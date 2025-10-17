@@ -35,6 +35,11 @@ export function PracticeCard({
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
   const pattern = generateVerbPattern(infinitive, form);
 
+  // Generate shuffled letters from the correct answer
+  const [shuffledLetters] = useState(() => {
+    return correctAnswer.split('').sort(() => Math.random() - 0.5);
+  });
+
   // Generate multiple choice options
   const generateOptions = (): string[] => {
     const options = [correctAnswer];
@@ -53,18 +58,29 @@ export function PracticeCard({
 
   const [options] = useState(generateOptions());
 
-  const handleSubmit = (answer: string) => {
+  const checkAnswer = (answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
-    setIsCorrect(correct);
-    setShowFeedback(true);
-    
     if (correct) {
+      setIsCorrect(true);
+      setShowFeedback(true);
       setShowConfetti(true);
       if (autoplayAudio) {
         speakSwedish(correctAnswer);
       }
+      // Auto-advance after a short delay
+      setTimeout(() => {
+        const grade: Grade = 5;
+        onAnswer(grade);
+      }, 1500);
     }
   };
+
+  // Real-time checking
+  useEffect(() => {
+    if (userAnswer && !showFeedback) {
+      checkAnswer(userAnswer);
+    }
+  }, [userAnswer, showFeedback]);
 
   const handleNext = () => {
     // Calculate grade based on correctness
@@ -87,6 +103,12 @@ export function PracticeCard({
     const text = conjugated[formToPronounce];
     if (text && text !== '(not available)') {
       speakSwedish(text);
+    }
+  };
+
+  const handleLetterClick = (letter: string) => {
+    if (!showFeedback) {
+      setUserAnswer(prev => prev + letter);
     }
   };
 
@@ -115,29 +137,33 @@ export function PracticeCard({
           {!showFeedback && (
             <div className="space-y-4">
               {mode === 'typing' ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <Input
                     value={userAnswer}
                     onChange={(e) => setUserAnswer(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit(userAnswer)}
                     placeholder="Type your answer..."
-                    className="text-2xl text-center py-6"
+                    className="text-2xl text-center py-6 caret-transparent"
                     autoFocus
                   />
-                  <Button
-                    onClick={() => handleSubmit(userAnswer)}
-                    className="w-full py-6 text-lg"
-                    disabled={!userAnswer.trim()}
-                  >
-                    Check Answer
-                  </Button>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {shuffledLetters.map((letter, index) => (
+                      <Button
+                        key={index}
+                        onClick={() => handleLetterClick(letter)}
+                        variant="outline"
+                        className="w-12 h-12 text-xl font-semibold"
+                      >
+                        {letter}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-3">
                   {options.map((option, index) => (
                     <Button
                       key={index}
-                      onClick={() => handleSubmit(option)}
+                      onClick={() => checkAnswer(option)}
                       variant="outline"
                       className="py-6 text-xl"
                     >
