@@ -30,35 +30,57 @@ export function PracticeCard({
   const [isCorrect, setIsCorrect] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
+  const [conjugated, setConjugated] = useState<any>(null);
+  const [pattern, setPattern] = useState<any>(null);
+  const [shuffledLetters, setShuffledLetters] = useState<string[]>([]);
 
-  const conjugated = conjugateVerb(infinitive);
+  // Load verb data
+  useEffect(() => {
+    conjugateVerb(infinitive).then(result => {
+      setConjugated(result);
+      const uniqueLetters = [...new Set(result[form].split(''))];
+      setShuffledLetters(uniqueLetters.sort(() => Math.random() - 0.5));
+    });
+    generateVerbPattern(infinitive, form).then(setPattern);
+  }, [infinitive, form]);
+
+  if (!conjugated || !pattern) {
+    return (
+      <Card className="w-full max-w-2xl shadow-xl">
+        <CardContent className="p-8 flex items-center justify-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const correctAnswer = conjugated[form];
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
-  const pattern = generateVerbPattern(infinitive, form);
-
-  // Generate shuffled unique letters from the correct answer
-  const [shuffledLetters] = useState(() => {
-    const uniqueLetters = [...new Set(correctAnswer.split(''))];
-    return uniqueLetters.sort(() => Math.random() - 0.5);
-  });
 
   // Generate multiple choice options
-  const generateOptions = (): string[] => {
-    const options = [correctAnswer];
-    const allVerbs = ['vara', 'ha', 'gå', 'komma', 'skriva', 'läsa', 'säga', 'få'];
-    
-    while (options.length < 4) {
-      const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
-      const randomConjugation = conjugateVerb(randomVerb)[form];
-      if (!options.includes(randomConjugation)) {
-        options.push(randomConjugation);
-      }
-    }
-    
-    return options.sort(() => Math.random() - 0.5);
-  };
+  const [options, setOptions] = useState<string[]>([]);
 
-  const [options] = useState(generateOptions());
+  useEffect(() => {
+    const generateOptions = async () => {
+      const opts = [correctAnswer];
+      const allVerbs = ['vara', 'ha', 'gå', 'komma', 'skriva', 'läsa', 'säga', 'få'];
+      
+      while (opts.length < 4) {
+        const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
+        const randomConjugation = await conjugateVerb(randomVerb);
+        const conjugatedForm = randomConjugation[form];
+        if (!opts.includes(conjugatedForm)) {
+          opts.push(conjugatedForm);
+        }
+      }
+      
+      setOptions(opts.sort(() => Math.random() - 0.5));
+    };
+
+    if (correctAnswer) {
+      generateOptions();
+    }
+  }, [correctAnswer, form]);
 
   const handleSubmit = (answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
@@ -132,6 +154,7 @@ export function PracticeCard({
     setIsCorrect(false);
     setShowConfetti(false);
     setRevealedHints([]);
+    setOptions([]);
   }, [infinitive, form]);
 
   const handlePronounceForm = (formToPronounce: Form) => {

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,12 +9,21 @@ import { loadVoices } from '@/lib/speech';
 export default function Home() {
   const navigate = useNavigate();
   const { getDueItems, isLoading } = useSrsProgress();
+  const [dueCount, setDueCount] = useState(0);
 
   useEffect(() => {
     loadVoices();
   }, []);
 
-  const dueCount = isLoading ? 0 : getDueItems().length;
+  useEffect(() => {
+    const loadDueCount = async () => {
+      if (!isLoading) {
+        const items = await getDueItems();
+        setDueCount(items.length);
+      }
+    };
+    loadDueCount();
+  }, [isLoading, getDueItems]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">

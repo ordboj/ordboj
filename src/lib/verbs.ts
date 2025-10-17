@@ -3,6 +3,7 @@ export type Form = "infinitive" | "presens" | "preteritum" | "supinum" | "impera
 export interface Verb {
   id: string;
   infinitive: string;
+  cefr?: string;
 }
 
 export interface ConjugatedVerb extends Verb {
@@ -12,57 +13,103 @@ export interface ConjugatedVerb extends Verb {
   imperativ: string;
 }
 
-// Common Swedish verbs (A1-B1)
-export const verbs: Verb[] = [
-  { id: "1", infinitive: "vara" },
-  { id: "2", infinitive: "ha" },
-  { id: "3", infinitive: "gå" },
-  { id: "4", infinitive: "komma" },
-  { id: "5", infinitive: "skriva" },
-  { id: "6", infinitive: "läsa" },
-  { id: "7", infinitive: "säga" },
-  { id: "8", infinitive: "få" },
-  { id: "9", infinitive: "kunna" },
-  { id: "10", infinitive: "vilja" },
-];
+let verbsCache: Verb[] | null = null;
 
-// Simple conjugation rules (basic approximation for common patterns)
-export function conjugateVerb(infinitive: string): ConjugatedVerb {
-  const verb = verbs.find(v => v.infinitive === infinitive);
-  const id = verb?.id || "unknown";
+// Load and parse verbs from CSV
+async function loadVerbs(): Promise<Verb[]> {
+  if (verbsCache) return verbsCache;
 
-  // Special irregular verbs
-  const irregulars: Record<string, ConjugatedVerb> = {
-    "vara": { id, infinitive: "vara", presens: "är", preteritum: "var", supinum: "varit", imperativ: "var" },
-    "ha": { id, infinitive: "ha", presens: "har", preteritum: "hade", supinum: "haft", imperativ: "ha" },
-    "gå": { id, infinitive: "gå", presens: "går", preteritum: "gick", supinum: "gått", imperativ: "gå" },
-    "komma": { id, infinitive: "komma", presens: "kommer", preteritum: "kom", supinum: "kommit", imperativ: "kom" },
-    "få": { id, infinitive: "få", presens: "får", preteritum: "fick", supinum: "fått", imperativ: "få" },
-    "säga": { id, infinitive: "säga", presens: "säger", preteritum: "sa/sade", supinum: "sagt", imperativ: "säg" },
-    "kunna": { id, infinitive: "kunna", presens: "kan", preteritum: "kunde", supinum: "kunnat", imperativ: "-" },
-    "vilja": { id, infinitive: "vilja", presens: "vill", preteritum: "ville", supinum: "velat", imperativ: "-" },
-  };
-
-  if (irregulars[infinitive]) {
-    return irregulars[infinitive];
+  try {
+    const response = await fetch('/data/swedish_verbs.csv');
+    const text = await response.text();
+    const lines = text.trim().split('\n');
+    
+    // Skip header
+    const verbLines = lines.slice(1);
+    
+    verbsCache = verbLines.map((line, index) => {
+      const [cefr, , infinitive] = line.split(',');
+      // Clean up infinitive (remove notes in parentheses)
+      const cleanInfinitive = infinitive.replace(/\s*\([^)]*\)/g, '').trim();
+      return {
+        id: String(index + 1),
+        infinitive: cleanInfinitive,
+        cefr: cefr
+      };
+    });
+    
+    return verbsCache;
+  } catch (error) {
+    console.error('Failed to load verbs:', error);
+    // Fallback to minimal set
+    return [
+      { id: "1", infinitive: "vara" },
+      { id: "2", infinitive: "ha" },
+      { id: "3", infinitive: "gå" },
+    ];
   }
+}
 
-  // Group 1: -ar verbs (most common)
-  if (infinitive.endsWith("a")) {
-    const stem = infinitive.slice(0, -1);
-    return {
-      id,
-      infinitive,
-      presens: stem + "ar",
-      preteritum: stem + "ade",
-      supinum: stem + "at",
-      imperativ: stem
-    };
+// Get all verbs
+export async function getVerbs(): Promise<Verb[]> {
+  return loadVerbs();
+}
+
+// Parse CSV line safely
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
   }
+  result.push(current);
+  return result;
+}
 
-  // Fallback
+// Conjugate verb from CSV data
+export async function conjugateVerb(infinitive: string): Promise<ConjugatedVerb> {
+  try {
+    const response = await fetch('/data/swedish_verbs.csv');
+    const text = await response.text();
+    const lines = text.trim().split('\n');
+    
+    // Find the verb in CSV
+    for (let i = 1; i < lines.length; i++) {
+      const parts = parseCSVLine(lines[i]);
+      const [cefr, , csvInfinitive, imperativ, presens, preteritum, supinum] = parts;
+      
+      // Clean infinitive for comparison
+      const cleanInfinitive = csvInfinitive?.replace(/\s*\([^)]*\)/g, '').trim();
+      
+      if (cleanInfinitive === infinitive) {
+        return {
+          id: String(i),
+          infinitive,
+          presens: presens || "(not available)",
+          preteritum: preteritum || "(not available)",
+          supinum: supinum || "(not available)",
+          imperativ: imperativ || "(not available)",
+          cefr
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Failed to conjugate verb:', error);
+  }
+  
+  // Fallback for unknown verbs
   return {
-    id,
+    id: "unknown",
     infinitive,
     presens: "(not available)",
     preteritum: "(not available)",
@@ -78,8 +125,8 @@ export interface VerbPattern {
   patternParts: Array<{ form: Form; text: string; isMissing: boolean }>;
 }
 
-export function generateVerbPattern(infinitive: string, targetForm: Form): VerbPattern {
-  const conjugated = conjugateVerb(infinitive);
+export async function generateVerbPattern(infinitive: string, targetForm: Form): Promise<VerbPattern> {
+  const conjugated = await conjugateVerb(infinitive);
   
   // For imperativ, use a simpler pattern
   if (targetForm === 'imperativ') {
@@ -97,7 +144,7 @@ export function generateVerbPattern(infinitive: string, targetForm: Form): VerbP
   const forms: Form[] = ['infinitive', 'presens', 'preteritum', 'supinum'];
   const parts = forms.map(form => ({
     form,
-    text: form === targetForm ? '_____' : conjugated[form],
+    text: form === targetForm ? '_____' : (form === 'infinitive' ? infinitive : conjugated[form]),
     isMissing: form === targetForm
   }));
   
@@ -162,3 +209,12 @@ export function getExampleSentence(infinitive: string, form: Form): string {
 
   return examples[infinitive]?.[form] || `[Example with ${form}]`;
 }
+
+// Legacy export for backward compatibility
+export const verbs: Verb[] = [];
+
+// Initialize verbs on module load
+loadVerbs().then(loaded => {
+  verbs.length = 0;
+  verbs.push(...loaded);
+});

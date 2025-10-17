@@ -13,18 +13,21 @@ export default function Practice() {
   const { getDueItems, recordAnswer, isLoading } = useSrsProgress();
   const { settings } = useSettings();
   
-  const [dueItems, setDueItems] = useState<ReturnType<typeof getDueItems>>([]);
+  const [dueItems, setDueItems] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [practiceComplete, setPracticeComplete] = useState(false);
 
   useEffect(() => {
-    if (!isLoading) {
-      const items = getDueItems();
-      setDueItems(items);
-      if (items.length === 0) {
-        setPracticeComplete(true);
+    const loadDueItems = async () => {
+      if (!isLoading) {
+        const items = await getDueItems();
+        setDueItems(items);
+        if (items.length === 0) {
+          setPracticeComplete(true);
+        }
       }
-    }
+    };
+    loadDueItems();
   }, [isLoading, getDueItems]);
 
   const handleAnswer = (grade: Grade) => {
