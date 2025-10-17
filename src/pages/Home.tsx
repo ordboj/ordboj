@@ -8,6 +8,7 @@ import { BookOpen, Settings, Trophy } from 'lucide-react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { loadVoices } from '@/lib/speech';
+import { getVerbs } from '@/lib/verbs';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function Home() {
   const { getDueItems, isLoading } = useSrsProgress(settings.cefrLevels);
   const [dueCount, setDueCount] = useState(0);
   const [selectedLevels, setSelectedLevels] = useState<string[]>(settings.cefrLevels);
+  const [totalVerbs, setTotalVerbs] = useState(0);
 
   useEffect(() => {
     loadVoices();
@@ -33,6 +35,17 @@ export default function Home() {
     };
     loadDueCount();
   }, [isLoading, settingsLoading, getDueItems]);
+
+  useEffect(() => {
+    const loadVerbCount = async () => {
+      const allVerbs = await getVerbs();
+      const filteredVerbs = allVerbs.filter(verb => 
+        verb.cefr && selectedLevels.includes(verb.cefr)
+      );
+      setTotalVerbs(filteredVerbs.length);
+    };
+    loadVerbCount();
+  }, [selectedLevels]);
 
   const handleLevelToggle = (level: string, checked: boolean) => {
     const newLevels = checked
@@ -67,11 +80,16 @@ export default function Home() {
               <BookOpen className="w-8 h-8 text-primary" />
               Ready to Practice?
             </CardTitle>
-            <CardDescription className="text-lg">
+            <CardDescription className="text-lg space-y-1">
               {dueCount > 0 ? (
-                <span className="text-primary font-semibold">
-                  {dueCount} cards due for review
-                </span>
+                <>
+                  <div className="text-primary font-semibold">
+                    {dueCount} conjugations due for review
+                  </div>
+                  <div className="text-muted-foreground text-sm">
+                    from {totalVerbs} verbs in selected levels
+                  </div>
+                </>
               ) : (
                 <span>All caught up! Great work! 🎉</span>
               )}
