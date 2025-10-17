@@ -73,6 +73,16 @@ export function PracticeCard({
     }
   };
 
+  // Auto-submit when answer is correct
+  useEffect(() => {
+    if (userAnswer && !showFeedback) {
+      const isAnswerCorrect = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+      if (isAnswerCorrect) {
+        handleSubmit(userAnswer);
+      }
+    }
+  }, [userAnswer, showFeedback, correctAnswer]);
+
   const handleHint = () => {
     if (revealedHints.length < correctAnswer.length) {
       // Find indices not yet revealed
