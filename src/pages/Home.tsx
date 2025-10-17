@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { BookOpen, Settings, Trophy } from 'lucide-react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
@@ -9,13 +11,18 @@ import { loadVoices } from '@/lib/speech';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { settings, isLoading: settingsLoading } = useSettings();
+  const { settings, isLoading: settingsLoading, updateSettings } = useSettings();
   const { getDueItems, isLoading } = useSrsProgress(settings.cefrLevels);
   const [dueCount, setDueCount] = useState(0);
+  const [selectedLevels, setSelectedLevels] = useState<string[]>(settings.cefrLevels);
 
   useEffect(() => {
     loadVoices();
   }, []);
+
+  useEffect(() => {
+    setSelectedLevels(settings.cefrLevels);
+  }, [settings.cefrLevels]);
 
   useEffect(() => {
     const loadDueCount = async () => {
@@ -26,6 +33,19 @@ export default function Home() {
     };
     loadDueCount();
   }, [isLoading, settingsLoading, getDueItems]);
+
+  const handleLevelToggle = (level: string, checked: boolean) => {
+    const newLevels = checked
+      ? [...selectedLevels, level]
+      : selectedLevels.filter(l => l !== level);
+    
+    if (newLevels.length === 0) return; // Prevent unselecting all
+    
+    setSelectedLevels(newLevels);
+    updateSettings({ cefrLevels: newLevels });
+  };
+
+  const allLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
@@ -57,14 +77,44 @@ export default function Home() {
               )}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            {/* CEFR Level Selector */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Select Difficulty Levels:</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {allLevels.map((level) => (
+                  <div
+                    key={level}
+                    className="flex items-center space-x-2 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                  >
+                    <Checkbox
+                      id={`home-cefr-${level}`}
+                      checked={selectedLevels.includes(level)}
+                      onCheckedChange={(checked) => handleLevelToggle(level, checked as boolean)}
+                    />
+                    <Label
+                      htmlFor={`home-cefr-${level}`}
+                      className="text-sm font-medium cursor-pointer flex-1"
+                    >
+                      {level}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                {selectedLevels.length === allLevels.length 
+                  ? 'All levels selected' 
+                  : `Selected: ${selectedLevels.sort().join(', ')}`}
+              </p>
+            </div>
+
             <Button
               onClick={() => navigate('/practice')}
               className="w-full py-8 text-2xl font-bold shadow-lg hover:shadow-xl transition-all"
               size="lg"
-              disabled={isLoading || dueCount === 0}
+              disabled={isLoading || settingsLoading || dueCount === 0}
             >
-              {isLoading ? 'Loading...' : dueCount > 0 ? 'Start Practice' : 'No Cards Due'}
+              {isLoading || settingsLoading ? 'Loading...' : dueCount > 0 ? 'Start Practice' : 'No Cards Due'}
             </Button>
 
             {dueCount === 0 && (
