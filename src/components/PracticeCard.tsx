@@ -1,0 +1,192 @@
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Volume2, CheckCircle2, XCircle } from 'lucide-react';
+import { conjugateVerb, Form, getExampleSentence } from '@/lib/verbs';
+import { speakSwedish } from '@/lib/speech';
+import { ConfettiEffect } from './ConfettiEffect';
+import { Grade } from '@/lib/srs';
+
+interface PracticeCardProps {
+  infinitive: string;
+  form: Form;
+  mode: 'typing' | 'multiple-choice';
+  showExamples: boolean;
+  autoplayAudio: boolean;
+  onAnswer: (grade: Grade) => void;
+}
+
+export function PracticeCard({
+  infinitive,
+  form,
+  mode,
+  showExamples,
+  autoplayAudio,
+  onAnswer,
+}: PracticeCardProps) {
+  const [userAnswer, setUserAnswer] = useState('');
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  const conjugated = conjugateVerb(infinitive);
+  const correctAnswer = conjugated[form];
+  const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
+
+  // Generate multiple choice options
+  const generateOptions = (): string[] => {
+    const options = [correctAnswer];
+    const allVerbs = ['vara', 'ha', 'gå', 'komma', 'skriva', 'läsa', 'säga', 'få'];
+    
+    while (options.length < 4) {
+      const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
+      const randomConjugation = conjugateVerb(randomVerb)[form];
+      if (!options.includes(randomConjugation)) {
+        options.push(randomConjugation);
+      }
+    }
+    
+    return options.sort(() => Math.random() - 0.5);
+  };
+
+  const [options] = useState(generateOptions());
+
+  const handleSubmit = (answer: string) => {
+    const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+    setIsCorrect(correct);
+    setShowFeedback(true);
+    
+    if (correct) {
+      setShowConfetti(true);
+      if (autoplayAudio) {
+        speakSwedish(correctAnswer);
+      }
+    }
+  };
+
+  const handleNext = () => {
+    // Calculate grade based on correctness
+    const grade: Grade = isCorrect ? 5 : 0;
+    onAnswer(grade);
+  };
+
+  const handlePronounce = () => {
+    speakSwedish(correctAnswer);
+  };
+
+  useEffect(() => {
+    setUserAnswer('');
+    setShowFeedback(false);
+    setIsCorrect(false);
+    setShowConfetti(false);
+  }, [infinitive, form]);
+
+  const formLabels: Record<Form, string> = {
+    infinitive: 'Infinitive',
+    presens: 'Present',
+    preteritum: 'Past',
+    supinum: 'Supine',
+    imperativ: 'Imperative',
+  };
+
+  return (
+    <>
+      <ConfettiEffect trigger={showConfetti} />
+      <Card className="w-full max-w-2xl shadow-xl">
+        <CardContent className="p-8 space-y-6">
+          {/* Question */}
+          <div className="text-center space-y-2">
+            <p className="text-muted-foreground text-sm">{formLabels[form]}</p>
+            <h2 className="text-4xl font-bold text-primary">{infinitive}</h2>
+            <p className="text-sm text-muted-foreground">What is the {formLabels[form].toLowerCase()} form?</p>
+          </div>
+
+          {/* Input Area */}
+          {!showFeedback && (
+            <div className="space-y-4">
+              {mode === 'typing' ? (
+                <div className="space-y-3">
+                  <Input
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit(userAnswer)}
+                    placeholder="Type your answer..."
+                    className="text-2xl text-center py-6"
+                    autoFocus
+                  />
+                  <Button
+                    onClick={() => handleSubmit(userAnswer)}
+                    className="w-full py-6 text-lg"
+                    disabled={!userAnswer.trim()}
+                  >
+                    Check Answer
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3">
+                  {options.map((option, index) => (
+                    <Button
+                      key={index}
+                      onClick={() => handleSubmit(option)}
+                      variant="outline"
+                      className="py-6 text-xl"
+                    >
+                      {option}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Feedback */}
+          {showFeedback && (
+            <div className="space-y-4">
+              <div className={`flex items-center justify-center gap-3 p-4 rounded-lg ${
+                isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
+              }`}>
+                {isCorrect ? (
+                  <>
+                    <CheckCircle2 className="w-8 h-8" />
+                    <span className="text-2xl font-bold">Correct!</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-8 h-8" />
+                    <span className="text-2xl font-bold">Not quite</span>
+                  </>
+                )}
+              </div>
+
+              <div className="text-center space-y-3">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-3xl font-bold text-primary">{correctAnswer}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handlePronounce}
+                    className="hover:bg-primary/10"
+                  >
+                    <Volume2 className="w-6 h-6 text-primary" />
+                  </Button>
+                </div>
+                
+                {showExamples && exampleSentence && (
+                  <p className="text-muted-foreground italic">{exampleSentence}</p>
+                )}
+              </div>
+
+              <Button
+                onClick={handleNext}
+                className="w-full py-6 text-lg"
+              >
+                Next Card
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+}
