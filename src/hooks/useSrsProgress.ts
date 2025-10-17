@@ -15,30 +15,22 @@ export function useSrsProgress() {
   const [srsStates, setSrsStates] = useState<Record<string, SrsState>>({});
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load from localStorage
+  // Load from localStorage and initialize
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
+    let loadedStates: Record<string, SrsState> = {};
+    
     if (stored) {
       try {
-        setSrsStates(JSON.parse(stored));
+        loadedStates = JSON.parse(stored);
       } catch (e) {
         console.error('Failed to parse SRS data', e);
       }
     }
-    setIsLoading(false);
-  }, []);
-
-  // Save to localStorage
-  useEffect(() => {
-    if (!isLoading) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(srsStates));
-    }
-  }, [srsStates, isLoading]);
-
-  // Initialize all verb+form combinations if they don't exist
-  const initializeAllItems = () => {
+    
+    // Initialize all verb+form combinations if they don't exist
     const forms: Form[] = ["presens", "preteritum", "supinum", "imperativ"];
-    const newStates: Record<string, SrsState> = { ...srsStates };
+    const newStates: Record<string, SrsState> = { ...loadedStates };
     let hasChanges = false;
 
     verbs.forEach(verb => {
@@ -51,9 +43,22 @@ export function useSrsProgress() {
       });
     });
 
-    if (hasChanges) {
-      setSrsStates(newStates);
+    setSrsStates(newStates);
+    setIsLoading(false);
+  }, []);
+
+  // Save to localStorage
+  useEffect(() => {
+    if (!isLoading) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(srsStates));
     }
+  }, [srsStates, isLoading]);
+
+  // Force refresh all items (useful for debugging)
+  const initializeAllItems = () => {
+    // This is now handled in the initial useEffect
+    // But we keep this function for backward compatibility
+    return;
   };
 
   // Get due items

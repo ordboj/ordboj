@@ -8,14 +8,13 @@ import { loadVoices } from '@/lib/speech';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { getDueItems, initializeAllItems } = useSrsProgress();
+  const { getDueItems, isLoading } = useSrsProgress();
 
   useEffect(() => {
-    initializeAllItems();
     loadVoices();
   }, []);
 
-  const dueCount = getDueItems().length;
+  const dueCount = isLoading ? 0 : getDueItems().length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
@@ -52,9 +51,9 @@ export default function Home() {
               onClick={() => navigate('/practice')}
               className="w-full py-8 text-2xl font-bold shadow-lg hover:shadow-xl transition-all"
               size="lg"
-              disabled={dueCount === 0}
+              disabled={isLoading || dueCount === 0}
             >
-              {dueCount > 0 ? 'Start Practice' : 'No Cards Due'}
+              {isLoading ? 'Loading...' : dueCount > 0 ? 'Start Practice' : 'No Cards Due'}
             </Button>
 
             {dueCount === 0 && (

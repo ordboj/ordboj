@@ -10,22 +10,22 @@ import { Grade } from '@/lib/srs';
 
 export default function Practice() {
   const navigate = useNavigate();
-  const { getDueItems, recordAnswer } = useSrsProgress();
+  const { getDueItems, recordAnswer, isLoading } = useSrsProgress();
   const { settings } = useSettings();
   
   const [dueItems, setDueItems] = useState<ReturnType<typeof getDueItems>>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [practiceComplete, setPracticeComplete] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    const items = getDueItems();
-    setDueItems(items);
-    if (items.length === 0) {
-      setPracticeComplete(true);
+    if (!isLoading) {
+      const items = getDueItems();
+      setDueItems(items);
+      if (items.length === 0) {
+        setPracticeComplete(true);
+      }
     }
-    setIsInitializing(false);
-  }, [getDueItems]);
+  }, [isLoading, getDueItems]);
 
   const handleAnswer = (grade: Grade) => {
     const currentItem = dueItems[currentIndex];
@@ -42,7 +42,7 @@ export default function Practice() {
     ? ((currentIndex + 1) / dueItems.length) * 100
     : 100;
 
-  if (isInitializing) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <div className="text-center">
