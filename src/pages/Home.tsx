@@ -157,7 +157,10 @@ export default function Home() {
 
         {/* Stats & Settings */}
         <div className="grid grid-cols-2 gap-4">
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate('/progress')}
+          >
             <CardHeader className="text-center">
               <Trophy className="w-8 h-8 mx-auto text-accent mb-2" />
               <CardTitle className="text-lg">Progress</CardTitle>
