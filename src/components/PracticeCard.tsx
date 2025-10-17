@@ -33,6 +33,7 @@ export function PracticeCard({
   const [conjugated, setConjugated] = useState<any>(null);
   const [pattern, setPattern] = useState<any>(null);
   const [shuffledLetters, setShuffledLetters] = useState<string[]>([]);
+  const [options, setOptions] = useState<string[]>([]);
 
   // Load verb data
   useEffect(() => {
@@ -44,21 +45,10 @@ export function PracticeCard({
     generateVerbPattern(infinitive, form).then(setPattern);
   }, [infinitive, form]);
 
-  if (!conjugated || !pattern) {
-    return (
-      <Card className="w-full max-w-2xl shadow-xl">
-        <CardContent className="p-8 flex items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const correctAnswer = conjugated[form];
+  const correctAnswer = conjugated?.[form] || '';
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
 
   // Generate multiple choice options
-  const [options, setOptions] = useState<string[]>([]);
 
   useEffect(() => {
     const generateOptions = async () => {
@@ -169,6 +159,16 @@ export function PracticeCard({
       setUserAnswer(prev => prev + letter);
     }
   };
+
+  if (!conjugated || !pattern) {
+    return (
+      <Card className="w-full max-w-2xl shadow-xl">
+        <CardContent className="p-8 flex items-center justify-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
