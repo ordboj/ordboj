@@ -35,9 +35,10 @@ export function PracticeCard({
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
   const pattern = generateVerbPattern(infinitive, form);
 
-  // Generate shuffled letters from the correct answer
+  // Generate shuffled unique letters from the correct answer
   const [shuffledLetters] = useState(() => {
-    return correctAnswer.split('').sort(() => Math.random() - 0.5);
+    const uniqueLetters = [...new Set(correctAnswer.split(''))];
+    return uniqueLetters.sort(() => Math.random() - 0.5);
   });
 
   // Generate multiple choice options
