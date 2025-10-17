@@ -9,7 +9,7 @@ import { loadVoices } from '@/lib/speech';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { settings } = useSettings();
+  const { settings, isLoading: settingsLoading } = useSettings();
   const { getDueItems, isLoading } = useSrsProgress(settings.cefrLevels);
   const [dueCount, setDueCount] = useState(0);
 
@@ -19,13 +19,13 @@ export default function Home() {
 
   useEffect(() => {
     const loadDueCount = async () => {
-      if (!isLoading) {
+      if (!isLoading && !settingsLoading) {
         const items = await getDueItems();
         setDueCount(items.length);
       }
     };
     loadDueCount();
-  }, [isLoading]);
+  }, [isLoading, settingsLoading, getDueItems]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">

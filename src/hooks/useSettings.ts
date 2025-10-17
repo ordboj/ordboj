@@ -22,6 +22,7 @@ const STORAGE_KEY = 'swedish-verbs-settings';
 
 export function useSettings() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -32,6 +33,7 @@ export function useSettings() {
         console.error('Failed to load settings', e);
       }
     }
+    setIsLoading(false);
   }, []);
 
   const updateSettings = (newSettings: Partial<Settings>) => {
@@ -42,5 +44,5 @@ export function useSettings() {
     });
   };
 
-  return { settings, updateSettings };
+  return { settings, updateSettings, isLoading };
 }

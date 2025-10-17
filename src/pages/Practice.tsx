@@ -10,7 +10,7 @@ import { Grade } from '@/lib/srs';
 
 export default function Practice() {
   const navigate = useNavigate();
-  const { settings } = useSettings();
+  const { settings, isLoading: settingsLoading } = useSettings();
   const { getDueItems, recordAnswer, isLoading } = useSrsProgress(settings.cefrLevels);
   
   const [dueItems, setDueItems] = useState<any[]>([]);
@@ -19,7 +19,7 @@ export default function Practice() {
 
   useEffect(() => {
     const loadDueItems = async () => {
-      if (!isLoading) {
+      if (!isLoading && !settingsLoading) {
         const items = await getDueItems();
         setDueItems(items);
         if (items.length === 0) {
@@ -28,7 +28,7 @@ export default function Practice() {
       }
     };
     loadDueItems();
-  }, [isLoading]);
+  }, [isLoading, settingsLoading, getDueItems]);
 
   const handleAnswer = (grade: Grade) => {
     const currentItem = dueItems[currentIndex];
@@ -45,7 +45,7 @@ export default function Practice() {
     ? ((currentIndex + 1) / dueItems.length) * 100
     : 100;
 
-  if (isLoading) {
+  if (isLoading || settingsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <div className="text-center">
