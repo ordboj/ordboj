@@ -29,20 +29,13 @@ export function useSrsProgress(cefrLevels?: string[]) {
         }
       }
       
-      // Initialize only available verb+form combinations
+      // Initialize all verb+form combinations
       const forms: Form[] = ["presens", "preteritum", "supinum", "imperativ"];
       const newStates: Record<string, SrsState> = { ...loadedStates };
       
       const verbs = await getVerbs();
       for (const verb of verbs) {
-        const conjugated = await conjugateVerb(verb.infinitive);
-        
         for (const form of forms) {
-          // Skip forms that are not available
-          if (conjugated[form] === "(not available)" || !conjugated[form]) {
-            continue;
-          }
-          
           const itemId = `${verb.id}-${form}`;
           if (!newStates[itemId]) {
             newStates[itemId] = initializeSrsState(itemId);
