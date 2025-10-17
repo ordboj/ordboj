@@ -6,6 +6,7 @@ export interface Settings {
   autoplayAudio: boolean;
   interfaceLanguage: 'en' | 'sv';
   dailyGoal: number;
+  cefrLevels: string[];
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -14,6 +15,7 @@ const DEFAULT_SETTINGS: Settings = {
   autoplayAudio: true,
   interfaceLanguage: 'en',
   dailyGoal: 20,
+  cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
 };
 
 const STORAGE_KEY = 'swedish-verbs-settings';

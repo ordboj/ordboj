@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen, Settings, Trophy } from 'lucide-react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
+import { useSettings } from '@/hooks/useSettings';
 import { loadVoices } from '@/lib/speech';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { getDueItems, isLoading } = useSrsProgress();
+  const { settings } = useSettings();
+  const { getDueItems, isLoading } = useSrsProgress(settings.cefrLevels);
   const [dueCount, setDueCount] = useState(0);
 
   useEffect(() => {

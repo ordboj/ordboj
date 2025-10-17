@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { SrsState, initializeSrsState, calculateNextReview, isDue, Grade } from '@/lib/srs';
-import { getVerbs, Form } from '@/lib/verbs';
+import { getVerbs, Form, Verb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -11,7 +11,7 @@ interface PracticeItem {
   itemId: string;
 }
 
-export function useSrsProgress() {
+export function useSrsProgress(cefrLevels?: string[]) {
   const [srsStates, setSrsStates] = useState<Record<string, SrsState>>({});
   const [isLoading, setIsLoading] = useState(true);
 
@@ -64,12 +64,17 @@ export function useSrsProgress() {
     return;
   };
 
-  // Get due items (randomized)
+  // Get due items (randomized and filtered by CEFR level)
   const getDueItems = useCallback(async (): Promise<PracticeItem[]> => {
     const forms: Form[] = ["presens", "preteritum", "supinum", "imperativ"];
     const dueItems: PracticeItem[] = [];
 
-    const verbs = await getVerbs();
+    const allVerbs = await getVerbs();
+    // Filter verbs by CEFR level if specified
+    const verbs = cefrLevels && cefrLevels.length > 0
+      ? allVerbs.filter(verb => verb.cefr && cefrLevels.includes(verb.cefr))
+      : allVerbs;
+
     verbs.forEach(verb => {
       forms.forEach(form => {
         const itemId = `${verb.id}-${form}`;
@@ -92,7 +97,7 @@ export function useSrsProgress() {
     }
 
     return dueItems;
-  }, [srsStates]);
+  }, [srsStates, cefrLevels]);
 
   // Record answer
   const recordAnswer = (itemId: string, grade: Grade) => {

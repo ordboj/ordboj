@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Download, Upload, Trash2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
@@ -135,6 +136,35 @@ export default function Settings() {
                   <SelectItem value="sv">Svenska</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-3">
+              <Label>CEFR Levels to Practice</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((level) => (
+                  <div key={level} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`cefr-${level}`}
+                      checked={settings.cefrLevels.includes(level)}
+                      onCheckedChange={(checked) => {
+                        const newLevels = checked
+                          ? [...settings.cefrLevels, level]
+                          : settings.cefrLevels.filter(l => l !== level);
+                        updateSettings({ cefrLevels: newLevels });
+                      }}
+                    />
+                    <Label
+                      htmlFor={`cefr-${level}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {level}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Select which difficulty levels you want to practice. At least one level must be selected.
+              </p>
             </div>
           </CardContent>
         </Card>

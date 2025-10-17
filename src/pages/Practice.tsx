@@ -10,8 +10,8 @@ import { Grade } from '@/lib/srs';
 
 export default function Practice() {
   const navigate = useNavigate();
-  const { getDueItems, recordAnswer, isLoading } = useSrsProgress();
   const { settings } = useSettings();
+  const { getDueItems, recordAnswer, isLoading } = useSrsProgress(settings.cefrLevels);
   
   const [dueItems, setDueItems] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
