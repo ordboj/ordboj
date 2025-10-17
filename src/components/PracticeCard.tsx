@@ -87,13 +87,23 @@ export function PracticeCard({
     }
   };
 
-  const getDisplayedHint = () => {
-    return correctAnswer.split('').map((letter, index) => {
-      if (revealedHints.includes(index)) {
-        return letter;
+  const getPatternWithHints = () => {
+    return pattern.patternParts.map(part => {
+      if (part.isMissing) {
+        // Show the blank with revealed hints
+        return correctAnswer.split('').map((letter, index) => {
+          if (revealedHints.includes(index)) {
+            return letter;
+          }
+          return '_';
+        }).join(' ');
       }
-      return '_';
-    }).join(' ');
+      return part.text;
+    }).join(' – ');
+  };
+
+  const handleDelete = () => {
+    setUserAnswer(prev => prev.slice(0, -1));
   };
 
   const handleNext = () => {
@@ -137,7 +147,7 @@ export function PracticeCard({
             <p className="text-muted-foreground text-sm font-medium">Fill in the missing form</p>
             <div className="bg-muted/30 rounded-lg p-6 space-y-2">
               <h2 className="text-3xl font-bold text-primary tracking-wide">
-                {pattern.display}
+                {getPatternWithHints()}
               </h2>
               <p className="text-sm text-muted-foreground">
                 Missing: <span className="font-semibold">{getFormLabel(form)}</span>
@@ -145,14 +155,6 @@ export function PracticeCard({
               <p className="text-xs text-muted-foreground italic">
                 {getFormHint(form)}
               </p>
-              {revealedHints.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-border">
-                  <p className="text-xs text-muted-foreground mb-1">Hint:</p>
-                  <p className="text-2xl font-mono tracking-wider text-primary">
-                    {getDisplayedHint()}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
 
@@ -180,6 +182,14 @@ export function PracticeCard({
                         {letter}
                       </Button>
                     ))}
+                    <Button
+                      onClick={handleDelete}
+                      variant="outline"
+                      className="w-12 h-12 text-xl"
+                      disabled={!userAnswer}
+                    >
+                      ⌫
+                    </Button>
                   </div>
                   <div className="flex gap-3">
                     <Button
