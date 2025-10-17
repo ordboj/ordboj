@@ -64,7 +64,7 @@ export function useSrsProgress() {
     return;
   };
 
-  // Get due items
+  // Get due items (randomized)
   const getDueItems = useCallback(async (): Promise<PracticeItem[]> => {
     const forms: Form[] = ["presens", "preteritum", "supinum", "imperativ"];
     const dueItems: PracticeItem[] = [];
@@ -84,6 +84,12 @@ export function useSrsProgress() {
         }
       });
     });
+
+    // Shuffle the items using Fisher-Yates algorithm
+    for (let i = dueItems.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [dueItems[i], dueItems[j]] = [dueItems[j], dueItems[i]];
+    }
 
     return dueItems;
   }, [srsStates]);
