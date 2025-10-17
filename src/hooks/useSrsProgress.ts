@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { SrsState, initializeSrsState, calculateNextReview, isDue, Grade } from '@/lib/srs';
-import { getVerbs, Form, Verb } from '@/lib/verbs';
+import { getVerbs, Form, Verb, conjugateVerb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -75,8 +75,16 @@ export function useSrsProgress(cefrLevels?: string[]) {
       ? allVerbs.filter(verb => verb.cefr && cefrLevels.includes(verb.cefr))
       : allVerbs;
 
-    verbs.forEach(verb => {
-      forms.forEach(form => {
+    // Check each verb's forms for availability
+    for (const verb of verbs) {
+      const conjugated = await conjugateVerb(verb.infinitive);
+      
+      for (const form of forms) {
+        // Skip forms that are not available
+        if (conjugated[form] === "(not available)" || !conjugated[form]) {
+          continue;
+        }
+        
         const itemId = `${verb.id}-${form}`;
         const state = srsStates[itemId];
         if (state && isDue(state)) {
@@ -87,8 +95,8 @@ export function useSrsProgress(cefrLevels?: string[]) {
             itemId,
           });
         }
-      });
-    });
+      }
+    }
 
     // Shuffle the items using Fisher-Yates algorithm
     for (let i = dueItems.length - 1; i > 0; i--) {
