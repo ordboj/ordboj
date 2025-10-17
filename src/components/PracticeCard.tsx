@@ -29,6 +29,7 @@ export function PracticeCard({
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [revealedHints, setRevealedHints] = useState<number[]>([]);
 
   const conjugated = conjugateVerb(infinitive);
   const correctAnswer = conjugated[form];
@@ -59,29 +60,41 @@ export function PracticeCard({
 
   const [options] = useState(generateOptions());
 
-  const checkAnswer = (answer: string) => {
+  const handleSubmit = (answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+    setIsCorrect(correct);
+    setShowFeedback(true);
+    
     if (correct) {
-      setIsCorrect(true);
-      setShowFeedback(true);
       setShowConfetti(true);
       if (autoplayAudio) {
         speakSwedish(correctAnswer);
       }
-      // Auto-advance after a short delay
-      setTimeout(() => {
-        const grade: Grade = 5;
-        onAnswer(grade);
-      }, 1500);
     }
   };
 
-  // Real-time checking
-  useEffect(() => {
-    if (userAnswer && !showFeedback) {
-      checkAnswer(userAnswer);
+  const handleHint = () => {
+    if (revealedHints.length < correctAnswer.length) {
+      // Find indices not yet revealed
+      const availableIndices = correctAnswer
+        .split('')
+        .map((_, index) => index)
+        .filter(index => !revealedHints.includes(index));
+      
+      // Pick a random unrevealed index
+      const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+      setRevealedHints(prev => [...prev, randomIndex]);
     }
-  }, [userAnswer, showFeedback]);
+  };
+
+  const getDisplayedHint = () => {
+    return correctAnswer.split('').map((letter, index) => {
+      if (revealedHints.includes(index)) {
+        return letter;
+      }
+      return '_';
+    }).join(' ');
+  };
 
   const handleNext = () => {
     // Calculate grade based on correctness
@@ -98,6 +111,7 @@ export function PracticeCard({
     setShowFeedback(false);
     setIsCorrect(false);
     setShowConfetti(false);
+    setRevealedHints([]);
   }, [infinitive, form]);
 
   const handlePronounceForm = (formToPronounce: Form) => {
@@ -131,6 +145,14 @@ export function PracticeCard({
               <p className="text-xs text-muted-foreground italic">
                 {getFormHint(form)}
               </p>
+              {revealedHints.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <p className="text-xs text-muted-foreground mb-1">Hint:</p>
+                  <p className="text-2xl font-mono tracking-wider text-primary">
+                    {getDisplayedHint()}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -142,6 +164,7 @@ export function PracticeCard({
                   <Input
                     value={userAnswer}
                     onChange={(e) => setUserAnswer(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && userAnswer.trim() && handleSubmit(userAnswer)}
                     placeholder="Type your answer..."
                     className="text-2xl text-center py-6 caret-transparent"
                     autoFocus
@@ -158,13 +181,30 @@ export function PracticeCard({
                       </Button>
                     ))}
                   </div>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleHint}
+                      variant="outline"
+                      className="flex-1 py-6 text-lg"
+                      disabled={revealedHints.length >= correctAnswer.length}
+                    >
+                      💡 Hint
+                    </Button>
+                    <Button
+                      onClick={() => handleSubmit(userAnswer)}
+                      className="flex-1 py-6 text-lg"
+                      disabled={!userAnswer.trim()}
+                    >
+                      Check Answer
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-3">
                   {options.map((option, index) => (
                     <Button
                       key={index}
-                      onClick={() => checkAnswer(option)}
+                      onClick={() => handleSubmit(option)}
                       variant="outline"
                       className="py-6 text-xl"
                     >
