@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { BookOpen, Settings, Trophy } from 'lucide-react';
+import { BookOpen, Settings, Trophy, Volume2, VolumeX } from 'lucide-react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { loadVoices } from '@/lib/speech';
@@ -64,7 +64,19 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-2 relative">
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute right-0 top-0"
+            onClick={() => updateSettings({ muteAudio: !settings.muteAudio })}
+          >
+            {settings.muteAudio ? (
+              <VolumeX className="h-5 w-5" />
+            ) : (
+              <Volume2 className="h-5 w-5" />
+            )}
+          </Button>
           <h1 className="text-5xl font-bold text-primary mb-2">
             Svenska Verb
           </h1>

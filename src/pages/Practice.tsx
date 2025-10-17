@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { PracticeCard } from '@/components/PracticeCard';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
@@ -10,7 +10,7 @@ import { Grade } from '@/lib/srs';
 
 export default function Practice() {
   const navigate = useNavigate();
-  const { settings, isLoading: settingsLoading } = useSettings();
+  const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
   const { getDueItems, recordAnswer, isLoading } = useSrsProgress(settings.cefrLevels);
   
   const [dueItems, setDueItems] = useState<any[]>([]);
@@ -94,9 +94,22 @@ export default function Practice() {
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
-          <span className="text-sm font-medium text-muted-foreground">
-            {currentIndex + 1} / {dueItems.length}
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-muted-foreground">
+              {currentIndex + 1} / {dueItems.length}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => updateSettings({ muteAudio: !settings.muteAudio })}
+            >
+              {settings.muteAudio ? (
+                <VolumeX className="h-5 w-5" />
+              ) : (
+                <Volume2 className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
         </div>
         
         <Progress value={progressPercent} className="h-3" />
@@ -111,6 +124,7 @@ export default function Practice() {
           mode={settings.practiceMode}
           showExamples={settings.showExamples}
           autoplayAudio={settings.autoplayAudio}
+          muteAudio={settings.muteAudio}
           onAnswer={handleAnswer}
         />
       </div>

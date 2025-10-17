@@ -14,6 +14,7 @@ interface PracticeCardProps {
   mode: 'typing' | 'multiple-choice';
   showExamples: boolean;
   autoplayAudio: boolean;
+  muteAudio: boolean;
   onAnswer: (grade: Grade) => void;
 }
 
@@ -23,6 +24,7 @@ export function PracticeCard({
   mode,
   showExamples,
   autoplayAudio,
+  muteAudio,
   onAnswer,
 }: PracticeCardProps) {
   const [userAnswer, setUserAnswer] = useState('');
@@ -80,7 +82,7 @@ export function PracticeCard({
     if (correct) {
       setShowConfetti(true);
       if (autoplayAudio) {
-        speakSwedish(correctAnswer);
+        speakSwedish(correctAnswer, muteAudio);
       }
     }
   };
@@ -135,7 +137,7 @@ export function PracticeCard({
   };
 
   const handlePronounce = () => {
-    speakSwedish(correctAnswer);
+    speakSwedish(correctAnswer, muteAudio);
   };
 
   useEffect(() => {
@@ -150,7 +152,7 @@ export function PracticeCard({
   const handlePronounceForm = (formToPronounce: Form) => {
     const text = conjugated[formToPronounce];
     if (text && text !== '(not available)') {
-      speakSwedish(text);
+      speakSwedish(text, muteAudio);
     }
   };
 

@@ -1,22 +1,24 @@
 // Web Speech API wrapper for Swedish pronunciation
-export function speakSwedish(text: string): void {
-  if ('speechSynthesis' in window) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'sv-SE';
-    utterance.rate = 0.85;
-    
-    // Try to find Swedish voice
-    const voices = speechSynthesis.getVoices();
-    const swedishVoice = voices.find(voice => 
-      voice.lang.startsWith('sv') || voice.name.toLowerCase().includes('swedish')
-    );
-    
-    if (swedishVoice) {
-      utterance.voice = swedishVoice;
-    }
-    
-    speechSynthesis.speak(utterance);
+export function speakSwedish(text: string, muted: boolean = false): void {
+  if (muted || !('speechSynthesis' in window)) {
+    return;
   }
+  
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'sv-SE';
+  utterance.rate = 0.85;
+  
+  // Try to find Swedish voice
+  const voices = speechSynthesis.getVoices();
+  const swedishVoice = voices.find(voice => 
+    voice.lang.startsWith('sv') || voice.name.toLowerCase().includes('swedish')
+  );
+  
+  if (swedishVoice) {
+    utterance.voice = swedishVoice;
+  }
+  
+  speechSynthesis.speak(utterance);
 }
 
 // Preload voices (some browsers load voices asynchronously)
