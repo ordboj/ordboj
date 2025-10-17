@@ -34,7 +34,6 @@ export function useSrsProgress(cefrLevels?: string[]) {
       const newStates: Record<string, SrsState> = { ...loadedStates };
       
       const verbs = await getVerbs();
-      console.log(`[SRS Init] Loaded ${verbs.length} verbs`);
       
       for (const verb of verbs) {
         for (const form of forms) {
@@ -45,7 +44,6 @@ export function useSrsProgress(cefrLevels?: string[]) {
         }
       }
 
-      console.log(`[SRS Init] Created ${Object.keys(newStates).length} SRS states`);
       setSrsStates(newStates);
       setIsLoading(false);
     };
@@ -73,15 +71,11 @@ export function useSrsProgress(cefrLevels?: string[]) {
     const dueItems: PracticeItem[] = [];
 
     const allVerbs = await getVerbs();
-    console.log(`[getDueItems] Total verbs: ${allVerbs.length}`);
     
     // Filter verbs by CEFR level if specified
     const verbs = cefrLevels && cefrLevels.length > 0
       ? allVerbs.filter(verb => verb.cefr && cefrLevels.includes(verb.cefr))
       : allVerbs;
-    
-    console.log(`[getDueItems] Filtered verbs by CEFR: ${verbs.length}, levels: ${cefrLevels?.join(',')}`);
-    console.log(`[getDueItems] Total SRS states: ${Object.keys(srsStates).length}`);
 
     // Check each verb's forms for availability
     for (const verb of verbs) {
@@ -105,8 +99,6 @@ export function useSrsProgress(cefrLevels?: string[]) {
         }
       }
     }
-    
-    console.log(`[getDueItems] Found ${dueItems.length} due items`);
 
     // Shuffle the items using Fisher-Yates algorithm
     for (let i = dueItems.length - 1; i > 0; i--) {
