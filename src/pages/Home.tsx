@@ -2,27 +2,49 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { BookOpen, Settings, Trophy } from 'lucide-react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { loadVoices } from '@/lib/speech';
+import { getVerbs } from '@/lib/verbs';
 
 export default function Home() {
   const navigate = useNavigate();
   const { settings, isLoading: settingsLoading, updateSettings } = useSettings();
   const { getDueItems, isLoading } = useSrsProgress(settings.cefrLevels);
   const [dueCount, setDueCount] = useState(0);
-  const [selectedLevels, setSelectedLevels] = useState<string[]>(settings.cefrLevels);
+  const [totalVerbs, setTotalVerbs] = useState(0);
+  
+  const allLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  const [rangeValues, setRangeValues] = useState<number[]>([0, 5]); // Start and end indices
 
   useEffect(() => {
     loadVoices();
   }, []);
 
+  // Initialize range from settings
   useEffect(() => {
-    setSelectedLevels(settings.cefrLevels);
-  }, [settings.cefrLevels]);
+    if (settings.cefrLevels.length > 0) {
+      const sortedSelected = [...settings.cefrLevels].sort();
+      const startIdx = allLevels.indexOf(sortedSelected[0]);
+      const endIdx = allLevels.indexOf(sortedSelected[sortedSelected.length - 1]);
+      setRangeValues([startIdx, endIdx]);
+    }
+  }, []);
+
+  // Update verb count when range changes
+  useEffect(() => {
+    const countVerbs = async () => {
+      const allVerbs = await getVerbs();
+      const selectedLevels = allLevels.slice(rangeValues[0], rangeValues[1] + 1);
+      const filteredVerbs = allVerbs.filter(
+        verb => verb.cefr && selectedLevels.includes(verb.cefr)
+      );
+      setTotalVerbs(filteredVerbs.length);
+    };
+    countVerbs();
+  }, [rangeValues]);
 
   useEffect(() => {
     const loadDueCount = async () => {
@@ -34,18 +56,18 @@ export default function Home() {
     loadDueCount();
   }, [isLoading, settingsLoading, getDueItems]);
 
-  const handleLevelToggle = (level: string, checked: boolean) => {
-    const newLevels = checked
-      ? [...selectedLevels, level]
-      : selectedLevels.filter(l => l !== level);
-    
-    if (newLevels.length === 0) return; // Prevent unselecting all
-    
-    setSelectedLevels(newLevels);
-    updateSettings({ cefrLevels: newLevels });
+  const handleRangeChange = (values: number[]) => {
+    setRangeValues(values);
+    const selectedLevels = allLevels.slice(values[0], values[1] + 1);
+    updateSettings({ cefrLevels: selectedLevels });
   };
 
-  const allLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  const getSelectedLevelsText = () => {
+    if (rangeValues[0] === rangeValues[1]) {
+      return allLevels[rangeValues[0]];
+    }
+    return `${allLevels[rangeValues[0]]} – ${allLevels[rangeValues[1]]}`;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
@@ -67,45 +89,41 @@ export default function Home() {
               <BookOpen className="w-8 h-8 text-primary" />
               Ready to Practice?
             </CardTitle>
-            <CardDescription className="text-lg">
-              {dueCount > 0 ? (
-                <span className="text-primary font-semibold">
-                  {dueCount} cards due for review
-                </span>
-              ) : (
-                <span>All caught up! Great work! 🎉</span>
-              )}
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* CEFR Level Selector */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Select Difficulty Levels:</Label>
-              <div className="grid grid-cols-3 gap-3">
-                {allLevels.map((level) => (
-                  <div
-                    key={level}
-                    className="flex items-center space-x-2 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
-                  >
-                    <Checkbox
-                      id={`home-cefr-${level}`}
-                      checked={selectedLevels.includes(level)}
-                      onCheckedChange={(checked) => handleLevelToggle(level, checked as boolean)}
-                    />
-                    <Label
-                      htmlFor={`home-cefr-${level}`}
-                      className="text-sm font-medium cursor-pointer flex-1"
-                    >
-                      {level}
-                    </Label>
-                  </div>
-                ))}
+            {/* CEFR Level Range Slider */}
+            <div className="space-y-4 px-2">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-center">
+                  Select Difficulty Range: <span className="text-primary font-bold">{getSelectedLevelsText()}</span>
+                </p>
+                <div className="flex items-center gap-4 pt-2">
+                  <span className="text-xs font-medium text-muted-foreground w-8">{allLevels[0]}</span>
+                  <Slider
+                    value={rangeValues}
+                    onValueChange={handleRangeChange}
+                    min={0}
+                    max={5}
+                    step={1}
+                    minStepsBetweenThumbs={0}
+                    className="flex-1"
+                  />
+                  <span className="text-xs font-medium text-muted-foreground w-8 text-right">{allLevels[5]}</span>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground text-center">
-                {selectedLevels.length === allLevels.length 
-                  ? 'All levels selected' 
-                  : `Selected: ${selectedLevels.sort().join(', ')}`}
-              </p>
+              
+              <div className="text-center space-y-1 pt-2">
+                <p className="text-sm text-muted-foreground">
+                  {totalVerbs} verbs in selected range
+                </p>
+                <p className="text-lg font-semibold text-primary">
+                  {dueCount > 0 ? (
+                    <span>{dueCount} cards due for review</span>
+                  ) : (
+                    <span className="text-muted-foreground">All caught up! Great work! 🎉</span>
+                  )}
+                </p>
+              </div>
             </div>
 
             <Button
