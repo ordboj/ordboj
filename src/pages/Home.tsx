@@ -34,7 +34,7 @@ export default function Home() {
       }
     };
     loadDueCount();
-  }, [isLoading, settingsLoading, getDueItems]);
+  }, [isLoading, settingsLoading, getDueItems, settings.cefrLevels]);
 
   useEffect(() => {
     const loadVerbCount = async () => {
