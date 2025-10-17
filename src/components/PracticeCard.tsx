@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Volume2, CheckCircle2, XCircle } from 'lucide-react';
-import { conjugateVerb, Form, getExampleSentence } from '@/lib/verbs';
+import { conjugateVerb, Form, getExampleSentence, generateVerbPattern, getFormLabel, getFormHint } from '@/lib/verbs';
 import { speakSwedish } from '@/lib/speech';
 import { ConfettiEffect } from './ConfettiEffect';
 import { Grade } from '@/lib/srs';
@@ -33,6 +33,7 @@ export function PracticeCard({
   const conjugated = conjugateVerb(infinitive);
   const correctAnswer = conjugated[form];
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
+  const pattern = generateVerbPattern(infinitive, form);
 
   // Generate multiple choice options
   const generateOptions = (): string[] => {
@@ -82,12 +83,11 @@ export function PracticeCard({
     setShowConfetti(false);
   }, [infinitive, form]);
 
-  const formLabels: Record<Form, string> = {
-    infinitive: 'Infinitive',
-    presens: 'Present',
-    preteritum: 'Past',
-    supinum: 'Supine',
-    imperativ: 'Imperative',
+  const handlePronounceForm = (formToPronounce: Form) => {
+    const text = conjugated[formToPronounce];
+    if (text && text !== '(not available)') {
+      speakSwedish(text);
+    }
   };
 
   return (
@@ -96,10 +96,19 @@ export function PracticeCard({
       <Card className="w-full max-w-2xl shadow-xl">
         <CardContent className="p-8 space-y-6">
           {/* Question */}
-          <div className="text-center space-y-2">
-            <p className="text-muted-foreground text-sm">{formLabels[form]}</p>
-            <h2 className="text-4xl font-bold text-primary">{infinitive}</h2>
-            <p className="text-sm text-muted-foreground">What is the {formLabels[form].toLowerCase()} form?</p>
+          <div className="text-center space-y-3">
+            <p className="text-muted-foreground text-sm font-medium">Fill in the missing form</p>
+            <div className="bg-muted/30 rounded-lg p-6 space-y-2">
+              <h2 className="text-3xl font-bold text-primary tracking-wide">
+                {pattern.display}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Missing: <span className="font-semibold">{getFormLabel(form)}</span>
+              </p>
+              <p className="text-xs text-muted-foreground italic">
+                {getFormHint(form)}
+              </p>
+            </div>
           </div>
 
           {/* Input Area */}
@@ -159,21 +168,54 @@ export function PracticeCard({
                 )}
               </div>
 
-              <div className="text-center space-y-3">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-3xl font-bold text-primary">{correctAnswer}</span>
+              <div className="space-y-4">
+                {/* Show full pattern with pronunciation buttons */}
+                <div className="bg-muted/20 rounded-lg p-4 space-y-3">
+                  <p className="text-sm text-muted-foreground text-center font-medium">
+                    Complete pattern:
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {pattern.patternParts.map((part, index) => (
+                      <div key={index} className="flex items-center gap-1">
+                        <div className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
+                          part.isMissing ? 'bg-primary text-primary-foreground font-bold' : 'bg-background'
+                        }`}>
+                          <span className="text-lg">
+                            {part.isMissing ? correctAnswer : part.text}
+                          </span>
+                          {!part.isMissing && conjugated[part.form] !== '(not available)' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 hover:bg-primary/10"
+                              onClick={() => handlePronounceForm(part.form)}
+                            >
+                              <Volume2 className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
+                        {index < pattern.patternParts.length - 1 && (
+                          <span className="text-muted-foreground">–</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                   <Button
-                    variant="ghost"
-                    size="icon"
+                    variant="outline"
+                    size="sm"
                     onClick={handlePronounce}
-                    className="hover:bg-primary/10"
+                    className="w-full gap-2"
                   >
-                    <Volume2 className="w-6 h-6 text-primary" />
+                    <Volume2 className="w-4 h-4" />
+                    Pronounce answer
                   </Button>
                 </div>
                 
                 {showExamples && exampleSentence && (
-                  <p className="text-muted-foreground italic">{exampleSentence}</p>
+                  <div className="bg-accent/10 rounded-lg p-4">
+                    <p className="text-sm text-muted-foreground mb-1">Example:</p>
+                    <p className="text-base italic">{exampleSentence}</p>
+                  </div>
                 )}
               </div>
 

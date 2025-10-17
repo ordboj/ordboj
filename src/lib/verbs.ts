@@ -71,6 +71,69 @@ export function conjugateVerb(infinitive: string): ConjugatedVerb {
   };
 }
 
+// Generate verb pattern display (e.g., "gå – gick – _____")
+export interface VerbPattern {
+  display: string;
+  missingForm: Form;
+  patternParts: Array<{ form: Form; text: string; isMissing: boolean }>;
+}
+
+export function generateVerbPattern(infinitive: string, targetForm: Form): VerbPattern {
+  const conjugated = conjugateVerb(infinitive);
+  
+  // For imperativ, use a simpler pattern
+  if (targetForm === 'imperativ') {
+    return {
+      display: `Command form of "${infinitive}"`,
+      missingForm: targetForm,
+      patternParts: [
+        { form: 'infinitive', text: infinitive, isMissing: false },
+        { form: 'imperativ', text: '_____', isMissing: true }
+      ]
+    };
+  }
+  
+  // For other forms, use the standard pattern: infinitive – presens – preteritum – supinum
+  const forms: Form[] = ['infinitive', 'presens', 'preteritum', 'supinum'];
+  const parts = forms.map(form => ({
+    form,
+    text: form === targetForm ? '_____' : conjugated[form],
+    isMissing: form === targetForm
+  }));
+  
+  const display = parts.map(p => p.text).join(' – ');
+  
+  return {
+    display,
+    missingForm: targetForm,
+    patternParts: parts
+  };
+}
+
+// Get form label for display
+export function getFormLabel(form: Form): string {
+  const labels: Record<Form, string> = {
+    infinitive: 'Infinitive',
+    presens: 'Present',
+    preteritum: 'Past',
+    supinum: 'Supine (perfect)',
+    imperativ: 'Imperative (command)',
+  };
+  return labels[form];
+}
+
+// Get form hint/description
+export function getFormHint(form: Form): string {
+  const hints: Record<Form, string> = {
+    infinitive: 'The basic form (to...)',
+    presens: 'Present tense (now)',
+    preteritum: 'Past tense (then)',
+    supinum: 'Perfect form (has/have...)',
+    imperativ: 'Command form (do it!)',
+  };
+  return hints[form];
+}
+
 // Example sentences
 export function getExampleSentence(infinitive: string, form: Form): string {
   const examples: Record<string, Record<Form, string>> = {
