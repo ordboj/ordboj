@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SrsState, initializeSrsState, calculateNextReview, isDue, Grade } from '@/lib/srs';
 import { getVerbs, Form } from '@/lib/verbs';
 
@@ -65,7 +65,7 @@ export function useSrsProgress() {
   };
 
   // Get due items
-  const getDueItems = async (): Promise<PracticeItem[]> => {
+  const getDueItems = useCallback(async (): Promise<PracticeItem[]> => {
     const forms: Form[] = ["presens", "preteritum", "supinum", "imperativ"];
     const dueItems: PracticeItem[] = [];
 
@@ -86,7 +86,7 @@ export function useSrsProgress() {
     });
 
     return dueItems;
-  };
+  }, [srsStates]);
 
   // Record answer
   const recordAnswer = (itemId: string, grade: Grade) => {

@@ -28,7 +28,7 @@ export default function Practice() {
       }
     };
     loadDueItems();
-  }, [isLoading, getDueItems]);
+  }, [isLoading]);
 
   const handleAnswer = (grade: Grade) => {
     const currentItem = dueItems[currentIndex];

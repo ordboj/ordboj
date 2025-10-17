@@ -23,7 +23,7 @@ export default function Home() {
       }
     };
     loadDueCount();
-  }, [isLoading, getDueItems]);
+  }, [isLoading]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
