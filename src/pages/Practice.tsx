@@ -13,9 +13,10 @@ export default function Practice() {
   const { getDueItems, recordAnswer } = useSrsProgress();
   const { settings } = useSettings();
   
-  const [dueItems, setDueItems] = useState(getDueItems());
+  const [dueItems, setDueItems] = useState<ReturnType<typeof getDueItems>>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [practiceComplete, setPracticeComplete] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     const items = getDueItems();
@@ -23,7 +24,8 @@ export default function Practice() {
     if (items.length === 0) {
       setPracticeComplete(true);
     }
-  }, []);
+    setIsInitializing(false);
+  }, [getDueItems]);
 
   const handleAnswer = (grade: Grade) => {
     const currentItem = dueItems[currentIndex];
@@ -39,6 +41,16 @@ export default function Practice() {
   const progressPercent = dueItems.length > 0
     ? ((currentIndex + 1) / dueItems.length) * 100
     : 100;
+
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-muted-foreground">Loading practice cards...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (practiceComplete) {
     return (
@@ -58,6 +70,10 @@ export default function Practice() {
         </div>
       </div>
     );
+  }
+
+  if (dueItems.length === 0 || !dueItems[currentIndex]) {
+    return null;
   }
 
   const currentItem = dueItems[currentIndex];
