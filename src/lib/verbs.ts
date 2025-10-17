@@ -55,6 +55,42 @@ export async function getVerbs(): Promise<Verb[]> {
   return loadVerbs();
 }
 
+// Get all conjugated verbs efficiently (reads CSV once)
+export async function getAllConjugatedVerbs(): Promise<ConjugatedVerb[]> {
+  try {
+    const response = await fetch('/data/swedish_verbs.csv');
+    const text = await response.text();
+    const lines = text.trim().split('\n');
+    
+    // Skip header and parse all verbs
+    const conjugatedVerbs: ConjugatedVerb[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const parts = parseCSVLine(lines[i]);
+      const [cefr, , csvInfinitive, imperativ, presens, preteritum, supinum] = parts;
+      
+      // Clean infinitive
+      const cleanInfinitive = csvInfinitive?.replace(/\s*\([^)]*\)/g, '').trim();
+      
+      if (cleanInfinitive) {
+        conjugatedVerbs.push({
+          id: String(i),
+          infinitive: cleanInfinitive,
+          presens: presens || "(not available)",
+          preteritum: preteritum || "(not available)",
+          supinum: supinum || "(not available)",
+          imperativ: imperativ || "(not available)",
+          cefr
+        });
+      }
+    }
+    
+    return conjugatedVerbs;
+  } catch (error) {
+    console.error('Failed to load conjugated verbs:', error);
+    return [];
+  }
+}
+
 // Parse CSV line safely
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];

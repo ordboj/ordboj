@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Search, ArrowUpDown } from 'lucide-react';
-import { getVerbs, ConjugatedVerb, conjugateVerb } from '@/lib/verbs';
+import { getAllConjugatedVerbs, ConjugatedVerb } from '@/lib/verbs';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { VerbDetailsModal } from '@/components/VerbDetailsModal';
@@ -34,10 +34,7 @@ export default function Progress() {
   useEffect(() => {
     const loadVerbs = async () => {
       setIsLoading(true);
-      const allVerbs = await getVerbs();
-      const conjugated = await Promise.all(
-        allVerbs.map(async (verb) => await conjugateVerb(verb.infinitive))
-      );
+      const conjugated = await getAllConjugatedVerbs();
       setVerbs(conjugated);
       setIsLoading(false);
     };
