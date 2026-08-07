@@ -1,126 +1,43 @@
-# ordboj
+# Ordböj
 
-Build a colorful, mobile-friendly web app to help users practice Swedish verb conjugations using an SRS (Spaced Repetition System).
-The app should feel fun and simple, like Memrise — but focused entirely on Swedish verbs.
-Include typing practice, multiple-choice mode, and Swedish pronunciation for each form.
+A colorful, mobile-friendly web app for practicing Swedish verb conjugations with spaced repetition (SRS). Fun and simple, like Memrise — but focused entirely on Swedish verbs.
 
-🧠 Core Functionality
+## Features
 
-1. Built-in Verb List (Hardcoded Data)
-The app includes a preloaded JSON array of common Swedish verbs (A1–B1).
-Example seed:
+- **Verb data** — a built-in set of common Swedish verbs (A1–C2), each tagged with a CEFR level, stored in `src/data/verbData.ts`.
+- **All major forms** — infinitive, presens, preteritum, supinum, imperativ.
+- **Two practice modes** — typing and multiple choice, switchable in Settings.
+- **Pronunciation** — Web Speech API with a Swedish voice when available; autoplay and mute are configurable.
+- **SRS scheduling** — an SM-2 (Anki-style) algorithm tracks repetitions, interval, ease factor and due date per verb+form item.
+- **Progress page** — due counts, streaks and per-verb scheduling state.
+- **Offline-first** — all progress and settings live in `localStorage`; no backend, no account.
+- **Playful UI** — single-card layout, large touch targets, progress bar, confetti on perfect answers.
 
-const verbs = [
-  { infinitive: "vara" },
-  { infinitive: "ha" },
-  { infinitive: "gå" },
-  { infinitive: "komma" },
-  { infinitive: "skriva" },
-  { infinitive: "läsa" },
-  { infinitive: "säga" },
-  { infinitive: "få" },
-  { infinitive: "kunna" },
-  { infinitive: "vilja" }
-];
+## Tech stack
 
+- Vite + React 18 + TypeScript
+- Tailwind CSS + shadcn/ui (Radix primitives)
+- React Router, TanStack Query
+- `canvas-confetti` for the celebration animation
 
-The structure should make it easy to extend this list later (up to ~1000 verbs).
+## Project layout
 
-2. Automatic Conjugation Generation
-For each infinitive, automatically generate all major Swedish forms:
+```
+src/
+  pages/        Home, Practice, Progress, Settings, NotFound
+  components/   PracticeCard, VerbDetailsModal, ConfettiEffect
+  components/ui shadcn/ui primitives
+  hooks/        useSettings, useSrsProgress
+  lib/          srs.ts (SM-2), verbs.ts (conjugation + lookup), speech.ts
+  data/         verbData.ts (hardcoded verb table)
+public/
+  data/         swedish_verbs.csv (source data the verb table was generated from)
+```
 
-Infinitive
+## Data model
 
-Presens
-
-Preteritum
-
-Supinum
-
-Imperativ
-Optionally show Perfekt (har + supinum) examples.
-If a form cannot be generated, show “(not available yet)” instead of failing.
-
-3. Practice Modes
-Two modes for each exercise:
-
-Typing: user types the correct conjugation.
-
-Multiple Choice: user selects one of four options.
-
-After each answer:
-
-Give visual feedback (green ✅ / red ❌).
-
-Play pronunciation for the correct form using Web Speech API (Swedish voice if available).
-
-Optionally display an example sentence (toggle in settings).
-
-4. SRS Scheduling
-Use a lightweight SM-2 algorithm (Anki-style).
-Each verb+form item stores:
-
-repetitions
-
-intervalDays
-
-easeFactor
-
-dueAt
-
-lastGrade
-
-After each attempt, update scheduling according to user accuracy (Again / Hard / Good / Easy).
-Show “Due now” count on home screen.
-
-5. Local Progress Storage
-Store all user progress locally using IndexedDB or localStorage.
-
-Works fully offline.
-
-Keep user’s SRS schedule, answers, and preferences persistent.
-
-Include “Backup / Restore” buttons in Settings (export/import JSON).
-
-6. UI & UX
-
-Colorful and playful, optimized for phones and iPads.
-
-Single-card layout per question:
-
-verb prompt at top,
-
-input or options in middle,
-
-feedback + Next button at bottom.
-
-Progress bar at top.
-
-Rounded edges, soft shadows, large touch-friendly buttons.
-
-Confetti animation for perfect answers.
-
-Minimal navigation: Home → Practice → Settings.
-
-Optional light/dark theme toggle.
-
-🧩 Settings
-
-Mode toggle (Typing / Multiple Choice)
-
-Example sentences on/off
-
-Audio autoplay on/off
-
-Interface language (EN / SV)
-
-Daily goal (optional, no gamification)
-
-📦 Persistence Model
-
-Use these entities internally:
-
-type Verb = { id: string; infinitive: string; };
+```ts
+type Verb = { id: string; infinitive: string; cefr?: string };
 type Form = "infinitive" | "presens" | "preteritum" | "supinum" | "imperativ";
 type SrsState = {
   itemId: string;
@@ -130,38 +47,27 @@ type SrsState = {
   dueAt: number;
   lastGrade?: number;
 };
+```
 
-✅ Acceptance Criteria
+## Settings
 
-I can open the app on my phone or iPad and immediately practice verbs.
-
-The app generates Swedish conjugations automatically.
-
-I can type or select answers and hear Swedish pronunciation.
-
-My progress and SRS data persist between sessions, even offline.
-
-The interface is colorful, simple, and touch-friendly.
-
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://ordboj.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/13d3d930-a1b8-4969-b581-4eccf57aa707).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+Practice mode, example sentences on/off, audio autoplay, mute, interface language (EN / SV), daily goal, and which CEFR levels to draw verbs from.
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Requires Node.js and npm.
 
 ```sh
 git clone <this-repository-url>
-cd <repository-name>
-npm i
+cd ordboj
+npm install
 npm run dev
+```
+
+The dev server runs on port 8080.
+
+```sh
+npm run build     # production build
+npm run preview   # serve the build locally
+npm run lint      # eslint
 ```
