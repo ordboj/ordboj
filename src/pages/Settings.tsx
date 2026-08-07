@@ -1,12 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Download, Upload, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Upload, Trash2, Sun, Moon, Monitor } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { toast } from 'sonner';
@@ -16,6 +23,12 @@ export default function Settings() {
   const { settings, updateSettings } = useSettings();
   const { exportData, importData, resetProgress } = useSrsProgress();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const { theme, setTheme } = useTheme();
+  // next-themes only knows the resolved theme after mount (it reads
+  // localStorage/matchMedia client-side); guard the trigger's value so we
+  // never render a value the Select doesn't recognize during that gap.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const handleExport = () => {
     const data = exportData();
@@ -66,16 +79,53 @@ export default function Settings() {
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="gap-2"
-          >
+          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
           <h1 className="text-3xl font-bold text-primary">Settings</h1>
         </div>
+
+        {/* Appearance */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Appearance</CardTitle>
+            <CardDescription>Choose how Ordböj looks</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="theme">Theme</Label>
+              <Select
+                value={mounted ? (theme ?? 'system') : 'system'}
+                onValueChange={(value: 'light' | 'dark' | 'system') => setTheme(value)}
+              >
+                <SelectTrigger id="theme">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">
+                    <span className="flex items-center gap-2">
+                      <Sun className="w-4 h-4" />
+                      Light
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="dark">
+                    <span className="flex items-center gap-2">
+                      <Moon className="w-4 h-4" />
+                      Dark
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="system">
+                    <span className="flex items-center gap-2">
+                      <Monitor className="w-4 h-4" />
+                      System
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Practice Settings */}
         <Card>
@@ -88,7 +138,7 @@ export default function Settings() {
               <Label htmlFor="practice-mode">Practice Mode</Label>
               <Select
                 value={settings.practiceMode}
-                onValueChange={(value: 'typing' | 'multiple-choice') => 
+                onValueChange={(value: 'typing' | 'multiple-choice') =>
                   updateSettings({ practiceMode: value })
                 }
               >
@@ -131,7 +181,7 @@ export default function Settings() {
                       onCheckedChange={(checked) => {
                         const newLevels = checked
                           ? [...settings.cefrLevels, level]
-                          : settings.cefrLevels.filter(l => l !== level);
+                          : settings.cefrLevels.filter((l) => l !== level);
                         updateSettings({ cefrLevels: newLevels });
                       }}
                     />
@@ -145,7 +195,8 @@ export default function Settings() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                Select which difficulty levels you want to practice. At least one level must be selected.
+                Select which difficulty levels you want to practice. At least one level must be
+                selected.
               </p>
             </div>
           </CardContent>
@@ -158,20 +209,12 @@ export default function Settings() {
             <CardDescription>Backup and restore your progress</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2"
-              onClick={handleExport}
-            >
+            <Button variant="outline" className="w-full justify-start gap-2" onClick={handleExport}>
               <Download className="w-4 h-4" />
               Export Progress
             </Button>
 
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2"
-              onClick={handleImport}
-            >
+            <Button variant="outline" className="w-full justify-start gap-2" onClick={handleImport}>
               <Upload className="w-4 h-4" />
               Import Progress
             </Button>
