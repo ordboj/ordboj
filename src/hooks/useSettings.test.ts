@@ -1,33 +1,33 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { renderHook, waitFor, act } from "@testing-library/react";
-import { useSettings } from "@/hooks/useSettings";
+import { describe, it, expect, beforeEach } from 'vitest';
+import { renderHook, waitFor, act } from '@testing-library/react';
+import { useSettings } from '@/hooks/useSettings';
 
-const STORAGE_KEY = "swedish-verbs-settings";
+const STORAGE_KEY = 'swedish-verbs-settings';
 
 const DEFAULTS = {
-  practiceMode: "typing",
+  practiceMode: 'typing',
   showExamples: false,
   autoplayAudio: true,
   muteAudio: false,
-  interfaceLanguage: "en",
+  interfaceLanguage: 'en',
   dailyGoal: 20,
-  cefrLevels: ["A1", "A2", "B1", "B2", "C1", "C2"],
+  cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
 };
 
 beforeEach(() => {
   localStorage.clear();
 });
 
-describe("defaults", () => {
-  it("starts from DEFAULT_SETTINGS when localStorage is empty", async () => {
+describe('defaults', () => {
+  it('starts from DEFAULT_SETTINGS when localStorage is empty', async () => {
     const { result } = renderHook(() => useSettings());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.settings).toEqual(DEFAULTS);
   });
 });
 
-describe("persistence", () => {
-  it("writes updates to the documented localStorage key", async () => {
+describe('persistence', () => {
+  it('writes updates to the documented localStorage key', async () => {
     const { result } = renderHook(() => useSettings());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -40,7 +40,7 @@ describe("persistence", () => {
     expect(stored).toEqual({ ...DEFAULTS, dailyGoal: 5 });
   });
 
-  it("merges a partial update onto the previous settings rather than replacing them", async () => {
+  it('merges a partial update onto the previous settings rather than replacing them', async () => {
     const { result } = renderHook(() => useSettings());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -59,8 +59,8 @@ describe("persistence", () => {
   });
 });
 
-describe("forward-compat: merging stored settings over defaults", () => {
-  it("fills in missing keys from DEFAULT_SETTINGS when the stored object is older/partial", async () => {
+describe('forward-compat: merging stored settings over defaults', () => {
+  it('fills in missing keys from DEFAULT_SETTINGS when the stored object is older/partial', async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ dailyGoal: 99 }));
 
     const { result } = renderHook(() => useSettings());
@@ -69,23 +69,23 @@ describe("forward-compat: merging stored settings over defaults", () => {
     expect(result.current.settings).toEqual({ ...DEFAULTS, dailyGoal: 99 });
   });
 
-  it("keeps unknown extra fields from a newer stored object without crashing", async () => {
+  it('keeps unknown extra fields from a newer stored object without crashing', async () => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ ...DEFAULTS, someFutureField: "from-a-newer-build" })
+      JSON.stringify({ ...DEFAULTS, someFutureField: 'from-a-newer-build' }),
     );
 
     const { result } = renderHook(() => useSettings());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.settings).toMatchObject(DEFAULTS);
-    expect((result.current.settings as Record<string, unknown>).someFutureField).toBe(
-      "from-a-newer-build"
+    expect((result.current.settings as unknown as Record<string, unknown>).someFutureField).toBe(
+      'from-a-newer-build',
     );
   });
 
-  it("does not throw and falls back to defaults when the stored value is malformed JSON", async () => {
-    localStorage.setItem(STORAGE_KEY, "{not json");
+  it('does not throw and falls back to defaults when the stored value is malformed JSON', async () => {
+    localStorage.setItem(STORAGE_KEY, '{not json');
 
     const { result } = renderHook(() => useSettings());
     await waitFor(() => expect(result.current.isLoading).toBe(false));

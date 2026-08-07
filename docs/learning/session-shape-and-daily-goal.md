@@ -6,42 +6,65 @@ empty?
 
 ## Decision
 
-One number, `dailyGoal`, default **12 items**, range 5–50, adjustable in steps of
+The learner picks **minutes per day**, not a card count. Onboarding asks once, and
+Settings keeps the control. The app derives the card goal at five items per minute
+— roughly 12 seconds per typed conjugation including feedback:
 
-1. A session ends when the learner has answered `dailyGoal` items **today** or the
-   queue empties, whichever comes first. Not a timer. Twelve typed conjugations at
-   roughly 8–12 seconds each is 100–150 seconds — one bus stop, one kettle.
+```
+dailyGoal = minutesPerDay * 5
+```
 
-Doing exactly one session hits the goal. That is deliberate: the goal and the
-session are the same unit, so the learner never has to reason about "how much of
-my goal is left". A bad day costs one session, not a negotiation.
+| Preset                    | `minutesPerDay` | `dailyGoal` |
+| ------------------------- | --------------- | ----------- |
+| Just a minute or two      | 2               | 10          |
+| A short session           | 5               | 25          |
+| **Ten minutes (default)** | **10**          | **50**      |
+| Serious                   | 20              | 100         |
 
-After the queue is empty or the goal is met, the learner gets a **Keep practising**
-button that opens _free practice_: items drawn from the nearest future due dates,
-in the same card UI, which **records nothing** — no `recordAnswer`, no `dueAt`
-change, no ease change, no daily count. Studying ahead of schedule is the classic
-way learners destroy their own spacing, and the fix is to let them do it without
-letting it touch the schedule. Anki solves the same problem with filtered decks
-set to "no rescheduling".
+`dailyGoal` is also directly editable in Settings (range 5–120) for anyone who
+would rather think in cards; editing it detaches it from the preset.
 
-One exception writes state: if items come **genuinely due later the same day**
-(interval-1 items scheduled for the evening), offering them is correct. Those go
-into an "Extra reviews (N)" round that does record answers and does count. The
-distinction an engineer implements is exactly `dueAt <= now`.
+A **day** ends when `answeredToday >= dailyGoal` or the queue empties. A **sitting**
+is capped at **15 items**, after which the card is replaced by
+`Keep going (N left today)` / `Done for now`. Ten minutes of study is a legitimate
+choice; ten minutes of study with no exit is a wall. The sitting cap costs one tap
+to dismiss and gives the learner a clean stopping point roughly every three
+minutes. Progress persists, so stopping mid-day costs nothing.
 
-| Parameter                                   | Value                                                |
-| ------------------------------------------- | ---------------------------------------------------- |
-| `dailyGoal` default                         | 12                                                   |
-| `dailyGoal` range                           | 5–50                                                 |
-| session end condition                       | `answeredToday >= dailyGoal \|\| queue.length === 0` |
-| free-practice batch size                    | 5 items, repeatable                                  |
-| free practice writes SRS state              | no                                                   |
-| lapse re-shows count toward `answeredToday` | no (see [[lapse-handling]])                          |
-| day boundary                                | local midnight                                       |
+Not a timer. A countdown pushes the learner toward fast recognition and away from
+effortful retrieval, and effortful retrieval is what produces retention. A timer
+also makes the hint button and the reveal-and-move-on flow feel expensive, which
+is backwards.
+
+After the goal is met or the queue is empty, **Keep practising** opens _free
+practice_: items drawn from the nearest future due dates, same card UI, which
+**records nothing** — no `recordAnswer`, no `dueAt` change, no ease change, no
+daily count. Studying ahead of schedule is the classic way learners destroy their
+own spacing, and the fix is to let them do it without letting it touch the
+schedule. Anki solves the same problem with filtered decks set to "no
+rescheduling".
+
+One exception writes state: items that come **genuinely due later the same day**
+(interval-1 items scheduled for the evening) are offered as an "Extra reviews (N)"
+round that does record and does count. The distinction an engineer implements is
+exactly `dueAt <= now`.
+
+| Parameter                               | Value                                                |
+| --------------------------------------- | ---------------------------------------------------- |
+| `minutesPerDay` default                 | 10                                                   |
+| `minutesPerDay` presets                 | 2 / 5 / 10 / 20                                      |
+| `itemsPerMinute`                        | 5 (constant)                                         |
+| `dailyGoal`                             | `minutesPerDay * 5`, overridable, range 5–120        |
+| sitting cap                             | 15 items, then continue/stop prompt                  |
+| day end condition                       | `answeredToday >= dailyGoal \|\| queue.length === 0` |
+| free-practice batch size                | 5 items, repeatable                                  |
+| free practice writes SRS state          | no                                                   |
+| lapse re-shows count toward `dailyGoal` | no (see [[lapse-handling]])                          |
+| day boundary                            | local midnight                                       |
 
 `answeredToday` is a new persisted value: `{ date: 'YYYY-MM-DD', count: number }`
-in `localStorage`, reset when the local date string changes. It is also the input
-to [[streak-mechanics]] and to the capacity gate in [[new-vs-review-mix]].
+in `localStorage`, reset when the local date string changes. It feeds
+[[streak-mechanics]] and the capacity gate in [[new-vs-review-mix]].
 
 ## What the code does today
 
@@ -65,50 +88,51 @@ after-the-queue path: the only button is **Back to Home**.
 `useSettings.ts` and in tests, nowhere else. It was never a decision; it was a
 scaffold field.
 
-## Why 12 and not 20
+## Why minutes rather than a card count
 
-The default should be a number the learner clears on their worst realistic day,
-because the first missed goal is what teaches them the app is optional. Twenty
-typed items is three to four minutes of sustained attention plus the failure
-handling; twelve is under two. If the learner routinely wants more, they will
-raise it — a raised goal is a commitment they chose, which is a different
-psychological object from a default they inherited and failed.
+Card counts are opaque before you have done any cards. A learner cannot tell
+whether 20 is a lot; they can tell whether ten minutes is a lot. Asking in the
+unit the learner already budgets in gets a truthful answer, and the truthful
+answer is what makes the goal survivable — the first missed goal is what teaches
+the learner the app is optional.
 
-The runner-up was a **timer** (two minutes, end wherever you are). It lost on
-desirable difficulty: a countdown pushes the learner toward fast recognition and
-away from effortful retrieval, and effortful retrieval is the thing that produces
-retention. A timer also makes the hint button and the reveal-and-move-on flow feel
-expensive, which is exactly backwards.
+Five items per minute is a planning constant, not a measurement of this learner.
+It should be replaced by their observed median seconds-per-item once
+`answeredToday` logging exists: `dailyGoal = round(minutesPerDay * 60 /
+medianSecondsPerItem)`, recomputed weekly, clamped to ±40% of the preset value so
+a few slow days cannot collapse the goal to nothing.
 
-The second runner-up was **end on empty queue only** — the current behaviour with
-a cap upstream. It is nearly identical in practice once
-[[new-vs-review-mix]] caps the queue at 30, but it gives the learner no stable
-number to plan around, and on a heavy backlog day it produces a 30-item sitting
-with no exit that counts as success.
+The runner-up was **a fixed 12-card default with no time question at all** — one
+number, no onboarding step, and the property that one sitting equals one day. It
+lost because it silently decides how much of the learner's day the app is worth,
+and the human's answer was that this is the learner's call. The sitting cap keeps
+the useful half of that design: 15 items is still a phone-queue-sized unit, it is
+just no longer the whole day for someone who wants more.
 
 ## The resume problem
 
-Because the goal is per-day and not per-session, closing the app mid-queue is
+Because the goal is per-day and not per-sitting, closing the app mid-queue is
 free: `answeredToday` persists, and reopening resumes with the remaining goal.
 `currentIndex` is component state and is lost, which is fine — the queue is
 rebuilt from `dueAt`, and answered items are no longer due.
 
 ## How we would know this was wrong
 
-- The learner raises `dailyGoal` above 25 within two weeks: 12 is too small, ship
-  a default of 20 and revisit.
-- The learner hits **Keep practising** in more than half of sessions: the goal is
-  under-serving them and free practice is absorbing demand that should be real
-  reviews — raise `newPerDayMax` rather than `dailyGoal`.
-- Median items answered per session settles well below 12 (say 7): the sitting is
-  too long, drop to 8.
-- Sessions abandoned mid-queue on days when the backlog display shows "+N
-  waiting": the backlog copy is producing dread rather than reassurance; hide the
-  secondary count entirely.
+- Median items per day settles far below the chosen `dailyGoal` for a week: the
+  preset was aspirational. Offer a one-tap "adjust to what you actually do" rather
+  than letting the goal stand and be missed.
+- The learner dismisses the sitting cap every single time: 15 is too small for
+  them, raise to 25 or make the cap a preference.
+- **Keep practising** used in more than half of sessions: the goal is
+  under-serving them; raise `newPerDayMax` rather than `dailyGoal`, since the
+  appetite is for new material, not more repetition.
+- Sessions abandoned mid-queue on days when the backlog shows "+N waiting": the
+  backlog copy is producing dread rather than reassurance; hide the secondary
+  count entirely.
 
 ## Routed to
 
-`frontend-expert` — session end, completion screen, free-practice mode, the
-`Keep practising` and `Extra reviews` paths, goal control in Settings.
-`srs-engine` — `answeredToday` persistence and the `dueAt <= now` split between
-free practice and extra reviews.
+`frontend-expert` — onboarding minutes question, Settings control, sitting cap and
+continue/stop prompt, completion screen, free-practice and extra-reviews paths.
+`srs-engine` — `answeredToday` persistence, `dailyGoal` derivation, and the
+`dueAt <= now` split between free practice and extra reviews.

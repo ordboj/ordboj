@@ -28,16 +28,16 @@ Roles: `product-manager` (scope/specs), three business owners
 Agents must not edit files another agent owns. Report the defect to the lead
 instead; the lead routes it.
 
-| Owner | Files |
-|---|---|
-| `swedish-linguist` | `src/data/verbData.ts`, `public/data/swedish_verbs.csv`, `src/lib/verbs.ts`, Swedish strings |
-| `srs-engine` | `src/lib/srs.ts`, `src/hooks/useSrsProgress.ts` |
-| `staff-engineer` | `index.html`, `src/main.tsx`, `src/App.tsx`, `tsconfig*.json`, `eslint.config.js`, `src/lib/utils.ts` |
-| `devops` | `vite.config.ts`, `postcss.config.js`, `package.json`, `.github/**`, PWA/manifest/service worker, deploy config |
-| `frontend-expert` | `src/pages/**`, `src/components/*.tsx`, `src/hooks/useSettings.ts`, `use-mobile.tsx`, `use-toast.ts`, `src/lib/speech.ts`, `tailwind.config.ts`, `src/index.css` |
-| `qa` | `*.test.ts(x)`, `src/test/**`, `vitest.config.ts` |
-| `learning-designer` | `docs/learning/**` — decision notes only, no production code |
-| `product-manager` | `docs/product/**` — specs and decisions only, no production code |
+| Owner               | Files                                                                                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `swedish-linguist`  | `src/data/verbData.ts`, `public/data/swedish_verbs.csv`, `src/lib/verbs.ts`, Swedish strings                                                                     |
+| `srs-engine`        | `src/lib/srs.ts`, `src/hooks/useSrsProgress.ts`                                                                                                                  |
+| `staff-engineer`    | `index.html`, `src/main.tsx`, `src/App.tsx`, `tsconfig*.json`, `eslint.config.js`, `src/lib/utils.ts`                                                            |
+| `devops`            | `vite.config.ts`, `postcss.config.js`, `package.json`, `.github/**`, PWA/manifest/service worker, deploy config                                                  |
+| `frontend-expert`   | `src/pages/**`, `src/components/*.tsx`, `src/hooks/useSettings.ts`, `use-mobile.tsx`, `use-toast.ts`, `src/lib/speech.ts`, `tailwind.config.ts`, `src/index.css` |
+| `qa`                | `*.test.ts(x)`, `src/test/**`, `vitest.config.ts`                                                                                                                |
+| `learning-designer` | `docs/learning/**` — decision notes only, no production code                                                                                                     |
+| `product-manager`   | `docs/product/**` — specs and decisions only, no production code                                                                                                 |
 
 `src/components/ui/**` is generated shadcn/ui. Nobody edits it in place;
 compose around it. Exception: `devops` may delete unused primitives during
@@ -46,8 +46,8 @@ dependency cleanup, with grep evidence.
 ## Task tracking — GitHub Projects
 
 All tasks live in the **Ordböj** GitHub Project:
-<https://github.com/users/tugrulcan/projects/2> (project number `2`, owner
-`tugrulcan`, linked repo `tugrulcan/ordboj`). Status is tracked there, not in
+<https://github.com/orgs/ordboj/projects/1> (project number `1`, owner
+`ordboj`, linked repo `ordboj/ordboj`). Status is tracked there, not in
 chat.
 
 - Every task an agent defines or receives becomes a GitHub Issue added to
@@ -61,17 +61,17 @@ Recipes (lead only):
 
 ```sh
 # create issue + add to project
-gh issue create --repo tugrulcan/ordboj --title "..." --body "..."
-gh project item-add 2 --owner tugrulcan --url <issue-url>
+gh issue create --repo ordboj/ordboj --title "..." --body "..."
+gh project item-add 1 --owner ordboj --url <issue-url>
 
-# move status (field/option ids for project 2)
-gh project item-edit --project-id PVT_kwHOAMCITM4Bft1t \
-  --id <item-id> --field-id PVTSSF_lAHOAMCITM4Bft1tzhZ-xp0 \
+# move status (field/option ids for org project 1)
+gh project item-edit --project-id PVT_kwDOEr3qds4BfuEP \
+  --id <item-id> --field-id PVTSSF_lADOEr3qds4BfuEPzhZ--ms \
   --single-select-option-id <opt>
 # Todo=f75ad846  In Progress=47fc9ee4  Done=98236657
 
 # find <item-id>
-gh project item-list 2 --owner tugrulcan --format json
+gh project item-list 1 --owner ordboj --format json
 ```
 
 Close the issue (`gh issue close`) when work is verified, then set status

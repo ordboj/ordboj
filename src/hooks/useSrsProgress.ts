@@ -4,7 +4,7 @@ import { getVerbs, Form, Verb, conjugateVerb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
-interface PracticeItem {
+export interface PracticeItem {
   verbId: string;
   infinitive: string;
   form: Form;
@@ -20,7 +20,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
     const initializeStates = async () => {
       const stored = localStorage.getItem(STORAGE_KEY);
       let loadedStates: Record<string, SrsState> = {};
-      
+
       if (stored) {
         try {
           loadedStates = JSON.parse(stored);
@@ -28,13 +28,13 @@ export function useSrsProgress(cefrLevels?: string[]) {
           console.error('Failed to parse SRS data', e);
         }
       }
-      
+
       // Initialize all verb+form combinations
-      const forms: Form[] = ["presens", "preteritum", "supinum", "imperativ"];
+      const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
       const newStates: Record<string, SrsState> = { ...loadedStates };
-      
+
       const verbs = await getVerbs();
-      
+
       for (const verb of verbs) {
         for (const form of forms) {
           const itemId = `${verb.id}-${form}`;
@@ -67,26 +67,27 @@ export function useSrsProgress(cefrLevels?: string[]) {
 
   // Get due items (randomized and filtered by CEFR level)
   const getDueItems = useCallback(async (): Promise<PracticeItem[]> => {
-    const forms: Form[] = ["presens", "preteritum", "supinum", "imperativ"];
+    const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
     const dueItems: PracticeItem[] = [];
 
     const allVerbs = await getVerbs();
-    
+
     // Filter verbs by CEFR level if specified
-    const verbs = cefrLevels && cefrLevels.length > 0
-      ? allVerbs.filter(verb => verb.cefr && cefrLevels.includes(verb.cefr))
-      : allVerbs;
+    const verbs =
+      cefrLevels && cefrLevels.length > 0
+        ? allVerbs.filter((verb) => verb.cefr && cefrLevels.includes(verb.cefr))
+        : allVerbs;
 
     // Check each verb's forms for availability
     for (const verb of verbs) {
       const conjugated = await conjugateVerb(verb.infinitive);
-      
+
       for (const form of forms) {
         // Skip forms that are not available
-        if (conjugated[form] === "(not available)" || !conjugated[form]) {
+        if (conjugated[form] === '(not available)' || !conjugated[form]) {
           continue;
         }
-        
+
         const itemId = `${verb.id}-${form}`;
         const state = srsStates[itemId];
         if (state && isDue(state)) {
@@ -113,7 +114,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
   const recordAnswer = (itemId: string, grade: Grade) => {
     const currentState = srsStates[itemId] || initializeSrsState(itemId);
     const newState = calculateNextReview(currentState, grade);
-    setSrsStates(prev => ({
+    setSrsStates((prev) => ({
       ...prev,
       [itemId]: newState,
     }));

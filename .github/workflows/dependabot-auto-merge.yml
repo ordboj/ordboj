@@ -1,0 +1,42 @@
+name: Dependabot auto-merge
+
+# Static SPA, no backend, no secrets that matter to this workflow: it only
+# ever needs to read PR metadata and act on Dependabot's own PRs, so this
+# runs on `pull_request` (not `pull_request_target`) and never touches repo
+# secrets or checks out untrusted code.
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    # Only ever acts on PRs opened by Dependabot itself.
+    if: github.actor == 'dependabot[bot]'
+    timeout-minutes: 5
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      # For grouped PRs, fetch-metadata reports the highest-severity update
+      # type across every dependency bundled into the PR, so a group that
+      # contains even one major bump is excluded here along with a
+      # single-dependency major PR. Only patch and minor ever reach
+      # `gh pr merge --auto`; major bumps fall through with no action and
+      # wait for a human.
+      - name: Approve and enable auto-merge for patch/minor
+        if: |
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        run: |
+          gh pr review --approve "$PR_URL"
+          gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -5,35 +5,57 @@ does it show, and what happens when the review backlog exceeds the day's budget?
 
 ## Decision
 
-New items are gated by remaining review capacity, not by a fixed rate. Each day
-the app computes `reviewBudget = 30` due items; whatever is left over after the
-day's genuinely-due reviews buys new items at three reviews per new item, capped
-at six:
+New items are gated by remaining review capacity, not by a fixed rate. The
+learner's chosen daily budget (`dailyGoal`, derived from a minutes-per-day
+setting — see [[session-shape-and-daily-goal]]) is the whole day's budget. Reviews
+are served first; whatever budget is left over buys new items at three reviews per
+new item:
 
 ```
-reviewsDueToday   = count(items where lastGrade !== undefined && dueAt <= endOfLocalDay)
-newAllowedToday   = clamp(0, 6, floor((30 - min(reviewsDueToday, 30)) / 3))
+reviewsDueToday = count(items where lastGrade !== undefined && dueAt <= endOfLocalDay)
+newPerDayMax    = round(dailyGoal * 0.3)
+newAllowedToday = clamp(0, newPerDayMax,
+                        floor((dailyGoal - min(reviewsDueToday, dailyGoal)) / 3))
 ```
 
-An item that has never been answered is **not due**. It has no `dueAt` that
-matters; it enters the queue only through `newAllowedToday`. The session queue is
-reviews first (sorted `dueAt` ascending, most overdue first), then new items
-(sorted by verb order, which is CEFR-ascending), truncated at the daily goal.
+An item that has never been answered is **not due**. Its `dueAt` is irrelevant; it
+enters the queue only through `newAllowedToday`. The session queue is reviews
+first (sorted `dueAt` ascending, most overdue first), then new items (sorted by
+verb order, which is CEFR-ascending), truncated at `dailyGoal`.
 
-Concrete parameters:
+Every number scales off the one knob the learner sets:
 
-| Parameter           | Default | Range  | Stored in |
-| ------------------- | ------- | ------ | --------- |
-| `reviewBudget`      | 30      | 10–120 | settings  |
-| `newPerDayMax`      | 6       | 0–20   | settings  |
-| `reviewsPerNewItem` | 3       | fixed  | constant  |
-| backlog display cap | 30      | fixed  | UI        |
+| Minutes/day (onboarding) | `dailyGoal` | `newPerDayMax` | New items on day one |
+| ------------------------ | ----------- | -------------- | -------------------- |
+| 2                        | 10          | 3              | 3                    |
+| 5                        | 25          | 8              | 8                    |
+| **10 (default)**         | **50**      | **15**         | **15**               |
+| 20                       | 100         | 30             | 30                   |
 
-When more than 30 reviews are due, show the 30 most overdue and display
-`30 due today` with a muted secondary line `+N waiting`. Never surface the raw
-backlog number as the primary figure. New items are suppressed entirely
-(`newAllowedToday = 0`) until the backlog clears — the queue drains itself
-without the learner having to understand why.
+| Parameter           | Value                    | Range             | Stored in |
+| ------------------- | ------------------------ | ----------------- | --------- |
+| `dailyGoal`         | 50 (from 10 min/day)     | 5–120             | settings  |
+| `newPerDayMax`      | `round(dailyGoal * 0.3)` | overridable, 0–40 | settings  |
+| `reviewsPerNewItem` | 3                        | fixed             | constant  |
+| review queue cap    | `dailyGoal`              | —                 | derived   |
+| backlog display cap | `dailyGoal`              | —                 | derived   |
+
+When more due reviews exist than `dailyGoal`, show the `dailyGoal` most overdue
+and display `50 due today` with a muted secondary line `+N waiting`. Never surface
+the raw backlog as the primary figure. New items are suppressed entirely
+(`newAllowedToday = 0`) until the backlog clears — the queue drains itself without
+the learner having to understand why.
+
+`newPerDayMax` derives from `dailyGoal` but remains independently settable, so a
+learner who wants to front-load coverage can raise it and accept the review debt
+knowingly.
+
+## No deadline mode
+
+Considered and rejected on the human's instruction: no exam-countdown mode that
+works backwards from a test date and prioritises coverage over retention.
+Capacity-gated introduction is the only mode. A learner with a deadline raises
+`newPerDayMax` manually, which is the same lever with the tradeoff visible.
 
 ## What the code does today
 
@@ -64,38 +86,37 @@ the app's first screen is the abandonment screen.
 
 ## Options considered
 
-**Fixed new-per-day (Anki's model).** `newPerDay = 3`, `maxReviews = 30`, both
-constant. Cost to the learner: correct at steady state, wrong at the start. For
-the first three weeks the review load is far below 30, so the learner does three
-new items and a nearly empty queue, and concludes the app has nothing for them.
-Then at week eight the load crosses 30 and the backlog grows silently.
+**Fixed new-per-day (Anki's model).** Constant `newPerDay` and `maxReviews`. Cost
+to the learner: correct at steady state, wrong at the start. For the first weeks
+the review load is far below the cap, so the learner does a handful of new items
+and faces a nearly empty queue, and concludes the app has nothing for them. Later
+the load crosses the cap and the backlog grows silently.
 
-**Fixed daily total, split by ratio.** 20 items/day, 70% review / 30% new. Cost:
-when fewer than 14 reviews are due the ratio invents work; when more than 14 are
-due it starves reviews to protect a new-item quota, which is backwards — a review
-due today is worth more than a first exposure.
+**Fixed daily total, split by ratio.** 70% review / 30% new regardless of what is
+due. Cost: when few reviews are due the ratio invents work; when many are due it
+starves reviews to protect a new-item quota, which is backwards — a review due
+today is worth more than a first exposure.
 
 **Capacity-gated new items (chosen).** Cost: the introduction rate is not
 predictable to the learner, and it slows down exactly when the learner is
-struggling — which feels like punishment if unexplained. Mitigate with one line of
+struggling, which feels like punishment if unexplained. Mitigate with one line of
 copy: "New verbs unlock as your reviews clear." The rate is self-correcting
 without any server-side tuning, which is the binding constraint here.
 
-## Why 30 and 6
+## Why the budget is the goal, and why 30%
 
 The steady-state review load of an SRS is roughly ten reviews per item over the
 first year, so `reviews/day ≈ 10 × new/day` is the standard planning heuristic and
-matches Anki community measurements (7–12× depending on lapse rate). A 30-review
-budget therefore supports about three new items per day sustained, which is what
-the formula converges to once the collection matures. The cap of six exists for
-the early weeks, when the review load is genuinely small and a hard limit of three
-would make the app feel empty. Six new items is at most two verbs' worth of forms
-— see [[form-introduction-order]], which introduces one form per verb at a time.
+matches Anki community measurements (7–12× depending on lapse rate). Setting the
+review budget equal to `dailyGoal` and charging three reviews per new item makes
+the formula converge to `dailyGoal / 10` new items per day once the collection
+matures — about five per day at the default. `newPerDayMax` at 30% of the goal
+binds only in the early weeks, when the review load is genuinely small and the
+steady-state rate alone would make the app feel empty.
 
-At three new items per day, the 50-verb table takes roughly two months to
-introduce fully. That is the honest cost of a 12-item daily goal
-([[session-shape-and-daily-goal]]). Raising `newPerDayMax` raises it back, at the
-price of a review queue the learner will eventually stop clearing.
+At the 10-minute default the 50-verb table is introduced in under two weeks; at
+the 2-minute preset it takes about two months. That is the honest cost of a short
+budget, and it is now the learner's choice rather than ours.
 
 ## Interaction with the day boundary
 
@@ -109,12 +130,13 @@ anything.
 ## How we would know this was wrong
 
 - Sessions where the learner answers fewer than half the queued items, repeatedly.
-  The cap is still too high.
+  The chosen minutes-per-day is above what they actually do; prompt a re-pick
+  rather than silently lowering it.
 - `newAllowedToday` sits at 0 for more than five consecutive days on a learner who
-  is studying daily. The budget/ratio pair is mistuned; lower `reviewsPerNewItem`
-  to 2 before raising `reviewBudget`.
-- The learner manually raises `newPerDayMax` in settings within the first week.
-  The default is too conservative for a motivated user and should start at 10.
+  is studying daily. The ratio is mistuned; lower `reviewsPerNewItem` to 2 before
+  raising the goal.
+- The learner raises `newPerDayMax` above the derived value in the first week. The
+  30% default is too conservative for a motivated user.
 - Backlog grows monotonically across a fortnight of daily use. The 10:1 heuristic
   is wrong for this material (plausible — four forms of one verb are more
   confusable than four unrelated words) and `reviewsPerNewItem` must rise to 4.
@@ -124,5 +146,6 @@ log. No backend needed.
 
 ## Routed to
 
-`srs-engine` — queue construction, new/review separation, day-boundary due-ness.
+`srs-engine` — queue construction, new/review separation, derived parameters,
+day-boundary due-ness.
 `frontend-expert` — capped backlog display, "new verbs unlock" copy.
