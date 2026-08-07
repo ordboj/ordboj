@@ -295,7 +295,7 @@ ${RULES}`,
     `You are the merge agent for Dependabot PR #${p.number} in ${REPO}: "${p.title}" (${p.updateType}${p.grouped ? ', grouped' : ''}).
 Use the Bash tool. Steps:
 1. Check state first: gh pr view ${p.number} --repo ${REPO} --json state,mergeStateStatus,mergeable — if already merged/closed, return 'already-merged'.
-2. Safety check: gh pr view ${p.number} --repo ${REPO} --json commits — if ANY commit author is not dependabot[bot], this PR is code-changed: do NOT merge, return 'code-changed' with detail listing the extra commits.
+2. Safety check — DIFF-based, not author-based (gh pr update-branch creates merge commits authored by the token user, so commit authors are unreliable): run gh pr diff ${p.number} --repo ${REPO} --name-only. Pure bump = every file is a dependency manifest/lockfile (package.json, package-lock.json) or a workflow file for a github-actions bump (.github/workflows/*, .github/dependabot.yml). If ANY other file appears in the diff, this PR is code-changed: do NOT merge, return 'code-changed' with detail listing those files.
 3. Branch update:
    - conflicted → comment "@dependabot rebase" on the PR, wait ~2 minutes, re-check; if still conflicted after 10 minutes, park.
    - behind base → gh pr update-branch ${p.number} --repo ${REPO}
