@@ -1,4 +1,6 @@
-import { VERB_DATA } from '@/data/verbData';
+import { VERB_DATA, type Grupp } from '@/data/verbData';
+
+export type { Grupp };
 
 export type Form = "infinitive" | "presens" | "preteritum" | "supinum" | "imperativ";
 
@@ -22,6 +24,14 @@ export async function getVerbs(): Promise<Verb[]> {
     infinitive: verb.infinitive,
     cefr: verb.cefr
   }));
+}
+
+// Look up a verb's conjugation class ('1' | '2a' | '2b' | '3' | '4').
+// Returns undefined both for verbs not found and for rows in VERB_DATA
+// where the group is flagged as needing human review — callers must treat
+// both cases the same way (i.e. "unknown", never guessed).
+export function getVerbGrupp(infinitive: string): Grupp | undefined {
+  return VERB_DATA.find(v => v.infinitive === infinitive)?.grupp;
 }
 
 // Get all conjugated verbs efficiently (no file reads needed!)
