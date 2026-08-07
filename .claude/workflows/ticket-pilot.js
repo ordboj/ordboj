@@ -7,6 +7,10 @@ export const meta = {
   phases: [
     { title: 'Triage', detail: 'read issue, pick owner role, model, risk class' },
     { title: 'Implement', detail: 'owner-role agent in isolated worktree, opens PR' },
+    {
+      title: 'Assist',
+      detail: 'on needs-help, helper role agent contributes its own files to the branch',
+    },
     { title: 'QA', detail: 'qa agent adds tests to the PR branch (test files are qa-owned)' },
     { title: 'Review', detail: 'adversarial review of PR diff vs acceptance criteria' },
     { title: 'Ship', detail: 'watch CI, resolve rebase conflicts, merge or park' },
@@ -72,7 +76,16 @@ const TRIAGE_SCHEMA = {
 const IMPL_SCHEMA = {
   type: 'object',
   properties: {
-    status: { type: 'string', enum: ['pr-opened', 'blocked'] },
+    status: { type: 'string', enum: ['pr-opened', 'needs-help', 'blocked'] },
+    helpRole: {
+      type: 'string',
+      enum: ['swedish-linguist', 'srs-engine', 'staff-engineer', 'devops', 'frontend-expert', 'qa'],
+      description: 'only with status needs-help: which role owns the files the change needs',
+    },
+    helpRequest: {
+      type: 'string',
+      description: 'only with status needs-help: precise description of the change needed and why',
+    },
     branch: { type: 'string' },
     prNumber: { type: 'number' },
     prUrl: { type: 'string' },
@@ -153,7 +166,8 @@ You are already in an isolated git worktree. Steps:
 6. Open the PR: gh pr create --repo ${REPO} --title "<type>: <title> (#${n})" --body "Closes #${n}\n\n<what changed, why>\n\n<verification evidence>"
 7. Return status 'pr-opened' with branch, prNumber (from gh pr view --json number), prUrl, evidence.
 
-If you cannot proceed safely (needs files outside your ownership, uncertain Swedish, acceptance criteria ambiguous, tests cannot pass without weakening), do NOT push anything: return status 'blocked' with a precise blockReason.
+If the fix genuinely requires a change in files owned by ANOTHER role: do NOT edit those files. Finish and commit YOUR part, push the branch, open the PR as draft (gh pr create --draft ...), and return status 'needs-help' with helpRole and a precise helpRequest — a teammate agent of that role will be dispatched to the same branch.
+If you cannot proceed safely at all (uncertain Swedish, acceptance criteria ambiguous, tests cannot pass without weakening), do NOT push anything: return status 'blocked' with a precise blockReason.
 ${RULES}`,
       {
         label: `impl:#${n}`,
@@ -164,6 +178,44 @@ ${RULES}`,
         isolation: 'worktree',
       },
     ).then((impl) => (impl ? { ...impl, triage: t } : null));
+  },
+
+  // ---- Assist: on needs-help, helper role agent contributes its own files
+  (r, n) => {
+    if (!r || r.status !== 'needs-help') return r;
+    return agent(
+      `You are the ${r.helpRole} on the Ordböj team. The ${r.triage.owner} implementing issue #${n} ("${r.triage.title}") on branch ${r.branch} needs your help:
+${r.helpRequest}
+
+You are in an isolated git worktree. Steps:
+1. git fetch origin && git checkout ${r.branch}
+2. Make ONLY the requested change, strictly inside files your role owns (CLAUDE.md table).
+3. Run all four verification commands (lint, typecheck, test, build); all must pass.
+4. Commit and push to the same branch.
+5. Find the PR for this branch (gh pr list --repo ${REPO} --head ${r.branch}); if it is a draft mark it ready with gh pr ready; if none exists, open one: gh pr create --repo ${REPO} --title "..." --body "Closes #${n} ...".
+6. Return status 'pr-opened' with branch, prNumber, prUrl and evidence.
+If you cannot do it safely, return status 'blocked' with a precise blockReason. Never return needs-help yourself.
+${RULES}`,
+      {
+        label: `assist:#${n}:${r.helpRole}`,
+        phase: 'Assist',
+        schema: IMPL_SCHEMA,
+        agentType: r.helpRole,
+        model: 'sonnet',
+        isolation: 'worktree',
+      },
+    ).then((h) =>
+      h
+        ? {
+            ...h,
+            triage: {
+              ...r.triage,
+              risky: true,
+              riskyReason: r.triage.riskyReason || 'cross-owner (assist)',
+            },
+          }
+        : null,
+    );
   },
 
   // ---- QA: qa agent adds tests to the PR branch (test files are qa-owned)
@@ -220,11 +272,11 @@ Return approved=true only if nothing material is wrong. List every finding eithe
   // ---- Ship: CI watch, conflict handling, merge or park
   (r, n) => {
     if (!r) return { ticket: n, status: 'failed', detail: 'earlier stage returned nothing' };
-    if (r.status === 'blocked')
+    if (r.status !== 'pr-opened')
       return {
         ticket: n,
         status: 'parked',
-        detail: 'blocked before PR: ' + (r.blockReason || 'unknown'),
+        detail: 'blocked before merge (' + r.status + '): ' + (r.blockReason || 'unknown'),
       };
     const risky = r.triage.risky;
     const approved = r.review && r.review.approved;
