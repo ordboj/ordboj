@@ -70,4 +70,10 @@ The dev server runs on port 8080.
 npm run build     # production build
 npm run preview   # serve the build locally
 npm run lint      # eslint
+npm run typecheck # tsc --noEmit
+npm test          # vitest (unit + component tests)
 ```
+
+## Project management
+
+Tasks and status are tracked in the [Ordböj GitHub Project](https://github.com/users/tugrulcan/projects/2).
