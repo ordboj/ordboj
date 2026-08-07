@@ -5,27 +5,45 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
+    # Always bump to the highest version that satisfies semver, not just the
+    # lowest that would technically resolve, so the lockfile actually moves.
+    versioning-strategy: increase
     labels:
       - "role:devops"
       - "dependencies"
     groups:
-      # Minor and patch bumps are low-risk (semver contract) and noisy one
-      # PR at a time; batch them so CI runs once instead of N times.
-      minor-and-patch:
+      # The Lovable scaffold left a large @radix-ui/* surface in
+      # dependencies; grouping it keeps the weekly Radix churn to one PR
+      # instead of a dozen.
+      radix:
+        patterns:
+          - "@radix-ui/*"
         update-types:
           - "minor"
           - "patch"
-    # Major bumps stay ungrouped and unopened by default policy below is not
-    # possible per-dependency here, so majors simply fall outside the group
-    # above and each gets its own PR for manual review.
+      production-dependencies:
+        dependency-type: "production"
+        exclude-patterns:
+          - "@radix-ui/*"
+        update-types:
+          - "minor"
+          - "patch"
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+    # Major bumps are excluded from every group above (update-types omits
+    # "major"), so they fall through ungrouped into their own PR for human
+    # review; the auto-merge workflow only acts on patch/minor anyway.
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     labels:
       - "role:devops"
       - "dependencies"
