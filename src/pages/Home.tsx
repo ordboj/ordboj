@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,15 +26,25 @@ export default function Home() {
     setSelectedLevels(settings.cefrLevels);
   }, [settings.cefrLevels]);
 
+  // getDueItems is recreated whenever srsStates changes, which happens
+  // continuously while a practice session elsewhere updates progress. Keep
+  // the latest reference in a ref so this effect only recomputes the due
+  // count in response to real changes (data ready, or the user changing
+  // CEFR levels), not on every incidental identity churn.
+  const getDueItemsRef = useRef(getDueItems);
+  useEffect(() => {
+    getDueItemsRef.current = getDueItems;
+  }, [getDueItems]);
+
   useEffect(() => {
     const loadDueCount = async () => {
       if (!isLoading && !settingsLoading) {
-        const items = await getDueItems();
+        const items = await getDueItemsRef.current();
         setDueCount(items.length);
       }
     };
     loadDueCount();
-  }, [isLoading, settingsLoading, getDueItems, settings.cefrLevels]);
+  }, [isLoading, settingsLoading, settings.cefrLevels]);
 
   useEffect(() => {
     const loadVerbCount = async () => {
