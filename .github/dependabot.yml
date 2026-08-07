@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "role:devops"
+      - "dependencies"
+    groups:
+      # Minor and patch bumps are low-risk (semver contract) and noisy one
+      # PR at a time; batch them so CI runs once instead of N times.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    # Major bumps stay ungrouped and unopened by default policy below is not
+    # possible per-dependency here, so majors simply fall outside the group
+    # above and each gets its own PR for manual review.
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "role:devops"
+      - "dependencies"
+    groups:
+      actions:
+        update-types:
+          - "minor"
+          - "patch"
