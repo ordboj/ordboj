@@ -19,7 +19,17 @@ export const meta = {
 
 const REPO = 'ordboj/ordboj';
 
-const tickets = Array.isArray(args) ? args : (args && args.tickets) || [];
+let parsedArgs = args;
+if (typeof parsedArgs === 'string') {
+  try {
+    parsedArgs = JSON.parse(parsedArgs);
+  } catch {
+    // tolerate loose forms like "{ tickets: [16, 18] }" or "16,18,28"
+    const nums = parsedArgs.match(/\d+/g);
+    parsedArgs = nums ? nums.map(Number) : null;
+  }
+}
+const tickets = Array.isArray(parsedArgs) ? parsedArgs : (parsedArgs && parsedArgs.tickets) || [];
 if (!tickets.length)
   throw new Error(
     'args.tickets required: array of GitHub issue numbers, e.g. { tickets: [16, 18, 28] }',
