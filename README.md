@@ -1,73 +1,167 @@
-# Welcome to your Lovable project
+# ordboj
 
-## Project info
+Build a colorful, mobile-friendly web app to help users practice Swedish verb conjugations using an SRS (Spaced Repetition System).
+The app should feel fun and simple, like Memrise — but focused entirely on Swedish verbs.
+Include typing practice, multiple-choice mode, and Swedish pronunciation for each form.
 
-**URL**: https://lovable.dev/projects/13d3d930-a1b8-4969-b581-4eccf57aa707
+🧠 Core Functionality
 
-## How can I edit this code?
+1. Built-in Verb List (Hardcoded Data)
+The app includes a preloaded JSON array of common Swedish verbs (A1–B1).
+Example seed:
 
-There are several ways of editing your application.
+const verbs = [
+  { infinitive: "vara" },
+  { infinitive: "ha" },
+  { infinitive: "gå" },
+  { infinitive: "komma" },
+  { infinitive: "skriva" },
+  { infinitive: "läsa" },
+  { infinitive: "säga" },
+  { infinitive: "få" },
+  { infinitive: "kunna" },
+  { infinitive: "vilja" }
+];
 
-**Use Lovable**
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/13d3d930-a1b8-4969-b581-4eccf57aa707) and start prompting.
+The structure should make it easy to extend this list later (up to ~1000 verbs).
 
-Changes made via Lovable will be committed automatically to this repo.
+2. Automatic Conjugation Generation
+For each infinitive, automatically generate all major Swedish forms:
 
-**Use your preferred IDE**
+Infinitive
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Presens
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Preteritum
 
-Follow these steps:
+Supinum
+
+Imperativ
+Optionally show Perfekt (har + supinum) examples.
+If a form cannot be generated, show “(not available yet)” instead of failing.
+
+3. Practice Modes
+Two modes for each exercise:
+
+Typing: user types the correct conjugation.
+
+Multiple Choice: user selects one of four options.
+
+After each answer:
+
+Give visual feedback (green ✅ / red ❌).
+
+Play pronunciation for the correct form using Web Speech API (Swedish voice if available).
+
+Optionally display an example sentence (toggle in settings).
+
+4. SRS Scheduling
+Use a lightweight SM-2 algorithm (Anki-style).
+Each verb+form item stores:
+
+repetitions
+
+intervalDays
+
+easeFactor
+
+dueAt
+
+lastGrade
+
+After each attempt, update scheduling according to user accuracy (Again / Hard / Good / Easy).
+Show “Due now” count on home screen.
+
+5. Local Progress Storage
+Store all user progress locally using IndexedDB or localStorage.
+
+Works fully offline.
+
+Keep user’s SRS schedule, answers, and preferences persistent.
+
+Include “Backup / Restore” buttons in Settings (export/import JSON).
+
+6. UI & UX
+
+Colorful and playful, optimized for phones and iPads.
+
+Single-card layout per question:
+
+verb prompt at top,
+
+input or options in middle,
+
+feedback + Next button at bottom.
+
+Progress bar at top.
+
+Rounded edges, soft shadows, large touch-friendly buttons.
+
+Confetti animation for perfect answers.
+
+Minimal navigation: Home → Practice → Settings.
+
+Optional light/dark theme toggle.
+
+🧩 Settings
+
+Mode toggle (Typing / Multiple Choice)
+
+Example sentences on/off
+
+Audio autoplay on/off
+
+Interface language (EN / SV)
+
+Daily goal (optional, no gamification)
+
+📦 Persistence Model
+
+Use these entities internally:
+
+type Verb = { id: string; infinitive: string; };
+type Form = "infinitive" | "presens" | "preteritum" | "supinum" | "imperativ";
+type SrsState = {
+  itemId: string;
+  repetitions: number;
+  intervalDays: number;
+  easeFactor: number;
+  dueAt: number;
+  lastGrade?: number;
+};
+
+✅ Acceptance Criteria
+
+I can open the app on my phone or iPad and immediately practice verbs.
+
+The app generates Swedish conjugations automatically.
+
+I can type or select answers and hear Swedish pronunciation.
+
+My progress and SRS data persist between sessions, even offline.
+
+The interface is colorful, simple, and touch-friendly.
+
+This project was built with [Lovable](https://lovable.dev).
+
+**Live app**: https://ordboj.lovable.app
+
+## Build with Lovable
+
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/13d3d930-a1b8-4969-b581-4eccf57aa707).
+
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+
+## Development
+
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+git clone <this-repository-url>
+cd <repository-name>
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/13d3d930-a1b8-4969-b581-4eccf57aa707) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
