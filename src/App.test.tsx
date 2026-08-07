@@ -77,57 +77,42 @@ describe('route-level crash containment (issue #18)', () => {
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
   });
 
-  // BUG: navigating away from a crashed route does not recover the app -
-  // it keeps showing the stale RouteCrashFallback instead of the newly
-  // matched route's real content, until the user manually clicks
-  // "Try again". Root cause: every <Route> in src/App.tsx wraps its page in
-  // the *same* RouteErrorBoundary component type
-  // (src/components/AppErrorBoundary.tsx:188-194), at the same position in
-  // the element tree under <Routes>. When react-router switches the matched
-  // route, React reconciles this as a props update (new `children`) on the
-  // *same* class component instance rather than an unmount/remount, so
-  // AppErrorBoundary's `hasError` state (src/components/AppErrorBoundary.tsx:64-93)
-  // is never cleared and render() keeps returning the old fallback for the
-  // new route too. This violates the ticket's "other routes remain
-  // reachable/navigable" acceptance criterion for ordinary navigation
-  // (Link click, browser back/forward, programmatic navigate) - the route
-  // only recovers if the user notices and clicks "Try again" first.
-  // Likely fix: key each per-route RouteErrorBoundary usage in App.tsx on
-  // the route path (e.g. `<RouteErrorBoundary key={path}>`), or reset
-  // hasError in componentDidUpdate when `children` changes.
-  // Owners: frontend-expert (src/components/AppErrorBoundary.tsx),
-  // staff-engineer (src/App.tsx route wiring).
-  it.fails(
-    'other routes remain reachable by direct navigation after a route has crashed',
-    async () => {
-      window.history.pushState({}, '', '/practice');
-      render(<App />);
-      expect(screen.getByText(/this page hit a snag/i)).toBeInTheDocument();
+  // Regression test for the route-reachability bug fixed in f4bd9c8: every
+  // <Route> in src/App.tsx now wraps its page in a RouteErrorBoundary keyed
+  // on the route path (e.g. `<RouteErrorBoundary key="/progress">`), so
+  // react-router switching the matched route unmounts/remounts a fresh
+  // boundary instance instead of reconciling onto the crashed one. Without
+  // that key, AppErrorBoundary's `hasError` state would survive the route
+  // change and render() would keep returning the stale fallback for the new
+  // route too, violating the ticket's "other routes remain
+  // reachable/navigable" acceptance criterion.
+  it('other routes remain reachable by direct navigation after a route has crashed', async () => {
+    window.history.pushState({}, '', '/practice');
+    render(<App />);
+    expect(screen.getByText(/this page hit a snag/i)).toBeInTheDocument();
 
-      // Simulate the user navigating away via the browser (back button / new
-      // URL) rather than clicking a link inside the crashed component.
-      window.history.pushState({}, '', '/progress');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+    // Simulate the user navigating away via the browser (back button / new
+    // URL) rather than clicking a link inside the crashed component.
+    window.history.pushState({}, '', '/progress');
+    window.dispatchEvent(new PopStateEvent('popstate'));
 
-      expect(await screen.findByText('Progress Page')).toBeInTheDocument();
-    },
-  );
+    expect(await screen.findByText('Progress Page')).toBeInTheDocument();
+    expect(screen.queryByText(/this page hit a snag/i)).not.toBeInTheDocument();
+  });
 
-  // Same bug as above, reached via the fallback's own "Home" link instead of
+  // Same fix as above, reached via the fallback's own "Home" link instead of
   // raw history navigation - confirms it is not a jsdom/popstate artifact.
-  it.fails(
-    'the crashed route\'s own fallback navigation links reach the other routes ("Home")',
-    async () => {
-      const user = userEvent.setup();
-      window.history.pushState({}, '', '/practice');
-      render(<App />);
+  it('the crashed route\'s own fallback navigation links reach the other routes ("Home")', async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, '', '/practice');
+    render(<App />);
 
-      const homeLink = screen.getByRole('link', { name: 'Home' });
-      await user.click(homeLink);
+    const homeLink = screen.getByRole('link', { name: 'Home' });
+    await user.click(homeLink);
 
-      expect(await screen.findByText('Home Page')).toBeInTheDocument();
-    },
-  );
+    expect(await screen.findByText('Home Page')).toBeInTheDocument();
+    expect(screen.queryByText(/this page hit a snag/i)).not.toBeInTheDocument();
+  });
 
   it('a route that never throws is unaffected: Settings renders normally without any fallback', () => {
     window.history.pushState({}, '', '/settings');

@@ -135,19 +135,33 @@ describe('export progress action', () => {
     }
   });
 
-  it('downloadProgressBackup() bundles every known localStorage store into a downloaded JSON blob', () => {
-    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
-    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  it('downloadProgressBackup() bundles every known localStorage store into a downloaded JSON blob, and revokes the blob URL only after deferring past the click (not cancelling the in-flight download)', () => {
+    vi.useFakeTimers();
+    try {
+      const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+      const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-    const ok = downloadProgressBackup();
+      const ok = downloadProgressBackup();
 
-    expect(ok).toBe(true);
-    expect(createObjectURL).toHaveBeenCalledTimes(1);
-    const blob = createObjectURL.mock.calls[0][0] as Blob;
-    expect(blob.type).toBe('application/json');
-    expect(clickSpy).toHaveBeenCalledTimes(1);
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+      expect(ok).toBe(true);
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      const blob = createObjectURL.mock.calls[0][0] as Blob;
+      expect(blob.type).toBe('application/json');
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+
+      // The revoke must be deferred past the synchronous click - revoking
+      // the object URL before the browser has started the download can
+      // cancel it. Confirm it has not fired yet at this point...
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+
+      // ...and that it does still fire once the deferral elapses, so the
+      // blob URL is not leaked forever either.
+      vi.runAllTimers();
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('downloadProgressBackup() returns false instead of throwing when the DOM download path fails', () => {
@@ -209,5 +223,24 @@ describe('RouteCrashFallback keeps the rest of the app navigable', () => {
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Progress' })).toHaveAttribute('href', '/progress');
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings');
+  });
+
+  // Escape hatch for when the SPA router state itself is wedged (not just
+  // the crashed route's component tree): a plain <a href="/"> forces a full
+  // document navigation/reload, unlike a react-router <Link>, which stays
+  // within the same (possibly broken) app instance. This was a review
+  // blocker for #18, so pin it against silent regression (e.g. someone
+  // "helpfully" swapping it for a <Link>).
+  it('offers a plain-anchor "Reload from the start" hard-navigation escape hatch to "/"', () => {
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <RouteErrorBoundary>
+          <Boom />
+        </RouteErrorBoundary>
+      </MemoryRouter>,
+    );
+
+    const reloadLink = screen.getByRole('link', { name: /reload from the start/i });
+    expect(reloadLink).toHaveAttribute('href', '/');
   });
 });
