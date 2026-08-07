@@ -23,7 +23,7 @@ export default function Settings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `svenska-verb-backup-${Date.now()}.json`;
+    a.download = `ordboj-backup-${Date.now()}.json`;
     a.click();
     toast.success('Progress exported successfully!');
   };
