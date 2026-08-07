@@ -10,8 +10,11 @@ import {
   generateVerbPattern,
   getFormLabel,
   getFormHint,
+  getAllConjugatedVerbs,
+  getVerbGrupp,
   type ConjugatedVerb,
   type VerbPattern,
+  type Grupp,
 } from '@/lib/verbs';
 import { speakSwedish } from '@/lib/speech';
 import { ConfettiEffect } from './ConfettiEffect';
@@ -59,29 +62,68 @@ export function PracticeCard({
   const correctAnswer = conjugated?.[form] || '';
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
 
-  // Generate multiple choice options
-
+  // Generate multiple choice options.
+  //
+  // Distractor policy (learning-designer decision, P14 in
+  // docs/learning/2026-08-08-ux-pedagogy-red-lines.md): distractors must
+  // share the target verb's conjugation group (or an adjacent group) and,
+  // where known, its CEFR level; they must be the same form as the target;
+  // they must never be a correct form of the target verb in a different
+  // slot; and an empty or "(not available)" conjugated form is never a
+  // valid option. Candidates are ranked once and the top three taken, so
+  // building the option list is a single bounded pass with no unbounded
+  // retry loop.
   useEffect(() => {
     const generateOptions = async () => {
-      const opts = [correctAnswer];
-      const allVerbs = ['vara', 'ha', 'gå', 'komma', 'skriva', 'läsa', 'säga', 'få'];
+      const allVerbs = await getAllConjugatedVerbs();
+      const targetGrupp = getVerbGrupp(infinitive);
+      const adjacentGrupp: Partial<Record<Grupp, Grupp[]>> = {
+        '2a': ['2b'],
+        '2b': ['2a'],
+      };
 
-      while (opts.length < 4) {
-        const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
-        const randomConjugation = await conjugateVerb(randomVerb);
-        const conjugatedForm = randomConjugation[form];
-        if (!opts.includes(conjugatedForm)) {
-          opts.push(conjugatedForm);
-        }
-      }
+      const targetOwnForms = new Set(
+        (['infinitive', 'presens', 'preteritum', 'supinum', 'imperativ'] as Form[])
+          .map((f) => conjugated?.[f])
+          .filter((value): value is string => !!value && value !== '(not available)'),
+      );
 
-      setOptions(opts.sort(() => Math.random() - 0.5));
+      const seen = new Set<string>([correctAnswer]);
+      const candidates = allVerbs
+        .filter((v) => v.infinitive !== infinitive)
+        .reduce<{ value: string; score: number }[]>((acc, v) => {
+          const value = v[form];
+          if (!value || value === '(not available)') return acc;
+          if (seen.has(value) || targetOwnForms.has(value)) return acc;
+          seen.add(value);
+
+          const vGrupp = getVerbGrupp(v.infinitive);
+          let score = 0;
+          if (targetGrupp && vGrupp === targetGrupp) {
+            score += 20;
+          } else if (targetGrupp && vGrupp && adjacentGrupp[targetGrupp]?.includes(vGrupp)) {
+            score += 10;
+          }
+          if (conjugated?.cefr && v.cefr === conjugated.cefr) {
+            score += 1;
+          }
+          acc.push({ value, score });
+          return acc;
+        }, []);
+
+      const distractors = candidates
+        .sort(() => Math.random() - 0.5)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .map((c) => c.value);
+
+      setOptions([correctAnswer, ...distractors].sort(() => Math.random() - 0.5));
     };
 
-    if (correctAnswer) {
+    if (correctAnswer && conjugated) {
       generateOptions();
     }
-  }, [correctAnswer, form]);
+  }, [correctAnswer, form, infinitive, conjugated]);
 
   const handleSubmit = (answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
