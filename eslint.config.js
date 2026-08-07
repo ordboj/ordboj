@@ -34,7 +34,22 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-      '@typescript-eslint/no-unused-vars': 'off',
+      // TODO(#120): 3 pre-existing hits live in files owned by other roles
+      // (csp-violations.spec.ts, src/hooks/use-toast.ts,
+      // src/hooks/useSrsProgress.ts). Promote to 'error' once those are
+      // cleaned up so CI enforces it the way exhaustive-deps will below.
+      '@typescript-eslint/no-unused-vars': 'warn',
+    },
+  },
+  {
+    // Root-level Node config files (commitlint, eslint itself, postcss,
+    // ...). Previously outside lint scope entirely, so syntax and dead
+    // code here were invisible to tooling.
+    extends: [js.configs.recommended],
+    files: ['*.js'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.node,
     },
   },
   prettierConfig,
