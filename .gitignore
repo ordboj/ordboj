@@ -34,3 +34,6 @@ playwright/.cache
 
 # Claude Code local machine settings
 .claude/settings.local.json
+
+# Workflow worktrees (session-local)
+.claude/worktrees/
