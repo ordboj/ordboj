@@ -6,7 +6,8 @@ export const meta = {
     'Run Ordböj board tickets autonomously. args: { tickets: [16, 18, 28] } — GitHub issue numbers in tugrulcan/ordboj. Risky classes (localStorage schema, verb-data correctness, dependency major bump, cross-owner) never auto-merge.',
   phases: [
     { title: 'Triage', detail: 'read issue, pick owner role, model, risk class' },
-    { title: 'Implement', detail: 'owner-role agent in isolated worktree, test-first, opens PR' },
+    { title: 'Implement', detail: 'owner-role agent in isolated worktree, opens PR' },
+    { title: 'QA', detail: 'qa agent adds tests to the PR branch (test files are qa-owned)' },
     { title: 'Review', detail: 'adversarial review of PR diff vs acceptance criteria' },
     { title: 'Ship', detail: 'watch CI, resolve rebase conflicts, merge or park' },
   ],
@@ -24,7 +25,8 @@ if (!tickets.length)
 
 const RULES = `
 Hard rules (non-negotiable):
-- Test first where the ticket is testable: write the failing test, then the fix. Never weaken or delete existing tests to pass.
+- Never weaken or delete existing tests to pass. All existing tests must stay green.
+- Do NOT edit test files (*.test.ts, *.test.tsx, src/test/**, vitest.config.ts) — qa owns them; a separate QA stage adds tests to your branch after you.
 - Respect file ownership from CLAUDE.md. If the work requires editing files owned by another role, STOP and report blocked — do not edit them.
 - Uncertain Swedish is NEVER guessed. Flag it and report blocked instead.
 - localStorage data shape never changes without a version field and forward migration — and such a change is risky-class: it will not auto-merge.
@@ -53,13 +55,18 @@ const TRIAGE_SCHEMA = {
         'true if localStorage schema, verb-data correctness, dependency major bump, or cross-owner change',
     },
     riskyReason: { type: 'string' },
+    needsTests: {
+      type: 'boolean',
+      description:
+        'true if the change is testable behavior (SRS math, data validation, component logic); false for pure config/formatting/docs',
+    },
     title: { type: 'string' },
     acceptance: {
       type: 'string',
       description: 'acceptance criteria distilled from the issue body',
     },
   },
-  required: ['owner', 'model', 'risky', 'title', 'acceptance'],
+  required: ['owner', 'model', 'risky', 'needsTests', 'title', 'acceptance'],
 };
 
 const IMPL_SCHEMA = {
@@ -70,6 +77,16 @@ const IMPL_SCHEMA = {
     prNumber: { type: 'number' },
     prUrl: { type: 'string' },
     evidence: { type: 'string', description: 'tail of lint/typecheck/test/build output' },
+    blockReason: { type: 'string' },
+  },
+  required: ['status'],
+};
+
+const QA_SCHEMA = {
+  type: 'object',
+  properties: {
+    status: { type: 'string', enum: ['tests-added', 'not-needed', 'blocked'] },
+    evidence: { type: 'string', description: 'tail of npm test / typecheck output' },
     blockReason: { type: 'string' },
   },
   required: ['status'],
@@ -107,6 +124,7 @@ Classify the ticket:
 - owner: which role owns every file this ticket touches. If it genuinely spans two owners, pick the primary owner AND set risky=true with riskyReason "cross-owner".
 - model: 'sonnet' by default; 'opus' only if the ticket changes localStorage storage schema/migration code or is an architectural change.
 - risky: true if ANY of: localStorage schema/shape change, Swedish verb-data correctness change (verbData.ts / swedish_verbs.csv content), dependency major version bump, cross-owner change. Otherwise false.
+- needsTests: true if the ticket changes testable behavior (logic, data handling, component behavior); false for pure config, formatting or docs work.
 - acceptance: distill concrete acceptance criteria from the issue body.
 Return only the structured result.`,
       {
@@ -148,6 +166,37 @@ ${RULES}`,
     ).then((impl) => (impl ? { ...impl, triage: t } : null));
   },
 
+  // ---- QA: qa agent adds tests to the PR branch (test files are qa-owned)
+  (r, n) => {
+    if (!r || r.status !== 'pr-opened') return r;
+    if (!r.triage.needsTests) return { ...r, qa: { status: 'not-needed' } };
+    return agent(
+      `You are the qa engineer. PR #${r.prNumber} in ${REPO} (branch ${r.branch}) implements issue #${n}: "${r.triage.title}".
+Acceptance criteria:
+${r.triage.acceptance}
+
+You are in an isolated git worktree. Steps:
+1. git fetch origin && git checkout ${r.branch}
+2. Read the PR diff (gh pr diff ${r.prNumber} --repo ${REPO}) and write deterministic Vitest tests that pin the new behavior to the acceptance criteria. Regression tests for any bug the ticket fixes.
+3. You may ONLY edit qa-owned files: *.test.ts, *.test.tsx, src/test/**, vitest.config.ts. Never change production code — if the change is untestable without a production edit, report blocked with the defect instead.
+4. Run npm test and npm run typecheck; both must pass. Capture real output as evidence.
+5. Commit ("test: ...") and push to the same branch.
+Return status 'tests-added' with evidence, or 'blocked' with blockReason. If the PR already has adequate tests somehow, return 'not-needed'.`,
+      {
+        label: `qa:#${n}`,
+        phase: 'QA',
+        schema: QA_SCHEMA,
+        agentType: 'qa',
+        model: 'sonnet',
+        isolation: 'worktree',
+      },
+    ).then((qa) =>
+      qa && qa.status === 'blocked'
+        ? { ...r, status: 'blocked', blockReason: 'qa: ' + (qa.blockReason || 'unknown'), qa }
+        : { ...r, qa },
+    );
+  },
+
   // ---- Review: adversarial review of the PR diff
   (r, n) => {
     if (!r || r.status !== 'pr-opened') return r;
@@ -159,6 +208,7 @@ Get the issue: gh issue view ${n} --repo ${REPO} --json title,body
 Check, trying to REFUTE the claim that this PR is correct and complete:
 - Does the diff actually satisfy every acceptance criterion? ${r.triage.acceptance}
 - Correctness bugs, edge cases, broken tests, weakened tests.
+- If the ticket changes testable behavior: does the branch actually contain meaningful tests pinning it (needsTests=${r.triage.needsTests})?
 - File-ownership violations (CLAUDE.md table) or edits to src/components/ui/**.
 - Any localStorage shape change without version+migration.
 - Any Swedish string change that could be wrong (conjugation, spelling).
