@@ -5,7 +5,6 @@ export interface Settings {
   showExamples: boolean;
   autoplayAudio: boolean;
   muteAudio: boolean;
-  interfaceLanguage: 'en' | 'sv';
   dailyGoal: number;
   cefrLevels: string[];
 }
@@ -15,7 +14,6 @@ const DEFAULT_SETTINGS: Settings = {
   showExamples: false,
   autoplayAudio: true,
   muteAudio: false,
-  interfaceLanguage: 'en',
   dailyGoal: 20,
   cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
 };
