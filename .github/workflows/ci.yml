@@ -15,12 +15,23 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  verify:
-    name: Lint, typecheck, test, build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+env:
+  # No `engines` field or .nvmrc in the repo; 22 is the active Node LTS and
+  # matches what's already used locally. Kept in one place so every job
+  # (including the Playwright one) stays in lockstep.
+  NODE_VERSION: '22'
 
+jobs:
+  # Lint, typecheck, unit test and build are independent of each other (none
+  # consumes another's output), so they run as separate jobs instead of
+  # sequential steps in one job. Each pays its own checkout + npm ci, but
+  # that cost is paid in parallel across four runners instead of stacking on
+  # one, and a failure in one check no longer blocks the others from
+  # reporting (four PR status checks instead of one all-or-nothing job).
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,42 +39,79 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Install dependencies
-        id: install
         run: npm ci
 
-      # Every check below runs even when an earlier one failed, so a single
-      # run reports every problem instead of only the first. A failed step
-      # still fails the job. They are skipped when the run is cancelled, and
-      # when the install failed, because their output would be meaningless.
       - name: Lint
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run lint
 
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Typecheck
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run typecheck
 
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Test
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm test
 
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Build
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run build
 
       - name: Report bundle size
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
-          if [ -d dist ]; then
-            ls -l dist/assets
-            du -sh dist
-          else
-            echo 'No dist/ produced: the build step did not succeed.'
-          fi
+          ls -l dist/assets
+          du -sh dist
 
   e2e:
     name: E2E (Playwright)
@@ -77,7 +125,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Install dependencies
@@ -86,7 +134,8 @@ jobs:
       # The Playwright config only defines a mobile-chrome project (see
       # playwright.config.ts), so CI only needs the Chromium browser.
       # Chromium binaries are pinned to the installed @playwright/test
-      # version, so keying the cache on the lockfile hash is enough.
+      # version, so keying the cache on the lockfile hash is enough: it
+      # invalidates whenever a Dependabot bump changes that version.
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
