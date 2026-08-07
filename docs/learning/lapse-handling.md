@@ -6,10 +6,10 @@ retry, when does the item come back, and what does the miss do to its schedule?
 ## Decision
 
 Reveal immediately, no retry before the reveal. Re-queue the item **within the
-same session**, after at least three intervening items, and require one correct
-answer on it before the session can end. Set `intervalDays = 1` and
-`repetitions = 0` as today, but replace the SM-2 ease formula with two flat
-constants, because the UI only ever produces two grades.
+same sitting**, after at least three intervening items, and require one correct
+answer on it before the sitting ends. Set `intervalDays = 1` and `repetitions = 0`
+as today, but replace the SM-2 ease formula with two flat constants, because the
+UI only ever produces two grades.
 
 ```
 correct : easeFactor = min(2.80, easeFactor + 0.05)
@@ -26,13 +26,23 @@ hinted  : easeFactor = max(1.30, easeFactor - 0.05)
 | lapse ease delta                   | −0.20                               |
 | correct ease delta                 | +0.05                               |
 | ease ceiling / floor               | 2.80 / 1.30                         |
-| same-session re-queue gap          | ≥ 3 items                           |
+| same-sitting re-queue gap          | ≥ 3 items                           |
 | re-queue counts toward `dailyGoal` | no                                  |
-| max re-queues per item per session | 2, then drop to tomorrow            |
+| max re-queues per item per day     | 2, then drop to tomorrow            |
 | hinted answer                      | half interval, ease −0.05, no reset |
 | retry before reveal                | never                               |
 
 Free-practice answers ([[session-shape-and-daily-goal]]) run none of this.
+
+## Interaction with the sitting cap
+
+A sitting is capped at 15 items and a day's goal may be several sittings
+([[session-shape-and-daily-goal]]). Pending re-queues carry across sittings within
+the same day: an item lapsed at item 14 of a sitting is re-asked at the start of
+the next sitting rather than being dropped, and the two-re-queue cap is per item
+per **day**, not per sitting, so a learner doing four sittings cannot be asked the
+same failed verb eight times. If the day ends with a re-queue still pending, it is
+simply due tomorrow with the lapse already applied — nothing is lost.
 
 ## What the code does today
 
@@ -81,37 +91,37 @@ Retry-until-correct converts retrieval into search. The learner cycles guesses
 until the form appears, the scheduler records success, and nothing was retrieved.
 Immediate corrective feedback after a failed retrieval attempt is the
 better-supported arrangement: the failed attempt itself potentiates learning, and
-the feedback that follows is what fixes the correct form
-(Butler & Roediger 2008, on feedback after errorful retrieval; Kornell, Hays &
-Bjork 2009, on unsuccessful retrieval attempts improving subsequent learning). The
-condition for that benefit is a genuine attempt followed by the answer — which is
-what the current card already does. What it lacks is the second retrieval.
+the feedback that follows is what fixes the correct form (Butler & Roediger 2008,
+on feedback after errorful retrieval; Kornell, Hays & Bjork 2009, on unsuccessful
+retrieval attempts improving subsequent learning). The condition for that benefit
+is a genuine attempt followed by the answer — which is what the current card
+already does. What it lacks is the second retrieval.
 
-## Why the same-session re-queue is the important half
+## Why the same-sitting re-queue is the important half
 
 Re-showing the correct form is exposure. Re-asking the question is retrieval, and
 retrieval is what produces the testing effect (Roediger & Karpicke 2006). Anki's
 relearning steps exist for this reason and are near-universally kept on. Three
 intervening items is enough to clear working memory without pushing the item so
-far that the correction is forgotten; it is also small enough to fit a 12-item
-session, where a gap of ten would mean lapsed items never return at all.
+far that the correction is forgotten; it is also small enough to fit inside a
+15-item sitting, where a gap of ten would mean lapsed items rarely return at all.
 
-Re-queued items must not count toward `dailyGoal`, or a bad day silently becomes
-a short day — failing more would mean studying less. Cap at two re-queues per item
-per session so one intractable verb cannot trap the learner in the session; on the
-third miss it goes to tomorrow with the ease penalty already applied.
+Re-queued items must not count toward `dailyGoal`, or a bad day silently becomes a
+short day — failing more would mean studying less. Cap at two re-queues per item
+per day so one intractable verb cannot trap the learner; on the third miss it goes
+to tomorrow with the ease penalty already applied.
 
 ## Why the ease constants change
 
 SM-2's graded ease formula assumes a self-rated 0–5 scale. Ordböj has a binary
 grader and, given `showExamples`, `handleHint` and a letter-tile keyboard, will
-not get a trustworthy self-rating out of this learner soon. Feeding a binary
-signal into a formula calibrated for six levels produces the −0.80/+0.10 asymmetry
-above, which is not a design choice anyone made. Flat constants at −0.20/+0.05
-keep ease meaningful (it still separates easy verbs from hard ones over a few
-dozen answers) without driving the whole collection to the floor. The 2.80 ceiling
-prevents the reverse failure: an item answered correctly forty times running
-otherwise inflates to intervals no one wants on irregular verbs.
+not get a trustworthy self-rating out of a learner soon. Feeding a binary signal
+into a formula calibrated for six levels produces the −0.80/+0.10 asymmetry above,
+which is not a design choice anyone made. Flat constants at −0.20/+0.05 keep ease
+meaningful (it still separates easy verbs from hard ones over a few dozen answers)
+without driving the whole collection to the floor. The 2.80 ceiling prevents the
+reverse failure: an item answered correctly forty times running otherwise inflates
+to intervals no one wants on irregular verbs.
 
 The runner-up was **removing ease entirely** — fixed multiplier 2.0, lapse resets
 to 1 day. It is simpler and, for a 50-verb collection, probably indistinguishable
@@ -126,7 +136,7 @@ Revisit only if a review log is added for other reasons.
 ## The hint penalty is a policy, not a bug fix
 
 Hints are worth keeping — a learner stuck on `visste` with no path forward
-abandons the card and the session. But an item recalled with three letters
+abandons the card and the sitting. But an item recalled with three letters
 revealed is not an item recalled. Halving the interval rather than resetting it
 says: this was partial, come back sooner, but you did not fail. `PracticeCard`
 must therefore report hint use to `Practice.tsx`, which means the `onAnswer`
@@ -135,24 +145,36 @@ signature changes from `(grade: Grade)` to something carrying
 `frontend-expert` owns the card and the call site, `srs-engine` owns the scheduler
 signature it calls into.
 
+## Migration
+
+These constants change the meaning of stored `easeFactor` values: an item sitting
+at 1.3 today may be there because of the −0.80 penalty rather than because it is
+genuinely hard. Existing progress is preserved (no reset), and the forward
+migration to `version: 2` should rebase eases that are pinned at the floor:
+`easeFactor = max(easeFactor, 1.8)` for any item with `repetitions >= 2`, which
+un-sticks items the old formula punished for a single early miss without inflating
+anything the learner actually finds difficult. Cloud backup is being evaluated
+separately; until it exists, one browser is the only copy and no migration may
+discard a field it does not recognise.
+
 ## How we would know this was wrong
 
 - Median `easeFactor` across the collection drifts below 1.8 within a month of
   daily use: the −0.20 penalty is still too harsh for a binary grader; go to
   −0.10.
-- Items repeatedly lapse the day after a same-session correction: the re-queue is
+- Items repeatedly lapse the day after a same-sitting correction: the re-queue is
   happening too soon to be a real retrieval; raise the gap to 6 items, or move the
-  second attempt to the end of the session.
-- Hint presses per session rise steadily: the halved interval is not deterring
+  second attempt to the end of the sitting.
+- Hint presses per sitting rise steadily: the halved interval is not deterring
   hint-as-answer-reveal and the hint needs a hard cap (e.g. at most
   `floor(length / 2)` letters).
-- Sessions abandoned immediately after a lapse: the re-queue requirement reads as
+- Sittings abandoned immediately after a lapse: the re-queue requirement reads as
   a punishment; make the second attempt optional and see whether it is still used.
 
 ## Routed to
 
 `srs-engine` — `src/lib/srs.ts` grading constants, lapse branch, hint branch,
-re-queue eligibility.
+re-queue eligibility, ease rebase in the `version: 2` migration.
 `frontend-expert` — `onAnswer` payload, hint accounting in `PracticeCard`, the
 re-queue insertion in `Practice.tsx`, and feedback copy that shows the correct
 form and announces the item will return.
