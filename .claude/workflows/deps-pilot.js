@@ -49,7 +49,10 @@ Hard rules (non-negotiable):
 - No infinite retries: if you cannot resolve a failure, stop and report it precisely.
 `;
 
-const CI_POLL = `Watch CI by POLLING: run gh pr checks <n> --repo ${REPO}, re-run every ~60 seconds until every check has concluded, up to ~20 minutes total. Do NOT use --watch (can outlive the command timeout).`;
+const CI_POLL = `Watch CI by POLLING inside a single Bash call (standalone sleep is blocked, but sleep INSIDE a loop in one command works). Use exactly this pattern with a 600000ms tool timeout:
+  for i in $(seq 1 18); do gh pr checks <n> --repo ${REPO} && break; sleep 30; done; gh pr checks <n> --repo ${REPO}
+(gh pr checks exits non-zero while checks are pending/failing, so the loop breaks on all-green.) If checks are still pending after that call, run the same call once more (~20 min total).
+NEVER start a background task or Monitor to wait for CI, and NEVER end your turn with CI still pending "to report later" — there is no later; your StructuredOutput call is your ONLY result and placeholder results are forbidden. If after ~20 minutes checks have not concluded, treat it as unresolved and follow your parked path.`;
 
 const PARK = `Park procedure (make it visible on GitHub):
 1. gh label create needs-human --repo ${REPO} --color D93F0B --description "agent parked, human decision needed" --force
