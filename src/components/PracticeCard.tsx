@@ -10,12 +10,26 @@ import {
   generateVerbPattern,
   getFormLabel,
   getFormHint,
+  getVerbs,
   type ConjugatedVerb,
   type VerbPattern,
 } from '@/lib/verbs';
 import { speakSwedish } from '@/lib/speech';
 import { ConfettiEffect } from './ConfettiEffect';
 import { Grade } from '@/lib/srs';
+
+const NOT_AVAILABLE = '(not available)';
+
+// Unbiased shuffle (matches useSrsProgress.ts:105-108). Returns a new array;
+// does not mutate the input.
+function fisherYatesShuffle<T>(items: readonly T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
 
 interface PracticeCardProps {
   infinitive: string;
@@ -51,7 +65,7 @@ export function PracticeCard({
     conjugateVerb(infinitive).then((result) => {
       setConjugated(result);
       const uniqueLetters = [...new Set(result[form].split(''))];
-      setShuffledLetters(uniqueLetters.sort(() => Math.random() - 0.5));
+      setShuffledLetters(fisherYatesShuffle(uniqueLetters));
     });
     generateVerbPattern(infinitive, form).then(setPattern);
   }, [infinitive, form]);
@@ -62,26 +76,50 @@ export function PracticeCard({
   // Generate multiple choice options
 
   useEffect(() => {
-    const generateOptions = async () => {
-      const opts = [correctAnswer];
-      const allVerbs = ['vara', 'ha', 'gå', 'komma', 'skriva', 'läsa', 'säga', 'få'];
+    let cancelled = false;
 
-      while (opts.length < 4) {
-        const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
-        const randomConjugation = await conjugateVerb(randomVerb);
-        const conjugatedForm = randomConjugation[form];
-        if (!opts.includes(conjugatedForm)) {
-          opts.push(conjugatedForm);
+    const generateOptions = async () => {
+      // TODO(learning-designer P14): distractors should be drawn from the same
+      // or an adjacent conjugation group as the target, via a shared helper
+      // srs-engine builds next to item construction (see
+      // docs/learning/2026-08-08-ux-pedagogy-red-lines.md). Until that helper
+      // exists, this picks from the full verb list at random, which is a
+      // bounded stand-in — not the final policy.
+      const verbs = await getVerbs();
+      const candidates = fisherYatesShuffle(verbs.filter((v) => v.infinitive !== infinitive));
+      const conjugatedCandidates = await Promise.all(
+        candidates.map((v) => conjugateVerb(v.infinitive))
+      );
+
+      const distractors: string[] = [];
+      for (const candidate of conjugatedCandidates) {
+        const value = candidate[form];
+        if (
+          value &&
+          value !== NOT_AVAILABLE &&
+          value !== correctAnswer &&
+          !distractors.includes(value)
+        ) {
+          distractors.push(value);
         }
+        if (distractors.length >= 3) break;
       }
 
-      setOptions(opts.sort(() => Math.random() - 0.5));
+      if (!cancelled) {
+        setOptions(fisherYatesShuffle([correctAnswer, ...distractors]));
+      }
     };
 
-    if (correctAnswer) {
+    if (correctAnswer && correctAnswer !== NOT_AVAILABLE) {
       generateOptions();
+    } else {
+      setOptions([]);
     }
-  }, [correctAnswer, form]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [correctAnswer, form, infinitive]);
 
   const handleSubmit = (answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
@@ -166,7 +204,7 @@ export function PracticeCard({
 
   const handlePronounceForm = (formToPronounce: Form) => {
     const text = conjugated[formToPronounce];
-    if (text && text !== '(not available)') {
+    if (text && text !== NOT_AVAILABLE) {
       speakSwedish(text, muteAudio);
     }
   };
@@ -222,9 +260,9 @@ export function PracticeCard({
                     autoFocus
                   />
                   <div className="flex flex-wrap justify-center gap-2">
-                    {shuffledLetters.map((letter, index) => (
+                    {shuffledLetters.map((letter) => (
                       <Button
-                        key={index}
+                        key={letter}
                         onClick={() => handleLetterClick(letter)}
                         variant="outline"
                         className="w-12 h-12 text-xl font-semibold"
@@ -261,9 +299,9 @@ export function PracticeCard({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-3">
-                  {options.map((option, index) => (
+                  {options.map((option) => (
                     <Button
-                      key={index}
+                      key={option}
                       onClick={() => handleSubmit(option)}
                       variant="outline"
                       className="py-6 text-xl"
@@ -316,7 +354,7 @@ export function PracticeCard({
                           <span className="text-lg">
                             {part.isMissing ? correctAnswer : part.text}
                           </span>
-                          {!part.isMissing && conjugated[part.form] !== '(not available)' && (
+                          {!part.isMissing && conjugated[part.form] !== NOT_AVAILABLE && (
                             <Button
                               variant="ghost"
                               size="icon"
