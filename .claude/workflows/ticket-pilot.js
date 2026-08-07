@@ -109,7 +109,13 @@ Classify the ticket:
 - risky: true if ANY of: localStorage schema/shape change, Swedish verb-data correctness change (verbData.ts / swedish_verbs.csv content), dependency major version bump, cross-owner change. Otherwise false.
 - acceptance: distill concrete acceptance criteria from the issue body.
 Return only the structured result.`,
-      { label: `triage:#${n}`, phase: 'Triage', schema: TRIAGE_SCHEMA, effort: 'low' },
+      {
+        label: `triage:#${n}`,
+        phase: 'Triage',
+        schema: TRIAGE_SCHEMA,
+        effort: 'low',
+        model: 'sonnet',
+      },
     ),
 
   // ---- Implement: owner-role agent in isolated worktree, opens PR
@@ -157,7 +163,7 @@ Check, trying to REFUTE the claim that this PR is correct and complete:
 - Any localStorage shape change without version+migration.
 - Any Swedish string change that could be wrong (conjugation, spelling).
 Return approved=true only if nothing material is wrong. List every finding either way.`,
-      { label: `review:#${n}`, phase: 'Review', schema: REVIEW_SCHEMA },
+      { label: `review:#${n}`, phase: 'Review', schema: REVIEW_SCHEMA, model: 'opus' },
     ).then((rev) => ({ ...r, review: rev }));
   },
 
@@ -191,7 +197,7 @@ Case B — review approved:
      If merge fails due to conflicts: clone-checkout the PR branch in a temp dir (gh pr checkout inside a fresh 'git worktree add'), rebase onto origin/main, resolve MECHANICAL conflicts only (imports, adjacent lines), run npm test, force-push with --force-with-lease, re-watch CI once, then merge. If the conflict is semantic (two changes to the same behavior), do not guess: comment, needs-human, return parked.
 4. Return merged with a one-line detail.
 Never edit application source. Never weaken tests. Never merge a risky-class or unapproved PR.`,
-      { label: `ship:#${n}`, phase: 'Ship', schema: SHIP_SCHEMA },
+      { label: `ship:#${n}`, phase: 'Ship', schema: SHIP_SCHEMA, model: 'sonnet' },
     ).then((s) => ({
       ticket: n,
       prUrl: r.prUrl,
