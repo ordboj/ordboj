@@ -5,6 +5,7 @@ import {
   getFormLabel,
   getFormHint,
   getVerbs,
+  getVerbGrupp,
   type Form,
 } from "@/lib/verbs";
 import { VERB_DATA } from "@/data/verbData";
@@ -136,6 +137,39 @@ describe("generateVerbPattern - 4-slot pattern", () => {
     expect(pattern.patternParts.filter((p) => p.isMissing)).toEqual([
       { form: "preteritum", text: "_____", isMissing: true },
     ]);
+  });
+});
+
+describe("getVerbGrupp", () => {
+  it("returns the stored grupp for a verb that has one assigned", () => {
+    const withGrupp = VERB_DATA.find((v) => v.grupp !== undefined);
+    expect(withGrupp).toBeDefined();
+    expect(getVerbGrupp(withGrupp!.infinitive)).toBe(withGrupp!.grupp);
+  });
+
+  it('returns undefined ("unknown") for a verb not present in VERB_DATA at all (lookup miss)', () => {
+    expect(getVerbGrupp("this-infinitive-does-not-exist")).toBeUndefined();
+  });
+
+  // Regression: rows flagged NEEDS HUMAN REVIEW in verbData.ts must expose
+  // as "unknown" through the public API too — a caller must not be able to
+  // tell a flagged-for-review verb apart from a genuinely missing one, and
+  // must never receive a guessed grupp for either.
+  it.each(["vända", "söka", "lägga"])(
+    'returns undefined for "%s", which is flagged for human review rather than guessed',
+    (infinitive) => {
+      expect(VERB_DATA.some((v) => v.infinitive === infinitive)).toBe(true); // it does exist...
+      expect(getVerbGrupp(infinitive)).toBeUndefined(); // ...but with no grupp guess
+    }
+  );
+
+  it("returns one of the five valid conjugation classes for every verb that has a grupp assigned", () => {
+    const valid = new Set(["1", "2a", "2b", "3", "4"]);
+    for (const verb of VERB_DATA) {
+      if (verb.grupp !== undefined) {
+        expect(valid.has(getVerbGrupp(verb.infinitive)!)).toBe(true);
+      }
+    }
   });
 });
 
