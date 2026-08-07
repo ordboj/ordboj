@@ -48,7 +48,9 @@ export function downloadProgressBackup(): boolean {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    // Deferred: revoking synchronously can cancel the download in flight
+    // on some browsers, and this is the only backup path for progress.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
     return true;
   } catch (e) {
     console.error('Ordböj: failed to export progress backup', e);
@@ -178,6 +180,12 @@ export function RouteCrashFallback({ reset }: { reset: () => void }) {
               Settings
             </Link>
           </nav>
+          <a
+            href="/"
+            className="w-full inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium underline"
+          >
+            Reload from the start
+          </a>
         </div>
       </div>
     </div>
