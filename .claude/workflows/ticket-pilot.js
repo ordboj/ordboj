@@ -10,7 +10,11 @@ export const meta = {
       detail:
         'read issue, pick owner role, model, risk class, predicted files; overlapping tickets serialize',
     },
-    { title: 'Implement', detail: 'owner-role agent in isolated worktree, opens PR' },
+    {
+      title: 'Implement',
+      detail:
+        'pull latest main in repo root, then owner-role agent in worktree created from fresh main, opens PR',
+    },
     {
       title: 'Assist',
       detail: 'on needs-help, helper role agent contributes its own files to the branch',
@@ -252,6 +256,30 @@ const missing = tickets.filter((n) => !triaged.some((x) => x.n === n));
 
 // ---------------------------------------------------------------- stages
 
+// Isolated worktrees are created from the primary tree's current HEAD. Pull
+// latest main in the repo root FIRST so every implement worktree is born from
+// fresh main, not a stale local copy. Serialized under one lock so concurrent
+// tickets never race the pull.
+function syncMainBeforeWorktree(n) {
+  return withLock('main-sync', () =>
+    agent(
+      `You are in the ordboj repo root (NOT an isolated worktree). Sync local main so the worktree created next is based on the latest main. Use the Bash tool:
+1. git fetch origin
+2. Check the current branch: git rev-parse --abbrev-ref HEAD
+   - If on main and git status shows no merge/rebase in progress: git pull --ff-only origin main
+   - If NOT on main: git fetch origin main:main (updates the main ref without a checkout; if git refuses because main is checked out elsewhere, that is fine — origin/main is already fresh from step 1).
+Never check out a different branch, never reset, never touch working files.
+Return exactly one line: "main at <output of git rev-parse origin/main>".`,
+      {
+        label: `sync-main:#${n}`,
+        phase: 'Implement',
+        effort: 'low',
+        model: 'sonnet',
+      },
+    ),
+  );
+}
+
 function parkNoPr(n, r, reason) {
   return agent(
     `Ticket #${n} in ${REPO} was parked by automation before any PR was opened.
@@ -288,6 +316,7 @@ async function runTicket(n, t, serializedAfter) {
   const fixtureNote = t.fixtureBreakExpected
     ? `\nEXPECTED FIXTURE BREAKAGE: triage predicts your change breaks existing test fixtures that hardcode what you remove/rename. That is fine and does NOT mean needs-help: if npm test fails ONLY in qa-owned test files whose fixtures reference the thing you intentionally changed (and every other suite is green), open the PR as DRAFT anyway (gh pr create --draft), set fixtureFailures=true, list the failing tests in evidence, and return 'pr-opened'. The QA stage runs next on your branch and repairs the fixtures — do not edit test files yourself and do not wait for help.`
     : '';
+  await syncMainBeforeWorktree(n);
   let r = await withLock('owner:' + t.owner, () =>
     agent(
       `You are implementing GitHub issue #${n} in ${REPO}: "${t.title}".
@@ -295,8 +324,8 @@ Acceptance criteria:
 ${t.acceptance}
 ${serialNote}${fixtureNote}
 
-You are already in an isolated git worktree. Steps:
-1. git fetch origin, then create the branch FROM origin/main: git checkout -b ticket/${n}-<short-slug> origin/main
+You are already in an isolated git worktree, created from a freshly pulled main. Steps:
+1. git fetch origin, then create the branch FROM origin/main (belt-and-suspenders even though the worktree base is fresh): git checkout -b ticket/${n}-<short-slug> origin/main
 2. Read the issue for full context: gh issue view ${n} --repo ${REPO} --json title,body
 3. Implement following the rules below. Stay strictly inside your role's file ownership (CLAUDE.md table). Keep the diff minimal — do not reformat untouched lines.
 4. Run all four verification commands; capture real output AND the commit SHA (git rev-parse HEAD) after committing.
