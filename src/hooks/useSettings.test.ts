@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSettings } from '@/hooks/useSettings';
 
@@ -134,6 +134,28 @@ describe('versioned envelope round-trip', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.settings).toEqual(validSettings);
+  });
+});
+
+describe('write guard (#9): quota exceeded on write', () => {
+  it('does not crash and keeps the in-memory update when localStorage.setItem throws (quota exceeded)', async () => {
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    });
+
+    expect(() => {
+      act(() => {
+        result.current.updateSettings({ dailyGoal: 5 });
+      });
+    }).not.toThrow();
+
+    // The in-memory session must still reflect the update even though the
+    // write failed -- user progress/settings during this session are not
+    // silently lost mid-session.
+    await waitFor(() => expect(result.current.settings.dailyGoal).toBe(5));
   });
 });
 
