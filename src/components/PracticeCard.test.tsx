@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { PracticeCard } from "@/components/PracticeCard";
 import type { Grade } from "@/lib/srs";
+import { getAllConjugatedVerbs, getVerbGrupp } from "@/lib/verbs";
 
 // "vara" is a stable, real fixture from VERB_DATA (owned by swedish-linguist):
 // presens "är", preteritum "var", supinum "varit", imperativ "var".
@@ -198,5 +199,123 @@ describe("PracticeCard - empty imperativ", () => {
     const user = userEvent.setup();
     await user.type(screen.getByPlaceholderText("Type your answer..."), "(not available)");
     expect(await screen.findByText("Correct!")).toBeInTheDocument();
+  });
+});
+
+// Issue #139: multiple-choice distractors were drawn from a fixed 8-verb
+// pool and could surface "(not available)" as a selectable option.
+describe("PracticeCard - multiple-choice distractor policy (#139)", () => {
+  it("regression: never offers the '(not available)' placeholder or an empty string as an option", async () => {
+    // "vara" has imperativ "var". Most of VERB_DATA's imperativ column is
+    // empty ("" -> conjugateVerb falls back to "(not available)"): 43 of 50
+    // rows, including every verb in the old hardcoded 8-verb pool except
+    // "vara", "ha" and "komma". Against the pre-fix pool
+    // (['vara','ha','gå','komma','skriva','läsa','säga','få']) the only
+    // three distinct imperativ values obtainable besides the correct answer
+    // "var" are "ha", "kom" and "(not available)" (from gå/skriva/läsa/säga/få,
+    // which all fall back identically) — so the old while loop was
+    // *guaranteed* to include "(not available)" as one of the 4 options
+    // every single run. This must never happen.
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="imperativ"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("button")).toHaveLength(4);
+    });
+
+    const optionTexts = screen.getAllByRole("button").map((b) => b.textContent);
+    expect(optionTexts).not.toContain("(not available)");
+    expect(optionTexts).not.toContain("");
+    expect(optionTexts).toContain("var");
+  });
+
+  it("draws distractors from the full verb table, preferring the target's own conjugation group", async () => {
+    // "unna" is grupp '1' and is not one of the old hardcoded 8 pool verbs
+    // (which are all irregular/grupp '4' or '3'). VERB_DATA has 10 grupp-'1'
+    // verbs total (9 excluding "unna" itself) — enough that all 3
+    // distractors should be drawn from grupp '1' under the scoring policy
+    // (same-group score strictly beats every other candidate, since every
+    // row shares the same CEFR level). Under the old fixed-pool
+    // implementation this could never happen: none of the 8 pool verbs are
+    // grupp '1'.
+    renderWithProviders(
+      <PracticeCard
+        infinitive="unna"
+        form="presens"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("button")).toHaveLength(4);
+    });
+
+    const optionTexts = screen.getAllByRole("button").map((b) => b.textContent);
+    const correctAnswer = "unnar";
+    expect(optionTexts).toContain(correctAnswer);
+
+    const distractorTexts = optionTexts.filter((t) => t !== correctAnswer);
+    expect(distractorTexts).toHaveLength(3);
+
+    const allVerbs = await getAllConjugatedVerbs();
+    for (const text of distractorTexts) {
+      const sourceVerb = allVerbs.find((v) => v.presens === text);
+      expect(sourceVerb, `distractor "${text}" should map to a known verb`).toBeDefined();
+      expect(getVerbGrupp(sourceVerb!.infinitive)).toBe("1");
+    }
+  });
+
+  it("produces exactly 4 unique, non-empty options including the correct answer, for several verb/form pairs", async () => {
+    // General validity check across a spread of forms and conjugation
+    // groups (grupp 1, 2a, 2b, 3, 4), doubling as evidence that option
+    // building always terminates (no unbounded retry loop can hang the
+    // component under waitFor's timeout).
+    const cases: Array<{ infinitive: string; form: "presens" | "preteritum" | "supinum" }> = [
+      { infinitive: "tycka", form: "presens" }, // grupp 2b
+      { infinitive: "höra", form: "preteritum" }, // grupp 2a
+      { infinitive: "tro", form: "supinum" }, // grupp 3
+      { infinitive: "komma", form: "presens" }, // grupp 4
+    ];
+
+    for (const { infinitive, form } of cases) {
+      const { unmount } = renderWithProviders(
+        <PracticeCard
+          infinitive={infinitive}
+          form={form}
+          mode="multiple-choice"
+          showExamples={false}
+          autoplayAudio={false}
+          muteAudio={true}
+          onAnswer={vi.fn()}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByRole("button")).toHaveLength(4);
+      });
+
+      const optionTexts = screen.getAllByRole("button").map((b) => b.textContent ?? "");
+      expect(optionTexts).toHaveLength(4);
+      expect(new Set(optionTexts).size).toBe(4); // no duplicates
+      for (const text of optionTexts) {
+        expect(text).not.toBe("");
+        expect(text).not.toBe("(not available)");
+      }
+
+      unmount();
+    }
   });
 });
