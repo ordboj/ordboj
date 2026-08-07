@@ -120,24 +120,6 @@ export default function Settings() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="interface-language">Interface Language</Label>
-              <Select
-                value={settings.interfaceLanguage}
-                onValueChange={(value: 'en' | 'sv') => 
-                  updateSettings({ interfaceLanguage: value })
-                }
-              >
-                <SelectTrigger id="interface-language">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="sv">Svenska</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="space-y-3">
               <Label>CEFR Levels to Practice</Label>
               <div className="grid grid-cols-2 gap-3">
