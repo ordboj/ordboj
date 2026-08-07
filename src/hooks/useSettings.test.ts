@@ -9,7 +9,6 @@ const DEFAULTS = {
   showExamples: false,
   autoplayAudio: true,
   muteAudio: false,
-  interfaceLanguage: 'en',
   dailyGoal: 20,
   cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
 };
@@ -56,6 +55,68 @@ describe('persistence', () => {
 
     // The earlier partial update must still be in effect.
     expect(result.current.settings.muteAudio).toBe(true);
+  });
+});
+
+describe('issue #92: interfaceLanguage removal', () => {
+  it('does not include interfaceLanguage in the settings returned for a fresh install', async () => {
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings).not.toHaveProperty('interfaceLanguage');
+  });
+
+  it('tolerates a legacy stored object that still has interfaceLanguage without breaking or dropping other fields', async () => {
+    // A stored object from before #92 shipped, still carrying the no-op key.
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        practiceMode: 'multiple-choice',
+        showExamples: true,
+        autoplayAudio: true,
+        muteAudio: false,
+        interfaceLanguage: 'sv',
+        dailyGoal: 15,
+        cefrLevels: ['A1', 'A2'],
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // Nothing throws, and every field the app still cares about survives the
+    // load intact - the stray field is carried non-destructively rather than
+    // migrated away or used to reject the whole object.
+    expect(result.current.settings).toMatchObject({
+      practiceMode: 'multiple-choice',
+      showExamples: true,
+      autoplayAudio: true,
+      muteAudio: false,
+      dailyGoal: 15,
+      cefrLevels: ['A1', 'A2'],
+    });
+  });
+
+  it('does not reintroduce interfaceLanguage into a fresh write after loading a legacy object that had it', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...DEFAULTS, interfaceLanguage: 'sv' }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.updateSettings({ dailyGoal: 42 });
+    });
+    await waitFor(() => expect(result.current.settings.dailyGoal).toBe(42));
+
+    // updateSettings spreads over the in-memory state, so the stray field
+    // that was already loaded rides along - it is not the app writing a new
+    // interfaceLanguage decision, just an untouched legacy value.
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored.dailyGoal).toBe(42);
+    expect(Object.keys(DEFAULTS)).not.toContain('interfaceLanguage');
   });
 });
 
