@@ -27,7 +27,7 @@ const App = () => (
             <Route
               path="/"
               element={
-                <RouteErrorBoundary>
+                <RouteErrorBoundary key="/">
                   <Home />
                 </RouteErrorBoundary>
               }
@@ -35,7 +35,7 @@ const App = () => (
             <Route
               path="/practice"
               element={
-                <RouteErrorBoundary>
+                <RouteErrorBoundary key="/practice">
                   <Practice />
                 </RouteErrorBoundary>
               }
@@ -43,7 +43,7 @@ const App = () => (
             <Route
               path="/progress"
               element={
-                <RouteErrorBoundary>
+                <RouteErrorBoundary key="/progress">
                   <Progress />
                 </RouteErrorBoundary>
               }
@@ -51,7 +51,7 @@ const App = () => (
             <Route
               path="/settings"
               element={
-                <RouteErrorBoundary>
+                <RouteErrorBoundary key="/settings">
                   <Settings />
                 </RouteErrorBoundary>
               }
@@ -60,7 +60,7 @@ const App = () => (
             <Route
               path="*"
               element={
-                <RouteErrorBoundary>
+                <RouteErrorBoundary key="*">
                   <NotFound />
                 </RouteErrorBoundary>
               }
