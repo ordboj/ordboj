@@ -102,6 +102,7 @@ export function PracticeCard({
       const isAnswerCorrect =
         userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
       if (isAnswerCorrect) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- auto-submit must react to userAnswer regardless of input source (keyboard or letter buttons); single transition to feedback state, no cascade
         handleSubmit(userAnswer);
       }
     }
@@ -156,12 +157,17 @@ export function PracticeCard({
   };
 
   useEffect(() => {
+    // Intentional synchronous reset of transient answer state when the card
+    // advances to a new verb/form. A keyed remount would also reset the loaded
+    // conjugation and flash the loading state between cards.
+    /* eslint-disable react-hooks/set-state-in-effect */
     setUserAnswer('');
     setShowFeedback(false);
     setIsCorrect(false);
     setShowConfetti(false);
     setRevealedHints([]);
     setOptions([]);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [infinitive, form]);
 
   const handlePronounceForm = (formToPronounce: Form) => {

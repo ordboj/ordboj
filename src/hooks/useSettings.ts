@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export interface Settings {
   practiceMode: 'typing' | 'multiple-choice';
@@ -20,24 +20,26 @@ const DEFAULT_SETTINGS: Settings = {
 
 const STORAGE_KEY = 'swedish-verbs-settings';
 
-export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
-      } catch (e) {
-        console.error('Failed to load settings', e);
-      }
+function loadStoredSettings(): Settings {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+    } catch (e) {
+      console.error('Failed to load settings', e);
     }
-    setIsLoading(false);
-  }, []);
+  }
+  return DEFAULT_SETTINGS;
+}
+
+export function useSettings() {
+  // Hydrate synchronously via lazy initializer: avoids a setState-in-effect
+  // cascade (react-hooks/set-state-in-effect) and a flash of default settings.
+  const [settings, setSettings] = useState<Settings>(loadStoredSettings);
+  const isLoading = false;
 
   const updateSettings = (newSettings: Partial<Settings>) => {
-    setSettings(prev => {
+    setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
