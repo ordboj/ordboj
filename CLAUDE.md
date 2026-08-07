@@ -46,8 +46,8 @@ dependency cleanup, with grep evidence.
 ## Task tracking — GitHub Projects
 
 All tasks live in the **Ordböj** GitHub Project:
-<https://github.com/users/tugrulcan/projects/2> (project number `2`, owner
-`tugrulcan`, linked repo `ordboj/ordboj`). Status is tracked there, not in
+<https://github.com/orgs/ordboj/projects/1> (project number `1`, owner
+`ordboj`, linked repo `ordboj/ordboj`). Status is tracked there, not in
 chat.
 
 - Every task an agent defines or receives becomes a GitHub Issue added to
@@ -62,11 +62,11 @@ Recipes (lead only):
 ```sh
 # create issue + add to project
 gh issue create --repo ordboj/ordboj --title "..." --body "..."
-gh project item-add 2 --owner tugrulcan --url <issue-url>
+gh project item-add 1 --owner ordboj --url <issue-url>
 
-# move status (field/option ids for project 2)
-gh project item-edit --project-id PVT_kwHOAMCITM4Bft1t \
-  --id <item-id> --field-id PVTSSF_lAHOAMCITM4Bft1tzhZ-xp0 \
+# move status (field/option ids for org project 1)
+gh project item-edit --project-id PVT_kwDOEr3qds4BfuEP \
+  --id <item-id> --field-id PVTSSF_lADOEr3qds4BfuEPzhZ--ms \
   --single-select-option-id <opt>
 # Todo=f75ad846  In Progress=47fc9ee4  Done=98236657
 
