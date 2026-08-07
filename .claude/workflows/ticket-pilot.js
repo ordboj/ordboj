@@ -3,7 +3,7 @@ export const meta = {
   description:
     'Per-ticket pipeline: triage → implement in isolated worktree → adversarial review → PR → CI watch → auto-merge or park with needs-human',
   whenToUse:
-    'Run Ordböj board tickets autonomously. args: { tickets: [16, 18, 28] } — GitHub issue numbers in tugrulcan/ordboj. Risky classes (localStorage schema, verb-data correctness, dependency major bump, cross-owner) never auto-merge.',
+    'Run Ordböj board tickets autonomously. args: { tickets: [16, 18, 28] } — GitHub issue numbers in ordboj/ordboj. Risky classes (localStorage schema, verb-data correctness, dependency major bump, cross-owner) never auto-merge.',
   phases: [
     { title: 'Triage', detail: 'read issue, pick owner role, model, risk class' },
     { title: 'Implement', detail: 'owner-role agent in isolated worktree, opens PR' },
@@ -17,7 +17,7 @@ export const meta = {
   ],
 };
 
-const REPO = 'tugrulcan/ordboj';
+const REPO = 'ordboj/ordboj';
 
 const tickets = Array.isArray(args) ? args : (args && args.tickets) || [];
 if (!tickets.length)

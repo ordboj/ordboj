@@ -28,16 +28,16 @@ Roles: `product-manager` (scope/specs), three business owners
 Agents must not edit files another agent owns. Report the defect to the lead
 instead; the lead routes it.
 
-| Owner | Files |
-|---|---|
-| `swedish-linguist` | `src/data/verbData.ts`, `public/data/swedish_verbs.csv`, `src/lib/verbs.ts`, Swedish strings |
-| `srs-engine` | `src/lib/srs.ts`, `src/hooks/useSrsProgress.ts` |
-| `staff-engineer` | `index.html`, `src/main.tsx`, `src/App.tsx`, `tsconfig*.json`, `eslint.config.js`, `src/lib/utils.ts` |
-| `devops` | `vite.config.ts`, `postcss.config.js`, `package.json`, `.github/**`, PWA/manifest/service worker, deploy config |
-| `frontend-expert` | `src/pages/**`, `src/components/*.tsx`, `src/hooks/useSettings.ts`, `use-mobile.tsx`, `use-toast.ts`, `src/lib/speech.ts`, `tailwind.config.ts`, `src/index.css` |
-| `qa` | `*.test.ts(x)`, `src/test/**`, `vitest.config.ts` |
-| `learning-designer` | `docs/learning/**` — decision notes only, no production code |
-| `product-manager` | `docs/product/**` — specs and decisions only, no production code |
+| Owner               | Files                                                                                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `swedish-linguist`  | `src/data/verbData.ts`, `public/data/swedish_verbs.csv`, `src/lib/verbs.ts`, Swedish strings                                                                     |
+| `srs-engine`        | `src/lib/srs.ts`, `src/hooks/useSrsProgress.ts`                                                                                                                  |
+| `staff-engineer`    | `index.html`, `src/main.tsx`, `src/App.tsx`, `tsconfig*.json`, `eslint.config.js`, `src/lib/utils.ts`                                                            |
+| `devops`            | `vite.config.ts`, `postcss.config.js`, `package.json`, `.github/**`, PWA/manifest/service worker, deploy config                                                  |
+| `frontend-expert`   | `src/pages/**`, `src/components/*.tsx`, `src/hooks/useSettings.ts`, `use-mobile.tsx`, `use-toast.ts`, `src/lib/speech.ts`, `tailwind.config.ts`, `src/index.css` |
+| `qa`                | `*.test.ts(x)`, `src/test/**`, `vitest.config.ts`                                                                                                                |
+| `learning-designer` | `docs/learning/**` — decision notes only, no production code                                                                                                     |
+| `product-manager`   | `docs/product/**` — specs and decisions only, no production code                                                                                                 |
 
 `src/components/ui/**` is generated shadcn/ui. Nobody edits it in place;
 compose around it. Exception: `devops` may delete unused primitives during
@@ -47,7 +47,7 @@ dependency cleanup, with grep evidence.
 
 All tasks live in the **Ordböj** GitHub Project:
 <https://github.com/users/tugrulcan/projects/2> (project number `2`, owner
-`tugrulcan`, linked repo `tugrulcan/ordboj`). Status is tracked there, not in
+`tugrulcan`, linked repo `ordboj/ordboj`). Status is tracked there, not in
 chat.
 
 - Every task an agent defines or receives becomes a GitHub Issue added to
@@ -61,7 +61,7 @@ Recipes (lead only):
 
 ```sh
 # create issue + add to project
-gh issue create --repo tugrulcan/ordboj --title "..." --body "..."
+gh issue create --repo ordboj/ordboj --title "..." --body "..."
 gh project item-add 2 --owner tugrulcan --url <issue-url>
 
 # move status (field/option ids for project 2)
