@@ -4,7 +4,57 @@ import { getVerbs, Form, Verb, conjugateVerb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
-interface PracticeItem {
+// Storage schema version. Version 1 was the original unversioned blob: a
+// bare Record<string, SrsState> at STORAGE_KEY. Version 2 wraps it in
+// { version, items } and, on upgrade from the legacy blob, rebases ease
+// factors that the old SM-2 formula drove to the floor (see
+// docs/learning/lapse-handling.md, Migration). The rebase runs exactly
+// once because the migrated payload is persisted with the version marker.
+const STORAGE_VERSION = 2;
+
+// Legacy -0.80-per-miss ease penalty pinned items at the 1.3 floor after a
+// single early miss. An item with repetitions >= 2 has since proven itself,
+// so its floor-stuck ease reflects the old formula, not real difficulty.
+const REBASE_EASE_MIN = 1.8;
+const REBASE_MIN_REPETITIONS = 2;
+
+function rebaseLegacyEase(items: Record<string, SrsState>): Record<string, SrsState> {
+  const rebased: Record<string, SrsState> = {};
+  for (const [itemId, state] of Object.entries(items)) {
+    if (
+      state &&
+      typeof state === 'object' &&
+      typeof state.easeFactor === 'number' &&
+      typeof state.repetitions === 'number' &&
+      state.repetitions >= REBASE_MIN_REPETITIONS
+    ) {
+      rebased[itemId] = { ...state, easeFactor: Math.max(state.easeFactor, REBASE_EASE_MIN) };
+    } else {
+      rebased[itemId] = state;
+    }
+  }
+  return rebased;
+}
+
+// Accepts either the version-2 envelope or the legacy bare map (from
+// storage or an old export file) and returns the item map, applying the
+// one-time ease rebase to legacy data. Unknown fields on individual items
+// survive via spread; nothing is discarded.
+function parseStoredProgress(raw: string): Record<string, SrsState> {
+  const parsed = JSON.parse(raw);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {};
+  }
+  if (typeof parsed.version === 'number') {
+    // Versioned envelope (this version or newer): take the items as-is.
+    const items = parsed.items;
+    return items && typeof items === 'object' && !Array.isArray(items) ? items : {};
+  }
+  // Legacy unversioned blob: the bare state map itself.
+  return rebaseLegacyEase(parsed as Record<string, SrsState>);
+}
+
+export interface PracticeItem {
   verbId: string;
   infinitive: string;
   form: Form;
@@ -20,21 +70,21 @@ export function useSrsProgress(cefrLevels?: string[]) {
     const initializeStates = async () => {
       const stored = localStorage.getItem(STORAGE_KEY);
       let loadedStates: Record<string, SrsState> = {};
-      
+
       if (stored) {
         try {
-          loadedStates = JSON.parse(stored);
+          loadedStates = parseStoredProgress(stored);
         } catch (e) {
           console.error('Failed to parse SRS data', e);
         }
       }
-      
+
       // Initialize all verb+form combinations
-      const forms: Form[] = ["presens", "preteritum", "supinum", "imperativ"];
+      const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
       const newStates: Record<string, SrsState> = { ...loadedStates };
-      
+
       const verbs = await getVerbs();
-      
+
       for (const verb of verbs) {
         for (const form of forms) {
           const itemId = `${verb.id}-${form}`;
@@ -54,7 +104,16 @@ export function useSrsProgress(cefrLevels?: string[]) {
   // Save to localStorage
   useEffect(() => {
     if (!isLoading) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(srsStates));
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ version: STORAGE_VERSION, items: srsStates }),
+        );
+      } catch (e) {
+        // Quota or storage failure: keep the in-memory session alive; the
+        // next successful write persists the full current state anyway.
+        console.error('Failed to save SRS data', e);
+      }
     }
   }, [srsStates, isLoading]);
 
@@ -67,26 +126,27 @@ export function useSrsProgress(cefrLevels?: string[]) {
 
   // Get due items (randomized and filtered by CEFR level)
   const getDueItems = useCallback(async (): Promise<PracticeItem[]> => {
-    const forms: Form[] = ["presens", "preteritum", "supinum", "imperativ"];
+    const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
     const dueItems: PracticeItem[] = [];
 
     const allVerbs = await getVerbs();
-    
+
     // Filter verbs by CEFR level if specified
-    const verbs = cefrLevels && cefrLevels.length > 0
-      ? allVerbs.filter(verb => verb.cefr && cefrLevels.includes(verb.cefr))
-      : allVerbs;
+    const verbs =
+      cefrLevels && cefrLevels.length > 0
+        ? allVerbs.filter((verb) => verb.cefr && cefrLevels.includes(verb.cefr))
+        : allVerbs;
 
     // Check each verb's forms for availability
     for (const verb of verbs) {
       const conjugated = await conjugateVerb(verb.infinitive);
-      
+
       for (const form of forms) {
         // Skip forms that are not available
-        if (conjugated[form] === "(not available)" || !conjugated[form]) {
+        if (conjugated[form] === '(not available)' || !conjugated[form]) {
           continue;
         }
-        
+
         const itemId = `${verb.id}-${form}`;
         const state = srsStates[itemId];
         if (state && isDue(state)) {
@@ -113,7 +173,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
   const recordAnswer = (itemId: string, grade: Grade) => {
     const currentState = srsStates[itemId] || initializeSrsState(itemId);
     const newState = calculateNextReview(currentState, grade);
-    setSrsStates(prev => ({
+    setSrsStates((prev) => ({
       ...prev,
       [itemId]: newState,
     }));
@@ -121,12 +181,14 @@ export function useSrsProgress(cefrLevels?: string[]) {
 
   // Export/Import for backup
   const exportData = () => {
-    return JSON.stringify(srsStates, null, 2);
+    return JSON.stringify({ version: STORAGE_VERSION, items: srsStates }, null, 2);
   };
 
+  // Accepts both versioned exports and legacy bare-map exports; legacy
+  // imports get the same one-time ease rebase as legacy storage.
   const importData = (jsonString: string) => {
     try {
-      const imported = JSON.parse(jsonString);
+      const imported = parseStoredProgress(jsonString);
       setSrsStates(imported);
       return true;
     } catch (e) {

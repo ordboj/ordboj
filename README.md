@@ -38,7 +38,7 @@ public/
 
 ```ts
 type Verb = { id: string; infinitive: string; cefr?: string };
-type Form = "infinitive" | "presens" | "preteritum" | "supinum" | "imperativ";
+type Form = 'infinitive' | 'presens' | 'preteritum' | 'supinum' | 'imperativ';
 type SrsState = {
   itemId: string;
   repetitions: number;
@@ -76,4 +76,4 @@ npm test          # vitest (unit + component tests)
 
 ## Project management
 
-Tasks and status are tracked in the [Ordböj GitHub Project](https://github.com/users/tugrulcan/projects/2).
+Tasks and status are tracked in the [Ordböj GitHub Project](https://github.com/orgs/ordboj/projects/1).

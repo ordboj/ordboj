@@ -3,7 +3,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Volume2, CheckCircle2, XCircle } from 'lucide-react';
-import { conjugateVerb, Form, getExampleSentence, generateVerbPattern, getFormLabel, getFormHint } from '@/lib/verbs';
+import {
+  conjugateVerb,
+  Form,
+  getExampleSentence,
+  generateVerbPattern,
+  getFormLabel,
+  getFormHint,
+  type ConjugatedVerb,
+  type VerbPattern,
+} from '@/lib/verbs';
 import { speakSwedish } from '@/lib/speech';
 import { ConfettiEffect } from './ConfettiEffect';
 import { Grade } from '@/lib/srs';
@@ -32,14 +41,14 @@ export function PracticeCard({
   const [isCorrect, setIsCorrect] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
-  const [conjugated, setConjugated] = useState<any>(null);
-  const [pattern, setPattern] = useState<any>(null);
+  const [conjugated, setConjugated] = useState<ConjugatedVerb | null>(null);
+  const [pattern, setPattern] = useState<VerbPattern | null>(null);
   const [shuffledLetters, setShuffledLetters] = useState<string[]>([]);
   const [options, setOptions] = useState<string[]>([]);
 
   // Load verb data
   useEffect(() => {
-    conjugateVerb(infinitive).then(result => {
+    conjugateVerb(infinitive).then((result) => {
       setConjugated(result);
       const uniqueLetters = [...new Set(result[form].split(''))];
       setShuffledLetters(uniqueLetters.sort(() => Math.random() - 0.5));
@@ -56,7 +65,7 @@ export function PracticeCard({
     const generateOptions = async () => {
       const opts = [correctAnswer];
       const allVerbs = ['vara', 'ha', 'gå', 'komma', 'skriva', 'läsa', 'säga', 'få'];
-      
+
       while (opts.length < 4) {
         const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
         const randomConjugation = await conjugateVerb(randomVerb);
@@ -65,7 +74,7 @@ export function PracticeCard({
           opts.push(conjugatedForm);
         }
       }
-      
+
       setOptions(opts.sort(() => Math.random() - 0.5));
     };
 
@@ -78,7 +87,7 @@ export function PracticeCard({
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
     setIsCorrect(correct);
     setShowFeedback(true);
-    
+
     if (correct) {
       setShowConfetti(true);
       if (autoplayAudio) {
@@ -90,7 +99,8 @@ export function PracticeCard({
   // Auto-submit when answer is correct
   useEffect(() => {
     if (userAnswer && !showFeedback) {
-      const isAnswerCorrect = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+      const isAnswerCorrect =
+        userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
       if (isAnswerCorrect) {
         handleSubmit(userAnswer);
       }
@@ -103,31 +113,36 @@ export function PracticeCard({
       const availableIndices = correctAnswer
         .split('')
         .map((_, index) => index)
-        .filter(index => !revealedHints.includes(index));
-      
+        .filter((index) => !revealedHints.includes(index));
+
       // Pick a random unrevealed index
       const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
-      setRevealedHints(prev => [...prev, randomIndex]);
+      setRevealedHints((prev) => [...prev, randomIndex]);
     }
   };
 
   const getPatternWithHints = () => {
-    return pattern.patternParts.map(part => {
-      if (part.isMissing) {
-        // Show the blank with revealed hints
-        return correctAnswer.split('').map((letter, index) => {
-          if (revealedHints.includes(index)) {
-            return letter;
-          }
-          return '_';
-        }).join(' ');
-      }
-      return part.text;
-    }).join(' – ');
+    return pattern.patternParts
+      .map((part) => {
+        if (part.isMissing) {
+          // Show the blank with revealed hints
+          return correctAnswer
+            .split('')
+            .map((letter, index) => {
+              if (revealedHints.includes(index)) {
+                return letter;
+              }
+              return '_';
+            })
+            .join(' ');
+        }
+        return part.text;
+      })
+      .join(' – ');
   };
 
   const handleDelete = () => {
-    setUserAnswer(prev => prev.slice(0, -1));
+    setUserAnswer((prev) => prev.slice(0, -1));
   };
 
   const handleNext = () => {
@@ -158,7 +173,7 @@ export function PracticeCard({
 
   const handleLetterClick = (letter: string) => {
     if (!showFeedback) {
-      setUserAnswer(prev => prev + letter);
+      setUserAnswer((prev) => prev + letter);
     }
   };
 
@@ -187,9 +202,7 @@ export function PracticeCard({
               <p className="text-sm text-muted-foreground">
                 Missing: <span className="font-semibold">{getFormLabel(form)}</span>
               </p>
-              <p className="text-xs text-muted-foreground italic">
-                {getFormHint(form)}
-              </p>
+              <p className="text-xs text-muted-foreground italic">{getFormHint(form)}</p>
             </div>
           </div>
 
@@ -201,7 +214,9 @@ export function PracticeCard({
                   <Input
                     value={userAnswer}
                     onChange={(e) => setUserAnswer(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && userAnswer.trim() && handleSubmit(userAnswer)}
+                    onKeyDown={(e) =>
+                      e.key === 'Enter' && userAnswer.trim() && handleSubmit(userAnswer)
+                    }
                     placeholder="Type your answer..."
                     className="text-2xl text-center py-6 caret-transparent"
                     autoFocus
@@ -264,9 +279,11 @@ export function PracticeCard({
           {/* Feedback */}
           {showFeedback && (
             <div className="space-y-4">
-              <div className={`flex items-center justify-center gap-3 p-4 rounded-lg ${
-                isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
-              }`}>
+              <div
+                className={`flex items-center justify-center gap-3 p-4 rounded-lg ${
+                  isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
+                }`}
+              >
                 {isCorrect ? (
                   <>
                     <CheckCircle2 className="w-8 h-8" />
@@ -289,9 +306,13 @@ export function PracticeCard({
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     {pattern.patternParts.map((part, index) => (
                       <div key={index} className="flex items-center gap-1">
-                        <div className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
-                          part.isMissing ? 'bg-primary text-primary-foreground font-bold' : 'bg-background'
-                        }`}>
+                        <div
+                          className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
+                            part.isMissing
+                              ? 'bg-primary text-primary-foreground font-bold'
+                              : 'bg-background'
+                          }`}
+                        >
                           <span className="text-lg">
                             {part.isMissing ? correctAnswer : part.text}
                           </span>
@@ -322,7 +343,7 @@ export function PracticeCard({
                     Pronounce answer
                   </Button>
                 </div>
-                
+
                 {showExamples && exampleSentence && (
                   <div className="bg-accent/10 rounded-lg p-4">
                     <p className="text-sm text-muted-foreground mb-1">Example:</p>
@@ -331,10 +352,7 @@ export function PracticeCard({
                 )}
               </div>
 
-              <Button
-                onClick={handleNext}
-                className="w-full py-6 text-lg"
-              >
+              <Button onClick={handleNext} className="w-full py-6 text-lg">
                 Next Card
               </Button>
             </div>

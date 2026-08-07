@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { PracticeCard } from '@/components/PracticeCard';
-import { useSrsProgress } from '@/hooks/useSrsProgress';
+import { useSrsProgress, type PracticeItem } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { Grade } from '@/lib/srs';
 
@@ -12,8 +12,8 @@ export default function Practice() {
   const navigate = useNavigate();
   const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
   const { getDueItems, recordAnswer, isLoading } = useSrsProgress(settings.cefrLevels);
-  
-  const [dueItems, setDueItems] = useState<any[]>([]);
+
+  const [dueItems, setDueItems] = useState<PracticeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [practiceComplete, setPracticeComplete] = useState(false);
 
@@ -41,9 +41,7 @@ export default function Practice() {
     }
   };
 
-  const progressPercent = dueItems.length > 0
-    ? ((currentIndex + 1) / dueItems.length) * 100
-    : 100;
+  const progressPercent = dueItems.length > 0 ? ((currentIndex + 1) / dueItems.length) * 100 : 100;
 
   if (isLoading || settingsLoading) {
     return (
@@ -60,14 +58,8 @@ export default function Practice() {
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <div className="w-full max-w-2xl text-center space-y-6">
           <h1 className="text-5xl font-bold text-primary">Great Work! 🎉</h1>
-          <p className="text-xl text-muted-foreground">
-            You've completed all due cards for today
-          </p>
-          <Button
-            onClick={() => navigate('/')}
-            size="lg"
-            className="text-lg px-8 py-6"
-          >
+          <p className="text-xl text-muted-foreground">You've completed all due cards for today</p>
+          <Button onClick={() => navigate('/')} size="lg" className="text-lg px-8 py-6">
             Back to Home
           </Button>
         </div>
@@ -86,11 +78,7 @@ export default function Practice() {
       {/* Header */}
       <div className="max-w-2xl mx-auto mb-6 space-y-4">
         <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="gap-2"
-          >
+          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
@@ -111,7 +99,7 @@ export default function Practice() {
             </Button>
           </div>
         </div>
-        
+
         <Progress value={progressPercent} className="h-3" />
       </div>
 
