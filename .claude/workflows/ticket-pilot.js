@@ -13,7 +13,7 @@ export const meta = {
     },
     { title: 'QA', detail: 'qa agent adds tests to the PR branch (test files are qa-owned)' },
     { title: 'Review', detail: 'adversarial review of PR diff vs acceptance criteria' },
-    { title: 'Ship', detail: 'watch CI, resolve rebase conflicts, merge or park' },
+    { title: 'Ship', detail: 'watch CI, merge + board update, or park with needs-human' },
   ],
 };
 
@@ -34,6 +34,20 @@ if (!tickets.length)
   throw new Error(
     'args.tickets required: array of GitHub issue numbers, e.g. { tickets: [16, 18, 28] }',
   );
+
+// Serialization locks: same-owner implements never run concurrently (no two
+// agents hold one owner's files), and merges happen one at a time so a PR is
+// never merged onto a main that just moved under it.
+const locks = {};
+function withLock(key, fn) {
+  const prev = locks[key] || Promise.resolve();
+  const next = prev.then(fn, fn);
+  locks[key] = next.then(
+    () => {},
+    () => {},
+  );
+  return next;
+}
 
 // ---------------------------------------------------------------- rules
 
@@ -161,9 +175,10 @@ Return only the structured result.`,
 
   // ---- Implement: owner-role agent in isolated worktree, opens PR
   (t, n) => {
-    if (!t) return null;
-    return agent(
-      `You are implementing GitHub issue #${n} in ${REPO}: "${t.title}".
+    if (!t) return { status: 'blocked', blockReason: 'triage agent returned nothing' };
+    return withLock('owner:' + t.owner, () =>
+      agent(
+        `You are implementing GitHub issue #${n} in ${REPO}: "${t.title}".
 Acceptance criteria:
 ${t.acceptance}
 
@@ -179,22 +194,28 @@ You are already in an isolated git worktree. Steps:
 If the fix genuinely requires a change in files owned by ANOTHER role: do NOT edit those files. Finish and commit YOUR part, push the branch, open the PR as draft (gh pr create --draft ...), and return status 'needs-help' with helpRole and a precise helpRequest — a teammate agent of that role will be dispatched to the same branch.
 If you cannot proceed safely at all (uncertain Swedish, acceptance criteria ambiguous, tests cannot pass without weakening), do NOT push anything: return status 'blocked' with a precise blockReason.
 ${RULES}`,
-      {
-        label: `impl:#${n}`,
-        phase: 'Implement',
-        schema: IMPL_SCHEMA,
-        agentType: t.owner,
-        model: t.model,
-        isolation: 'worktree',
-      },
-    ).then((impl) => (impl ? { ...impl, triage: t } : null));
+        {
+          label: `impl:#${n}`,
+          phase: 'Implement',
+          schema: IMPL_SCHEMA,
+          agentType: t.owner,
+          model: t.model,
+          isolation: 'worktree',
+        },
+      ),
+    ).then((impl) =>
+      impl
+        ? { ...impl, triage: t }
+        : { status: 'blocked', blockReason: 'implement agent returned nothing', triage: t },
+    );
   },
 
   // ---- Assist: on needs-help, helper role agent contributes its own files
   (r, n) => {
     if (!r || r.status !== 'needs-help') return r;
-    return agent(
-      `You are the ${r.helpRole} on the Ordböj team. The ${r.triage.owner} implementing issue #${n} ("${r.triage.title}") on branch ${r.branch} needs your help:
+    return withLock('owner:' + r.helpRole, () =>
+      agent(
+        `You are the ${r.helpRole} on the Ordböj team. The ${r.triage.owner} implementing issue #${n} ("${r.triage.title}") on branch ${r.branch} needs your help:
 ${r.helpRequest}
 
 You are in an isolated git worktree. Steps:
@@ -206,14 +227,15 @@ You are in an isolated git worktree. Steps:
 6. Return status 'pr-opened' with branch, prNumber, prUrl and evidence.
 If you cannot do it safely, return status 'blocked' with a precise blockReason. Never return needs-help yourself.
 ${RULES}`,
-      {
-        label: `assist:#${n}:${r.helpRole}`,
-        phase: 'Assist',
-        schema: IMPL_SCHEMA,
-        agentType: r.helpRole,
-        model: 'sonnet',
-        isolation: 'worktree',
-      },
+        {
+          label: `assist:#${n}:${r.helpRole}`,
+          phase: 'Assist',
+          schema: IMPL_SCHEMA,
+          agentType: r.helpRole,
+          model: 'sonnet',
+          isolation: 'worktree',
+        },
+      ),
     ).then((h) =>
       h
         ? {
@@ -224,7 +246,11 @@ ${RULES}`,
               riskyReason: r.triage.riskyReason || 'cross-owner (assist)',
             },
           }
-        : null,
+        : {
+            ...r,
+            status: 'blocked',
+            blockReason: 'assist (' + r.helpRole + ') agent returned nothing',
+          },
     );
   },
 
@@ -275,48 +301,84 @@ Check, trying to REFUTE the claim that this PR is correct and complete:
 - Any localStorage shape change without version+migration.
 - Any Swedish string change that could be wrong (conjugation, spelling).
 Return approved=true only if nothing material is wrong. List every finding either way.`,
+      // review pinned to opus: strongest affordable tier (session model too expensive)
       { label: `review:#${n}`, phase: 'Review', schema: REVIEW_SCHEMA, model: 'opus' },
     ).then((rev) => ({ ...r, review: rev }));
   },
 
-  // ---- Ship: CI watch, conflict handling, merge or park
+  // ---- Ship: CI watch, conflict handling, merge + board update, or park
   (r, n) => {
     if (!r) return { ticket: n, status: 'failed', detail: 'earlier stage returned nothing' };
-    if (r.status !== 'pr-opened')
-      return {
+
+    // Parked before any PR existed: make it visible on GitHub instead of
+    // failing silently — comment on the issue and label it needs-human.
+    if (r.status !== 'pr-opened') {
+      const reason = 'blocked before merge (' + r.status + '): ' + (r.blockReason || 'unknown');
+      return agent(
+        `Ticket #${n} in ${REPO} was parked by automation before any PR was opened.
+Reason: ${reason}
+
+Make the parked state visible on GitHub (use the Bash tool):
+1. Ensure the label exists (create-or-update, never errors):
+   gh label create needs-human --repo ${REPO} --color D93F0B --description "agent parked, human decision needed" --force
+2. Comment the reason on the issue: gh issue comment ${n} --repo ${REPO} --body "<the reason, one short paragraph>"
+3. Label the issue: gh issue edit ${n} --repo ${REPO} --add-label needs-human
+Return status 'parked' with a one-line detail.`,
+        {
+          label: `park:#${n}`,
+          phase: 'Ship',
+          schema: SHIP_SCHEMA,
+          effort: 'low',
+          model: 'sonnet',
+        },
+      ).then((s) => ({
         ticket: n,
+        owner: r.triage && r.triage.owner,
         status: 'parked',
-        detail: 'blocked before merge (' + r.status + '): ' + (r.blockReason || 'unknown'),
-      };
+        detail: (s && s.detail) || reason,
+      }));
+    }
+
     const risky = r.triage.risky;
     const approved = r.review && r.review.approved;
-    return agent(
-      `You are the ship agent for PR #${r.prNumber} in ${REPO} (issue #${n}).
+    const runShip = () =>
+      agent(
+        `You are the ship agent for PR #${r.prNumber} in ${REPO} (issue #${n}).
 Context: review approved=${approved}; findings: ${JSON.stringify((r.review && r.review.findings) || [])}. Risky class=${risky}${risky ? ' (' + (r.triage.riskyReason || '') + ')' : ''}.
+Use the Bash tool for all commands.
 
-Ensure the 'needs-human' label exists (ignore error if it does):
-gh label create needs-human --repo ${REPO} --color D93F0B --description "agent parked, human decision needed" || true
+Ensure the 'needs-human' label exists (create-or-update, never errors):
+gh label create needs-human --repo ${REPO} --color D93F0B --description "agent parked, human decision needed" --force
 
 Case A — review NOT approved:
-Comment the findings on the PR, add label needs-human, do NOT merge. Return parked.
+Comment the findings on the PR, add label needs-human to BOTH the PR and issue #${n} (gh issue edit ${n} --repo ${REPO} --add-label needs-human), do NOT merge. Return parked.
 
 Case B — review approved:
-1. Watch CI: gh pr checks ${r.prNumber} --repo ${REPO} --watch --interval 30 (if this exceeds your command timeout, poll gh pr checks in a loop instead; overall give CI up to ~20 minutes).
-2. CI red: read the failing job log (gh run view --log-failed). If the failure is clearly caused by this PR and trivially fixable is NOT your call — you do not edit code. Comment the failing lines on the PR, add needs-human, return parked.
+1. Watch CI by POLLING: run gh pr checks ${r.prNumber} --repo ${REPO}, then re-run it every ~60 seconds until every check has concluded, up to ~20 minutes total. Do NOT use --watch — it can outlive the command timeout.
+2. CI red: read the failing job log (gh run view --log-failed). You do not edit code, even for trivial failures. Comment the failing lines on the PR, add needs-human to the PR and the issue, return parked.
 3. CI green and risky=${risky}:
-   - risky true: comment "CI green, review clean — risky class (${r.triage.riskyReason || 'risky'}), waiting for human approval", add needs-human, return parked.
+   - risky true: comment "CI green, review clean — risky class (${r.triage.riskyReason || 'risky'}), waiting for human approval", add needs-human to the PR and the issue, return parked.
    - risky false: merge with gh pr merge ${r.prNumber} --repo ${REPO} --squash --delete-branch.
-     If merge fails due to conflicts: clone-checkout the PR branch in a temp dir (gh pr checkout inside a fresh 'git worktree add'), rebase onto origin/main, resolve MECHANICAL conflicts only (imports, adjacent lines), run npm test, force-push with --force-with-lease, re-watch CI once, then merge. If the conflict is semantic (two changes to the same behavior), do not guess: comment, needs-human, return parked.
-4. Return merged with a one-line detail.
+     If merge fails due to conflicts: clone-checkout the PR branch in a temp dir (gh pr checkout inside a fresh 'git worktree add'), rebase onto origin/main, resolve MECHANICAL conflicts only (imports, adjacent lines), run npm test, force-push with --force-with-lease, re-watch CI once (polling), then retry the merge once more. If the conflict is semantic (two changes to the same behavior) or the retry fails again, do not guess: comment, needs-human on PR and issue, return parked.
+4. After a successful merge, update the board:
+   - The PR body says "Closes #${n}", so the issue should close automatically; verify with gh issue view ${n} --repo ${REPO} --json state and close it manually (gh issue close ${n} --repo ${REPO}) if still open.
+   - Move the project item to Done: find the item id with
+     gh project item-list 1 --owner ordboj --format json
+     (the item whose content.number is ${n}), then
+     gh project item-edit --project-id PVT_kwDOEr3qds4BfuEP --id <item-id> --field-id PVTSSF_lADOEr3qds4BfuEPzhZ--ms --single-select-option-id 98236657
+5. Return merged with a one-line detail.
 Never edit application source. Never weaken tests. Never merge a risky-class or unapproved PR.`,
-      { label: `ship:#${n}`, phase: 'Ship', schema: SHIP_SCHEMA, model: 'sonnet' },
-    ).then((s) => ({
+        { label: `ship:#${n}`, phase: 'Ship', schema: SHIP_SCHEMA, model: 'sonnet' },
+      );
+    // Only merge candidates take the merge lock; park-only ships stay parallel.
+    const shipRun = approved && !risky ? withLock('merge', runShip) : runShip();
+    return shipRun.then((s) => ({
       ticket: n,
       prUrl: r.prUrl,
       prNumber: r.prNumber,
       owner: r.triage.owner,
       risky,
-      ...s,
+      ...(s || { status: 'failed', detail: 'ship agent returned nothing' }),
     }));
   },
 );
