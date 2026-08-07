@@ -1,6 +1,18 @@
 // Hardcoded Swedish verb conjugation data
 // This data is extracted from the CSV to improve loading performance
 
+// Conjugation classes as taught in Swedish grammar:
+//   '1'  -ar                     tala/talar/talade/talat
+//   '2a' -er, voiced stem        ringa/ringer/ringde/ringt
+//   '2b' -er, voiceless stem     köpa/köper/köpte/köpt
+//   '3'  short vowel-final stem  bo/bor/bodde/bott
+//   '4'  starka och oregelbundna verb. This bucket deliberately covers BOTH
+//        true strong verbs with vowel gradation (dricka/drack/druckit) AND
+//        irregular verbs and auxiliaries that fit no other class
+//        (vara, ha, kunna, vilja, veta, göra, säga, anse, lägga). Swedish
+//        school grammar names this class "grupp 4 - starka och oregelbundna
+//        verb", so the merge matches what a learner is taught. Consumers must
+//        not assume every '4' row shows vowel gradation.
 export type Grupp = '1' | '2a' | '2b' | '3' | '4';
 
 export interface VerbData {
@@ -26,9 +38,9 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "vilja", imperativ: "", presens: "vill", preteritum: "ville", supinum: "velat", grupp: "4" },
   { cefr: "A1", infinitive: "göra", imperativ: "gör", presens: "gör", preteritum: "gjorde", supinum: "gjort", grupp: "4" },
   { cefr: "A1", infinitive: "finna", imperativ: "finn", presens: "finner", preteritum: "fann", supinum: "funnit", grupp: "4" },
-  { cefr: "A1", infinitive: "ta", imperativ: "", presens: "tar", preteritum: "tade", supinum: "tat", grupp: "4" },
+  { cefr: "A1", infinitive: "ta", imperativ: "", presens: "tar", preteritum: "tog", supinum: "tagit", grupp: "4" },
   { cefr: "A1", infinitive: "se", imperativ: "", presens: "ser", preteritum: "såg", supinum: "sett", grupp: "4" },
-  { cefr: "A1", infinitive: "gå", imperativ: "", presens: "går", preteritum: "gick", supinum: "gắtt", grupp: "4" },
+  { cefr: "A1", infinitive: "gå", imperativ: "", presens: "går", preteritum: "gick", supinum: "gått", grupp: "4" },
   { cefr: "A1", infinitive: "säga", imperativ: "", presens: "säger", preteritum: "sa", supinum: "sagt", grupp: "4" },
   { cefr: "A1", infinitive: "äga", imperativ: "", presens: "äger", preteritum: "ägde", supinum: "ägt", grupp: "2a" },
   { cefr: "A1", infinitive: "betyda", imperativ: "", presens: "betyder", preteritum: "betydde", supinum: "betytt", grupp: "2a" },
@@ -45,29 +57,20 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "känna", imperativ: "", presens: "känner", preteritum: "kände", supinum: "känt", grupp: "2a" },
   { cefr: "A1", infinitive: "läsa", imperativ: "", presens: "läser", preteritum: "läste", supinum: "läst", grupp: "2b" },
   { cefr: "A1", infinitive: "ro", imperativ: "", presens: "ror", preteritum: "rodde", supinum: "rott", grupp: "3" },
-  { cefr: "A1", infinitive: "låta", imperativ: "", presens: "låter", preteritum: "lat", supinum: "låtit", grupp: "4" },
+  { cefr: "A1", infinitive: "låta", imperativ: "", presens: "låter", preteritum: "lät", supinum: "låtit", grupp: "4" },
   { cefr: "A1", infinitive: "stå", imperativ: "", presens: "står", preteritum: "stod", supinum: "stått", grupp: "4" },
   { cefr: "A1", infinitive: "visa", imperativ: "", presens: "visar", preteritum: "visade", supinum: "visat", grupp: "1" },
   { cefr: "A1", infinitive: "använda", imperativ: "", presens: "använder", preteritum: "använde", supinum: "använt", grupp: "2a" },
-  // NEEDS HUMAN REVIEW: "vända" is grupp 2a in standard Swedish
-  // (vända/vänder/vände/vänt), but the stored forms below
-  // (vändar/vändade/vändat) follow a grupp-1 pattern instead. The forms
-  // themselves look wrong; do not assign a grupp until the forms are
-  // confirmed/fixed. Flagging rather than guessing.
-  { cefr: "A1", infinitive: "vända", imperativ: "", presens: "vändar", preteritum: "vändade", supinum: "vändat" },
+  { cefr: "A1", infinitive: "vända", imperativ: "", presens: "vänder", preteritum: "vände", supinum: "vänt", grupp: "2a" },
   { cefr: "A1", infinitive: "hålla", imperativ: "", presens: "håller", preteritum: "höll", supinum: "hållit", grupp: "4" },
   { cefr: "A1", infinitive: "tänka", imperativ: "", presens: "tänker", preteritum: "tänkte", supinum: "tänkt", grupp: "2b" },
-  // NEEDS HUMAN REVIEW: "söka" is grupp 2b in standard Swedish
-  // (söka/söker/sökte/sökt, voiceless k stem), but the stored forms below
-  // (sökar/sökade/sökat) follow a grupp-1 pattern instead. Flagging rather
-  // than guessing until the forms are confirmed/fixed.
-  { cefr: "A1", infinitive: "söka", imperativ: "", presens: "sökar", preteritum: "sökade", supinum: "sökat" },
+  { cefr: "A1", infinitive: "söka", imperativ: "", presens: "söker", preteritum: "sökte", supinum: "sökt", grupp: "2b" },
   { cefr: "A1", infinitive: "ligga", imperativ: "", presens: "ligger", preteritum: "låg", supinum: "legat", grupp: "4" },
-  // NEEDS HUMAN REVIEW: "lägga" is a strong grupp 4 verb in standard Swedish
-  // (lägga/lägger/la(de)/lagt), but the stored forms below
-  // (läggar/läggade/läggat) follow a grupp-1 pattern instead. Flagging
-  // rather than guessing until the forms are confirmed/fixed.
-  { cefr: "A1", infinitive: "lägga", imperativ: "", presens: "läggar", preteritum: "läggade", supinum: "läggat" },
+  // "lägga" has two accepted preteritum forms, "la" and "lade" (SAOL). The
+  // short form is stored here for consistency with "säga" -> "sa" above.
+  // Until the app accepts alternate answers, a learner typing "lade" is
+  // marked wrong even though it is correct: a product gap, not a data error.
+  { cefr: "A1", infinitive: "lägga", imperativ: "", presens: "lägger", preteritum: "la", supinum: "lagt", grupp: "4" },
   { cefr: "A1", infinitive: "anse", imperativ: "", presens: "anser", preteritum: "ansåg", supinum: "ansett", grupp: "4" },
   { cefr: "A1", infinitive: "öva", imperativ: "", presens: "övar", preteritum: "övade", supinum: "övat", grupp: "1" },
   { cefr: "A1", infinitive: "handla", imperativ: "", presens: "handlar", preteritum: "handlade", supinum: "handlat", grupp: "1" },
