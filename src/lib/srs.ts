@@ -22,6 +22,10 @@ const EASE_FLOOR = 1.3;
 const EASE_DELTA_CORRECT = 0.05;
 const EASE_DELTA_WRONG = -0.2;
 
+// Hard ceiling on any single interval. Even at the 2.8 ease ceiling an
+// item's schedule cannot leave the app's one-year horizon.
+export const MAX_INTERVAL_DAYS = 365;
+
 // SM-2-derived scheduler, but with flat ease deltas instead of the
 // textbook graded-ease formula. The textbook formula assumes a self-rated
 // 0-5 input; fed a binary correct/wrong signal it produced a -0.80/+0.10
@@ -34,7 +38,10 @@ const EASE_DELTA_WRONG = -0.2;
 export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
   let { repetitions, intervalDays, easeFactor } = state;
 
-  const isCorrect = grade >= 3;
+  // Exact match, not >= 3: Grade is 0 | 5 today, and a future hinted
+  // grade must force an explicit branch here rather than silently
+  // counting as correct.
+  const isCorrect = grade === 5;
 
   if (!isCorrect) {
     // Lapse: flat penalty, reset progress. No longer runs the SM-2 formula
@@ -52,7 +59,7 @@ export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
     } else if (repetitions === 2) {
       intervalDays = 6;
     } else {
-      intervalDays = Math.round(intervalDays * easeFactor);
+      intervalDays = Math.min(MAX_INTERVAL_DAYS, Math.round(intervalDays * easeFactor));
     }
   }
 
