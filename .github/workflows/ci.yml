@@ -131,8 +131,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # The Playwright config only defines a mobile-chrome project (see
-      # playwright.config.ts), so CI only needs the Chromium browser.
+      # The Playwright config defines two projects, mobile-chrome and
+      # csp-prod-build (see playwright.config.ts), both on Pixel 7 (Chromium)
+      # emulation, so CI only needs the Chromium browser.
       # Chromium binaries are pinned to the installed @playwright/test
       # version, so keying the cache on the lockfile hash is enough: it
       # invalidates whenever a Dependabot bump changes that version.
