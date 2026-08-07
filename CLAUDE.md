@@ -71,7 +71,7 @@ gh project item-edit --project-id PVT_kwDOEr3qds4BfuEP \
 # Todo=f75ad846  In Progress=47fc9ee4  Done=98236657
 
 # find <item-id>
-gh project item-list 2 --owner tugrulcan --format json
+gh project item-list 1 --owner ordboj --format json
 ```
 
 Close the issue (`gh issue close`) when work is verified, then set status
