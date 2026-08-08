@@ -6,7 +6,7 @@ import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { PracticeCard } from '@/components/PracticeCard';
 import { useSrsProgress, type PracticeItem } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
-import { Grade } from '@/lib/srs';
+import { Grade, RELEARNING_MIN_GAP } from '@/lib/srs';
 
 export default function Practice() {
   const navigate = useNavigate();
@@ -32,9 +32,24 @@ export default function Practice() {
 
   const handleAnswer = (grade: Grade) => {
     const currentItem = dueItems[currentIndex];
-    recordAnswer(currentItem.itemId, grade);
+    // Optional chaining, not a destructure: keeps this call site resilient
+    // if recordAnswer is ever mocked or stubbed without the requeue result.
+    const needsRequeue = recordAnswer(currentItem.itemId, grade)?.needsRequeue ?? false;
 
-    if (currentIndex < dueItems.length - 1) {
+    if (needsRequeue) {
+      // Lapse: re-insert this item RELEARNING_MIN_GAP items ahead so it
+      // comes back for a second retrieval attempt within the same sitting
+      // (docs/learning/lapse-handling.md), instead of only surfacing
+      // tomorrow. Clamped to the end of the queue when fewer items remain.
+      setDueItems((prev) => {
+        const next = [...prev];
+        const insertAt = Math.min(currentIndex + RELEARNING_MIN_GAP, next.length);
+        next.splice(insertAt, 0, currentItem);
+        return next;
+      });
+    }
+
+    if (currentIndex < dueItems.length - 1 || needsRequeue) {
       setCurrentIndex(currentIndex + 1);
     } else {
       setPracticeComplete(true);

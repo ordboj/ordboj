@@ -146,8 +146,12 @@ export function PracticeCard({
   };
 
   const handleNext = () => {
-    // Calculate grade based on correctness
-    const grade: Grade = isCorrect ? 5 : 0;
+    // Calculate grade based on correctness and hint usage (see
+    // docs/learning/lapse-handling.md, "The hint penalty is a policy, not a
+    // bug fix"): a wrong answer is always a lapse (0); a correct answer
+    // reached with one or more revealed hints is partial credit (3), not
+    // full recall; an unaided correct answer is full credit (5).
+    const grade: Grade = !isCorrect ? 0 : revealedHints.length > 0 ? 3 : 5;
     onAnswer(grade);
   };
 
@@ -296,6 +300,13 @@ export function PracticeCard({
                   </>
                 )}
               </div>
+
+              {!isCorrect && (
+                <p className="text-sm text-muted-foreground text-center">
+                  No worries — this one will come back later in this session so you can try
+                  again.
+                </p>
+              )}
 
               <div className="space-y-4">
                 {/* Show full pattern with pronunciation buttons */}
