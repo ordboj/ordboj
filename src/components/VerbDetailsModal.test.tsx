@@ -1,8 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { VerbDetailsModal } from '@/components/VerbDetailsModal';
 import { getFormLabel, type ConjugatedVerb } from '@/lib/verbs';
+import { conjugationItemId } from '@/lib/itemIds';
+import type { SrsState } from '@/lib/srs';
 
 // PR #199 (issue #112, AC #4): the "New" stage badge used an off-palette
 // bg-purple-500 utility that doesn't map to a design token. It must use an
@@ -26,6 +28,83 @@ describe('VerbDetailsModal - stage badge color token', () => {
     const badge = screen.getByText('New');
     expect(badge).toHaveClass('bg-primary');
     expect(badge).not.toHaveClass('bg-purple-500');
+  });
+});
+
+// Issue #227: getStageBadge previously returned bg-orange-500 / bg-yellow-500
+// / bg-green-500 (raw Tailwind palette classes with no design-token backing)
+// for the Learning/Reviewing/Mastered stages, duplicated between this
+// component and Progress.tsx. Post-fix both call sites share
+// StageBadge.tsx's getStageBadge, which returns semantic bg-stage-* tokens
+// instead. Against the pre-fix inline getStageBadge these raw-class
+// assertions fail (the badge does carry bg-orange-500 etc.), so this is
+// non-vacuous.
+describe('VerbDetailsModal - Learning/Reviewing/Mastered badges use semantic tokens, not raw palette classes (issue #227)', () => {
+  it('renders the Learning badge (stage 1-2) with bg-stage-learning, not bg-orange-500', () => {
+    renderWithProviders(
+      <VerbDetailsModal verb={VERB} srsStage={1} srsStates={{}} onClose={vi.fn()} />,
+    );
+    const badge = screen.getByText('Learning');
+    expect(badge).toHaveClass('bg-stage-learning');
+    expect(badge).not.toHaveClass('bg-orange-500');
+  });
+
+  it('renders the Reviewing badge (stage 3-4) with bg-stage-reviewing, not bg-yellow-500', () => {
+    renderWithProviders(
+      <VerbDetailsModal verb={VERB} srsStage={3} srsStates={{}} onClose={vi.fn()} />,
+    );
+    const badge = screen.getByText('Reviewing');
+    expect(badge).toHaveClass('bg-stage-reviewing');
+    expect(badge).not.toHaveClass('bg-yellow-500');
+  });
+
+  it('renders the Mastered badge (stage 5+) with bg-stage-mastered, not bg-green-500', () => {
+    renderWithProviders(
+      <VerbDetailsModal verb={VERB} srsStage={5} srsStates={{}} onClose={vi.fn()} />,
+    );
+    const badge = screen.getByText('Mastered');
+    expect(badge).toHaveClass('bg-stage-mastered');
+    expect(badge).not.toHaveClass('bg-green-500');
+  });
+});
+
+// Issue #227: the stray overdue indicator at VerbDetailsModal.tsx:117 used
+// text-orange-500 directly (no token). It is retokenized to text-stage-learning.
+// A deterministic fake clock pins "overdue" without touching real Date.now().
+describe('VerbDetailsModal - overdue indicator retokenized (issue #227)', () => {
+  const FIXED_NOW = new Date('2026-08-08T12:00:00Z').getTime();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(FIXED_NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('applies text-stage-learning (not text-orange-500) to the "Next review" line when the item is overdue', () => {
+    const overdueState: SrsState = {
+      itemId: conjugationItemId(VERB.id, 'presens'),
+      repetitions: 3,
+      intervalDays: 4,
+      easeFactor: 2.1,
+      // Due a full day before the fixed "now" -- unambiguously overdue.
+      dueAt: FIXED_NOW - 24 * 60 * 60 * 1000,
+    };
+    renderWithProviders(
+      <VerbDetailsModal
+        verb={VERB}
+        srsStage={1}
+        srsStates={{ [overdueState.itemId]: overdueState }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const nextReviewLine = screen.getByText(/Next review:/).closest('p') as HTMLElement;
+    expect(nextReviewLine.textContent).toContain('(Due now!)');
+    expect(nextReviewLine).toHaveClass('text-stage-learning');
+    expect(nextReviewLine).not.toHaveClass('text-orange-500');
   });
 });
 

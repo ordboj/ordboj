@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { conjugationItemId } from '@/lib/itemIds';
 import Progress from '@/pages/Progress';
 
 // Progress.tsx composes useSrsProgress (srs-engine) and useSettings
@@ -54,6 +55,79 @@ describe("Progress page - 'New' stage badge color token (AC #4, issue #112)", ()
       expect(badge).toHaveClass('bg-primary');
       expect(badge).not.toHaveClass('bg-purple-500');
     }
+  });
+});
+
+// Issue #227: Progress.tsx had its own inline getStageBadge duplicating
+// VerbDetailsModal.tsx's, both returning raw bg-orange-500 / bg-yellow-500 /
+// bg-green-500 Tailwind palette classes for the Learning/Reviewing/Mastered
+// stages. Post-fix, Progress.tsx imports the same shared helper from
+// StageBadge.tsx, which returns semantic bg-stage-* tokens instead. Each
+// case below drives a controlled srsStates fixture through the real
+// getSrsStage computation (average repetitions across the four conjugation
+// forms, floored) so the resulting stage -- and therefore badge -- is
+// deterministic. Against the pre-fix inline getStageBadge these
+// not-toHaveClass raw-palette assertions fail, so this is non-vacuous.
+describe('Progress page - Learning/Reviewing/Mastered badges use semantic tokens, not raw palette classes (issue #227)', () => {
+  const FIXTURE_VERB = {
+    id: 'stage-badge-fixture-227',
+    infinitive: 'fixturverbet227',
+    cefr: 'A1' as const,
+    presens: 'fixturar',
+    preteritum: 'fixturade',
+    supinum: 'fixturat',
+    imperativ: 'fixtura',
+  };
+
+  async function renderProgressWithStage(repetitions: number) {
+    vi.resetModules();
+    vi.doMock('@/lib/verbs', async () => {
+      const actual = await vi.importActual<typeof import('@/lib/verbs')>('@/lib/verbs');
+      return { ...actual, getAllConjugatedVerbs: async () => [FIXTURE_VERB] };
+    });
+    vi.doMock('@/hooks/useSrsProgress', () => ({
+      useSrsProgress: () => ({
+        srsStates: {
+          [conjugationItemId(FIXTURE_VERB.id, 'presens')]: {
+            itemId: conjugationItemId(FIXTURE_VERB.id, 'presens'),
+            repetitions,
+            intervalDays: 1,
+            easeFactor: 2.0,
+            dueAt: Date.now() + 999 * 24 * 60 * 60 * 1000,
+          },
+        },
+      }),
+    }));
+
+    const { default: MockedProgress } = await import('@/pages/Progress');
+    renderWithProviders(<MockedProgress />, { route: '/progress' });
+  }
+
+  afterEach(() => {
+    vi.doUnmock('@/lib/verbs');
+    vi.doUnmock('@/hooks/useSrsProgress');
+    vi.resetModules();
+  });
+
+  it('renders the Learning badge (stage 1) with bg-stage-learning, not bg-orange-500', async () => {
+    await renderProgressWithStage(1);
+    const badge = await screen.findByText('Learning');
+    expect(badge).toHaveClass('bg-stage-learning');
+    expect(badge).not.toHaveClass('bg-orange-500');
+  });
+
+  it('renders the Reviewing badge (stage 3) with bg-stage-reviewing, not bg-yellow-500', async () => {
+    await renderProgressWithStage(3);
+    const badge = await screen.findByText('Reviewing');
+    expect(badge).toHaveClass('bg-stage-reviewing');
+    expect(badge).not.toHaveClass('bg-yellow-500');
+  });
+
+  it('renders the Mastered badge (stage 5) with bg-stage-mastered, not bg-green-500', async () => {
+    await renderProgressWithStage(5);
+    const badge = await screen.findByText('Mastered');
+    expect(badge).toHaveClass('bg-stage-mastered');
+    expect(badge).not.toHaveClass('bg-green-500');
   });
 });
 
