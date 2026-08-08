@@ -37,7 +37,7 @@ export function useSettings() {
   }, []);
 
   const updateSettings = (newSettings: Partial<Settings>) => {
-    setSettings(prev => {
+    setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;

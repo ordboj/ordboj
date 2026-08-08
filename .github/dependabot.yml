@@ -1,54 +1,54 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: 'weekly'
+      day: 'monday'
     open-pull-requests-limit: 10
     # Always bump to the highest version that satisfies semver, not just the
     # lowest that would technically resolve, so the lockfile actually moves.
     versioning-strategy: increase
     labels:
-      - "role:devops"
-      - "dependencies"
+      - 'role:devops'
+      - 'dependencies'
     groups:
       # The Lovable scaffold left a large @radix-ui/* surface in
       # dependencies; grouping it keeps the weekly Radix churn to one PR
       # instead of a dozen.
       radix:
         patterns:
-          - "@radix-ui/*"
+          - '@radix-ui/*'
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
       production-dependencies:
-        dependency-type: "production"
+        dependency-type: 'production'
         exclude-patterns:
-          - "@radix-ui/*"
+          - '@radix-ui/*'
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
       dev-dependencies:
-        dependency-type: "development"
+        dependency-type: 'development'
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
     # Major bumps are excluded from every group above (update-types omits
     # "major"), so they fall through ungrouped into their own PR for human
     # review; the auto-merge workflow only acts on patch/minor anyway.
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: 'weekly'
+      day: 'monday'
     open-pull-requests-limit: 10
     labels:
-      - "role:devops"
-      - "dependencies"
+      - 'role:devops'
+      - 'dependencies'
     groups:
       actions:
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
