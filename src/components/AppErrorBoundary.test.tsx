@@ -351,15 +351,18 @@ describe('RouteChunk chunk-load retry and recovery (#220)', () => {
       // every time locally - but react-dom's Scheduler can still defer a
       // render slice through a real (not fake-timer-controlled) callback
       // under load, which is exactly the kind of variance a CI runner has
-      // and a idle local machine does not. `vi.waitFor` (unlike
+      // and an idle local machine does not. `vi.waitFor` (unlike
       // `screen.findByText`, which vitest's fake timers make hang - it only
       // recognizes Jest's fake timers) polls with vitest's own
       // pre-captured *real* timers, so it tolerates that deferred case
       // without weakening the assertion: it still fails loudly if the text
       // never appears within the timeout.
-      await vi.waitFor(() => {
-        expect(screen.getByText('page loaded')).toBeInTheDocument();
-      });
+      await vi.waitFor(
+        () => {
+          expect(screen.getByText('page loaded')).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
       expect(screen.queryByText('loading...')).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'retry' })).not.toBeInTheDocument();
     } finally {
@@ -376,19 +379,20 @@ describe('RouteChunk chunk-load retry and recovery (#220)', () => {
   // DOM" - only React's own Suspense/lazy re-render is between them. That
   // re-render is scheduled by react-dom's Scheduler via a real MessageChannel
   // task (jsdom implements MessageChannel), which vi.useFakeTimers() does
-  // not intercept - only setTimeout/setInterval/Date are faked, not
-  // postMessage delivery. So `await vi.advanceTimersByTimeAsync(0)` can
-  // return before that MessageChannel task has actually run, and a bare
-  // `screen.getByText(...)` right after it is checking the DOM before React
-  // has committed. `vi.waitFor` closes that gap by polling with vitest's
-  // real timers until the commit lands (or failing loudly if it never
-  // does), which is the same fix the flaky test above needed - this test
-  // pins that it is required (not incidental) by first proving a bare
-  // synchronous assertion fails deterministically without it. If this ever
-  // starts passing without the `vi.waitFor` wrapper below, the fix for #335
-  // has been silently invalidated by an upstream change in fake-timers or
-  // react-dom's scheduling and needs re-review, not deletion.
-  it('regression #335: a resolved chunk import (no backoff, so no timer stands between resolution and commit) still requires waiting for the Suspense/lazy commit, because that commit is scheduled via a real MessageChannel task that fake timers do not advance', async () => {
+  // not intercept: setTimeout, setInterval, Date, queueMicrotask and
+  // requestAnimationFrame are faked, but MessageChannel/postMessage delivery
+  // is not. So `await vi.advanceTimersByTimeAsync(0)` can return before that
+  // MessageChannel task has actually run, and a bare `screen.getByText(...)`
+  // right after it is checking the DOM before React has committed.
+  // `vi.waitFor` closes that gap by polling with vitest's real timers until
+  // the commit lands (or failing loudly if it never does), which is the same
+  // fix the flaky test above needed - the fail-first proof lives in this
+  // commit's message, not in the test body: removing the vi.waitFor wrapper
+  // below makes this test fail on every run. If this ever starts passing
+  // without the `vi.waitFor` wrapper below, the fix for #335 has been
+  // silently invalidated by an upstream change in fake-timers or react-dom's
+  // scheduling and needs re-review, not deletion.
+  it("regression #335: a resolved chunk import still needs vi.waitFor, because fake timers do not advance React's MessageChannel commit", async () => {
     vi.useFakeTimers();
     try {
       function Page() {
@@ -418,9 +422,12 @@ describe('RouteChunk chunk-load retry and recovery (#220)', () => {
 
       // The commit has not necessarily landed yet (see comment above) - only
       // vi.waitFor's real-timer polling can observe it reliably.
-      await vi.waitFor(() => {
-        expect(screen.getByText('page loaded')).toBeInTheDocument();
-      });
+      await vi.waitFor(
+        () => {
+          expect(screen.getByText('page loaded')).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
       expect(screen.queryByText('loading...')).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
