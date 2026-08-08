@@ -54,7 +54,7 @@ const STORAGE_KEY = 'swedish-verbs-settings';
 // wrong reading silently. The version field is what lets that be noticed.
 export const SETTINGS_STORAGE_VERSION = 1;
 
-// Shape validation for the stored payload. `passthrough` is deliberate: a key
+// Shape validation for the stored payload. `looseObject` is deliberate: a key
 // this build does not know about belongs to a newer build and rides along
 // untouched, exactly as the plain merge used to carry it. What the schema is
 // here to stop is the other case — a key this build *does* know, holding a
@@ -124,7 +124,7 @@ function parseStoredSettings(raw: string): Settings {
   }
 
   // The empty-cefrLevels coercion of #137 now lives in the schema's
-  // `.min(1)`: an empty selection fails validation and the field falls back
+  // `z.minLength(1)`: an empty selection fails validation and the field falls back
   // to every level, which is what that guard did.
   return validateSettings({ ...DEFAULT_SETTINGS, ...(stored as Record<string, unknown>) });
 }
