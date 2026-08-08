@@ -20,7 +20,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
   const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
 
   const getStageBadge = (stage: number) => {
-    if (stage === 0) return { label: 'New', color: 'bg-purple-500' };
+    if (stage === 0) return { label: 'New', color: 'bg-primary' };
     if (stage <= 2) return { label: 'Learning', color: 'bg-orange-500' };
     if (stage <= 4) return { label: 'Reviewing', color: 'bg-yellow-500' };
     return { label: 'Mastered', color: 'bg-green-500' };
@@ -55,7 +55,9 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{verb.infinitive}</span>
+              <span className="text-2xl" lang="sv">
+                {verb.infinitive}
+              </span>
               <Button variant="ghost" size="icon" onClick={() => handleSpeak(verb.infinitive)}>
                 <Volume2 className="w-5 h-5" />
               </Button>
@@ -68,7 +70,9 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
           {/* Infinitive */}
           <div>
             <p className="text-sm text-muted-foreground">Infinitive</p>
-            <p className="text-lg font-medium">{verb.infinitive}</p>
+            <p className="text-lg font-medium" lang="sv">
+              {verb.infinitive}
+            </p>
           </div>
 
           {/* CEFR Level */}
@@ -107,7 +111,9 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
                           <Volume2 className="w-4 h-4" />
                         </Button>
                       </div>
-                      <p className="text-lg font-semibold text-primary">{formValue}</p>
+                      <p className="text-lg font-semibold text-primary" lang="sv">
+                        {formValue}
+                      </p>
                     </div>
 
                     {srsInfo && (
@@ -123,9 +129,18 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
 
                     {/* Example sentence */}
                     <div className="mt-2 pt-2 border-t">
-                      <p className="text-sm italic text-muted-foreground">
-                        {getExampleSentence(verb.infinitive, form)}
-                      </p>
+                      {(() => {
+                        const example = getExampleSentence(verb.infinitive, form);
+                        const isPlaceholder = example.startsWith('[');
+                        return (
+                          <p
+                            className="text-sm italic text-muted-foreground"
+                            lang={isPlaceholder ? undefined : 'sv'}
+                          >
+                            {example}
+                          </p>
+                        );
+                      })()}
                     </div>
                   </div>
                 );

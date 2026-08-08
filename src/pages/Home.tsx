@@ -91,7 +91,7 @@ export default function Home() {
               <BookOpen className="w-8 h-8 text-primary" />
               Ready to Practice?
             </CardTitle>
-            <CardDescription className="text-lg space-y-1">
+            <div className="text-muted-foreground text-lg space-y-1">
               {dueCount > 0 ? (
                 <>
                   <div className="text-primary font-semibold">
@@ -104,7 +104,7 @@ export default function Home() {
               ) : (
                 <span>All caught up! Great work! 🎉</span>
               )}
-            </CardDescription>
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* CEFR Level Selector */}

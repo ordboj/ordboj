@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Search, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, Search, ArrowUpDown, Trophy } from 'lucide-react';
 import { getAllConjugatedVerbs, ConjugatedVerb } from '@/lib/verbs';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
@@ -56,18 +56,18 @@ export default function Progress() {
 
   const getSrsStage = useCallback(
     (verbId: string): number => {
-    const forms = ['presens', 'preteritum', 'supinum', 'imperativ'];
-    let totalReps = 0;
-    let count = 0;
+      const forms = ['presens', 'preteritum', 'supinum', 'imperativ'];
+      let totalReps = 0;
+      let count = 0;
 
-    forms.forEach((form) => {
-      const itemId = `${verbId}-${form}`;
-      const state = srsStates[itemId];
-      if (state) {
-        totalReps += state.repetitions;
-        count++;
-      }
-    });
+      forms.forEach((form) => {
+        const itemId = `${verbId}-${form}`;
+        const state = srsStates[itemId];
+        if (state) {
+          totalReps += state.repetitions;
+          count++;
+        }
+      });
 
       return count > 0 ? Math.floor(totalReps / count) : 0;
     },
@@ -75,7 +75,7 @@ export default function Progress() {
   );
 
   const getStageBadge = (stage: number) => {
-    if (stage === 0) return { label: 'New', variant: 'default' as const, color: 'bg-purple-500' };
+    if (stage === 0) return { label: 'New', variant: 'default' as const, color: 'bg-primary' };
     if (stage <= 2)
       return { label: 'Learning', variant: 'secondary' as const, color: 'bg-orange-500' };
     if (stage <= 4)
@@ -155,7 +155,10 @@ export default function Progress() {
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold text-primary">🇸🇪 Progress & Review</h1>
+          <h1 className="text-3xl font-bold text-primary flex items-center justify-center gap-2">
+            <Trophy className="w-7 h-7" />
+            Progress & Review
+          </h1>
           <div className="w-24" /> {/* Spacer for centering */}
         </div>
 
@@ -169,7 +172,7 @@ export default function Progress() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ProgressBar value={progressStats.percentage} className="h-4" />
+            <ProgressBar value={progressStats.percentage} className="h-4 bg-muted-foreground" />
           </CardContent>
         </Card>
 
@@ -261,15 +264,26 @@ export default function Progress() {
                       }`}
                       onClick={() => setSelectedVerb(verb)}
                     >
-                      <TableCell className="font-medium">{verb.infinitive}</TableCell>
-                      <TableCell>{verb.presens}</TableCell>
-                      <TableCell>{verb.preteritum}</TableCell>
-                      <TableCell>{verb.supinum}</TableCell>
+                      <TableCell className="font-medium">
+                        <span lang="sv">{verb.infinitive}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span lang="sv">{verb.presens}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span lang="sv">{verb.preteritum}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span lang="sv">{verb.supinum}</span>
+                      </TableCell>
                       <TableCell>
                         {verb.imperativ === '(not available)' ? (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-muted-foreground">
+                            <span aria-hidden="true">—</span>
+                            <span className="sr-only">not applicable</span>
+                          </span>
                         ) : (
-                          verb.imperativ
+                          <span lang="sv">{verb.imperativ}</span>
                         )}
                       </TableCell>
                       <TableCell>

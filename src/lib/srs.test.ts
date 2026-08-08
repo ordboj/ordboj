@@ -3,8 +3,11 @@ import {
   calculateNextReview,
   initializeSrsState,
   isDue,
+  isEligibleForRequeue,
   isSrsState,
   MAX_INTERVAL_DAYS,
+  MAX_REQUEUES_PER_DAY,
+  REQUEUE_GAP_ITEMS,
   type SrsState,
   type Grade,
 } from '@/lib/srs';
@@ -234,6 +237,52 @@ describe('isDue', () => {
     expect(isDue(state)).toBe(false);
     vi.setSystemTime(FIXED_NOW + DAY_MS);
     expect(isDue(state)).toBe(true);
+  });
+});
+
+// docs/learning/lapse-handling.md, "Decision": same-sitting re-queue gap of
+// >= 3 intervening items, capped at 2 re-queues per item per day. These
+// constants are the whole of that policy's numbers; pinning them here means
+// any change to the policy has to be deliberate, in this file, not a silent
+// edit of a magic number in Practice.tsx.
+describe('requeue policy constants (docs/learning/lapse-handling.md)', () => {
+  it('pins the documented gap and daily cap', () => {
+    expect(REQUEUE_GAP_ITEMS).toBe(3);
+    expect(MAX_REQUEUES_PER_DAY).toBe(2);
+  });
+});
+
+describe('isEligibleForRequeue', () => {
+  it('is not eligible before the gap is reached, even with no prior requeues', () => {
+    expect(isEligibleForRequeue(0, 0)).toBe(false);
+    expect(isEligibleForRequeue(1, 0)).toBe(false);
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS - 1, 0)).toBe(false);
+  });
+
+  it('becomes eligible exactly at the gap boundary, not one item early', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, 0)).toBe(true);
+  });
+
+  it('stays eligible for any gap at or beyond the threshold', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS + 5, 0)).toBe(true);
+    expect(isEligibleForRequeue(100, 1)).toBe(true);
+  });
+
+  it('is still eligible one requeue below the daily cap', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, MAX_REQUEUES_PER_DAY - 1)).toBe(true);
+  });
+
+  it('is not eligible once the daily requeue cap is reached, however large the gap', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, MAX_REQUEUES_PER_DAY)).toBe(false);
+    expect(isEligibleForRequeue(1000, MAX_REQUEUES_PER_DAY)).toBe(false);
+    expect(isEligibleForRequeue(1000, MAX_REQUEUES_PER_DAY + 3)).toBe(false);
+  });
+
+  it('requires both conditions: gap alone or cap-room alone is not enough', () => {
+    // Gap satisfied but cap already spent.
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, MAX_REQUEUES_PER_DAY)).toBe(false);
+    // Cap room available but gap not yet reached.
+    expect(isEligibleForRequeue(0, 0)).toBe(false);
   });
 });
 
