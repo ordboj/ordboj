@@ -1,0 +1,550 @@
+// Validating promotion pipeline for VERB_DATA (issue #41).
+//
+// Two data sources exist and have drifted:
+//   public/data/swedish_verbs.csv  — ~1537 rows, source of record, ~35% error rate
+//   src/data/verbData.ts           — the small hand-curated table that ships
+//
+// This script does three things, all deterministic and pure functions of
+// the two files on disk (no clock, no random, no network):
+//
+//   1. Classifies every CSV row into grupp 1 / 2a / 2b / 3 / 4 / deponens
+//      using morphological pattern matching, and validates it (charset,
+//      form-class self-consistency, empty imperativ on a non-modal verb).
+//      Every row's verdict is written to scripts/verb-data-review.csv —
+//      this is a human-review artifact, never consumed at runtime.
+//   2. Re-runs the same validator against the CURRENTLY SHIPPED rows in
+//      src/data/verbData.ts (using their own stored forms, not the CSV) and
+//      fails the build (non-zero exit) if any shipped row does not pass.
+//      This is what "the shipped table has zero validator failures" means
+//      in practice: an enforced invariant, not an aspiration.
+//   3. Re-emits src/data/verbData.ts. Growing VERB_DATA (the next ticket)
+//      means adding infinitives to NEW_PROMOTIONS below and re-running this
+//      script: each candidate is looked up in the CSV, classified and
+//      validated the same way, and only appended to the array literal if it
+//      passes — otherwise it is reported and left out, never guessed in.
+//      NEW_PROMOTIONS is empty in this change, so step 3 is a verified
+//      round-trip of the existing 56 rows: the script reconstructs the file
+//      from parsed blocks and *asserts* the result is byte-identical to the
+//      input before writing anything, rather than trusting its own parser.
+//
+// IMPORTANT — VERB_DATA row order is pinned (src/data/verbData.orderPin.test.ts):
+// a learner's SRS progress is keyed by array index, so this script only
+// ever APPENDS new rows at the end. It must never reorder, delete or
+// rewrite the text of an existing row.
+//
+// Classifier design note (read before extending NEW_PROMOTIONS): several
+// real Swedish spelling-simplification rules apply at the stem/suffix
+// boundary and are NOT modelled here on purpose:
+//   - stem ending "-nd" + preteritum "-de" simplifies ("vänd" -> "vände",
+//     not "vändde"); stem "-nd" + supinum "-t" drops the d ("vänd" -> "vänt")
+//   - stem ending "-d" + supinum "-t" assimilates to "-tt" ("betyd" -> "betytt")
+//   - word-final double consonants after some stems simplify in the
+//     imperativ ("glömma" -> "glöm", not "glömm") while others don't
+//     ("ställa" -> "ställ", keeps the double l)
+// A previous attempt at this pipeline (PR #165, closed) mechanically
+// derived forms with a formula that got these wrong and shipped fabricated
+// Swedish. This script does the opposite: it never derives a form. It only
+// classifies and cross-checks forms that are ALREADY present in the data,
+// and any row whose regular forms don't line up with one of the four
+// mechanical patterns below — including every case above — falls through
+// to 'needs-check' (grupp 4 / irregular bucket), never a guessed pass.
+// 'needs-check' is not a validator failure; CLAUDE.md requires grupp 4
+// verbs to be verified individually against a reference, never derived, so
+// a human confirming the grupp by hand (as all shipped grupp-4 rows already
+// are) is the correct and expected path, not a gap in the script.
+
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(here, '..');
+const CSV_PATH = join(ROOT, 'public/data/swedish_verbs.csv');
+const VERB_DATA_PATH = join(ROOT, 'src/data/verbData.ts');
+const REVIEW_PATH = join(ROOT, 'scripts/verb-data-review.csv');
+
+// Infinitives to add to VERB_DATA on this run, beyond what is already
+// shipped. Empty for #41 (this ticket builds the pipeline; growing the
+// table past 50 is the next ticket, per the issue title). A future ticket
+// populates this and re-runs the script; anything that fails validation is
+// reported and left out, never force-included.
+const NEW_PROMOTIONS = [];
+
+// ---------------------------------------------------------------------
+// Charset
+// ---------------------------------------------------------------------
+// Ticket #41: reject a verb-form field containing anything outside
+// lowercase a-zåäöé. Space is additionally allowed — the app already
+// ships one two-word entry ("te sig") and the particle-verb rule
+// (CLAUDE.md) requires the particle to stay in the stored infinitive, so a
+// hard "no space" rule would reject data the product already treats as
+// correct. No other punctuation is allowed: hyphen, slash, parentheses and
+// period are exactly how the CSV encodes dirty rows today — an annotation
+// stuffed into the field ("ta (el. taga)", "jämföra (förk. jfr)") or an
+// alternate form crammed into one field with a slash ("sa/sade",
+// "betalat/betalt") instead of the dedicated `alternates` mechanism
+// verbData.ts already has. Both classes are routed to the review file,
+// never silently accepted.
+const CHARSET = /^[a-zåäöé ]*$/;
+const FORM_FIELDS = ['infinitive', 'imperativ', 'presens', 'preteritum', 'supinum'];
+
+function charsetFailures(row) {
+  const failures = [];
+  for (const field of FORM_FIELDS) {
+    const value = row[field] ?? '';
+    if (value !== '' && !CHARSET.test(value)) {
+      failures.push(`charset: ${field}="${value}"`);
+    }
+  }
+  return failures;
+}
+
+// ---------------------------------------------------------------------
+// Modal / auxiliary verbs — grammatically have no imperativ (CLAUDE.md).
+// Curated, closed list; anything else with an empty imperativ is a data
+// bug, not a deliberate gap.
+// ---------------------------------------------------------------------
+const MODAL_VERBS = new Set(['kunna', 'få', 'vilja', 'skola', 'måste', 'böra', 'lär']);
+
+const VOICELESS_FINAL = new Set(['k', 'p', 't', 's', 'x']);
+
+// ---------------------------------------------------------------------
+// Particle stripping — classify the verb, not the particle (CLAUDE.md:
+// "Particle verbs conjugate the verb only; the particle stays put.").
+// ---------------------------------------------------------------------
+function splitParticle(inf, pres, pret, sup) {
+  const sp = inf.indexOf(' ');
+  if (sp === -1) return { inf, pres, pret, sup };
+  const particle = inf.slice(sp); // e.g. " sig"
+  if (pres.endsWith(particle) && pret.endsWith(particle) && sup.endsWith(particle)) {
+    return {
+      inf: inf.slice(0, sp),
+      pres: pres.slice(0, pres.length - particle.length),
+      pret: pret.slice(0, pret.length - particle.length),
+      sup: sup.slice(0, sup.length - particle.length),
+    };
+  }
+  // Couldn't confirm a shared particle across all forms — classify as-is.
+  // This will almost certainly fail to match any mechanical pattern below
+  // and fall through to 'needs-check', which is the safe outcome.
+  return { inf, pres, pret, sup };
+}
+
+// ---------------------------------------------------------------------
+// Classifier. Returns { grupp, contradiction } where grupp is one of
+// '1' | '2a' | '2b' | '3' | 'deponens' | null (null = needs-check /
+// irregular, never guessed), and contradiction is a human-readable reason
+// string, present only when two fields disagree about the SAME row (a real
+// data bug), never merely because a form doesn't match a regular pattern.
+// ---------------------------------------------------------------------
+function classifyCore({ inf, pres, pret, sup }) {
+  if (
+    inf.length > 1 &&
+    inf.endsWith('s') &&
+    pres.endsWith('s') &&
+    pret.endsWith('s') &&
+    sup.endsWith('s')
+  ) {
+    return { grupp: 'deponens', contradiction: null };
+  }
+
+  if (inf.endsWith('a')) {
+    const stem = inf.slice(0, -1);
+    const presSignal = pres === stem + 'ar' ? '1' : pres === stem + 'er' ? '2' : null;
+    const pretSupSignal =
+      pret === stem + 'ade' && sup === stem + 'at'
+        ? '1'
+        : pret === stem + 'de' && sup === stem + 't'
+          ? '2a'
+          : pret === stem + 'te' && sup === stem + 't'
+            ? '2b'
+            : null;
+
+    if (presSignal && pretSupSignal) {
+      const presFamily = presSignal === '1' ? '1' : '2';
+      const pretSupFamily = pretSupSignal === '1' ? '1' : '2';
+      if (presFamily !== pretSupFamily) {
+        return {
+          grupp: null,
+          contradiction: `presens "${pres}" implies grupp ${presSignal === '1' ? '1' : '2'} but preteritum/supinum imply grupp ${pretSupSignal}`,
+        };
+      }
+      if (pretSupSignal === '2a' || pretSupSignal === '2b') {
+        const finalConsonant = stem.slice(-1);
+        const isVoiceless = VOICELESS_FINAL.has(finalConsonant);
+        if (pretSupSignal === '2a' && isVoiceless) {
+          return {
+            grupp: null,
+            contradiction: `stem "${stem}" ends in voiceless "${finalConsonant}" (k/p/t/s/x) but preteritum "${pret}" is the grupp 2a (voiced) -de pattern; expected grupp 2b -te`,
+          };
+        }
+        if (pretSupSignal === '2b' && !isVoiceless) {
+          return {
+            grupp: null,
+            contradiction: `stem "${stem}" ends in voiced "${finalConsonant}" but preteritum "${pret}" is the grupp 2b (voiceless) -te pattern; expected grupp 2a -de`,
+          };
+        }
+      }
+      return { grupp: pretSupSignal, contradiction: null };
+    }
+    // Neither a full regular match nor an unambiguous cross-field
+    // disagreement — either a genuine strong/irregular verb (vara, komma,
+    // sätta, ...) or a stem-boundary spelling simplification this script
+    // deliberately does not model (see header note). Never guess: defer.
+    return { grupp: null, contradiction: null };
+  }
+
+  // Infinitive doesn't end in "a": grupp 3 candidate (bo/tro/ro-style short
+  // stem) if presens/preteritum/supinum all agree with the grupp 3 pattern;
+  // otherwise an irregular verb whose infinitive happens to be short
+  // (se, ge, gå, stå, bli, ...) — defer, don't guess.
+  if (pres === inf + 'r' && pret === inf + 'dde' && sup === inf + 'tt') {
+    return { grupp: '3', contradiction: null };
+  }
+  return { grupp: null, contradiction: null };
+}
+
+function classifyAndValidate(infinitive, imperativ, presens, preteritum, supinum, declaredGrupp) {
+  const reasons = [];
+  const row = { infinitive, imperativ, presens, preteritum, supinum };
+  reasons.push(...charsetFailures(row));
+
+  const baseInf = infinitive.split(' ')[0] ?? infinitive;
+  const isModal = MODAL_VERBS.has(infinitive) || MODAL_VERBS.has(baseInf);
+  const emptyImperativ = (imperativ ?? '').trim() === '';
+
+  const core = splitParticle(infinitive, presens, preteritum, supinum);
+  const { grupp, contradiction } = classifyCore(core);
+  if (contradiction) reasons.push(`contradiction: ${contradiction}`);
+
+  if (
+    declaredGrupp !== undefined &&
+    grupp !== null &&
+    grupp !== 'deponens' &&
+    declaredGrupp !== grupp
+  ) {
+    reasons.push(
+      `contradiction: row declares grupp "${declaredGrupp}" but forms match grupp "${grupp}"`,
+    );
+  }
+
+  let status;
+  if (reasons.length > 0) {
+    status = 'fail';
+  } else if (emptyImperativ && !isModal) {
+    status = 'fail';
+    reasons.push('empty imperativ on non-modal verb');
+  } else if (grupp === null) {
+    status = 'needs-check';
+  } else {
+    status = 'pass';
+  }
+
+  return { grupp: grupp ?? '', status, reasons };
+}
+
+// ---------------------------------------------------------------------
+// CSV parsing (RFC 4180-lite: handles quoted fields; the data has none
+// today, but a bare comma-split would silently mis-column the day one
+// appears). Ported from the existing scripts/validate-verb-forms.mjs.
+// ---------------------------------------------------------------------
+function splitCsvLine(line) {
+  const fields = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ',') {
+      fields.push(field);
+      field = '';
+    } else {
+      field += ch;
+    }
+  }
+  fields.push(field);
+  return fields;
+}
+
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/);
+  const headerLine = lines.findIndex((l) => l.trim().length > 0);
+  if (headerLine === -1) return [];
+  const header = splitCsvLine(lines[headerLine]).map((h) => h.trim());
+  const rows = [];
+  for (let i = headerLine + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim().length === 0) continue;
+    const fields = splitCsvLine(line);
+    const row = { line: i + 1 };
+    header.forEach((key, idx) => {
+      row[key] = fields[idx] ?? '';
+    });
+    rows.push(row);
+  }
+  return rows;
+}
+
+// ---------------------------------------------------------------------
+// verbData.ts parsing — regex-based, mirrors scripts/validate-verb-forms.mjs.
+// Captures both the parsed field values (for validation) and the exact raw
+// line block for each row (for lossless reconstruction).
+// ---------------------------------------------------------------------
+const START_MARKER = 'export const VERB_DATA: VerbData[] = [';
+const FIELD_RE = /(cefr|infinitive|imperativ|presens|preteritum|supinum|grupp)\s*:\s*"([^"]*)"/g;
+
+// The file on disk may use CRLF (Windows checkout) or LF line endings.
+// Detecting and reusing whatever is actually there — rather than assuming
+// '\n' — is what makes the reconstructed output byte-identical to the
+// input; a mismatched EOL would fail the self-check below on every run on
+// a CRLF checkout.
+function detectEol(text) {
+  return text.includes('\r\n') ? '\r\n' : '\n';
+}
+
+function parseVerbDataTs(text) {
+  const eol = detectEol(text);
+  const startIdx = text.indexOf(START_MARKER);
+  if (startIdx === -1) {
+    throw new Error(`could not find "${START_MARKER}" in ${VERB_DATA_PATH}`);
+  }
+  const headerEnd = startIdx + START_MARKER.length;
+  const header = text.slice(0, headerEnd) + eol;
+
+  const rest = text.slice(headerEnd);
+  const lines = rest.split(eol);
+  const closeIdx = lines.findIndex((l) => l.trim().startsWith(']'));
+  if (closeIdx === -1) {
+    throw new Error('could not find closing "];" of VERB_DATA array');
+  }
+
+  // lines[0] is empty (the newline right after the marker); drop it, the
+  // header above already ends with the detected EOL.
+  const bodyLines = lines.slice(1, closeIdx);
+  const footer = lines.slice(closeIdx).join(eol);
+
+  const blocks = [];
+  let pending = [];
+  for (const line of bodyLines) {
+    pending.push(line);
+    if (/infinitive\s*:\s*"/.test(line)) {
+      const fields = {};
+      for (const m of line.matchAll(FIELD_RE)) fields[m[1]] = m[2];
+      const noNaturalImperativ = /noNaturalImperativ\s*:\s*true/.test(line);
+      const hasGrupp = /\bgrupp\s*:\s*"/.test(line);
+      blocks.push({ lines: pending, fields, noNaturalImperativ, hasGrupp });
+      pending = [];
+    }
+  }
+  // Any trailing lines that never hit an `infinitive:` (shouldn't happen in
+  // well-formed input) belong to the footer instead of being silently
+  // dropped.
+  const trailingFooter = pending.length > 0 ? pending.join(eol) + eol : '';
+
+  return { header, blocks, footer: trailingFooter + footer, eol };
+}
+
+function formatNewRow({ cefr, infinitive, imperativ, presens, preteritum, supinum, grupp }) {
+  return `  { cefr: "${cefr}", infinitive: "${infinitive}", imperativ: "${imperativ}", presens: "${presens}", preteritum: "${preteritum}", supinum: "${supinum}", grupp: "${grupp}" },`;
+}
+
+// ---------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------
+function main() {
+  const checkOnly = process.argv.includes('--check');
+
+  // --- Step 1: classify + validate every CSV row, write the review file ---
+  const csvText = readFileSync(CSV_PATH, 'utf8');
+  const csvRows = parseCsv(csvText);
+
+  const reviewRows = csvRows.map((row) => {
+    const infinitive = row.infinitive ?? '';
+    const result = classifyAndValidate(
+      infinitive,
+      row.imperativ ?? '',
+      row.presens ?? '',
+      row.preteritum ?? '',
+      row.supinum ?? '',
+      undefined,
+    );
+    return {
+      line: row.line,
+      cefr: row['cefr levels'] ?? '',
+      infinitive,
+      grupp: result.grupp,
+      status: result.status,
+      reasons: result.reasons.join('; '),
+    };
+  });
+
+  const csvCounts = { pass: 0, 'needs-check': 0, fail: 0 };
+  for (const r of reviewRows) csvCounts[r.status]++;
+
+  const reviewCsv = [
+    'line,cefr,infinitive,grupp,status,reasons',
+    ...reviewRows.map(
+      (r) =>
+        `${r.line},"${r.cefr}","${r.infinitive.replace(/"/g, '""')}",${r.grupp},${r.status},"${r.reasons.replace(/"/g, '""')}"`,
+    ),
+  ].join('\n');
+
+  // --- Step 2: re-validate the currently shipped rows against their own
+  // stored forms; this is the "zero validator failures" gate. ---
+  const verbDataText = readFileSync(VERB_DATA_PATH, 'utf8');
+  const parsed = parseVerbDataTs(verbDataText);
+
+  const shippedFailures = [];
+  for (const block of parsed.blocks) {
+    const f = block.fields;
+    const commentBlock = block.lines.join('\n');
+    const explainedEmpty =
+      block.noNaturalImperativ ||
+      MODAL_VERBS.has(f.infinitive) ||
+      /modal verb/i.test(commentBlock) ||
+      /NEEDS HUMAN CHECK/i.test(commentBlock);
+
+    const result = classifyAndValidate(
+      f.infinitive,
+      f.imperativ ?? '',
+      f.presens ?? '',
+      f.preteritum ?? '',
+      f.supinum ?? '',
+      f.grupp,
+    );
+
+    // classifyAndValidate already fails empty-imperativ-on-non-modal using
+    // the CSV-only MODAL_VERBS heuristic; the shipped table additionally
+    // carries noNaturalImperativ / review comments as first-class evidence,
+    // so an empty imperativ backed by either is accepted here even though
+    // classifyAndValidate alone flagged it.
+    if (
+      result.status === 'fail' &&
+      result.reasons.length === 1 &&
+      result.reasons[0] === 'empty imperativ on non-modal verb' &&
+      explainedEmpty
+    ) {
+      continue;
+    }
+    if (!block.hasGrupp && !/NEEDS HUMAN REVIEW/i.test(commentBlock)) {
+      shippedFailures.push({
+        infinitive: f.infinitive,
+        reasons: ['grupp omitted without a NEEDS HUMAN REVIEW comment'],
+      });
+      continue;
+    }
+    if (result.status === 'fail') {
+      shippedFailures.push({ infinitive: f.infinitive, reasons: result.reasons });
+    }
+  }
+
+  if (shippedFailures.length > 0) {
+    console.error(
+      `FAIL: ${shippedFailures.length} shipped row(s) in verbData.ts do not pass validation:`,
+    );
+    for (const f of shippedFailures) {
+      console.error(`  ${f.infinitive}: ${f.reasons.join('; ')}`);
+    }
+    process.exit(1);
+  }
+
+  // --- Step 3: promote NEW_PROMOTIONS (empty for #41) and reconstruct the
+  // file. Reconstruction is verified byte-identical to the input before any
+  // write happens, whenever there is nothing new to add. ---
+  const promotionFailures = [];
+  const newBlocks = [];
+  const existingInfinitives = new Set(parsed.blocks.map((b) => b.fields.infinitive));
+
+  for (const candidate of NEW_PROMOTIONS) {
+    if (existingInfinitives.has(candidate)) continue;
+    const csvRow = csvRows.find((r) => r.infinitive === candidate);
+    if (!csvRow) {
+      promotionFailures.push({ infinitive: candidate, reasons: ['not found in CSV'] });
+      continue;
+    }
+    const result = classifyAndValidate(
+      candidate,
+      csvRow.imperativ ?? '',
+      csvRow.presens ?? '',
+      csvRow.preteritum ?? '',
+      csvRow.supinum ?? '',
+      undefined,
+    );
+    if (result.status !== 'pass') {
+      promotionFailures.push({
+        infinitive: candidate,
+        reasons: result.reasons.length ? result.reasons : [`status: ${result.status}`],
+      });
+      continue;
+    }
+    newBlocks.push({
+      lines: [
+        formatNewRow({
+          cefr: csvRow['cefr levels'] ?? '',
+          infinitive: candidate,
+          imperativ: csvRow.imperativ ?? '',
+          presens: csvRow.presens ?? '',
+          preteritum: csvRow.preteritum ?? '',
+          supinum: csvRow.supinum ?? '',
+          grupp: result.grupp,
+        }),
+      ],
+    });
+  }
+
+  const allBlocks = [...parsed.blocks, ...newBlocks];
+  const rebuilt =
+    parsed.header +
+    allBlocks.map((b) => b.lines.join(parsed.eol)).join(parsed.eol) +
+    parsed.eol +
+    parsed.footer;
+
+  if (newBlocks.length === 0 && rebuilt !== verbDataText) {
+    console.error(
+      'FAIL: reconstructed verbData.ts is not byte-identical to the input even though no rows were added. ' +
+        'The parser/serializer in this script has drifted from the file format — refusing to write a file ' +
+        'that could silently corrupt or reformat the shipped table.',
+    );
+    process.exit(1);
+  }
+
+  if (!checkOnly) {
+    writeFileSync(REVIEW_PATH, reviewCsv + '\n', 'utf8');
+    writeFileSync(VERB_DATA_PATH, rebuilt, 'utf8');
+  }
+
+  console.log(
+    `CSV audit: ${csvRows.length} rows — ${csvCounts.pass} pass, ${csvCounts['needs-check']} needs-check, ${csvCounts.fail} fail.` +
+      ` Review file: ${REVIEW_PATH}${checkOnly ? ' (not written, --check)' : ''}`,
+  );
+  console.log(
+    `Shipped table: ${parsed.blocks.length} rows, 0 validator failures. New promotions: ${newBlocks.length} added, ${promotionFailures.length} rejected.`,
+  );
+  if (promotionFailures.length > 0) {
+    console.log('Rejected promotions (not written to verbData.ts):');
+    for (const f of promotionFailures) {
+      console.log(`  ${f.infinitive}: ${f.reasons.join('; ')}`);
+    }
+  }
+  console.log(
+    checkOnly
+      ? 'verbData.ts unchanged (--check mode).'
+      : rebuilt === verbDataText
+        ? 'verbData.ts re-emitted, byte-identical to before (no new promotions this run).'
+        : `verbData.ts re-emitted with ${newBlocks.length} new row(s) appended.`,
+  );
+}
+
+main();
