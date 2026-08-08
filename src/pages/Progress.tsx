@@ -261,7 +261,15 @@ export default function Progress() {
                               <Badge variant="outline">{verb.cefr}</Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={badge.variant} className={badge.color}>
+                              {/* Issue #227: hardcode `outline` instead of badge.variant.
+                                  The default/secondary Badge variants each carry their own
+                                  hover-opacity background class, which conflicts with
+                                  badge.color's stage token and flips the badge back to
+                                  primary/secondary blue on hover (the #313 regression).
+                                  `outline` contributes no background or hover utility, so
+                                  badge.color's stage bg and foreground text classes are the
+                                  only source of color, on hover or otherwise. */}
+                              <Badge variant="outline" className={badge.color}>
                                 {badge.label}
                               </Badge>
                             </TableCell>
@@ -416,7 +424,9 @@ export default function Progress() {
                         <Badge variant="outline">{verb.cefr}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={badge.variant} className={badge.color}>
+                        {/* Issue #227: outline hardcoded, not badge.variant — see the
+                            particle table's badge above for why. */}
+                        <Badge variant="outline" className={badge.color}>
                           {badge.label}
                         </Badge>
                       </TableCell>
