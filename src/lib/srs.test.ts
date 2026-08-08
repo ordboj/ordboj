@@ -3,6 +3,7 @@ import {
   calculateNextReview,
   initializeSrsState,
   isDue,
+  localDateKey,
   MAX_INTERVAL_DAYS,
   type SrsState,
   type Grade,
@@ -229,5 +230,60 @@ describe('isDue', () => {
     expect(isDue(state)).toBe(false);
     vi.setSystemTime(FIXED_NOW + DAY_MS);
     expect(isDue(state)).toBe(true);
+  });
+});
+
+// issue #26: answeredToday's day-rollover boundary is localDateKey(), which is
+// deliberately built from getFullYear/getMonth/getDate (host local calendar),
+// NOT toISOString().slice(0, 10) (UTC calendar). These pin that contract
+// across the exact cases the PR calls out: DST spring-forward, a month
+// boundary and a year boundary, all in a UTC+1/+2 zone where the local date
+// and the UTC date routinely disagree near local midnight.
+describe('localDateKey', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('zero-pads single-digit month and day', () => {
+    vi.stubEnv('TZ', 'UTC');
+    expect(localDateKey(new Date('2026-01-05T12:00:00.000Z').getTime())).toBe('2026-01-05');
+  });
+
+  it('defaults to the current instant when called with no argument', () => {
+    vi.stubEnv('TZ', 'UTC');
+    vi.setSystemTime(new Date('2026-06-15T10:00:00.000Z').getTime());
+    expect(localDateKey()).toBe('2026-06-15');
+  });
+
+  it('DST spring-forward (Europe/Stockholm, 2026-03-29): pre- and post-transition instants both key to the same local date', () => {
+    vi.stubEnv('TZ', 'Europe/Stockholm');
+    // 2026-03-29 01:30 CET (UTC+1, pre-transition) and 03:30 CEST (UTC+2,
+    // post-transition) are both still "2026-03-29" on the wall clock.
+    expect(localDateKey(new Date('2026-03-29T00:30:00.000Z').getTime())).toBe('2026-03-29');
+    expect(localDateKey(new Date('2026-03-29T01:30:00.000Z').getTime())).toBe('2026-03-29');
+  });
+
+  it('DST spring-forward: local midnight the next day rolls the key over, not 24 UTC hours later', () => {
+    vi.stubEnv('TZ', 'Europe/Stockholm');
+    // 2026-03-30 00:30 CEST local is 2026-03-29 22:30Z - less than 24h after
+    // the 2026-03-29 00:30 CEST->CEST-adjacent instant above, because the
+    // clock jumped forward an hour in between.
+    expect(localDateKey(new Date('2026-03-29T22:30:00.000Z').getTime())).toBe('2026-03-30');
+  });
+
+  it('month boundary (Europe/Stockholm, 2026-02-01 local): local date has already rolled over while UTC has not', () => {
+    vi.stubEnv('TZ', 'Europe/Stockholm');
+    const at = new Date('2026-01-31T23:10:00.000Z').getTime(); // 2026-02-01 00:10 CET
+    expect(localDateKey(at)).toBe('2026-02-01');
+    // The UTC-based approach this function deliberately avoids would file
+    // this instant a day early.
+    expect(new Date(at).toISOString().slice(0, 10)).toBe('2026-01-31');
+  });
+
+  it('year boundary (Europe/Stockholm, 2027-01-01 local): local date has already rolled over while UTC has not', () => {
+    vi.stubEnv('TZ', 'Europe/Stockholm');
+    const at = new Date('2026-12-31T23:10:00.000Z').getTime(); // 2027-01-01 00:10 CET
+    expect(localDateKey(at)).toBe('2027-01-01');
+    expect(new Date(at).toISOString().slice(0, 10)).toBe('2026-12-31');
   });
 });

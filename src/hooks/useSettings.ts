@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS: Settings = {
   showExamples: false,
   autoplayAudio: true,
   muteAudio: false,
-  dailyGoal: 20,
+  dailyGoal: 12,
   cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
 };
 
@@ -37,7 +37,7 @@ export function useSettings() {
   }, []);
 
   const updateSettings = (newSettings: Partial<Settings>) => {
-    setSettings(prev => {
+    setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;

@@ -9,7 +9,7 @@ const DEFAULTS = {
   showExamples: false,
   autoplayAudio: true,
   muteAudio: false,
-  dailyGoal: 20,
+  dailyGoal: 12,
   cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
 };
 
@@ -98,10 +98,7 @@ describe('issue #92: interfaceLanguage removal', () => {
   });
 
   it('does not reintroduce interfaceLanguage into a fresh write after loading a legacy object that had it', async () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ ...DEFAULTS, interfaceLanguage: 'sv' }),
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, interfaceLanguage: 'sv' }));
 
     const { result } = renderHook(() => useSettings());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
