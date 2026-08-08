@@ -45,6 +45,14 @@ export default {
           DEFAULT: 'hsl(var(--success))',
           foreground: 'hsl(var(--success-foreground))',
         },
+        stage: {
+          learning: 'hsl(var(--stage-learning))',
+          'learning-foreground': 'hsl(var(--stage-learning-foreground))',
+          reviewing: 'hsl(var(--stage-reviewing))',
+          'reviewing-foreground': 'hsl(var(--stage-reviewing-foreground))',
+          mastered: 'hsl(var(--stage-mastered))',
+          'mastered-foreground': 'hsl(var(--stage-mastered-foreground))',
+        },
         muted: {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',

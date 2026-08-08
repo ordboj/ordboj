@@ -28,6 +28,7 @@ import { getVerifiedParticleVerbs, hasRecallItem, renderLemma } from '@/lib/part
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { VerbDetailsModal } from '@/components/VerbDetailsModal';
+import { getStageBadge } from '@/components/StageBadge';
 
 type SortField = 'infinitive' | 'difficulty';
 type SortDirection = 'asc' | 'desc';
@@ -75,15 +76,6 @@ export default function Progress() {
     },
     [srsStates],
   );
-
-  const getStageBadge = (stage: number) => {
-    if (stage === 0) return { label: 'New', variant: 'default' as const, color: 'bg-primary' };
-    if (stage <= 2)
-      return { label: 'Learning', variant: 'secondary' as const, color: 'bg-orange-500' };
-    if (stage <= 4)
-      return { label: 'Reviewing', variant: 'outline' as const, color: 'bg-yellow-500' };
-    return { label: 'Mastered', variant: 'default' as const, color: 'bg-green-500' };
-  };
 
   const filteredAndSortedVerbs = useMemo(() => {
     let filtered = verbs;
@@ -279,9 +271,7 @@ export default function Progress() {
                               <Badge variant="outline">{verb.cefr}</Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={badge.variant} className={badge.color}>
-                                {badge.label}
-                              </Badge>
+                              <Badge className={badge.className}>{badge.label}</Badge>
                             </TableCell>
                           </TableRow>
                         );
@@ -434,9 +424,7 @@ export default function Progress() {
                         <Badge variant="outline">{verb.cefr}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={badge.variant} className={badge.color}>
-                          {badge.label}
-                        </Badge>
+                        <Badge className={badge.className}>{badge.label}</Badge>
                       </TableCell>
                     </TableRow>
                   );

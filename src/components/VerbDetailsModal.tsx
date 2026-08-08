@@ -7,6 +7,7 @@ import { conjugationItemId } from '@/lib/itemIds';
 import { isDue, SrsState } from '@/lib/srs';
 import { speakSwedish } from '@/lib/speech';
 import { useSettings } from '@/hooks/useSettings';
+import { getStageBadge } from '@/components/StageBadge';
 
 interface VerbDetailsModalProps {
   verb: ConjugatedVerb;
@@ -19,13 +20,6 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
   const { settings } = useSettings();
 
   const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
-
-  const getStageBadge = (stage: number) => {
-    if (stage === 0) return { label: 'New', color: 'bg-primary' };
-    if (stage <= 2) return { label: 'Learning', color: 'bg-orange-500' };
-    if (stage <= 4) return { label: 'Reviewing', color: 'bg-yellow-500' };
-    return { label: 'Mastered', color: 'bg-green-500' };
-  };
 
   const badge = getStageBadge(srsStage);
   // Konjugationsgrupp predicts the answer's ending pattern, so it's only
@@ -68,7 +62,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
                 <Volume2 className="w-5 h-5" />
               </Button>
             </div>
-            <Badge className={badge.color}>{badge.label}</Badge>
+            <Badge className={badge.className}>{badge.label}</Badge>
           </DialogTitle>
         </DialogHeader>
 
@@ -144,7 +138,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
                       <div className="text-sm text-muted-foreground space-y-1">
                         <p>Repetitions: {srsInfo.repetitions}</p>
                         <p>Interval: {srsInfo.intervalDays} days</p>
-                        <p className={srsInfo.isOverdue ? 'text-orange-500 font-medium' : ''}>
+                        <p className={srsInfo.isOverdue ? 'text-stage-learning font-medium' : ''}>
                           Next review: {srsInfo.nextReview} {srsInfo.isOverdue && '(Due now!)'}
                         </p>
                         <p>Ease Factor: {srsInfo.easeFactor}</p>
