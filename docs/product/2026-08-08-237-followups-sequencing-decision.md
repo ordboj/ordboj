@@ -27,19 +27,19 @@ each forced by something that changed after the umbrella was written:
 3. **#251 loses its temporal gate and gains an invariant** (section 3). Its
    PR #303 may merge before #248.
 4. **#253 stays deferred even though PR #304 now exists** (section 4). The
-   PR converts to draft and waits for its gate.
+   lead converts PR #304 to draft. The PR is not a draft yet.
 
 ## 1. Status, verified against code
 
-| Issue | State  | Evidence today                                                                                                                                                                            |
-| ----- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| #249  | OPEN   | Bug still live. `Practice.tsx:213-215` calls `recordAnswer` for every non-free answer; `isRequeueAttempt` (line 315) is never consulted, and `recordAnswer` itself has no re-queue guard. |
-| #250  | CLOSED | Done.                                                                                                                                                                                     |
-| #254  | OPEN   | No PR.                                                                                                                                                                                    |
-| #252  | OPEN   | No decision note in `docs/product/` yet.                                                                                                                                                  |
-| #248  | OPEN   | No PR. Its prerequisites are in flight: PR #174 (`answeredToday`, #26) and PR #201 (session shape, #111).                                                                                 |
-| #251  | OPEN   | PR #303 open, in remediation.                                                                                                                                                             |
-| #253  | OPEN   | PR #304 open — ahead of its wave.                                                                                                                                                         |
+| Issue | State  | Evidence today                                                                                                                                                                                                                                         |
+| ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| #249  | OPEN   | Bug still live. `Practice.tsx:213-215` calls `recordAnswer` for every non-free answer; `isRequeueAttempt` (line 315) is never consulted, and `recordAnswer` itself has no re-queue guard. Serialized behind PR #302, which is a draft (see section 2). |
+| #250  | CLOSED | Done.                                                                                                                                                                                                                                                  |
+| #254  | OPEN   | No PR.                                                                                                                                                                                                                                                 |
+| #252  | OPEN   | No decision note in `docs/product/` yet.                                                                                                                                                                                                               |
+| #248  | OPEN   | No PR. Its prerequisites are in flight: PR #174 (`answeredToday`, #26) and PR #201 (session shape, #111).                                                                                                                                              |
+| #251  | OPEN   | PR #303 open, in remediation.                                                                                                                                                                                                                          |
+| #253  | OPEN   | PR #304 open — ahead of its wave. PR #304 is not a draft yet; the lead converts it (section 4).                                                                                                                                                        |
 
 ## 2. Wave 1 — order among the three remaining items
 
@@ -51,9 +51,16 @@ call; belt and braces, because the parent note's stated failure mode is a
 future caller that trusts the default path.
 
 **Serialization rule for #249:** PR #302 (#222) edits the same re-queue map
-in `Practice.tsx`. The two must not be in flight at once. #302 merges first
-because it is already open; #249 branches from the merged result. If #302 is
-closed instead, #249 proceeds from main immediately.
+in `Practice.tsx`. The two must not be in flight at once. PR #302 is a
+DRAFT today: its own body asks for a `frontend-expert` follow-up, a `qa`
+fixture pass, and the human's explicit approval for its `localStorage`
+shape change. Three outcomes, all covered:
+
+- #302 becomes ready and merges: #249 branches from the merged result.
+- #302 closes: #249 proceeds from main immediately.
+- #302 stays draft or the human refuses the shape change: #249 does not
+  wait. #249 proceeds from main, and #302 rebases onto the merged #249. A
+  live grading bug never waits on a parked draft.
 
 **#254** is an independent UI fix. It merges at any point inside Wave 1 with
 no ordering constraint.
@@ -61,7 +68,11 @@ no ordering constraint.
 **#252** is decision-only and runs in parallel. Hard gate, restated with the
 new number: **no v3→v4 SRS migration PR opens, for any reason, before the
 #252 decision note is ratified.** A migration PR that appears earlier is
-rejected in review, not amended.
+rejected in review, not amended. Scope of this gate: it binds PRs that
+implement this tracker's sub-issues. PR #302 (#222) predates the gate and
+sits outside the tracker, so the gate does not reject it. #302 is reviewed
+on its own terms, under the human-approval rule for localStorage shape
+changes.
 
 ## 3. Wave 2 — #248, and the amended rule for #251
 
@@ -72,10 +83,13 @@ reviews the shape. All numbers are already fixed in the parent note — 100
 samples, 30-sample warm-up, 4–30 s clamp, ±40% goal clamp, 12 s seed, weekly
 recompute — and this note does not reopen any of them.
 
-**#251: the "after #248" ordering is void.** It rested on the envelope
-covering the stats key, and the parent note itself later excluded that key
-from the envelope as disposable. What remains is not an ordering but an
-invariant, and the invariant is stronger:
+**#251: the "after #248" ordering is void.** It rested on two legs: the
+envelope covering the stats key, and the envelope covering the
+daily-session and streak stores. The parent note later excluded the stats
+key as disposable, which removes the first leg. The invariant below
+removes the second leg, because the PR that creates each new store extends
+the envelope itself. What remains is not an ordering but an invariant, and
+the invariant is stronger:
 
 > The backup envelope covers every persistent, non-disposable store that
 > exists on `main` at the envelope's merge time. Every later PR that creates
@@ -101,19 +115,24 @@ batching changes the persistence path of irreplaceable progress, and the
 hazard it removes is not present yet — the blob is ~26 KB per answer today
 and becomes a problem near ~800 KB, after CSV expansion.
 
-**Gate, stated concretely:** PR #304 converts to draft. It merges only after
-the CSV expansion of `VERB_DATA` (~1537 verbs) is an accepted, scheduled item
-on the board. If the branch has rotted by then, close it and redo the work —
-the carrying cost of a draft is near zero, and a stale persistence-path
-branch is worse than none.
+**Gate, stated concretely:** The lead runs `gh pr ready --undo 304`. The PR
+then waits for its gate. It merges only after the CSV expansion of
+`VERB_DATA` (~1537 verbs) is an accepted, scheduled item on the board. If
+the branch has rotted by then, close it and redo the work — the carrying
+cost of a draft is near zero, and a stale persistence-path branch is worse
+than none.
 
 ## 5. Constraint spanning all waves — restated with current numbers
 
 - Nothing in this tracker changes `calculateNextReview` semantics. Its
   output for a given `(state, grade)` is identical before and after every
   sub-issue merges.
-- `STORAGE_VERSION` is 3 and stays 3 through this tracker. The only v4
-  candidate anywhere on the board is the outcome of #252.
+- `STORAGE_VERSION` is 3 and stays 3 through this tracker. No sub-issue of
+  this tracker bumps the SRS store. One PR outside this tracker does: PR
+  #302 (#222) adds a `requeues` ledger to the SRS envelope, so it bumps the
+  store to 4. Its body still says 2 -> 3, which issue #53 has already
+  consumed; the #302 review corrects that number. Inside this tracker the
+  only v3->v4 candidate is the outcome of #252.
 
 ## 6. Close condition
 
