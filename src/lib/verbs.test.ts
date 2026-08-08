@@ -6,6 +6,8 @@ import {
   getFormHint,
   getVerbs,
   getVerbGrupp,
+  getAlternateForms,
+  isAcceptedAnswer,
   type Form,
 } from '@/lib/verbs';
 import { VERB_DATA } from '@/data/verbData';
@@ -226,5 +228,68 @@ describe('getFormLabel / getFormHint', () => {
   it('gives each form a distinct label (no accidental duplicate mapping)', () => {
     const labels = ALL_FORMS.map(getFormLabel);
     expect(new Set(labels).size).toBe(ALL_FORMS.length);
+  });
+});
+
+// Issue #123: "lade" (lägga preteritum) and "sade" (säga preteritum) are
+// documented SAOL alternates for their respective primary short forms
+// ("la", "sa"). These pin AC2 ("checker accepts documented alternate forms")
+// at the lib level, independent of the UI.
+describe('getAlternateForms', () => {
+  it('returns the documented alternate(s) for lägga preteritum ("lade" alongside primary "la")', () => {
+    expect(getAlternateForms('lägga', 'preteritum')).toEqual(['lade']);
+  });
+
+  it('returns the documented alternate(s) for säga preteritum ("sade" alongside primary "sa")', () => {
+    expect(getAlternateForms('säga', 'preteritum')).toEqual(['sade']);
+  });
+
+  it('returns an empty array for a verb+form with no documented alternate (the common case)', () => {
+    expect(getAlternateForms('vara', 'presens')).toEqual([]);
+  });
+
+  it('returns an empty array for an unknown infinitive (lookup miss)', () => {
+    expect(getAlternateForms('this-infinitive-does-not-exist', 'preteritum')).toEqual([]);
+  });
+
+  it('returns an empty array for "infinitive" even for a verb that has alternates on other forms', () => {
+    // Alternates are not modeled for the dictionary form itself.
+    expect(getAlternateForms('lägga', 'infinitive')).toEqual([]);
+  });
+
+  it("does not leak lägga's preteritum alternate onto a different form of the same verb", () => {
+    expect(getAlternateForms('lägga', 'presens')).toEqual([]);
+    expect(getAlternateForms('lägga', 'supinum')).toEqual([]);
+  });
+});
+
+describe('isAcceptedAnswer', () => {
+  it('accepts the primary stored form', () => {
+    expect(isAcceptedAnswer('lägga', 'preteritum', 'la', 'la')).toBe(true);
+  });
+
+  it('accepts a documented alternate form even though it differs from the primary form passed in', () => {
+    expect(isAcceptedAnswer('lägga', 'preteritum', 'lade', 'la')).toBe(true);
+    expect(isAcceptedAnswer('säga', 'preteritum', 'sade', 'sa')).toBe(true);
+  });
+
+  it('normalizes the alternate match the same way as the primary match: case-insensitive and trimmed', () => {
+    expect(isAcceptedAnswer('lägga', 'preteritum', '  LADE  ', 'la')).toBe(true);
+    expect(isAcceptedAnswer('säga', 'preteritum', '  SaDe ', 'sa')).toBe(true);
+  });
+
+  it('rejects an answer that matches neither the primary form nor any documented alternate', () => {
+    expect(isAcceptedAnswer('lägga', 'preteritum', 'lagg', 'la')).toBe(false);
+    expect(isAcceptedAnswer('säga', 'preteritum', 'sager', 'sa')).toBe(false);
+  });
+
+  it('does not broaden acceptance for a verb+form with no documented alternates: only the primary form is accepted', () => {
+    expect(isAcceptedAnswer('vara', 'presens', 'är', 'är')).toBe(true);
+    expect(isAcceptedAnswer('vara', 'presens', 'var', 'är')).toBe(false);
+  });
+
+  it('does not accept an alternate documented for a different form of the same verb', () => {
+    // "lade" is only a documented alternate for lägga's preteritum, not its presens.
+    expect(isAcceptedAnswer('lägga', 'presens', 'lade', 'lägger')).toBe(false);
   });
 });

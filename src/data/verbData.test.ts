@@ -151,6 +151,62 @@ describe('VERB_DATA - grupp field contract', () => {
   });
 });
 
+// Issue #123: VerbData gains an optional `alternates` field so documented
+// SAOL alternate forms (e.g. "lade" beside primary "la" for lägga) can be
+// stored without touching any existing row. Pin that contract at the data
+// level, independent of the checker that consumes it (src/lib/verbs.ts).
+describe('VERB_DATA - alternates field (issue #123)', () => {
+  it('does not require the field on rows without a documented alternate: the overwhelming majority of rows omit it', () => {
+    const withAlternates = VERB_DATA.filter((v) => v.alternates !== undefined);
+    const withoutAlternates = VERB_DATA.filter((v) => v.alternates === undefined);
+    // Existing rows were not touched by #123: only the two known regression
+    // fixtures (lägga, säga) should carry an `alternates` entry.
+    expect(withAlternates.map((v) => v.infinitive).sort()).toEqual(['lägga', 'säga']);
+    expect(withoutAlternates.length).toBe(VERB_DATA.length - 2);
+  });
+
+  it('pins the documented alternate for lägga preteritum: primary "la", alternate "lade"', () => {
+    const row = VERB_DATA.find((v) => v.infinitive === 'lägga');
+    expect(row).toBeDefined();
+    expect(row?.preteritum).toBe('la');
+    expect(row?.alternates?.preteritum).toEqual(['lade']);
+  });
+
+  it('pins the documented alternate for säga preteritum: primary "sa", alternate "sade"', () => {
+    const row = VERB_DATA.find((v) => v.infinitive === 'säga');
+    expect(row).toBeDefined();
+    expect(row?.preteritum).toBe('sa');
+    expect(row?.alternates?.preteritum).toEqual(['sade']);
+  });
+
+  it('never documents an alternate identical to its own primary form (would be a no-op that hides a real data error)', () => {
+    for (const verb of VERB_DATA) {
+      if (!verb.alternates) continue;
+      for (const [field, alts] of Object.entries(verb.alternates) as Array<
+        ['imperativ' | 'presens' | 'preteritum' | 'supinum', string[]]
+      >) {
+        const primary = verb[field];
+        for (const alt of alts) {
+          expect(alt).not.toBe(primary);
+        }
+      }
+    }
+  });
+
+  it('never documents an empty-string alternate or an empty alternates array (would silently accept "" as correct)', () => {
+    for (const verb of VERB_DATA) {
+      if (!verb.alternates) continue;
+      for (const alts of Object.values(verb.alternates)) {
+        expect(alts).toBeDefined();
+        expect((alts as string[]).length).toBeGreaterThan(0);
+        for (const alt of alts as string[]) {
+          expect(alt.trim().length).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+});
+
 describe('swedish_verbs.csv - mojibake guard', () => {
   // The source CSV legitimately contains parentheses, slashes and periods
   // for alternate forms and abbreviations (e.g. "ta (el. taga)",
