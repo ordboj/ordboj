@@ -22,29 +22,29 @@ type SessionKind = 'due' | 'free' | 'extra';
 
 // Per-item in-session bookkeeping for the same-sitting relearning queue
 // (docs/learning/lapse-handling.md, "Decision" and "Interaction with the
-// sitting cap"). This is day-level bookkeeping and outlives any single
-// round: requeuesToday is a per-item-per-day cap, so it survives a switch
-// between 'due'/'free'/'extra' rounds within the same mount. `pending` and
-// `itemsSinceLapse` are round-structural instead -- they describe a retry's
-// position in the *current* queue, so a new round clears them (a retry
-// still pending when a round ends is dropped; the lapse already moved the
-// item's own schedule, so nothing is lost).
+// sitting cap"). The per-item-per-day requeue cap itself is now persisted
+// and owned by useSrsProgress (requeuesToday/recordRequeue), so it survives
+// a reload mid-sitting. `pending` and `itemsSinceLapse` stay round-structural
+// -- they describe a retry's position in the *current* queue, so a new round
+// clears them (a retry still pending when a round ends is dropped; the lapse
+// already moved the item's own schedule, so nothing is lost).
 interface RequeueEntry {
   itemsSinceLapse: number;
-  requeuesToday: number;
   pending: boolean;
-}
-
-function getLocalDayKey(): string {
-  return new Date().toDateString();
 }
 
 export default function Practice() {
   const navigate = useNavigate();
   const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
-  const { getDueItems, recordAnswer, srsStates, isLoading, isReadOnly } = useSrsProgress(
-    settings.cefrLevels,
-  );
+  const {
+    getDueItems,
+    recordAnswer,
+    srsStates,
+    isLoading,
+    isReadOnly,
+    requeuesToday,
+    recordRequeue,
+  } = useSrsProgress(settings.cefrLevels);
 
   // `items` is the current round's live, mutable working list -- a lapse in
   // a 'due'/'extra' round can splice a same-sitting retry back into it.
@@ -59,7 +59,6 @@ export default function Practice() {
   const [sessionComplete, setSessionComplete] = useState(false);
   const [completedItemIds, setCompletedItemIds] = useState<Set<string>>(new Set());
   const [requeueMap, setRequeueMap] = useState<Record<string, RequeueEntry>>({});
-  const [requeueDay, setRequeueDay] = useState(getLocalDayKey);
   // The due/free pools available once a session ends, computed once
   // srsStates has actually caught up with any answer just recorded (see the
   // effect below). The completion screen's counts and its "Extra reviews" /
@@ -113,10 +112,10 @@ export default function Practice() {
 
   // Starts a fresh round: resets the queue-structural state (items,
   // roundItemIds, currentIndex, completedItemIds) and clears any retry that
-  // was still pending from the previous round without discarding the
-  // day-level requeue-cap bookkeeping (docs/learning/lapse-handling.md: the
-  // cap is per item per day, not per round). A day change wipes the whole
-  // map, same as the mid-round check in handleAnswer.
+  // was still pending from the previous round. The day-level requeue-cap
+  // bookkeeping itself lives in useSrsProgress now (docs/learning/lapse-
+  // handling.md: the cap is per item per day, not per round), so there is
+  // no day check here -- requeuesToday already rolls over on its own.
   const startRound = (roundItems: PracticeItem[], kind: SessionKind) => {
     setItems(roundItems);
     setRoundItemIds(new Set(roundItems.map((item) => item.itemId)));
@@ -125,14 +124,11 @@ export default function Practice() {
     setSessionComplete(false);
     setCompletedItemIds(new Set());
 
-    const today = getLocalDayKey();
-    const carriedMap = today === requeueDay ? requeueMap : {};
     const clearedMap: Record<string, RequeueEntry> = {};
-    for (const [id, entry] of Object.entries(carriedMap)) {
+    for (const [id, entry] of Object.entries(requeueMap)) {
       clearedMap[id] = entry.pending ? { ...entry, pending: false, itemsSinceLapse: 0 } : entry;
     }
     setRequeueMap(clearedMap);
-    setRequeueDay(today);
   };
 
   // Load the deck exactly once per session (i.e. once per mount), when the
@@ -157,7 +153,6 @@ export default function Practice() {
         setCurrentIndex(0);
         setSessionKind('due');
         setCompletedItemIds(new Set());
-        setRequeueDay(getLocalDayKey());
         if (due.length === 0) {
           setSessionComplete(true);
         }
@@ -226,14 +221,11 @@ export default function Practice() {
       }
     } else {
       const isCorrect = grade === 5;
-      const today = getLocalDayKey();
-      // Local-day boundary: bookkeeping from a previous day never carries in.
-      const baseMap = today === requeueDay ? requeueMap : {};
 
       // Every other item still waiting on its re-queue gets one item closer
       // to eligibility now that another card has been answered.
       const advancedMap: Record<string, RequeueEntry> = {};
-      for (const [id, entry] of Object.entries(baseMap)) {
+      for (const [id, entry] of Object.entries(requeueMap)) {
         advancedMap[id] =
           entry.pending && id !== answeredItem.itemId
             ? { ...entry, itemsSinceLapse: entry.itemsSinceLapse + 1 }
@@ -242,7 +234,6 @@ export default function Practice() {
 
       const priorEntry = advancedMap[answeredItem.itemId] ?? {
         itemsSinceLapse: 0,
-        requeuesToday: 0,
         pending: false,
       };
 
@@ -250,7 +241,7 @@ export default function Practice() {
         ? // Correct answer resolves any pending lapse (first try or the
           // required retry after a re-queue).
           { ...priorEntry, pending: false }
-        : priorEntry.requeuesToday < MAX_REQUEUES_PER_DAY
+        : (requeuesToday[answeredItem.itemId] ?? 0) < MAX_REQUEUES_PER_DAY
           ? // Lapsed, and still under the daily re-queue cap: wait for the gap.
             { ...priorEntry, itemsSinceLapse: 0, pending: true }
           : // Cap already spent today: leave it for its normal `dueAt` (already
@@ -266,15 +257,24 @@ export default function Practice() {
       // Invariant: an itemId may appear at most once beyond the
       // currently-shown card, so the cap is only spent on retries actually
       // shown (see PR #166/#13 for the duplicate-splice freeze this guards).
+      // localRequeuesToday tracks same-pass splices: requeuesToday from the
+      // hook only refreshes on the next render, and a single handleAnswer
+      // call can splice more than one item back in.
+      const localRequeuesToday: Record<string, number> = { ...requeuesToday };
       for (const [id, entry] of Object.entries(nextMap)) {
-        if (entry.pending && isEligibleForRequeue(entry.itemsSinceLapse, entry.requeuesToday)) {
+        if (
+          entry.pending &&
+          isEligibleForRequeue(entry.itemsSinceLapse, localRequeuesToday[id] ?? 0)
+        ) {
           const alreadyQueuedAhead = nextQueue.some(
             (q, index) => index > currentIndex && q.itemId === id,
           );
           const item = items.find((q) => q.itemId === id);
           if (item && !alreadyQueuedAhead) {
             nextQueue = [...nextQueue, item];
-            nextMap[id] = { ...entry, requeuesToday: entry.requeuesToday + 1, itemsSinceLapse: 0 };
+            nextMap[id] = { ...entry, itemsSinceLapse: 0 };
+            recordRequeue(id);
+            localRequeuesToday[id] = (localRequeuesToday[id] ?? 0) + 1;
           }
         }
       }
@@ -290,7 +290,6 @@ export default function Practice() {
           : completedItemIds;
 
       setRequeueMap(nextMap);
-      setRequeueDay(today);
     }
 
     setItems(nextQueue);
@@ -306,9 +305,7 @@ export default function Practice() {
   const totalRoundItems = roundItemIds.size;
   const currentItem = items[currentIndex];
   const requeuesSoFar =
-    currentItem && sessionKind !== 'free'
-      ? (requeueMap[currentItem.itemId]?.requeuesToday ?? 0)
-      : 0;
+    currentItem && sessionKind !== 'free' ? (requeuesToday[currentItem.itemId] ?? 0) : 0;
   // Free rounds never grade to real SRS state, so a wrong answer there can
   // never trigger a same-sitting requeue either.
   const willRequeueIfWrong = sessionKind !== 'free' && requeuesSoFar < MAX_REQUEUES_PER_DAY;
