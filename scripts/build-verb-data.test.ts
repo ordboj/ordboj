@@ -33,6 +33,7 @@ import {
   writeFileSync,
   readFileSync,
   existsSync,
+  statSync,
   rmSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -128,6 +129,10 @@ function reviewPath(): string {
 
 function verbDataPath(): string {
   return join(tmpRoot, 'src', 'data', 'verbData.ts');
+}
+
+function proposedRowsPath(): string {
+  return join(tmpRoot, 'docs', 'verb-data', 'proposed-rows.txt');
 }
 
 // Minimal CSV-row-line parser for the review file's own quoted-CSV format,
@@ -511,31 +516,28 @@ describe('output contract', () => {
     expect(readFileSync(verbDataPath(), 'utf8')).toBe(original);
   });
 
-  it('a normal run writes the review file and re-emits verbData.ts byte-identical (no promotions this ticket)', () => {
-    const original = buildVerbDataTs([VALID_SHIPPED_ROW]);
+  // The script never writes src/data/verbData.ts, in any mode (see the
+  // header comment in build-verb-data.mjs): promotion is human-paste-only.
+  // This pins that as an observable, EOL-agnostic guarantee — asserting
+  // byte-identity to the pre-run fixture, not calling it a "round-trip"
+  // (there is no read-modify-rewrite happening; the file is simply left
+  // alone) — against both an LF and a CRLF shipped-file fixture. The mtime
+  // check (not just content equality) is load-bearing: an implementation
+  // that reconstructs and rewrites a byte-identical file would still pass
+  // a content-only assertion, which is exactly how the three tests this
+  // replaced stayed green after verbData.ts stopped being written at all.
+  it.each([
+    ['LF', '\n'],
+    ['CRLF', '\r\n'],
+  ] as const)('a normal run never modifies verbData.ts (%s fixture)', (_label, eol) => {
+    const original = buildVerbDataTs([VALID_SHIPPED_ROW], eol);
     setupFixture(trivialCsv, original);
+    const mtimeBefore = statSync(verbDataPath()).mtimeMs;
     const result = run();
     expect(result.status).toBe(0);
     expect(existsSync(reviewPath())).toBe(true);
     expect(readFileSync(verbDataPath(), 'utf8')).toBe(original);
-  });
-
-  it('round-trips a CRLF-line-ended verbData.ts byte-identically', () => {
-    const original = buildVerbDataTs([VALID_SHIPPED_ROW], '\r\n');
-    expect(original).toContain('\r\n');
-    setupFixture(trivialCsv, original);
-    const result = run();
-    expect(result.status).toBe(0);
-    expect(readFileSync(verbDataPath(), 'utf8')).toBe(original);
-  });
-
-  it('round-trips an LF-line-ended verbData.ts byte-identically', () => {
-    const original = buildVerbDataTs([VALID_SHIPPED_ROW], '\n');
-    expect(original).not.toContain('\r\n');
-    setupFixture(trivialCsv, original);
-    const result = run();
-    expect(result.status).toBe(0);
-    expect(readFileSync(verbDataPath(), 'utf8')).toBe(original);
+    expect(statSync(verbDataPath()).mtimeMs).toBe(mtimeBefore);
   });
 
   it('is deterministic: two consecutive runs produce byte-identical review files', () => {
@@ -547,6 +549,75 @@ describe('output contract', () => {
     expect(second.status).toBe(0);
     const secondReview = readFileSync(reviewPath(), 'utf8');
     expect(secondReview).toBe(firstReview);
+  });
+});
+
+// ---------------------------------------------------------------------
+// Promotion input surface (--promote=inf1,inf2 / scripts/verb-data-promotions.txt)
+// ---------------------------------------------------------------------
+describe('promotion input surface', () => {
+  const csv = buildCsv([
+    {
+      infinitive: 'kalla',
+      imperativ: 'kalla',
+      presens: 'kallar',
+      preteritum: 'kallade',
+      supinum: 'kallat',
+    },
+    // regular grupp 2a verb, not yet shipped: a passing candidate
+    {
+      infinitive: 'ringa',
+      imperativ: 'ring',
+      presens: 'ringer',
+      preteritum: 'ringde',
+      supinum: 'ringt',
+    },
+    // empty imperativ, non-modal, not yet shipped: a failing candidate
+    // (same "glömma"-shaped defect class as the 'vimla' row in the
+    // classification suite above)
+    {
+      infinitive: 'vimla',
+      imperativ: '',
+      presens: 'vimlar',
+      preteritum: 'vimlade',
+      supinum: 'vimlat',
+    },
+  ]);
+
+  it('writes a passing --promote candidate to proposed-rows.txt with its classified grupp, and never to verbData.ts', () => {
+    const original = buildVerbDataTs([VALID_SHIPPED_ROW]); // ships only "kalla"
+    setupFixture(csv, original);
+    const result = run(['--promote=ringa']);
+    expect(result.status).toBe(0);
+    const proposed = readFileSync(proposedRowsPath(), 'utf8');
+    expect(proposed).toContain('infinitive: "ringa"');
+    expect(proposed).toContain('grupp: "2a"');
+    expect(readFileSync(verbDataPath(), 'utf8')).toBe(original);
+    expect(readFileSync(verbDataPath(), 'utf8')).not.toContain('infinitive: "ringa"');
+  });
+
+  it('reports a failing --promote candidate as rejected, exits 0, and writes it to neither file', () => {
+    const original = buildVerbDataTs([VALID_SHIPPED_ROW]);
+    setupFixture(csv, original);
+    const result = run(['--promote=vimla']);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('vimla: empty imperativ on non-modal verb');
+    const proposed = readFileSync(proposedRowsPath(), 'utf8');
+    expect(proposed).not.toContain('infinitive: "vimla"');
+    expect(proposed).toContain('REJECTED "vimla": empty imperativ on non-modal verb');
+    expect(readFileSync(verbDataPath(), 'utf8')).toBe(original);
+  });
+
+  it('silently skips a --promote candidate whose infinitive is already shipped in verbData.ts', () => {
+    const original = buildVerbDataTs([VALID_SHIPPED_ROW]); // ships "kalla"
+    setupFixture(csv, original);
+    const result = run(['--promote=kalla']);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Promotion candidates: 1 requested, 0 passed, 0 rejected.');
+    expect(result.stdout).not.toContain('Rejected promotion candidates:');
+    const proposed = readFileSync(proposedRowsPath(), 'utf8');
+    expect(proposed).not.toContain('kalla');
+    expect(readFileSync(verbDataPath(), 'utf8')).toBe(original);
   });
 });
 
