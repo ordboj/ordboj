@@ -31,15 +31,15 @@ each forced by something that changed after the umbrella was written:
 
 ## 1. Status, verified against code
 
-| Issue | State  | Evidence today                                                                                                                                                                                                                                         |
-| ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| #249  | OPEN   | Bug still live. `Practice.tsx:213-215` calls `recordAnswer` for every non-free answer; `isRequeueAttempt` (line 315) is never consulted, and `recordAnswer` itself has no re-queue guard. Serialized behind PR #302, which is a draft (see section 2). |
-| #250  | CLOSED | Done.                                                                                                                                                                                                                                                  |
-| #254  | OPEN   | No PR.                                                                                                                                                                                                                                                 |
-| #252  | OPEN   | No decision note in `docs/product/` yet.                                                                                                                                                                                                               |
-| #248  | OPEN   | No PR. Its prerequisites are in flight: PR #174 (`answeredToday`, #26) and PR #201 (session shape, #111).                                                                                                                                              |
-| #251  | OPEN   | PR #303 open, in remediation.                                                                                                                                                                                                                          |
-| #253  | OPEN   | PR #304 open — ahead of its wave. PR #304 is not a draft yet; the lead converts it (section 4).                                                                                                                                                        |
+| Issue | State  | Evidence today                                                                                                                                                                                                                                                   |
+| ----- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #249  | OPEN   | Bug still live. `Practice.tsx:213-215` calls `recordAnswer` for every non-free answer; `isRequeueAttempt` (line 316) is never consulted, and `recordAnswer` itself has no re-queue guard. PR #302 is a draft today, so #249 does not wait on it (see section 2). |
+| #250  | CLOSED | Done.                                                                                                                                                                                                                                                            |
+| #254  | OPEN   | PR #326 open. The UI already landed on main in PR #200 (commit 4ad8e59); #326 adds the missing test only.                                                                                                                                                        |
+| #252  | OPEN   | No decision note in `docs/product/` yet.                                                                                                                                                                                                                         |
+| #248  | OPEN   | No PR. Its prerequisites are in flight: PR #174 (`answeredToday`, #26) and PR #201 (session shape, #111).                                                                                                                                                        |
+| #251  | OPEN   | PR #303 open, in remediation.                                                                                                                                                                                                                                    |
+| #253  | OPEN   | PR #304 open — ahead of its wave. PR #304 is not a draft yet; the lead converts it (section 4).                                                                                                                                                                  |
 
 ## 2. Wave 1 — order among the three remaining items
 
@@ -51,7 +51,7 @@ call; belt and braces, because the parent note's stated failure mode is a
 future caller that trusts the default path.
 
 **Serialization rule for #249:** PR #302 (#222) edits the same re-queue map
-in `Practice.tsx`. The two must not be in flight at once. PR #302 is a
+in `Practice.tsx`. Only one of the two may be ready for merge at a time. PR #302 is a
 DRAFT today: its own body asks for a `frontend-expert` follow-up, a `qa`
 fixture pass, and the human's explicit approval for its `localStorage`
 shape change. Three outcomes, all covered:
@@ -62,12 +62,13 @@ shape change. Three outcomes, all covered:
   wait. #249 proceeds from main, and #302 rebases onto the merged #249. A
   live grading bug never waits on a parked draft.
 
-**#254** is an independent UI fix. It merges at any point inside Wave 1 with
-no ordering constraint.
+**#254** is already fixed on main. PR #200 (commit 4ad8e59) shipped the
+subordinated wrong-answer UI. Only test coverage was missing, and PR #326
+adds it. #254 carries no ordering constraint and closes when #326 merges.
 
 **#252** is decision-only and runs in parallel. Hard gate, restated with the
-new number: **no v3→v4 SRS migration PR opens, for any reason, before the
-#252 decision note is ratified.** A migration PR that appears earlier is
+new number: **no sub-issue of this tracker opens a v3→v4 SRS migration PR
+before the #252 decision note is ratified.** A migration PR that appears earlier is
 rejected in review, not amended. Scope of this gate: it binds PRs that
 implement this tracker's sub-issues. PR #302 (#222) predates the gate and
 sits outside the tracker, so the gate does not reject it. #302 is reviewed
@@ -129,10 +130,11 @@ than none.
   sub-issue merges.
 - `STORAGE_VERSION` is 3 and stays 3 through this tracker. No sub-issue of
   this tracker bumps the SRS store. One PR outside this tracker does: PR
-  #302 (#222) adds a `requeues` ledger to the SRS envelope, so it bumps the
-  store to 4. Its body still says 2 -> 3, which issue #53 has already
-  consumed; the #302 review corrects that number. Inside this tracker the
-  only v3->v4 candidate is the outcome of #252.
+  #302 (#222) adds a `requeues` ledger to the SRS envelope. Its branch
+  still sets `STORAGE_VERSION = 3` in `src/hooks/useSrsProgress.ts`, and its
+  body still says 2 -> 3. Issue #53 already consumed version 3 on main. The
+  #302 review must make the code, the tests and the body say 3 -> 4. Inside
+  this tracker the only v3->v4 candidate is the outcome of #252.
 
 ## 6. Close condition
 
