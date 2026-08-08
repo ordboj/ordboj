@@ -377,3 +377,181 @@ describe('importData legacy rebase', () => {
     expect(result.current.srsStates['1-presens'].easeFactor).toBe(1.3);
   });
 });
+
+// issue #26: answeredToday is the counter Practice.tsx bounds the session
+// against. Stored at its own key ('swedish-verbs-daily-count') as
+// { version, date, count }, separate from the irreplaceable SRS envelope.
+describe('answeredToday', () => {
+  const DAILY_COUNT_KEY = 'swedish-verbs-daily-count';
+
+  it('starts at 0 when the key is absent', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.answeredToday).toBe(0);
+  });
+
+  it('increments by exactly one per recordAnswer call, right or wrong (grade 0 still counts)', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => result.current.recordAnswer('1-presens', 5));
+    await waitFor(() => expect(result.current.answeredToday).toBe(1));
+
+    act(() => result.current.recordAnswer('1-preteritum', 0));
+    await waitFor(() => expect(result.current.answeredToday).toBe(2));
+  });
+
+  it('twelve answers in a row raise answeredToday 1..12 and persist a final stored count of 12', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const grades: Array<0 | 5> = [5, 5, 5, 0, 5, 5, 5, 0, 5, 5, 5, 5];
+    for (let i = 0; i < grades.length; i++) {
+      const itemId = ALL_ITEM_IDS[i % ALL_ITEM_IDS.length];
+      act(() => result.current.recordAnswer(itemId, grades[i]));
+      await waitFor(() => expect(result.current.answeredToday).toBe(i + 1));
+    }
+
+    const stored = JSON.parse(localStorage.getItem(DAILY_COUNT_KEY) as string);
+    expect(stored).toEqual({ version: 1, date: '2026-01-01', count: 12 });
+  });
+
+  it('persists {version, date, count} to its own key and re-reads it verbatim on remount', async () => {
+    const first = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+
+    act(() => first.result.current.recordAnswer('1-presens', 5));
+    await waitFor(() => expect(first.result.current.answeredToday).toBe(1));
+
+    const stored = JSON.parse(localStorage.getItem(DAILY_COUNT_KEY) as string);
+    expect(stored).toEqual({ version: 1, date: '2026-01-01', count: 1 });
+
+    first.unmount();
+
+    const second = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(second.result.current.isLoading).toBe(false));
+    expect(second.result.current.answeredToday).toBe(1);
+  });
+
+  it('resets to 0 when the local date has rolled over since the stored count', async () => {
+    localStorage.setItem(
+      DAILY_COUNT_KEY,
+      JSON.stringify({ version: 1, date: '2025-12-31', count: 11 }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.answeredToday).toBe(0);
+
+    // The next answer starts a fresh day's count rather than resuming
+    // yesterday's 11.
+    act(() => result.current.recordAnswer('1-presens', 5));
+    await waitFor(() => expect(result.current.answeredToday).toBe(1));
+    const stored = JSON.parse(localStorage.getItem(DAILY_COUNT_KEY) as string);
+    expect(stored).toEqual({ version: 1, date: '2026-01-01', count: 1 });
+  });
+
+  it('resumes an in-progress day: a stored count for today is read back as-is on mount', async () => {
+    localStorage.setItem(
+      DAILY_COUNT_KEY,
+      JSON.stringify({ version: 1, date: '2026-01-01', count: 7 }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.answeredToday).toBe(7);
+  });
+
+  it('does not throw and collapses to 0 on malformed JSON at the daily-count key', async () => {
+    localStorage.setItem(DAILY_COUNT_KEY, '{not valid json!!');
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.answeredToday).toBe(0);
+  });
+
+  it.each([
+    ['a null payload', 'null'],
+    ['an array payload', '[1,2,3]'],
+    ['a missing count field', JSON.stringify({ version: 1, date: '2026-01-01' })],
+    ['a non-numeric count', JSON.stringify({ version: 1, date: '2026-01-01', count: 'lots' })],
+    ['a negative count', JSON.stringify({ version: 1, date: '2026-01-01', count: -3 })],
+    ['a non-finite count', JSON.stringify({ version: 1, date: '2026-01-01', count: Infinity })],
+    ['a malformed date', JSON.stringify({ version: 1, date: '01/01/2026', count: 5 })],
+    ['a missing date field', JSON.stringify({ version: 1, count: 5 })],
+  ])('collapses to answeredToday 0 on %s', async (_label, raw) => {
+    localStorage.setItem(DAILY_COUNT_KEY, raw);
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.answeredToday).toBe(0);
+  });
+
+  it('does not discard a newer-version payload whose date/count are still structurally valid', async () => {
+    localStorage.setItem(
+      DAILY_COUNT_KEY,
+      JSON.stringify({ version: 2, date: '2026-01-01', count: 5, someFutureField: 'x' }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.answeredToday).toBe(5);
+  });
+
+  it('does not crash when localStorage.setItem throws (quota exceeded); the in-memory count still advances', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    });
+
+    expect(() => {
+      act(() => result.current.recordAnswer('1-presens', 5));
+    }).not.toThrow();
+
+    await waitFor(() => expect(result.current.answeredToday).toBe(1));
+  });
+
+  it('resetProgress zeroes the daily count as well as the schedule', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => result.current.recordAnswer('1-presens', 5));
+    await waitFor(() => expect(result.current.answeredToday).toBe(1));
+
+    act(() => result.current.resetProgress());
+    await waitFor(() => expect(result.current.answeredToday).toBe(0));
+
+    const stored = JSON.parse(localStorage.getItem(DAILY_COUNT_KEY) as string);
+    expect(stored.count).toBe(0);
+  });
+
+  it('re-derives to 0 when the clock crosses local midnight during an open session, without a fresh recordAnswer', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => result.current.recordAnswer('1-presens', 5));
+    await waitFor(() => expect(result.current.answeredToday).toBe(1));
+
+    // Cross local midnight without any further interaction, then trigger a
+    // fresh answer - answeredToday is re-derived against "now" on every
+    // render (not cached from the earlier one), so it starts a new day's
+    // count instead of carrying yesterday's 1 forward.
+    vi.setSystemTime(FIXED_NOW + 24 * 60 * 60 * 1000 + 1000);
+    act(() => {
+      result.current.recordAnswer('1-preteritum', 5);
+    });
+    await waitFor(() => expect(result.current.answeredToday).toBe(1));
+
+    const stored = JSON.parse(localStorage.getItem(DAILY_COUNT_KEY) as string);
+    expect(stored.date).toBe('2026-01-02');
+    expect(stored.count).toBe(1);
+  });
+});
