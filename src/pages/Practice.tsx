@@ -325,7 +325,7 @@ export default function Practice() {
 
   if (isLoading || settingsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
+      <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-muted-foreground">Loading practice cards...</p>
         </div>
@@ -356,7 +356,7 @@ export default function Practice() {
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
+      <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         {/* Only celebrate a real finish, not an empty queue on arrival. The
             explicit !isLoading/!settingsLoading guard is redundant with the
             early return above today (this branch is unreachable while
@@ -419,7 +419,7 @@ export default function Practice() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
+    <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
       {/* Header */}
       <div className="max-w-2xl mx-auto mb-6 space-y-4">
         {isReadOnly && <ReadOnlyBanner />}

@@ -179,14 +179,14 @@ export default function Progress() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
+      <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <p className="text-xl text-muted-foreground">Loading progress...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
+    <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -328,9 +328,9 @@ export default function Progress() {
           </CardContent>
         </Card>
 
-        {/* Table */}
-        <Card>
-          <ScrollArea className="h-[600px]">
+        {/* Table - readable at sm and up; 7 columns need horizontal room */}
+        <Card className="hidden sm:block">
+          <ScrollArea className="h-[min(600px,70dvh)]">
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
@@ -474,6 +474,106 @@ export default function Progress() {
             </Table>
           </ScrollArea>
         </Card>
+
+        {/* Card list - below sm, a 7-column table can't stay readable at 360px width.
+            The sort headers live in the (hidden-below-sm) table, so this is the
+            only sort affordance phone users have. */}
+        <div className="sm:hidden space-y-3">
+          {filteredAndSortedVerbs.length > 0 && (
+            <div className="flex justify-end">
+              <Select
+                value={`${sortField}-${sortDirection}`}
+                onValueChange={(value) => {
+                  const [field, direction] = value.split('-') as [SortField, SortDirection];
+                  setSortField(field);
+                  setSortDirection(direction);
+                }}
+              >
+                <SelectTrigger aria-label="Sort verbs" className="w-48">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="infinitive-asc">Verb A-Z</SelectItem>
+                  <SelectItem value="infinitive-desc">Verb Z-A</SelectItem>
+                  <SelectItem value="difficulty-asc">Difficulty (easy first)</SelectItem>
+                  <SelectItem value="difficulty-desc">Difficulty (hard first)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {filteredAndSortedVerbs.map((verb) => {
+            const stage = getSrsStage(verb.id);
+            const badge = getMasteryStageBadge(stage);
+            const grupp = getVerbGrupp(verb.infinitive);
+            return (
+              <Card
+                key={verb.id}
+                role="button"
+                tabIndex={0}
+                className="cursor-pointer active:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                onClick={() => setSelectedVerb(verb)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setSelectedVerb(verb);
+                  }
+                }}
+              >
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-lg break-words" lang="sv">
+                      {verb.infinitive}
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="outline">{verb.cefr}</Badge>
+                      {/* Issue #227: outline hardcoded, not badge.variant — see the
+                          table's badge above for why. */}
+                      <Badge variant="outline" className={badge.color}>
+                        {badge.label}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                    <div>
+                      <span className="font-medium text-foreground">Presens: </span>
+                      <span lang="sv">{verb.presens}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground">Preteritum: </span>
+                      <span lang="sv">{verb.preteritum}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground">Supinum: </span>
+                      <span lang="sv">{verb.supinum}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground">Imperativ: </span>
+                      {verb.imperativNotApplicable || verb.imperativ === '(not available)' ? (
+                        <span className="text-muted-foreground">
+                          <span aria-hidden="true">—</span>
+                          <span className="sr-only">not applicable</span>
+                        </span>
+                      ) : (
+                        <span lang="sv">{verb.imperativ}</span>
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground">Grupp: </span>
+                      {grupp ? (
+                        <Badge variant="outline">grupp {grupp}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          <span aria-hidden="true">—</span>
+                          <span className="sr-only">not available</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
 
         {filteredAndSortedVerbs.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">

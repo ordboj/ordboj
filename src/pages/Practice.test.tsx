@@ -170,6 +170,46 @@ describe('Practice page - one full session', () => {
   });
 });
 
+describe('Practice page - dvh viewport units (#113)', () => {
+  // min-h-dvh tracks the current layout viewport, so the page no longer
+  // leaves a gap or forces a scroll when iOS Safari's URL bar shows or
+  // hides. It does NOT follow the visual viewport, so on its own it is not
+  // a fix for the on-screen keyboard overlapping the Hint/Check row -- that
+  // needs the VisualViewport API and is out of scope here.
+  it('uses min-h-dvh (not min-h-screen) for the root container in the active-session view', async () => {
+    const { container } = renderWithProviders(<Practice />, { route: '/practice' });
+
+    await screen.findByText('1 / 2');
+    const root = container.firstElementChild as HTMLElement;
+    const classes = root.className.split(/\s+/);
+    expect(classes).toContain('min-h-dvh');
+    expect(classes).not.toContain('min-h-screen');
+    // Sanity: not asserting against an empty/wrong root.
+    expect(root.textContent).toContain('Back');
+  });
+
+  it('uses min-h-dvh (not min-h-screen) for the loading view', () => {
+    mocks.settingsLoading = true;
+    const { container } = renderWithProviders(<Practice />, { route: '/practice' });
+
+    const root = container.firstElementChild as HTMLElement;
+    const classes = root.className.split(/\s+/);
+    expect(classes).toContain('min-h-dvh');
+    expect(classes).not.toContain('min-h-screen');
+  });
+
+  it('uses min-h-dvh (not min-h-screen) for the completion view', async () => {
+    mocks.dueItems = [];
+    const { container } = renderWithProviders(<Practice />, { route: '/practice' });
+
+    await screen.findByText(/Great Work/i);
+    const root = container.firstElementChild as HTMLElement;
+    const classes = root.className.split(/\s+/);
+    expect(classes).toContain('min-h-dvh');
+    expect(classes).not.toContain('min-h-screen');
+  });
+});
+
 describe('Practice page - icon-button accessibility and touch targets (issue #100)', () => {
   it('labels the mute toggle by current mute state and gives it a 44px touch target', async () => {
     // The shared mock settings fixture in this file has muteAudio: true, so
