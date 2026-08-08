@@ -15,9 +15,13 @@
     "jsx": "react-jsx",
 
     /* Linting */
-    "strict": false,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
+    /* Overrides `strict` on purpose: canvas-confetti ships no types and
+       @types/canvas-confetti is not installed (package.json is devops-owned).
+       Remove this line once the types land. */
     "noImplicitAny": false,
     "noFallthroughCasesInSwitch": false,
 
@@ -26,5 +30,10 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  /* Unused generated shadcn/ui primitives. Nobody edits src/components/ui in
+     place, so type errors there are unfixable noise — same rationale as the
+     eslint ignore. Excluding only drops them as *root* files: the moment
+     anything imports one, TypeScript pulls it back in and checks it. */
+  "exclude": ["src/components/ui/chart.tsx", "src/components/ui/input-otp.tsx"]
 }
