@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { PracticeCard } from '@/components/PracticeCard';
+import { ConfettiEffect } from '@/components/ConfettiEffect';
 import { ReadOnlyBanner } from '@/components/ReadOnlyBanner';
 import { useSrsProgress, type PracticeItem } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
@@ -356,6 +357,18 @@ export default function Practice() {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
+        {/* Only celebrate a real finish, not an empty queue on arrival. The
+            explicit !isLoading/!settingsLoading guard is redundant with the
+            early return above today (this branch is unreachable while
+            either is true) but makes the invariant explicit rather than
+            relying on branch order, since loadDueItems resolves the round
+            asynchronously after that early return has already passed. Per
+            the P8 confetti policy, this goal-completion moment is the only
+            trigger -- there is no per-answer confetti in PracticeCard, and
+            the lapse-recovery trigger this PR originally shipped was
+            removed as dead code (failedItemIds could never be populated;
+            see commit 0e1fc55) pending a real relearning-queue state. */}
+        <ConfettiEffect trigger={!isLoading && !settingsLoading && totalRoundItems > 0} />
         <div className="w-full max-w-2xl text-center space-y-6">
           {isReadOnly && <ReadOnlyBanner />}
           <h1 className="text-5xl font-bold text-primary">Great work! 🎉</h1>
@@ -411,7 +424,7 @@ export default function Practice() {
       <div className="max-w-2xl mx-auto mb-6 space-y-4">
         {isReadOnly && <ReadOnlyBanner />}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
+          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 h-11">
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
@@ -422,7 +435,9 @@ export default function Practice() {
             <Button
               variant="outline"
               size="icon"
+              className="h-11 w-11"
               onClick={() => updateSettings({ muteAudio: !settings.muteAudio })}
+              aria-label={settings.muteAudio ? 'Unmute audio' : 'Mute audio'}
             >
               {settings.muteAudio ? (
                 <VolumeX className="h-5 w-5" />
