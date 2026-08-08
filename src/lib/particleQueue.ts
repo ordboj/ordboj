@@ -297,8 +297,19 @@ export function buildFreeParticlePractice(
       });
     }
   }
+  // One item per verb, same sibling-separation reasoning as a scheduled
+  // sitting: a cloze feedback screen shows the phrase in full, so pairing it
+  // with its own recall card makes the second card a reading exercise. A free
+  // round records nothing, so no false success reaches the scheduler, but the
+  // round is worth less and there is no reason to build it that way.
+  const seenVerbs = new Set<string>();
   return candidates
     .sort((a, b) => a.dueAt - b.dueAt)
+    .filter(({ card }) => {
+      if (seenVerbs.has(card.entry.id)) return false;
+      seenVerbs.add(card.entry.id);
+      return true;
+    })
     .slice(0, FREE_PARTICLE_PRACTICE_SIZE)
     .map(({ card }) => card);
 }

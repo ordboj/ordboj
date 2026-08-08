@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildFreeParticlePractice,
   buildParticleSitting,
   countParticleReviewsDue,
   isBaseRecentlyUsed,
@@ -534,6 +535,52 @@ describe('countParticleReviewsDue', () => {
 
   it('is zero for a learner who has never opened the mode', () => {
     expect(countParticleReviewsDue({}, NOW, [entry({ id: 'pv:test-ut' })])).toBe(0);
+  });
+});
+
+describe('free practice pool', () => {
+  const target = entry({ id: 'pv:test-ut' });
+  const clozeId = particleItemId(target.id, 'cloze');
+  const recallId = particleItemId(target.id, 'recall');
+
+  it('draws only items the learner has met that are not yet due', () => {
+    const other = entry({ id: 'pv:other-ut', baseInfinitive: 'ta' });
+    const otherCloze = particleItemId(other.id, 'cloze');
+    const states = {
+      ...readyBase('gå'),
+      ...readyBase('ta'),
+      [clozeId]: state({ itemId: clozeId, repetitions: 4, dueAt: NOW + 10 * DAY }),
+      // Due, so it belongs in the scheduled queue, not the free pool.
+      [otherCloze]: state({ itemId: otherCloze, repetitions: 4, dueAt: NOW - DAY }),
+    };
+    const pool = buildFreeParticlePractice(states, NOW, [target, other]);
+    expect(pool.map((card) => card.itemId)).toEqual([clozeId]);
+  });
+
+  it('never counts a free card toward the goal', () => {
+    const states = {
+      ...readyBase('gå'),
+      [clozeId]: state({ itemId: clozeId, repetitions: 4, dueAt: NOW + 10 * DAY }),
+    };
+    expect(buildFreeParticlePractice(states, NOW, [target]).every((c) => !c.countsTowardGoal)).toBe(
+      true,
+    );
+  });
+
+  it('serves at most one item per verb, nearest due first', () => {
+    // Pairing a cloze with its own recall card makes the second card a
+    // reading exercise, since the first one displayed the whole phrase.
+    const states = {
+      ...readyBase('gå'),
+      [clozeId]: state({ itemId: clozeId, repetitions: 4, dueAt: NOW + 20 * DAY }),
+      [recallId]: state({ itemId: recallId, repetitions: 3, dueAt: NOW + 5 * DAY }),
+    };
+    const pool = buildFreeParticlePractice(states, NOW, [target]);
+    expect(pool.map((card) => card.itemId)).toEqual([recallId]);
+  });
+
+  it('is empty for a learner who has met nothing', () => {
+    expect(buildFreeParticlePractice(readyBase('gå'), NOW, [target])).toEqual([]);
   });
 });
 
