@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { PracticeCard } from '@/components/PracticeCard';
 import type { Grade } from '@/lib/srs';
-import { getAllConjugatedVerbs, getVerbGrupp } from '@/lib/verbs';
+import { getAllConjugatedVerbs, getFormLabel, getVerbGrupp } from '@/lib/verbs';
 
 // "vara" is a stable, real fixture from VERB_DATA (owned by swedish-linguist):
 // presens "är", preteritum "var", supinum "varit", imperativ "var".
@@ -262,9 +262,15 @@ describe("PracticeCard - wrong-answer feedback shows the learner's own input (#1
     expect(missingFormWrapper).toHaveClass('bg-primary');
     expect(missingFormWrapper).toHaveClass('font-bold');
 
-    // The wrong answer is never spoken: no pronounce button anywhere near it.
+    // The wrong answer is never spoken: no pronounce button targets it, and
+    // no button anywhere in the panel carries the learner's wrong text.
     expect(
       within(wrongAnswerLine).queryByRole('button', { name: /^Pronounce/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /totallywrong/i })).not.toBeInTheDocument();
+    // Every pronounce button belongs to a form the learner did not have to supply.
+    expect(
+      screen.queryByRole('button', { name: `Pronounce ${getFormLabel('presens')}` }),
     ).not.toBeInTheDocument();
   });
 
