@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { VERB_DATA, type Grupp } from '@/data/verbData';
+import { VERB_DATA, type Grupp, type AlternateFormField } from '@/data/verbData';
 
 const VALID_GRUPP: ReadonlySet<Grupp> = new Set(['1', '2a', '2b', '3', '4']);
 
@@ -719,5 +719,420 @@ describe('issue #42 - CEFR re-tag (shipped-50 audit, PR #298)', () => {
     // that doc landing, that is exactly the kind of guessed-pedagogy
     // change CLAUDE.md reserves for learning-designer.
     expect(nonA1.sort()).toEqual(['kapa', 'te sig', 'unna']);
+  });
+});
+
+// Issue #43 (docs/learning/2026-08-08-verb-data-conventions.md), implemented
+// by PR #279/#360: lemma-column cleanup, the `note` field, reflexive-form
+// audit, and CSV<->TS alternates sync. Section 6 of the decision doc lists
+// the acceptance checks (AC1-AC10) this describe block pins directly.
+describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
+  type FullCsvRow = {
+    cefr: string;
+    grammar: string;
+    infinitive: string;
+    imperativ: string;
+    presens: string;
+    preteritum: string;
+    supinum: string;
+    note: string;
+  };
+
+  function parseFullCsv(): FullCsvRow[] {
+    const csvPath = join(here, '..', '..', 'public', 'data', 'swedish_verbs.csv');
+    const csv = readFileSync(csvPath, 'utf-8');
+    const lines = csv.split(/\r?\n/).filter(Boolean);
+    return lines.slice(1).map((line) => {
+      const [
+        cefr = '',
+        grammar = '',
+        infinitive = '',
+        imperativ = '',
+        presens = '',
+        preteritum = '',
+        supinum = '',
+        note = '',
+      ] = line.split(',');
+      return { cefr, grammar, infinitive, imperativ, presens, preteritum, supinum, note };
+    });
+  }
+
+  function csvRowFor(infinitive: string): FullCsvRow {
+    const row = parseFullCsv().find((r) => r.infinitive === infinitive);
+    if (!row) throw new Error(`No CSV row found for infinitive "${infinitive}"`);
+    return row;
+  }
+
+  // AC1: no cell in the infinitive column of CSV or TS contains "(", ")" or
+  // "/" -- includes CSV line 1482 (betyg(s)sätta), resolved under C2b.
+  describe('AC1 - clean lemma column, no parens or slash', () => {
+    it('no CSV infinitive cell contains "(", ")" or "/"', () => {
+      const offenders = parseFullCsv().filter((r) => /[()/]/.test(r.infinitive));
+      expect(offenders.map((r) => r.infinitive)).toEqual([]);
+    });
+
+    // Note: a table-wide "no VERB_DATA.infinitive contains paren/slash"
+    // check is deliberately not included here. Every VERB_DATA row except
+    // "ta" and "ge" was already clean before #43 (only those two carried an
+    // annotated lemma, per the decision doc's "already stripped two of them
+    // silently" note) -- a table-wide version of this check would pass
+    // identically against the pre-#43 code, proving nothing about this fix.
+    // The two rows that actually had the defect are pinned by name below.
+
+    // Regression: CSV line 1482 used to store the lemma as "betyg(s)sätta".
+    // C2b resolves this to a single clean spelling with the rejected
+    // spelling (if any) moved to `note`, never left in the lemma itself.
+    it('regression: CSV line 1482 (betyg(s)sätta) now stores a single clean lemma with no parentheses', () => {
+      const row = csvRowFor('betygsätta');
+      expect(row.infinitive).toBe('betygsätta');
+    });
+
+    // Regression: verbData.ts previously carried annotated lemmas like
+    // "ta (el. taga)" and "ge (formellt giva)" before the C1 audit.
+    it.each(['ta', 'ge'] as const)(
+      'regression: VERB_DATA "%s" is a clean lemma (the parenthetical annotation moved to `note`)',
+      (infinitive) => {
+        const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+        expect(row).toBeDefined();
+        expect(row?.infinitive).toBe(infinitive);
+        expect(row?.note).toBeDefined();
+        expect(row?.note!.length).toBeGreaterThan(0);
+      },
+    );
+  });
+
+  // AC2: the 15 reflexive lemmas are unchanged and carry "sig" in every
+  // non-empty stored form; any stored reflexive imperativ uses "dig". Unlike
+  // AC1/AC3/AC4/AC7/AC9 above, this data was already correct before #43 (the
+  // linguist's audit confirmed it, rather than fixing it) -- "unchanged" is
+  // literally the criterion -- so these checks hold against both the
+  // pre-#43 and post-#43 CSV. The assertion logic itself is not a tautology:
+  // it was verified separately against a deliberately-broken in-memory
+  // fixture (missing "sig", imperativ using "sig" instead of "dig") outside
+  // this suite before landing here.
+  describe('AC2 - reflexive lemmas keep "sig", imperativ (if any) uses "dig"', () => {
+    const REFLEXIVE_LEMMAS = [
+      'te sig',
+      'åta sig',
+      'bry sig',
+      'närma sig',
+      'lämpa sig',
+      'bege sig',
+      'förhålla sig',
+      'bete sig',
+      'nöja sig',
+      'motsätta sig',
+      'utspela sig',
+      'löna sig',
+      'bosätta sig',
+      'infinna sig',
+      'förlita sig',
+    ] as const;
+
+    it('exactly these 15 reflexive lemmas are present in the CSV, unchanged', () => {
+      const present = REFLEXIVE_LEMMAS.filter((name) =>
+        parseFullCsv().some((r) => r.infinitive === name),
+      );
+      expect(present.slice().sort()).toEqual([...REFLEXIVE_LEMMAS].sort());
+    });
+
+    it.each(REFLEXIVE_LEMMAS)(
+      '"%s" carries "sig" in the lemma and in every non-empty stored form',
+      (name) => {
+        const row = csvRowFor(name);
+        expect(row.infinitive.endsWith(' sig')).toBe(true);
+        for (const field of ['presens', 'preteritum', 'supinum'] as const) {
+          if (row[field] !== '') {
+            expect(row[field].endsWith(' sig')).toBe(true);
+          }
+        }
+      },
+    );
+
+    it.each(REFLEXIVE_LEMMAS)(
+      '"%s" never stores an imperativ ending in "sig" -- a stored reflexive imperativ must use "dig"',
+      (name) => {
+        const row = csvRowFor(name);
+        if (row.imperativ !== '') {
+          expect(row.imperativ.endsWith(' sig')).toBe(false);
+          expect(row.imperativ.endsWith(' dig')).toBe(true);
+        }
+      },
+    );
+  });
+
+  // AC3: every slash cell parses as form(/form)+ with no spaces; the
+  // shipped TS rows with `alternates` have the first token as their field
+  // value and the verified remainder in `alternates`; and, in the other
+  // direction, every `alternates` entry in VERB_DATA has a matching "/"
+  // cell in the CSV row for that lemma.
+  describe('AC3 - slash-cell encoding and CSV<->TS alternates sync', () => {
+    // This format contract already held for every pre-existing slash cell
+    // (e.g. "sa/sade" was already spaceless before #43); #43 formalizes it
+    // rather than fixing a violation reachable in this repo's history, so
+    // it also holds against the pre-#43 CSV. The regex was checked against
+    // a deliberately spaced fixture ("sa / sade") outside this suite to
+    // confirm it is not a tautology.
+    it('every "/"-containing conjugation cell in the CSV parses as form(/form)+ with no spaces', () => {
+      const offenders: string[] = [];
+      for (const row of parseFullCsv()) {
+        for (const field of ['imperativ', 'presens', 'preteritum', 'supinum'] as const) {
+          const value = row[field];
+          if (value.includes('/') && !/^[^\s/]+(\/[^\s/]+)+$/.test(value)) {
+            offenders.push(`${row.infinitive}.${field}="${value}"`);
+          }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    // Regression for the exact defect the decision doc names: before #43,
+    // the CSV cell for lägga's preteritum was plain "la" with no slash,
+    // even though verbData.ts already shipped alternates: { preteritum:
+    // ["lade"] }. This iterates every (verb, form) pair that carries
+    // `alternates` in VERB_DATA today, so it also protects any future
+    // shipped alternate pair, not just this one.
+    it.each(
+      VERB_DATA.filter((v) => v.alternates).flatMap((v) =>
+        (Object.keys(v.alternates!) as AlternateFormField[]).map(
+          (form) => [v.infinitive, form] as const,
+        ),
+      ),
+    )(
+      'VERB_DATA "%s" alternates on "%s" have a matching "/" cell in the CSV row for that lemma',
+      (infinitive, form) => {
+        const verb = VERB_DATA.find((v) => v.infinitive === infinitive)!;
+        const csvRow = csvRowFor(infinitive);
+        const cell = csvRow[form];
+        expect(cell).toContain('/');
+        const tokens = cell.split('/');
+        expect(tokens[0]).toBe(verb[form]);
+        expect(tokens.slice(1)).toEqual(verb.alternates![form]);
+      },
+    );
+  });
+
+  // AC4: for each of the 9 rows + mala, a note names the classification
+  // category (free variant / sense-conditioned / archaic-dropped) per form.
+  // These rows are CSV-only (not shipped in VERB_DATA), so the "source
+  // comment" the decision doc requires lands in the CSV `note` column
+  // rather than a verbData.ts comment.
+  describe('AC4 - classification note on the 9 slash rows + mala', () => {
+    const NINE_ROWS_PLUS_MALA = [
+      'säga',
+      'betala',
+      'tvinga',
+      'växa',
+      'sprida',
+      'vika',
+      'lyda',
+      'begrava',
+      'svälta',
+      'mala',
+    ] as const;
+
+    it.each(NINE_ROWS_PLUS_MALA)('"%s" carries a non-empty classification note', (name) => {
+      const row = csvRowFor(name);
+      expect(row.note.length).toBeGreaterThan(0);
+    });
+
+    it.each(NINE_ROWS_PLUS_MALA)(
+      '"%s" note names a recognized #43 category (C5 free variant, C6a sense-conditioned, or an explicit archaic/unverified-drop marker)',
+      (name) => {
+        const row = csvRowFor(name);
+        expect(row.note).toMatch(/C5|C6a|fri variant|betydelsebetingat|verifierad/i);
+      },
+    );
+
+    // Regression: lyda and svälta are the two rows the decision doc names
+    // explicitly as sense-conditioned (C6a); pin that their note actually
+    // says so, not just "C5 free variant" like the other seven.
+    it.each(['lyda', 'svälta'] as const)(
+      '"%s" note is tagged sense-conditioned (C6a / "betydelsebetingat"), not just a free variant',
+      (name) => {
+        const row = csvRowFor(name);
+        expect(row.note).toMatch(/C6a/);
+        expect(row.note).toMatch(/betydelsebetingat/i);
+      },
+    );
+  });
+
+  // AC7: taga, giva, funka-forms and other note-only variants grade
+  // incorrect. Full grading is exercised in src/lib/verbs.test.ts and
+  // src/components/PracticeCard.test.tsx; this pins the CSV-side half of
+  // the contract -- every annotated lemma's note explicitly marks its
+  // named variant as not an accepted answer.
+  describe('AC7 - note-only variants are explicitly marked "not accepted" in the CSV', () => {
+    it.each(['ta', 'ge', 'be', 'klä', 'fotografera'] as const)(
+      '"%s" note marks its named variant "accepteras ej" (not accepted as an answer)',
+      (name) => {
+        const row = csvRowFor(name);
+        expect(row.note).toMatch(/accepteras ej/i);
+      },
+    );
+
+    // "jämföra (förk. jfr)" is the one C2 exception: the annotation is a
+    // dictionary abbreviation, not a variant form, and is dropped entirely
+    // rather than moved to `note`.
+    it('"jämföra" has an empty note: the "(förk. jfr)" annotation was dropped, not moved (C2 exception)', () => {
+      const row = csvRowFor('jämföra');
+      expect(row.note).toBe('');
+    });
+  });
+
+  // AC8: VERB_DATA row order and length are unchanged (id stability until
+  // #8 makes the infinitive the id). #43 only adds `note`/`alternatesNote`
+  // fields and comments to existing rows -- it must not insert, delete or
+  // reorder anything. Like AC2, this necessarily holds against both the
+  // pre-#43 and post-#43 table (that is the criterion), so it is a forward
+  // regression guard against the next edit rather than a fix this PR makes;
+  // the comparison logic (array equality of an ordered id list) was checked
+  // against a deliberately reordered fixture outside this suite to confirm
+  // it is not a tautology.
+  it('AC8: VERB_DATA has exactly the pinned 56 rows, in the pinned order', () => {
+    expect(VERB_DATA).toHaveLength(56);
+    expect(VERB_DATA.map((v) => v.infinitive)).toEqual([
+      'vara',
+      'ha',
+      'kunna',
+      'unna',
+      'få',
+      'bli',
+      'komma',
+      'vilja',
+      'göra',
+      'finna',
+      'ta',
+      'se',
+      'gå',
+      'säga',
+      'äga',
+      'betyda',
+      'ge',
+      'skriva',
+      'te sig',
+      'riva',
+      'börja',
+      'tro',
+      'tycka',
+      'veta',
+      'försöka',
+      'behöva',
+      'känna',
+      'läsa',
+      'ro',
+      'låta',
+      'stå',
+      'visa',
+      'använda',
+      'vända',
+      'hålla',
+      'tänka',
+      'söka',
+      'ligga',
+      'lägga',
+      'anse',
+      'öva',
+      'handla',
+      'öka',
+      'skapa',
+      'kapa',
+      'gälla',
+      'verka',
+      'tala',
+      'bära',
+      'höra',
+      'stänga',
+      'sätta',
+      'stiga',
+      'hälsa',
+      'bygga',
+      'ställa',
+    ]);
+  });
+
+  // AC9: line 1482's lemma spelling and its presens/preteritum/supinum
+  // cells use the same compound form.
+  describe('AC9 - betygsätta lemma spelling matches its own paradigm cells', () => {
+    it('presens/preteritum/supinum all inherit the single-s "betygsätta" spelling, not the rejected double-s doublet', () => {
+      const row = csvRowFor('betygsätta');
+      expect(row.presens).toBe('betygsätter');
+      expect(row.preteritum).toBe('betygsatte');
+      expect(row.supinum).toBe('betygsatt');
+    });
+
+    it('no cell in the betygsätta row (other than `note`) contains the rejected double-s spelling', () => {
+      const row = csvRowFor('betygsätta');
+      for (const field of [
+        'infinitive',
+        'imperativ',
+        'presens',
+        'preteritum',
+        'supinum',
+      ] as const) {
+        expect(row[field]).not.toMatch(/betygss/i);
+      }
+      // The rejected spelling is only named, recognition-only, in `note`.
+      expect(row.note).toMatch(/betygss/i);
+    });
+  });
+
+  // AC10: after the C1 cleanup, every lemma in the CSV infinitive column is
+  // unique, and every VERB_DATA.infinitive is unique -- the #8 id depends
+  // on it. As with AC2/AC8, uniqueness already held before #43 (the C1
+  // cleanup removed annotations, it did not deduplicate rows), so this is a
+  // forward guard for #8; the duplicate-counting logic was checked against
+  // a fixture with a deliberate duplicate outside this suite.
+  describe('AC10 - lemma uniqueness', () => {
+    it('every CSV infinitive appears exactly once', () => {
+      const counts = new Map<string, number>();
+      for (const row of parseFullCsv()) {
+        counts.set(row.infinitive, (counts.get(row.infinitive) ?? 0) + 1);
+      }
+      const dups = [...counts.entries()].filter(([, count]) => count > 1).map(([inf]) => inf);
+      expect(dups).toEqual([]);
+    });
+
+    it('every VERB_DATA.infinitive appears exactly once', () => {
+      const counts = new Map<string, number>();
+      for (const verb of VERB_DATA) {
+        counts.set(verb.infinitive, (counts.get(verb.infinitive) ?? 0) + 1);
+      }
+      const dups = [...counts.entries()].filter(([, count]) => count > 1).map(([inf]) => inf);
+      expect(dups).toEqual([]);
+    });
+  });
+
+  // Guard, not an acceptance check by number: the "note" column is the
+  // eighth CSV column, and the decision doc (section 5, step 3) flags that
+  // a note containing an unquoted comma would silently break the bare-split
+  // parser this test file and #125's audit both use. Pin that every data
+  // row splits into exactly 8 fields, so a future note with an embedded
+  // comma fails loudly here instead of shifting every field after it.
+  it('every CSV data row splits into exactly 8 comma-separated fields (no unescaped comma in `note`)', () => {
+    const csvPath = join(here, '..', '..', 'public', 'data', 'swedish_verbs.csv');
+    const csv = readFileSync(csvPath, 'utf-8');
+    const lines = csv.split(/\r?\n/).filter(Boolean);
+    const offenders = lines.slice(1).filter((line) => line.split(',').length !== 8);
+    expect(offenders).toEqual([]);
+  });
+
+  // The CSV header itself gained the `note` column under #43; pin it so a
+  // future edit can't silently drop or rename it out from under every test
+  // in this describe block.
+  it('the CSV header names 8 columns ending in "note"', () => {
+    const csvPath = join(here, '..', '..', 'public', 'data', 'swedish_verbs.csv');
+    const csv = readFileSync(csvPath, 'utf-8');
+    const header = csv.split(/\r?\n/)[0]!.split(',');
+    expect(header).toEqual([
+      'cefr levels',
+      'grammar',
+      'infinitive',
+      'imperativ',
+      'presens',
+      'preteritum',
+      'supinum',
+      'note',
+    ]);
   });
 });
