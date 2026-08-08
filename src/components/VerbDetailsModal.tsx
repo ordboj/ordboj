@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Volume2 } from 'lucide-react';
 import { ConjugatedVerb, Form, getExampleSentence, getFormLabel } from '@/lib/verbs';
-import { SrsState } from '@/lib/srs';
+import { isDue, SrsState } from '@/lib/srs';
 import { speakSwedish } from '@/lib/speech';
 import { useSettings } from '@/hooks/useSettings';
 
@@ -34,7 +34,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
     if (!state) return null;
 
     const nextReview = new Date(state.dueAt);
-    const isOverdue = nextReview.getTime() <= Date.now();
+    const isOverdue = isDue(state);
 
     return {
       repetitions: state.repetitions,
