@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+  averageMasteryStage,
   calculateNextReview,
+  getMasteryStageBadge,
   initializeSrsState,
   isDue,
   isEligibleForRequeue,
   isSrsState,
+  MASTERED_STAGE_THRESHOLD,
   MAX_INTERVAL_DAYS,
   MAX_REQUEUES_PER_DAY,
   REQUEUE_GAP_ITEMS,
@@ -444,5 +447,79 @@ describe('isSrsState', () => {
 
   it('rejects a non-finite lastGrade when the field is present', () => {
     expect(isSrsState({ ...initializeSrsState('1-presens'), lastGrade: NaN })).toBe(false);
+  });
+});
+
+// getMasteryStageBadge buckets a repetitions count into the label shown on
+// the Progress page and in VerbDetailsModal (#108). The boundaries below are
+// the pedagogy decision documented in lib/srs.ts: 0 = New, 1-2 = Learning,
+// 3-4 = Reviewing, MASTERED_STAGE_THRESHOLD+ = Mastered.
+describe('getMasteryStageBadge', () => {
+  it('labels stage 0 as New', () => {
+    expect(getMasteryStageBadge(0).label).toBe('New');
+  });
+
+  it('labels stage 1 as Learning', () => {
+    expect(getMasteryStageBadge(1).label).toBe('Learning');
+  });
+
+  it('labels stage 2 as Learning, the top of the Learning range', () => {
+    expect(getMasteryStageBadge(2).label).toBe('Learning');
+  });
+
+  it('labels stage 3 as Reviewing, the start of the Reviewing range', () => {
+    expect(getMasteryStageBadge(3).label).toBe('Reviewing');
+  });
+
+  it('labels stage 4 as Reviewing, the top of the Reviewing range', () => {
+    expect(getMasteryStageBadge(4).label).toBe('Reviewing');
+  });
+
+  it('labels stage 5 as Mastered, exactly at MASTERED_STAGE_THRESHOLD', () => {
+    expect(MASTERED_STAGE_THRESHOLD).toBe(5);
+    expect(getMasteryStageBadge(5).label).toBe('Mastered');
+  });
+
+  it('labels stage 6 as Mastered, one above the threshold', () => {
+    expect(getMasteryStageBadge(6).label).toBe('Mastered');
+  });
+
+  it('treats a negative stage as 0 (New), not as a crash or a lower bucket leaking through', () => {
+    expect(getMasteryStageBadge(-1).label).toBe('New');
+  });
+
+  it('treats a non-finite stage (NaN) as 0 (New)', () => {
+    expect(getMasteryStageBadge(NaN).label).toBe('New');
+  });
+});
+
+// averageMasteryStage reduces the SRS states of a verb's several
+// conjugation forms to one stage number, floored, with never-studied forms
+// (undefined) excluded from both the sum and the count rather than treated
+// as 0 (#108 doc comment above the implementation).
+describe('averageMasteryStage', () => {
+  it('returns 0 for an empty array', () => {
+    expect(averageMasteryStage([])).toBe(0);
+  });
+
+  it('returns 0 when every entry is undefined (no form ever studied)', () => {
+    expect(averageMasteryStage([undefined, undefined, undefined])).toBe(0);
+  });
+
+  it('excludes undefined entries from both the sum and the count', () => {
+    // If undefined were counted as 0 the average would be (5 + 0 + 7) / 3 = 4.
+    // Excluding it, it is (5 + 7) / 2 = 6.
+    const result = averageMasteryStage([{ repetitions: 5 }, undefined, { repetitions: 7 }]);
+    expect(result).toBe(6);
+  });
+
+  it('floors a non-integer average rather than rounding', () => {
+    // (1 + 2 + 2) / 3 = 1.666..., which must floor to 1, not round to 2.
+    const result = averageMasteryStage([
+      { repetitions: 1 },
+      { repetitions: 2 },
+      { repetitions: 2 },
+    ]);
+    expect(result).toBe(1);
   });
 });
