@@ -19,9 +19,14 @@ function readJson(relativePath: string): unknown {
 
 // --- 1. The 32 unused shadcn primitives are gone -------------------------
 
+// 'alert-dialog' is deliberately not in this list even though #115
+// originally deleted it as unused: a later main commit (b582f2f,
+// "guard reset with AlertDialog") gave it a real consumer
+// (src/pages/Settings.tsx's reset-confirmation dialog), so it and its
+// backing @radix-ui/react-alert-dialog dependency were restored during
+// this branch's merge with main rather than reintroduced by accident.
 const deletedPrimitives = [
   'accordion',
-  'alert-dialog',
   'alert',
   'aspect-ratio',
   'avatar',
@@ -60,6 +65,17 @@ describe('issue #115 - 32 unused shadcn/ui primitives deleted', () => {
   });
 });
 
+describe('alert-dialog was restored, not left deleted (revived by a later feature)', () => {
+  it('src/components/ui/alert-dialog.tsx exists', () => {
+    expect(existsSync(resolve(uiDir, 'alert-dialog.tsx'))).toBe(true);
+  });
+
+  it('@radix-ui/react-alert-dialog is a dependency', () => {
+    const pkg = readJson('package.json') as { dependencies: Record<string, string> };
+    expect(pkg.dependencies).toHaveProperty('@radix-ui/react-alert-dialog');
+  });
+});
+
 // --- 2. The second (Radix) toast system is gone ---------------------------
 
 describe('issue #115 - Radix toast system removed', () => {
@@ -94,10 +110,11 @@ describe('issue #115 - dead standalone files removed', () => {
 // every time an unrelated dependency is legitimately added later - it only
 // fails if one of #115's specific removals is ever reintroduced, and it
 // still fails hard against the pre-#115 package.json.
+// See the deletedPrimitives comment above: '@radix-ui/react-alert-dialog'
+// was restored (it now backs a real feature), so it's not in this list.
 const removedDependencies = [
   '@hookform/resolvers',
   '@radix-ui/react-accordion',
-  '@radix-ui/react-alert-dialog',
   '@radix-ui/react-aspect-ratio',
   '@radix-ui/react-avatar',
   '@radix-ui/react-collapsible',
