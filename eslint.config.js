@@ -52,13 +52,12 @@ export default tseslint.config(
       // No PropTypes here: this is a TypeScript codebase, props are typed
       // statically instead.
       'react/prop-types': 'off',
-      // TODO(#120): 3 pre-existing hits live in files owned by other roles
-      // (csp-violations.spec.ts, src/hooks/use-toast.ts,
-      // src/hooks/useSrsProgress.ts). Promote to 'error' once those are
-      // cleaned up. The '^_' patterns exempt deliberate discards (e.g.
-      // `_itemId` in src/lib/srs.test.ts): an underscore prefix is the
-      // author saying "unused on purpose", which is not debt worth warning
-      // about.
+      // TODO(#120): pre-existing hits live in files owned by other roles
+      // (run `npx eslint .` for the current list). Promote to 'error' once
+      // those are cleaned up. The '^_' patterns exempt deliberate discards
+      // (e.g. `_itemId` in src/lib/srs.test.ts): an underscore prefix is
+      // the author saying "unused on purpose", which is not debt worth
+      // warning about.
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {
@@ -67,15 +66,14 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      // TODO(#120): enabling react.configs.flat.recommended surfaces 3
-      // pre-existing hits (unescaped apostrophe in copy) in
-      // frontend-expert-owned src/pages/Practice.tsx, Progress.tsx and
-      // Settings.tsx. 'warn' makes the debt visible without breaking CI or
-      // requiring this role to edit files it doesn't own. Promote to
-      // 'error' once those are fixed.
+      // TODO(#120): enabling react.configs.flat.recommended surfaces
+      // pre-existing hits (unescaped apostrophes in copy) in
+      // frontend-expert-owned pages/components. 'warn' makes the debt
+      // visible without breaking CI or requiring this role to edit files
+      // it doesn't own. Promote to 'error' once those are fixed.
       'react/no-unescaped-entities': 'warn',
-      // TODO(#120): jsxA11y.flatConfigs.recommended surfaces 1 pre-existing
-      // hit (autoFocus) in frontend-expert-owned src/components/PracticeCard.tsx.
+      // TODO(#120): jsxA11y.flatConfigs.recommended surfaces a pre-existing
+      // autoFocus hit in frontend-expert-owned src/components/PracticeCard.tsx.
       // Same reasoning as above: 'warn' for visibility, promote to 'error'
       // once fixed.
       'jsx-a11y/no-autofocus': 'warn',
