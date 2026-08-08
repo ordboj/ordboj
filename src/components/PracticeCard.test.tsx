@@ -33,6 +33,28 @@ describe('PracticeCard - typing mode', () => {
     expect(screen.getByText(/Missing:/)).toHaveTextContent('Present');
   });
 
+  it('marks the answer input as Swedish and disables phone autocorrect/autocapitalize (issue #134)', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    // Without these, the phone's English autocorrect silently mangles å/ä/ö
+    // input before the learner even sees what they typed.
+    expect(input).toHaveAttribute('lang', 'sv');
+    expect(input).toHaveAttribute('autocapitalize', 'off');
+    expect(input).toHaveAttribute('autocorrect', 'off');
+    expect(input).toHaveAttribute('spellcheck', 'false');
+  });
+
   it('accepts the correct answer (auto-submits), ignoring case and surrounding whitespace', async () => {
     const user = userEvent.setup();
     renderWithProviders(

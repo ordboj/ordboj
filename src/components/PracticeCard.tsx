@@ -220,6 +220,10 @@ export function PracticeCard({
                     placeholder="Type your answer..."
                     className="text-2xl text-center py-6 caret-transparent"
                     autoFocus
+                    lang="sv"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                   />
                   <div className="flex flex-wrap justify-center gap-2">
                     {SWEDISH_SPECIAL_CHARS.map((char) => (
