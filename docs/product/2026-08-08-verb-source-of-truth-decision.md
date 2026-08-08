@@ -20,9 +20,9 @@ This rejects option (a) from the ticket ("generate `verbData.ts` from the
 CSV at build time"), and takes option (b) at the level that matters — the
 app and the bundle have exactly one verb table — while refusing the part of
 (b) that destroys value: the file itself is not deleted, because it carries
-1,537 CEFR-tagged candidates and 316 human-corrected rows from the #125
+1,538 CEFR-tagged candidates and 316 human-corrected rows from the #125
 audit (PR #158). That is the raw material for all future verb growth under
-epic #257, and re-deriving it would cost more than keeping a 68.5K file in
+epic #257, and re-deriving it would cost more than keeping a 66 KiB file in
 `docs/`.
 
 Ticket #21 recommended option (a). The `swedish-linguist` audit refuted its
@@ -60,15 +60,19 @@ Section 2 has the numbers.
 
 ## 2. Why not option (a): build-time generation from the CSV
 
-1. **The CSV forms are not trustworthy at scale.** The audit measured a
-   ~35–37% form error rate before PR #158 (146/405 family-check
-   mismatches; 11/30 blind sample). #158 corrected the 316 rows it could
-   positively identify, but the audit itself states the naive-template
-   error class "is not closed": ~940 rows survive only because no curated
-   rule flagged them, and 13 rows are known-uncertain. Generating
-   `verbData.ts` from this file ships unreviewed Swedish to learners.
-   Project rule #2 — wrong Swedish is worse than missing Swedish — forbids
-   that outcome regardless of how convenient the pipeline is.
+1. **The CSV forms are not trustworthy at scale.**
+   `docs/verb-data/swedish_verbs.audit.md` records 316 rows positively
+   identified as non-grupp-1 and corrected in PR #158 (163 dictionary
+   matches, 129 ending-based sweep, 24 family-based sweep), plus 2
+   unrelated corruption rows. The audit states the naive-template error
+   class "is not closed", and proves it: its own second pass found 24 more
+   wrong rows in compound families the first pass never examined. A
+   shape-based sweep therefore does not bound the residual error. ~940 rows
+   survive only because no curated rule flagged them, and 13 rows are
+   known-uncertain. Generating `verbData.ts` from this file ships
+   unreviewed Swedish to learners. Project rule #2 — wrong Swedish is worse
+   than missing Swedish — forbids that outcome regardless of how convenient
+   the pipeline is.
 2. **Generation would be lossy in the wrong direction.** `grupp`,
    `alternates` and the review annotations exist only in `verbData.ts`.
    The CSV cannot express them. A generator would either drop them or need
@@ -121,15 +125,19 @@ part of this ruling; deletion from the repo is not.
   `VERB_DATA` is the only allowed shape of extension; the existing 51 rows
   are never reordered.
 - **R4 — hard gate on #8.** No PR that extends `VERB_DATA` merges before
-  issue #8 (stable ids + migration) is resolved. This is enforced by CI,
-  not by memory: `scripts/validate-verb-forms.mjs` asserts the
-  `verbData.ts` row count is **exactly 51** and fails otherwise, with a
-  comment naming #8. The PR that resolves #8 removes the assertion in the
-  same change. Until then, even a "safe" append is rejected — append-only
-  discipline is exactly the kind of convention that erodes, and the cost
-  of one bad merge is silent corruption of every user's progress.
-- **R5 — drift check in CI.** The `validate-verbs` job (already in
-  `ci.yml`, dependency-free plain Node) is extended to enforce the
+  issue #8 (stable ids + migration) is resolved. **Not yet enforced —
+  mechanism pending, see section 5 step 2.** The rule becomes CI-enforced
+  when `scripts/validate-verb-forms.mjs` gains an assertion that the
+  `verbData.ts` row count is **exactly 51**, with a comment naming #8.
+  Until that follow-up PR merges, R4 is convention and the lead enforces
+  it by hand on the board. The PR that resolves #8 removes the assertion
+  in the same change. Until then, even a "safe" append is rejected —
+  append-only discipline is exactly the kind of convention that erodes,
+  and the cost of one bad merge is silent corruption of every user's
+  progress.
+- **R5 — drift check in CI.** **Not yet implemented — this is the
+  specification for section 5 step 2.** The `validate-verbs` job (already
+  in `ci.yml`, dependency-free plain Node) will be extended to enforce the
   decision structurally:
   1. Fail if any `*.csv` exists under `public/` — the bundle can never
      regain a second verb source by accident.
@@ -148,10 +156,10 @@ part of this ruling; deletion from the repo is not.
 
 Open PR #265 (ticket #262) appends six base verbs to `VERB_DATA`, taking
 it to 57 rows. Under R4 it does not merge before #8 closes. The order-pin
-test it adds (`src/data/verbData.orderPin.test.ts`) pins existing
-positions but does not give SRS items stable ids, so it is not a
-substitute for #8. The lead moves #262 behind #8 on the board and marks
-PR #265 blocked.
+test it extends (`src/data/verbData.orderPin.test.ts`, already on `main`)
+pins existing positions but does not give SRS items stable ids, so it is
+not a substitute for #8. The lead moves #262 behind #8 on the board and
+marks PR #265 blocked.
 
 ## 5. Sequencing and follow-up tickets
 
@@ -171,6 +179,8 @@ routes them; owners per the CLAUDE.md table.
    of record", which R1 reverses) and the `validate-verbs` comment block
    in `.github/workflows/ci.yml` (line 93). Result: dead payload gone from
    `dist/`, drift check live, row count pinned, stale comments corrected.
+   Filed as #280, a sub-issue of epic #257, before this note merges; R4
+   and R5 stay unenforced until it lands.
 3. **Resolve the 13 flagged rows** (`swedish-linguist` prepares, human
    confirms) — small, unblocks nothing but shrinks the uncertain set.
 4. **After #8 merges:** first promotion batch per R3 (remaining A1 rows
