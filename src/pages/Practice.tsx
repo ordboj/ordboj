@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -22,18 +22,39 @@ export default function Practice() {
   // (learning decision P8).
   const [failedItemIds, setFailedItemIds] = useState<Set<string>>(new Set());
 
+  // getDueItems is recreated every time srsStates changes (i.e. after every
+  // answer). Keep the latest reference in a ref so the load effect below can
+  // call it without depending on its identity, otherwise the deck would be
+  // recomputed and reshuffled mid-session while currentIndex still points
+  // into the old array, causing skipped/repeated cards.
+  const getDueItemsRef = useRef(getDueItems);
   useEffect(() => {
+    getDueItemsRef.current = getDueItems;
+  }, [getDueItems]);
+
+  // Load the deck exactly once per session (i.e. once per mount), when the
+  // underlying data first becomes available.
+  const deckLoadedRef = useRef(false);
+  useEffect(() => {
+    if (deckLoadedRef.current || isLoading || settingsLoading) {
+      return;
+    }
+    deckLoadedRef.current = true;
+
     const loadDueItems = async () => {
-      if (!isLoading && !settingsLoading) {
-        const items = await getDueItems();
+      try {
+        const items = await getDueItemsRef.current();
         setDueItems(items);
         if (items.length === 0) {
           setPracticeComplete(true);
         }
+      } catch (error) {
+        console.error('Failed to load due items for practice session', error);
+        setPracticeComplete(true);
       }
     };
     loadDueItems();
-  }, [isLoading, settingsLoading, getDueItems]);
+  }, [isLoading, settingsLoading]);
 
   const handleAnswer = (grade: Grade) => {
     const currentItem = dueItems[currentIndex];

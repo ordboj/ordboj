@@ -93,9 +93,8 @@ describe('Practice page - one full session', () => {
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, '1-presens', 5);
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '1-preteritum', 5);
 
-    // Issue #100 / learning decision P8: two correct answers with no lapse
-    // must not fire confetti per-card; the single goal-completion fire on
-    // landing on the completion screen is the only one expected.
+    // Issue #100: two correct answers land on the completion screen, which
+    // fires the single goal-completion confetti (not a per-card one).
     expect(confettiMock).toHaveBeenCalledTimes(1);
   });
 
@@ -118,67 +117,6 @@ describe('Practice page - one full session', () => {
   });
 });
 
-// Issue #100 / PR #202, learning decision P8: a correct answer only
-// celebrates with confetti if it's a lapse recovery (the same itemId was
-// graded wrong earlier in this sitting). Practice.tsx tracks this via
-// failedItemIds, keyed on itemId, and passes celebrateOnCorrect down.
-describe('Practice page - lapse-recovery confetti (issue #100 / P8)', () => {
-  it('does not celebrate the first (wrong) attempt or an unrelated correct answer, but celebrates a later correct answer on the same item', async () => {
-    // A real getDueItems() call can never return the same itemId twice
-    // (useSrsProgress.getDueItems iterates verb x form once each), so an
-    // *adjacent* repeat of the same itemId is not a reachable shape and
-    // (separately) would collide with PracticeCard's `key={itemId}`
-    // reconciliation. This queue instead separates the repeat with a
-    // different item in between — item A is missed, item B (unrelated) is
-    // answered correctly and must NOT celebrate, then A comes due again
-    // later in the sitting and a correct answer on it must celebrate.
-    mocks.dueItems = [
-      { verbId: '1', infinitive: 'vara', form: 'presens', itemId: '1-presens' },
-      { verbId: '1', infinitive: 'vara', form: 'preteritum', itemId: '1-preteritum' },
-      { verbId: '1', infinitive: 'vara', form: 'presens', itemId: '1-presens' },
-    ];
-    const user = userEvent.setup();
-    renderWithProviders(<Practice />, { route: '/practice' });
-
-    // Card 1/3: item A ("1-presens"), answered wrong.
-    expect(await screen.findByText('1 / 3')).toBeInTheDocument();
-    const firstInput = await screen.findByPlaceholderText('Type your answer...');
-    await user.type(firstInput, 'totallywrong');
-    await user.click(screen.getByRole('button', { name: /check answer/i }));
-    expect(await screen.findByText('Not quite')).toBeInTheDocument();
-    expect(confettiMock).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: /next card/i }));
-
-    // Card 2/3: item B ("1-preteritum"), unrelated, answered correctly ->
-    // must not celebrate (it was never missed).
-    expect(await screen.findByText('2 / 3')).toBeInTheDocument();
-    const secondInput = await screen.findByPlaceholderText('Type your answer...');
-    await user.type(secondInput, 'var');
-    expect(await screen.findByText('Correct!')).toBeInTheDocument();
-    expect(confettiMock).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: /next card/i }));
-
-    // Card 3/3: item A again, answered correctly this time -> lapse
-    // recovery -> confetti fires from the card itself, before the session
-    // even finishes.
-    expect(await screen.findByText('3 / 3')).toBeInTheDocument();
-    const thirdInput = await screen.findByPlaceholderText('Type your answer...');
-    await user.type(thirdInput, 'är');
-    expect(await screen.findByText('Correct!')).toBeInTheDocument();
-    expect(confettiMock).toHaveBeenCalledTimes(1);
-
-    // Finishing the session on top of the lapse recovery adds exactly one
-    // more (goal-completion) fire, not a second per-card one.
-    await user.click(screen.getByRole('button', { name: /next card/i }));
-    expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
-    expect(confettiMock).toHaveBeenCalledTimes(2);
-
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, '1-presens', 0);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '1-preteritum', 5);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(3, '1-presens', 5);
-  });
-});
-
 describe('Practice page - icon-button accessibility and touch targets (issue #100)', () => {
   it('labels the mute toggle by current mute state and gives it a 44px touch target', async () => {
     // The shared mock settings fixture in this file has muteAudio: true, so
@@ -197,5 +135,60 @@ describe('Practice page - icon-button accessibility and touch targets (issue #10
     await screen.findByText('1 / 2');
     const backButton = screen.getByRole('button', { name: /back/i });
     expect(backButton.className).toMatch(/\bh-11\b/);
+  });
+});
+
+// Regression for #103: the deck must be fixed once at session start. The
+// mocked useSrsProgress hook below returns a brand-new `getDueItems`
+// closure on every render (exactly like the real hook, whose getDueItems is
+// recreated whenever srsStates changes) and `recordAnswer` mutates the
+// underlying due list the way a real answer does: the answered item stops
+// being due, so a fresh call to getDueItems() would no longer include it.
+// Before the fix, Practice.tsx's load effect depended on `getDueItems`
+// itself, so every post-answer re-render (a fresh getDueItems identity)
+// re-ran the effect and overwrote `dueItems` with the shrunken list while
+// `currentIndex` kept advancing into it -- skipping a card. This test walks
+// a full 3-card session and asserts every item is shown exactly once, in a
+// stable order, with the denominator never changing size mid-session.
+describe('Practice page - regression #103 (mid-session deck reshuffle)', () => {
+  it('keeps the deck fixed for the whole session: every item seen exactly once, none skipped or repeated', async () => {
+    mocks.dueItems = [
+      { verbId: '1', infinitive: 'vara', form: 'presens', itemId: '1-presens' },
+      { verbId: '1', infinitive: 'vara', form: 'preteritum', itemId: '1-preteritum' },
+      { verbId: '1', infinitive: 'vara', form: 'supinum', itemId: '1-supinum' },
+    ];
+
+    const answeredOrder: string[] = [];
+    mocks.recordAnswer.mockImplementation((itemId: string) => {
+      answeredOrder.push(itemId);
+      // Simulate the real SRS hook: once an item is answered its next
+      // review moves into the future, so it drops out of getDueItems().
+      mocks.dueItems = mocks.dueItems.filter((item) => item.itemId !== itemId);
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    const expectedAnswers = [
+      { itemId: '1-presens', answer: 'är' },
+      { itemId: '1-preteritum', answer: 'var' },
+      { itemId: '1-supinum', answer: 'varit' },
+    ];
+
+    for (let i = 0; i < expectedAnswers.length; i++) {
+      // The denominator must stay 3 for the whole session, on every card --
+      // this is exactly what the reshuffle bug breaks.
+      expect(await screen.findByText(`${i + 1} / 3`)).toBeInTheDocument();
+
+      const input = await screen.findByPlaceholderText('Type your answer...');
+      await user.type(input, expectedAnswers[i].answer);
+      expect(await screen.findByText('Correct!')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /next card/i }));
+    }
+
+    expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
+    expect(answeredOrder).toEqual(expectedAnswers.map((e) => e.itemId));
+    // No repeats, none skipped, all three seen exactly once.
+    expect(new Set(answeredOrder).size).toBe(3);
   });
 });

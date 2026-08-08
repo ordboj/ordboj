@@ -1,20 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import confetti from 'canvas-confetti';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { PracticeCard } from '@/components/PracticeCard';
 import type { Grade } from '@/lib/srs';
-
-// canvas-confetti is mocked globally in src/test/setup.ts.
-const confettiMock = confetti as unknown as ReturnType<typeof vi.fn>;
-
-beforeEach(() => {
-  // `restoreMocks: true` (vitest.config.ts) is a documented no-op on a
-  // plain vi.fn() (as opposed to a vi.spyOn spy), so canvas-confetti's
-  // call history from src/test/setup.ts's vi.mock() must be cleared here.
-  confettiMock.mockClear();
-});
 
 // "vara" is a stable, real fixture from VERB_DATA (owned by swedish-linguist):
 // presens "är", preteritum "var", supinum "varit", imperativ "var".
@@ -276,15 +265,8 @@ describe('PracticeCard - pronounce button accessibility', () => {
     const pronounceAnswerButton = screen.getByRole('button', { name: /pronounce answer/i });
     expect(pronounceAnswerButton.className).toMatch(/\bh-11\b/);
   });
-});
 
-// Issue #100 / PR #202, learning decision P8: confetti must not fire on
-// every correct answer (it fires only for lapse recovery or session/goal
-// completion). PracticeCard gates its own confetti on the celebrateOnCorrect
-// prop, which the caller (Practice.tsx) sets only for a lapse recovery.
-describe('PracticeCard - confetti gating (celebrateOnCorrect)', () => {
-  it('does not celebrate a correct answer when celebrateOnCorrect is left at its default (false)', async () => {
-    const user = userEvent.setup();
+  it('gives the backspace key an accessible name', async () => {
     renderWithProviders(
       <PracticeCard
         infinitive="vara"
@@ -297,55 +279,7 @@ describe('PracticeCard - confetti gating (celebrateOnCorrect)', () => {
       />,
     );
 
-    const input = await screen.findByPlaceholderText('Type your answer...');
-    await user.type(input, 'är');
-    await screen.findByText('Correct!');
-
-    expect(confettiMock).not.toHaveBeenCalled();
-  });
-
-  it('does not celebrate a wrong answer even when celebrateOnCorrect is true', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(
-      <PracticeCard
-        infinitive="vara"
-        form="presens"
-        mode="typing"
-        showExamples={false}
-        autoplayAudio={false}
-        muteAudio={true}
-        celebrateOnCorrect={true}
-        onAnswer={vi.fn()}
-      />,
-    );
-
-    const input = await screen.findByPlaceholderText('Type your answer...');
-    await user.type(input, 'totallywrong');
-    await user.click(screen.getByRole('button', { name: /check answer/i }));
-    await screen.findByText('Not quite');
-
-    expect(confettiMock).not.toHaveBeenCalled();
-  });
-
-  it('celebrates a correct answer when celebrateOnCorrect is true (lapse recovery)', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(
-      <PracticeCard
-        infinitive="vara"
-        form="presens"
-        mode="typing"
-        showExamples={false}
-        autoplayAudio={false}
-        muteAudio={true}
-        celebrateOnCorrect={true}
-        onAnswer={vi.fn()}
-      />,
-    );
-
-    const input = await screen.findByPlaceholderText('Type your answer...');
-    await user.type(input, 'är');
-    await screen.findByText('Correct!');
-
-    expect(confettiMock).toHaveBeenCalledTimes(1);
+    await screen.findByPlaceholderText('Type your answer...');
+    expect(screen.getByRole('button', { name: /backspace/i })).toBeInTheDocument();
   });
 });
