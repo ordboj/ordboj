@@ -24,7 +24,11 @@ const queryClient = new QueryClient();
 /** Minimal, dependency-free fallback shown while a route chunk loads. */
 function RouteLoadingFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background text-foreground">
+    <div
+      role="status"
+      aria-live="polite"
+      className="min-h-screen flex items-center justify-center p-6 bg-background text-foreground"
+    >
       <p className="text-muted-foreground">Loading…</p>
     </div>
   );
