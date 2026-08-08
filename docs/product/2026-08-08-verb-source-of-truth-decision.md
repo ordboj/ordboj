@@ -161,6 +161,26 @@ pins existing positions but does not give SRS items stable ids, so it is
 not a substitute for #8. The lead moves #262 behind #8 on the board and
 marks PR #265 blocked.
 
+## 4b. Effect on ticket #41 (promotion pipeline)
+
+Ticket #41's acceptance text predates this note. It asks for a script
+(`scripts/build-verb-data.mjs`) that "emits verbData.ts in exact current
+format". That clause conflicts with R1: no codegen writes
+`src/data/verbData.ts`. This note supersedes that clause.
+
+What survives of #41 — most of it: the classifier (grupp 1/2a/2b/3/4/
+deponens), the form-class contradiction checks, the character checks, and
+the empty-imperativ checks. What changes is only the output target. The
+script reads the CSV queue, validates candidate rows, and writes its
+output to a human-review file (for example `docs/verb-data/` output or a
+proposed-rows report). A human moves approved rows into `verbData.ts` by
+hand in a reviewed PR, per R3. The script never writes `verbData.ts`
+itself, not at build time and not as a side effect.
+
+The lead updates #41's acceptance criteria to match this section before
+its PR merges. If #41's implementation lands as a verbData.ts-writing
+generator, that PR does not merge until the output target is changed.
+
 ## 5. Sequencing and follow-up tickets
 
 Order is mandatory. The lead files these as sub-issues of epic #257 and
