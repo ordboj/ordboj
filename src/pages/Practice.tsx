@@ -121,11 +121,22 @@ export default function Practice() {
     };
 
     // Splice back in every pending item that has now cleared the gap.
+    // Invariant: an itemId may appear at most once beyond the currently-shown
+    // card. A pending item stays pending after its splice, and every later
+    // answer keeps advancing its itemsSinceLapse, so without this guard the
+    // gap clears a second time before the first retry is ever shown -- a
+    // duplicate copy lands in the queue, silently burns the daily cap, and
+    // (because PracticeCard is keyed on itemId) React never remounts the
+    // card for the back-to-back copy, freezing the sitting on the previous
+    // attempt's feedback panel.
     let nextQueue = queue;
     for (const [id, entry] of Object.entries(nextMap)) {
       if (entry.pending && isEligibleForRequeue(entry.itemsSinceLapse, entry.requeuesToday)) {
+        const alreadyQueuedAhead = nextQueue.some(
+          (q, index) => index > currentIndex && q.itemId === id,
+        );
         const item = queue.find((q) => q.itemId === id);
-        if (item) {
+        if (item && !alreadyQueuedAhead) {
           nextQueue = [...nextQueue, item];
           nextMap[id] = { ...entry, requeuesToday: entry.requeuesToday + 1, itemsSinceLapse: 0 };
         }
