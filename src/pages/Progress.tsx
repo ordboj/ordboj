@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,22 +54,25 @@ export default function Progress() {
     loadVerbs();
   }, []);
 
-  const getSrsStage = (verbId: string): number => {
-    const forms = ['presens', 'preteritum', 'supinum', 'imperativ'];
-    let totalReps = 0;
-    let count = 0;
+  const getSrsStage = useCallback(
+    (verbId: string): number => {
+      const forms = ['presens', 'preteritum', 'supinum', 'imperativ'];
+      let totalReps = 0;
+      let count = 0;
 
-    forms.forEach((form) => {
-      const itemId = `${verbId}-${form}`;
-      const state = srsStates[itemId];
-      if (state) {
-        totalReps += state.repetitions;
-        count++;
-      }
-    });
+      forms.forEach((form) => {
+        const itemId = `${verbId}-${form}`;
+        const state = srsStates[itemId];
+        if (state) {
+          totalReps += state.repetitions;
+          count++;
+        }
+      });
 
-    return count > 0 ? Math.floor(totalReps / count) : 0;
-  };
+      return count > 0 ? Math.floor(totalReps / count) : 0;
+    },
+    [srsStates],
+  );
 
   const getStageBadge = (stage: number) => {
     if (stage === 0) return { label: 'New', variant: 'default' as const, color: 'bg-purple-500' };
@@ -117,14 +120,14 @@ export default function Progress() {
     });
 
     return filtered;
-  }, [verbs, searchQuery, difficultyFilter, srsFilter, sortField, sortDirection, srsStates]);
+  }, [verbs, searchQuery, difficultyFilter, srsFilter, sortField, sortDirection, getSrsStage]);
 
   const progressStats = useMemo(() => {
     const total = verbs.length;
     const mastered = verbs.filter((verb) => getSrsStage(verb.id) >= 5).length;
     const percentage = total > 0 ? (mastered / total) * 100 : 0;
     return { total, mastered, percentage };
-  }, [verbs, srsStates]);
+  }, [verbs, getSrsStage]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -262,7 +265,13 @@ export default function Progress() {
                       <TableCell>{verb.presens}</TableCell>
                       <TableCell>{verb.preteritum}</TableCell>
                       <TableCell>{verb.supinum}</TableCell>
-                      <TableCell>{verb.imperativ}</TableCell>
+                      <TableCell>
+                        {verb.imperativ === '(not available)' ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : (
+                          verb.imperativ
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">{verb.cefr}</Badge>
                       </TableCell>
