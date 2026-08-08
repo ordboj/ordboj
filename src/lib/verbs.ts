@@ -15,6 +15,14 @@ export interface ConjugatedVerb extends Verb {
   preteritum: string;
   supinum: string;
   imperativ: string;
+  // True only for verbs that grammatically have no imperativ in Swedish
+  // (modal/auxiliary verbs, per VerbData.noNaturalImperativ). Lets a
+  // consumer tell "this form doesn't exist" apart from "data not filled
+  // in yet" instead of relying solely on an empty/placeholder imperativ
+  // string. Omitted for verbs where it doesn't apply (the common case) and
+  // for the unknown-verb fallback, where the app has no basis to claim the
+  // form doesn't exist.
+  imperativNotApplicable?: boolean;
 }
 
 // Get all basic verbs
@@ -32,6 +40,16 @@ export async function getVerbs(): Promise<Verb[]> {
 // both cases the same way (i.e. "unknown", never guessed).
 export function getVerbGrupp(infinitive: string): Grupp | undefined {
   return VERB_DATA.find((v) => v.infinitive === infinitive)?.grupp;
+}
+
+// True if `infinitive` grammatically has no imperativ in Swedish (modal /
+// auxiliary verbs such as "kunna", per VerbData.noNaturalImperativ) — i.e.
+// a quiz should never ask for this verb's imperativ. False for a verb not
+// found in VERB_DATA: the app has no basis to claim the form doesn't
+// exist, so it must not be treated the same as a confirmed non-existent
+// form.
+export function isImperativNotApplicable(infinitive: string): boolean {
+  return VERB_DATA.find((v) => v.infinitive === infinitive)?.noNaturalImperativ ?? false;
 }
 
 // Documented alternate accepted forms for a verb + form, e.g. "lade" for
@@ -110,6 +128,7 @@ export async function getAllConjugatedVerbs(): Promise<ConjugatedVerb[]> {
     preteritum: verb.preteritum || '(not available)',
     supinum: verb.supinum || '(not available)',
     imperativ: verb.imperativ || '(not available)',
+    imperativNotApplicable: verb.noNaturalImperativ,
     cefr: verb.cefr,
   }));
 }
@@ -127,6 +146,7 @@ export async function conjugateVerb(infinitive: string): Promise<ConjugatedVerb>
       preteritum: verb.preteritum || '(not available)',
       supinum: verb.supinum || '(not available)',
       imperativ: verb.imperativ || '(not available)',
+      imperativNotApplicable: verb.noNaturalImperativ,
       cefr: verb.cefr,
     };
   }

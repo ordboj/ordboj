@@ -36,17 +36,24 @@ export interface VerbData {
   // or empty means "no documented alternate", which is true for almost every
   // row and requires no change to existing data.
   alternates?: Partial<Record<AlternateFormField, string[]>>;
+  // True only for verbs that grammatically have no imperativ at all in
+  // Swedish — modal/auxiliary verbs (kunna, få, vilja, ...). Distinguishes
+  // that fact from "not filled in yet": every other row must have a
+  // non-empty imperativ, and an empty imperativ without this flag set is a
+  // data bug, not a deliberate gap. Omitted (undefined) is equivalent to
+  // false and is the correct value for every non-modal verb.
+  noNaturalImperativ?: boolean;
 }
 
 export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "vara", imperativ: "var", presens: "är", preteritum: "var", supinum: "varit", grupp: "4" },
   { cefr: "A1", infinitive: "ha", imperativ: "ha", presens: "har", preteritum: "hade", supinum: "haft", grupp: "4" },
-  { cefr: "A1", infinitive: "kunna", imperativ: "", presens: "kan", preteritum: "kunde", supinum: "kunnat", grupp: "4" }, // modal verb: no imperativ in Swedish, empty is correct
+  { cefr: "A1", infinitive: "kunna", imperativ: "", presens: "kan", preteritum: "kunde", supinum: "kunnat", grupp: "4", noNaturalImperativ: true }, // modal verb: no imperativ in Swedish, empty is correct
   { cefr: "A1", infinitive: "unna", imperativ: "unna", presens: "unnar", preteritum: "unnade", supinum: "unnat", grupp: "1" },
-  { cefr: "A1", infinitive: "få", imperativ: "", presens: "får", preteritum: "fick", supinum: "fått", grupp: "4" }, // modal verb: no imperativ in Swedish, empty is correct
+  { cefr: "A1", infinitive: "få", imperativ: "", presens: "får", preteritum: "fick", supinum: "fått", grupp: "4", noNaturalImperativ: true }, // modal verb: no imperativ in Swedish, empty is correct
   { cefr: "A1", infinitive: "bli", imperativ: "bli", presens: "blir", preteritum: "blev", supinum: "blivit", grupp: "4" },
   { cefr: "A1", infinitive: "komma", imperativ: "kom", presens: "kommer", preteritum: "kom", supinum: "kommit", grupp: "4" },
-  { cefr: "A1", infinitive: "vilja", imperativ: "", presens: "vill", preteritum: "ville", supinum: "velat", grupp: "4" }, // modal verb: no imperativ in Swedish, empty is correct
+  { cefr: "A1", infinitive: "vilja", imperativ: "", presens: "vill", preteritum: "ville", supinum: "velat", grupp: "4", noNaturalImperativ: true }, // modal verb: no imperativ in Swedish, empty is correct
   { cefr: "A1", infinitive: "göra", imperativ: "gör", presens: "gör", preteritum: "gjorde", supinum: "gjort", grupp: "4" },
   { cefr: "A1", infinitive: "finna", imperativ: "finn", presens: "finner", preteritum: "fann", supinum: "funnit", grupp: "4" },
   { cefr: "A1", infinitive: "ta", imperativ: "ta", presens: "tar", preteritum: "tog", supinum: "tagit", grupp: "4" },
