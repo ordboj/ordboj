@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, within, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import Progress from '@/pages/Progress';
 
@@ -164,6 +164,89 @@ describe('Progress page - imperativNotApplicable flag hides imperativ regardless
 
     vi.resetModules();
     vi.doUnmock('@/lib/verbs');
+  });
+});
+
+// Issue #110 AC: sortable TableHead columns need aria-sort plus a keyboard
+// path (Enter/Space), not just an onClick a mouse/touch user could reach.
+describe('Progress page - sortable column headers: aria-sort + keyboard (issue #110 AC)', () => {
+  it('marks the default-sorted "Verb" column ascending via aria-sort; other headers stay unsorted', async () => {
+    renderWithProviders(<Progress />, { route: '/progress' });
+    await screen.findByText('kunna');
+
+    const verbHeader = screen.getByRole('columnheader', { name: /verb/i });
+    const difficultyHeader = screen.getByRole('columnheader', { name: /difficulty/i });
+    expect(verbHeader).toHaveAttribute('aria-sort', 'ascending');
+    expect(difficultyHeader).toHaveAttribute('aria-sort', 'none');
+
+    // A non-sortable column never got a sort role at all.
+    const presensHeader = screen.getByRole('columnheader', { name: 'Presens' });
+    expect(presensHeader).not.toHaveAttribute('aria-sort');
+  });
+
+  it('reverses the verb row order and flips aria-sort when the "Verb" header is activated by keyboard Enter', async () => {
+    const { container } = renderWithProviders(<Progress />, { route: '/progress' });
+    await screen.findByText('kunna');
+
+    const infinitivesOf = () =>
+      Array.from(container.querySelectorAll('tbody tr td:first-child span[lang="sv"]')).map(
+        (el) => el.textContent,
+      );
+
+    const before = infinitivesOf();
+    expect(before.length).toBeGreaterThan(1);
+
+    const verbHeader = screen.getByRole('columnheader', { name: /verb/i });
+    fireEvent.keyDown(verbHeader, { key: 'Enter' });
+
+    expect(verbHeader).toHaveAttribute('aria-sort', 'descending');
+    expect(infinitivesOf()).toEqual([...before].reverse());
+  });
+
+  it('switches sorting to the "Difficulty" column when it is activated by keyboard Space, and the "Verb" header goes back to unsorted', async () => {
+    renderWithProviders(<Progress />, { route: '/progress' });
+    await screen.findByText('kunna');
+
+    const verbHeader = screen.getByRole('columnheader', { name: /verb/i });
+    const difficultyHeader = screen.getByRole('columnheader', { name: /difficulty/i });
+    fireEvent.keyDown(difficultyHeader, { key: ' ' });
+
+    expect(difficultyHeader).toHaveAttribute('aria-sort', 'ascending');
+    expect(verbHeader).toHaveAttribute('aria-sort', 'none');
+  });
+});
+
+// Issue #110 AC: the TableRow that opens the verb details modal needs a
+// keyboard path, not just an onClick.
+describe('Progress page - verb row opens the details modal by keyboard (issue #110 AC)', () => {
+  it('opens the VerbDetailsModal for "kunna" when its row is activated by keyboard Enter', async () => {
+    renderWithProviders(<Progress />, { route: '/progress' });
+
+    const row = await screen.findByRole('button', { name: /view details for kunna/i });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.keyDown(row, { key: 'Enter' });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getAllByText('kunna').length).toBeGreaterThan(0);
+  });
+
+  it('opens the VerbDetailsModal when its row is activated by keyboard Space', async () => {
+    renderWithProviders(<Progress />, { route: '/progress' });
+
+    const row = await screen.findByRole('button', { name: /view details for kunna/i });
+    fireEvent.keyDown(row, { key: ' ' });
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('does not open the modal on an unrelated key (e.g. Tab)', async () => {
+    renderWithProviders(<Progress />, { route: '/progress' });
+
+    const row = await screen.findByRole('button', { name: /view details for kunna/i });
+    fireEvent.keyDown(row, { key: 'Tab' });
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
 
