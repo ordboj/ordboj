@@ -68,4 +68,11 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Tailwind v4 Preflight dropped v3's `button { cursor: pointer }`;
+     restore it so interactive controls keep the pointer cursor. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
 }
