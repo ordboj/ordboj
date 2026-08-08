@@ -72,7 +72,7 @@ example sentences contain commas.
 export interface ParticleVerbData {
   id: string; // "pv:hora-av-sig" — ASCII-folded slug, stable, never positional
   cefr: 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
-  baseInfinitive: string; // "höra" — joins to VERB_DATA when conjugation lands in v2
+  baseInfinitive: string; // "höra" — MUST resolve in VERB_DATA (eligibility gate joins on it in v1)
   particle: string; // "av" — the cloze answer
   reflexive: 'none' | 'beforeParticle' | 'afterParticle';
   lemma: string; // "höra av {refl}" — placeholder, never literal "sig"
@@ -80,6 +80,7 @@ export interface ParticleVerbData {
   transparency: 'literal' | 'idiomatic';
   contrast?: string; // prepositional twin, e.g. "hälsa på (greet)"
   acceptedParticles: string[]; // cloze accepted answers; [0] primary
+  acceptedRecall?: string[]; // recall accepted answers where the gloss is irreducibly ambiguous; [0] primary
   examples: Array<{ sv: string; blankIndex?: number; en?: string }>;
   verified: boolean; // human-checked against SO/SAOL; false = never shipped to learners
 }
@@ -100,11 +101,25 @@ Key constraints:
   every correct answer, per `docs/product/2026-08-08-alternate-answers-decision.md`.
   Single-answer grading of ambiguous cloze is a correctness violation.
 - Glosses must be narrow enough to select one phrase for recall, or the recall
-  item carries an accepted-answer set too.
-- CEFR bands are the linguist's recorded judgment (frequency via Korp
-  everyday-leaning corpora + semantic transparency + base-verb floor, with a
-  textbook gate for A1/A2). Honest distribution is B1/B2-heavy; A1 holds ~5
-  items. The UI must not imply an official standard.
+  item carries `acceptedRecall`.
+- Every `baseInfinitive` MUST resolve to a VERB_DATA verb — enforced by a
+  build-time/test assertion, so a miss is a data defect, not a silently
+  unsatisfiable eligibility gate (dead content).
+- **CEFR bands come from SVALex** (CEFRLex project, UCLouvain/Språkbanken —
+  graded lexicon derived from 12 CEFR-graded Swedish coursebooks incl.
+  Rivstart; 429 verb+particle combinations, A1: 25 / A2: 70 / B1: 122 /
+  B2: 143 / C1: 69). Human decision 2026-08-08: use it. The linguist
+  adjudicates: (a) the 111 entries whose particle form is also a preposition
+  (tycka om is a particle verb, bero på is not — discriminator is stress, per
+  SO/SAOL), (b) the sparse C1 tail (some levels rest on a single coursebook
+  hit). "First nonzero level" is our derivation from SVALex's frequency
+  distributions, not the resource's own claim — record it as method.
+  **License: CC BY-NC-SA 4.0** — attribution + license notice ship in the
+  repo; derived grading data carries the same license; app must stay
+  non-commercial or the data gets rewritten. SweLLex (learner-production
+  counterpart) is the cross-check. Extraction draft:
+  `docs/research/svalex/partikelverb_cefr_draft.csv`. The UI must not imply
+  an official CEFR standard.
 - Excluded from the dataset: inseparable prefixed compounds (påminna,
   avbryta), plain verb+preposition (titta på TV). Uncertain classifications
   (ta reda på, komma överens, sätta igång spelling) stay out until confirmed.
@@ -134,18 +149,24 @@ Key constraints:
   `particleNewCardsPerDay = clamp(1, 10, round(particleDailyGoal / 4))` — 3/day
   at the default 12; `particleNewAllowedToday = clamp(0, particleNewCardsPerDay,
 floor((particleDailyGoal - min(particleReviewsDue, particleDailyGoal)) / 4))`.
-- **Streak is unchanged**: a day counts when `answeredToday >= dailyGoal`, with
-  particle cards counting toward `answeredToday`. `particleDailyGoal` never
-  appears in the streak calculation — it paces the particle queue only. Adding
-  the mode can never make the streak harder to keep.
+- **Streak constraint (binding on the future streak implementation — no streak
+  code exists yet, per `docs/learning/streak-mechanics.md`)**: a day counts
+  when `answeredToday >= dailyGoal`, with particle cards counting toward
+  `answeredToday`. `particleDailyGoal` never appears in the streak
+  calculation — it paces the particle queue only. Adding the mode can never
+  make the streak harder to keep.
 - Empty particle queue routes to non-recording free practice, not a dead end
   (~70 cards are all live after ~24 days at defaults; 40 verbs is a starter
   set, not the end state).
 - Grading: binary typed correctness maps to the existing Grade 0|5. The
   `recordAnswer` signature gains `modality: 'typed' | 'choice'` (bundled with
-  the hint change from `docs/learning/lapse-handling.md`) so any future
-  recognition-based answering can be credited more weakly (ease unchanged,
-  interval multiplier capped at 1.6, wrong = full lapse). v1 ships typed only.
+  the hint change from `docs/learning/lapse-handling.md`). In v1 the parameter
+  is **plumb-and-ignore**: recorded, never branched on — the weaker-credit
+  path (ease unchanged, interval multiplier capped at 1.6, wrong = full lapse)
+  is specified here for the future but ships no code, so "scheduler needs zero
+  changes" stays literally true. Typed-answer normalization (case, whitespace,
+  optional leading "att") follows
+  `docs/product/2026-08-08-alternate-answers-decision.md`.
 
 ## UI surface (owner: frontend-expert)
 
@@ -176,29 +197,48 @@ floor((particleDailyGoal - min(particleReviewsDue, particleDailyGoal)) / 4))`.
 
 Prerequisites (can overlap, all before feature merge):
 
-- P2. Extract a single shared itemId helper; kill the three-way duplication
-  (`useSrsProgress`, `Progress.tsx`, `VerbDetailsModal.tsx`). (srs-engine)
+- P1b. **VERB_DATA order pin test**: qa-owned test asserting the literal
+  current index→infinitive mapping for all rows, so any reorder/insert fails
+  CI instead of silently rebinding every user's SRS keys. Lands before any
+  feature code. The snapshot table doubles as prework for the v3 migration
+  ticket. (qa)
+- P2. Extract a single shared itemId helper; kill the three-way duplication.
+  Helper lands in an srs-engine-owned lib file (srs-engine); call-site edits
+  in `Progress.tsx` and `VerbDetailsModal.tsx` are frontend-expert's, done
+  jointly.
 - P3. Version the settings store. (frontend-expert, staff review)
 - P4. Generalize `useSrsProgress` to item providers with behavior identical
-  for conjugation; qa green before any particle code lands on top. (srs-engine)
+  for conjugation; qa green before any particle code lands on top. While in
+  the hook, add the forward-compat guard: refuse to persist over a store whose
+  version is greater than known (today a v3 envelope would be silently
+  rewritten as v2). (srs-engine)
 
 Feature:
 
 - F1. Learning-designer revised goal/streak note — DONE
   (`docs/learning/particle-verb-practice.md`).
-- F2. Linguist data module: ~40 entries, verified against SO/SAOL, cloze
-  sentences authored for uniqueness, accepted-answer sets where irreducible.
-  Ship in `verified: true` batches; unverified entries never render.
+- F2. Linguist data module: ~40 entries selected from the SVALex extraction
+  (A1/A2 core first), particle-vs-preposition adjudication for ambiguous
+  forms, verified against SO/SAOL, cloze sentences authored for uniqueness,
+  accepted-answer sets where irreducible. SVALex attribution + CC BY-NC-SA
+  notice added to the repo. Ship in `verified: true` batches; unverified
+  entries never render.
 - F3. Particle item provider + lazy init + caps wiring. (srs-engine)
 - F4. ParticleVerbCard + route + Home entry. (frontend-expert, staff-engineer)
 - F5. Progress/Settings surfaces. (frontend-expert)
 - F6. qa: provider tests, reflexive renderer tests, accepted-answer grading
   tests, export/import round-trip with mixed legacy + `pv:` keys, e2e of the
-  mode.
+  mode, and a **dataset-integrity test**: ids unique across
+  `particleVerbData`, `acceptedParticles[0] === particle`, every
+  `baseInfinitive` resolves in VERB_DATA, `verified: false` entries never
+  enumerated by the provider.
 
 Refuse-to-merge list (staff-engineer, adopted):
 
+- No feature merge before the P1b pin test is green in CI.
 - No feature merge without the export/import mixed-key round-trip test.
+- No feature merge without the F6 dataset-integrity test (this is what makes
+  the append-only id contract and the verified-gate enforceable).
 - No example sentence ships without linguist verification (`verified: true`).
 - No second copy of an id scheme in a page component.
 - No storage-shape change without staff review; any future v3 migration also
@@ -238,10 +278,13 @@ Refuse-to-merge list (staff-engineer, adopted):
 
 ## Open items
 
-- Web research (in flight): whether any authoritative CEFR-graded partikelverb
-  list exists (Kelly-listan, Skolverket/sfi, coursebook corpora). If one does,
-  the linguist's grading method is cross-checked against it; if not, the
-  judgment-based method stands.
+- ~~Web research: authoritative CEFR-graded partikelverb list~~ — RESOLVED:
+  SVALex found and adopted (see Data model). Kelly-listan confirmed useless
+  for combinations (0 particle verbs); no Swedish RLD exists; Skolverket/sfi
+  publish no inventories.
+- Learning-designer: define the short-sitting fallback for the "first cloze at
+  least six items later" rule — unsatisfiable at `particleDailyGoal = 4`
+  (settings floor). One line in the learning note.
 - Adoption signal to watch post-launch: if `particleDailyGoal` is met on fewer
   than half the days `dailyGoal` is, drop the default from 12 to 8 before
   concluding the mode failed.
