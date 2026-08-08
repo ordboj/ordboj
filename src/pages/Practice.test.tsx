@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import confetti from 'canvas-confetti';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import Practice from '@/pages/Practice';
 import { MAX_REQUEUES_PER_DAY } from '@/lib/srs';
+
+// canvas-confetti is mocked globally in src/test/setup.ts.
+const confettiMock = confetti as unknown as ReturnType<typeof vi.fn>;
 
 // Practice.tsx composes useSrsProgress (srs-engine) and useSettings
 // (srs-engine) with PracticeCard (ui-craft). Those two hooks are mocked here
@@ -81,6 +85,10 @@ vi.mock('@/hooks/useSettings', () => ({
 
 beforeEach(() => {
   mocks.recordAnswer.mockClear();
+  // `restoreMocks: true` (vitest.config.ts) is a documented no-op on a
+  // plain vi.fn() (as opposed to a vi.spyOn spy), so canvas-confetti's
+  // call history from src/test/setup.ts's vi.mock() must be cleared here.
+  confettiMock.mockClear();
   mocks.srsLoading = false;
   mocks.settingsLoading = false;
   mocks.srsReadOnly = false;
@@ -137,13 +145,20 @@ describe('Practice page - one full session', () => {
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(2);
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, '1-presens', 5);
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '1-preteritum', 5);
+
+    // Issue #100: two correct answers land on the completion screen, which
+    // fires the single goal-completion confetti (not a per-card one).
+    expect(confettiMock).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the completion screen immediately when there are no due cards', async () => {
+  it('shows the completion screen immediately when there are no due cards, without firing confetti', async () => {
     mocks.dueItems = [];
     renderWithProviders(<Practice />, { route: '/practice' });
 
     expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
+    // Arriving to an empty queue is not "finishing a session" — no
+    // celebration for a queue that was never worked.
+    expect(confettiMock).not.toHaveBeenCalled();
   });
 
   it('shows a loading state before settings and progress have loaded', async () => {
@@ -152,6 +167,30 @@ describe('Practice page - one full session', () => {
 
     expect(screen.getByText(/Loading practice cards/i)).toBeInTheDocument();
     expect(screen.queryByText('1 / 2')).not.toBeInTheDocument();
+  });
+});
+
+describe('Practice page - icon-button accessibility and touch targets (issue #100)', () => {
+  it('labels the mute toggle by current mute state and gives it a 44px touch target', async () => {
+    // The shared mock settings fixture in this file has muteAudio: true, so
+    // the accessible name is "Unmute audio" (state-dependent label).
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    await screen.findByText('1 / 2');
+    const muteToggle = screen.getByRole('button', { name: 'Unmute audio' });
+    expect(muteToggle.className).toMatch(/\bh-11\b/);
+    expect(muteToggle.className).toMatch(/\bw-11\b/);
+  });
+
+  it('gives the back button a 44px-tall touch target', async () => {
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    await screen.findByText('1 / 2');
+    // Exact match: PracticeCard's backspace key also has an accessible name
+    // containing "Back" ("Backspace"), so a loose /back/i regex here would
+    // match both buttons.
+    const backButton = screen.getByRole('button', { name: 'Back' });
+    expect(backButton.className).toMatch(/\bh-11\b/);
   });
 });
 
