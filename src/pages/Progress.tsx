@@ -154,7 +154,7 @@ export default function Progress() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ProgressBar value={progressStats.percentage} className="h-4" />
+            <ProgressBar value={progressStats.percentage} className="h-4 bg-muted" />
           </CardContent>
         </Card>
 
