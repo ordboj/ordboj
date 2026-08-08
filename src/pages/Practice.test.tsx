@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { renderWithProviders } from "@/test/renderWithProviders";
-import Practice from "@/pages/Practice";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { renderWithProviders } from '@/test/renderWithProviders';
+import Practice from '@/pages/Practice';
 
 // Practice.tsx composes useSrsProgress (srs-engine) and useSettings
 // (srs-engine) with PracticeCard (ui-craft). Those two hooks are mocked here
@@ -20,12 +20,12 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/hooks/useSrsProgress", () => ({
+vi.mock('@/hooks/useSrsProgress', () => ({
   useSrsProgress: () => ({
     isLoading: mocks.srsLoading,
     getDueItems: async () => mocks.dueItems,
     recordAnswer: mocks.recordAnswer,
-    exportData: () => "{}",
+    exportData: () => '{}',
     importData: () => true,
     resetProgress: () => undefined,
     srsStates: {},
@@ -33,16 +33,16 @@ vi.mock("@/hooks/useSrsProgress", () => ({
   }),
 }));
 
-vi.mock("@/hooks/useSettings", () => ({
+vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
     isLoading: mocks.settingsLoading,
     settings: {
-      practiceMode: "typing",
+      practiceMode: 'typing',
       showExamples: false,
       autoplayAudio: false,
       muteAudio: true,
       dailyGoal: 20,
-      cefrLevels: ["A1"],
+      cefrLevels: ['A1'],
     },
     updateSettings: vi.fn(),
   }),
@@ -53,51 +53,106 @@ beforeEach(() => {
   mocks.srsLoading = false;
   mocks.settingsLoading = false;
   mocks.dueItems = [
-    { verbId: "1", infinitive: "vara", form: "presens", itemId: "1-presens" },
-    { verbId: "1", infinitive: "vara", form: "preteritum", itemId: "1-preteritum" },
+    { verbId: '1', infinitive: 'vara', form: 'presens', itemId: '1-presens' },
+    { verbId: '1', infinitive: 'vara', form: 'preteritum', itemId: '1-preteritum' },
   ];
 });
 
-describe("Practice page - one full session", () => {
-  it("walks through both due cards and lands on the completion screen, recording each answer", async () => {
+describe('Practice page - one full session', () => {
+  it('walks through both due cards and lands on the completion screen, recording each answer', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Practice />, { route: "/practice" });
+    renderWithProviders(<Practice />, { route: '/practice' });
 
     // Card 1 of 2: "vara" presens -> "är"
-    expect(await screen.findByText("1 / 2")).toBeInTheDocument();
-    const firstInput = await screen.findByPlaceholderText("Type your answer...");
-    await user.type(firstInput, "är");
-    expect(await screen.findByText("Correct!")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /next card/i }));
+    expect(await screen.findByText('1 / 2')).toBeInTheDocument();
+    const firstInput = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(firstInput, 'är');
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next card/i }));
 
     // Card 2 of 2: "vara" preteritum -> "var"
-    expect(await screen.findByText("2 / 2")).toBeInTheDocument();
-    const secondInput = await screen.findByPlaceholderText("Type your answer...");
-    await user.type(secondInput, "var");
-    expect(await screen.findByText("Correct!")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /next card/i }));
+    expect(await screen.findByText('2 / 2')).toBeInTheDocument();
+    const secondInput = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(secondInput, 'var');
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next card/i }));
 
     // Session complete screen.
     expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
     expect(screen.getByText(/completed all due cards/i)).toBeInTheDocument();
 
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(2);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, "1-presens", 5);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, "1-preteritum", 5);
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, '1-presens', 5);
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '1-preteritum', 5);
   });
 
-  it("shows the completion screen immediately when there are no due cards", async () => {
+  it('shows the completion screen immediately when there are no due cards', async () => {
     mocks.dueItems = [];
-    renderWithProviders(<Practice />, { route: "/practice" });
+    renderWithProviders(<Practice />, { route: '/practice' });
 
     expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
   });
 
-  it("shows a loading state before settings and progress have loaded", async () => {
+  it('shows a loading state before settings and progress have loaded', async () => {
     mocks.settingsLoading = true;
-    renderWithProviders(<Practice />, { route: "/practice" });
+    renderWithProviders(<Practice />, { route: '/practice' });
 
     expect(screen.getByText(/Loading practice cards/i)).toBeInTheDocument();
-    expect(screen.queryByText("1 / 2")).not.toBeInTheDocument();
+    expect(screen.queryByText('1 / 2')).not.toBeInTheDocument();
+  });
+});
+
+// Regression for #103: the deck must be fixed once at session start. The
+// mocked useSrsProgress hook below returns a brand-new `getDueItems`
+// closure on every render (exactly like the real hook, whose getDueItems is
+// recreated whenever srsStates changes) and `recordAnswer` mutates the
+// underlying due list the way a real answer does: the answered item stops
+// being due, so a fresh call to getDueItems() would no longer include it.
+// Before the fix, Practice.tsx's load effect depended on `getDueItems`
+// itself, so every post-answer re-render (a fresh getDueItems identity)
+// re-ran the effect and overwrote `dueItems` with the shrunken list while
+// `currentIndex` kept advancing into it -- skipping a card. This test walks
+// a full 3-card session and asserts every item is shown exactly once, in a
+// stable order, with the denominator never changing size mid-session.
+describe('Practice page - regression #103 (mid-session deck reshuffle)', () => {
+  it('keeps the deck fixed for the whole session: every item seen exactly once, none skipped or repeated', async () => {
+    mocks.dueItems = [
+      { verbId: '1', infinitive: 'vara', form: 'presens', itemId: '1-presens' },
+      { verbId: '1', infinitive: 'vara', form: 'preteritum', itemId: '1-preteritum' },
+      { verbId: '1', infinitive: 'vara', form: 'supinum', itemId: '1-supinum' },
+    ];
+
+    const answeredOrder: string[] = [];
+    mocks.recordAnswer.mockImplementation((itemId: string) => {
+      answeredOrder.push(itemId);
+      // Simulate the real SRS hook: once an item is answered its next
+      // review moves into the future, so it drops out of getDueItems().
+      mocks.dueItems = mocks.dueItems.filter((item) => item.itemId !== itemId);
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    const expectedAnswers = [
+      { itemId: '1-presens', answer: 'är' },
+      { itemId: '1-preteritum', answer: 'var' },
+      { itemId: '1-supinum', answer: 'varit' },
+    ];
+
+    for (let i = 0; i < expectedAnswers.length; i++) {
+      // The denominator must stay 3 for the whole session, on every card --
+      // this is exactly what the reshuffle bug breaks.
+      expect(await screen.findByText(`${i + 1} / 3`)).toBeInTheDocument();
+
+      const input = await screen.findByPlaceholderText('Type your answer...');
+      await user.type(input, expectedAnswers[i].answer);
+      expect(await screen.findByText('Correct!')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /next card/i }));
+    }
+
+    expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
+    expect(answeredOrder).toEqual(expectedAnswers.map((e) => e.itemId));
+    // No repeats, none skipped, all three seen exactly once.
+    expect(new Set(answeredOrder).size).toBe(3);
   });
 });
