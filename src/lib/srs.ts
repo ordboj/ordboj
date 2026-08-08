@@ -84,7 +84,31 @@ export function initializeSrsState(itemId: string): SrsState {
   };
 }
 
-// Check if item is due
-export function isDue(state: SrsState): boolean {
-  return state.dueAt <= Date.now();
+// "Due today" is decided at a local calendar-day boundary, not by exact
+// millisecond comparison against dueAt. `dueAt` is still an absolute
+// timestamp (`Date.now() + intervalDays*86400000`, unchanged - see
+// calculateNextReview above), so a review done at 23:50 stores a dueAt of
+// 23:50 the following day. Comparing that raw timestamp against "now"
+// makes an item invisible until the exact minute it was reviewed on the
+// day it's due, which starves same-day practice sessions of items that
+// are, for a day-granularity spaced-repetition app, genuinely due today.
+//
+// Decision (learning-designer, docs/learning/new-vs-review-mix.md
+// "Interaction with the day boundary"): local timezone (the browser's,
+// via Date), boundary at the end of the local calendar day - an item is
+// due if `dueAt <= endOfLocalDay(now)`. This is the read-side fix only;
+// the acceptance criteria for this change is explicit that stored dueAt
+// values are not rewritten, so existing data stays valid without a
+// migration.
+function endOfLocalDay(timestamp: number): number {
+  const d = new Date(timestamp);
+  d.setHours(23, 59, 59, 999);
+  return d.getTime();
+}
+
+// Check if item is due. `now` defaults to Date.now() but is accepted
+// explicitly so callers (and tests) can evaluate due-ness against a fixed
+// instant without relying on global clock mutation.
+export function isDue(state: SrsState, now: number = Date.now()): boolean {
+  return state.dueAt <= endOfLocalDay(now);
 }
