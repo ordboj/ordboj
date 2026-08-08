@@ -68,8 +68,9 @@ export default function Home() {
           <Button
             variant="outline"
             size="icon"
-            className="absolute right-0 top-0"
+            className="absolute right-0 top-0 h-11 w-11"
             onClick={() => updateSettings({ muteAudio: !settings.muteAudio })}
+            aria-label={settings.muteAudio ? 'Unmute audio' : 'Mute audio'}
           >
             {settings.muteAudio ? (
               <VolumeX className="h-5 w-5" />

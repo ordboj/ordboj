@@ -24,6 +24,12 @@ interface PracticeCardProps {
   showExamples: boolean;
   autoplayAudio: boolean;
   muteAudio: boolean;
+  /** True when this item was answered wrong earlier in the sitting, so a
+   * correct answer now is a lapse recovery worth celebrating (learning
+   * decision P8: confetti fires on lapse recovery and end-of-goal, not on
+   * every correct answer). Defaults to false — no confetti unless the
+   * caller opts in. */
+  celebrateOnCorrect?: boolean;
   onAnswer: (grade: Grade) => void;
 }
 
@@ -34,6 +40,7 @@ export function PracticeCard({
   showExamples,
   autoplayAudio,
   muteAudio,
+  celebrateOnCorrect = false,
   onAnswer,
 }: PracticeCardProps) {
   const [userAnswer, setUserAnswer] = useState('');
@@ -89,7 +96,9 @@ export function PracticeCard({
     setShowFeedback(true);
 
     if (correct) {
-      setShowConfetti(true);
+      if (celebrateOnCorrect) {
+        setShowConfetti(true);
+      }
       if (autoplayAudio) {
         speakSwedish(correctAnswer, muteAudio);
       }
@@ -320,8 +329,9 @@ export function PracticeCard({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 hover:bg-primary/10"
+                              className="h-11 w-11 hover:bg-primary/10"
                               onClick={() => handlePronounceForm(part.form)}
+                              aria-label={`Pronounce ${part.text}`}
                             >
                               <Volume2 className="w-3 h-3" />
                             </Button>
@@ -337,7 +347,7 @@ export function PracticeCard({
                     variant="outline"
                     size="sm"
                     onClick={handlePronounce}
-                    className="w-full gap-2"
+                    className="w-full gap-2 h-11"
                   >
                     <Volume2 className="w-4 h-4" />
                     Pronounce answer

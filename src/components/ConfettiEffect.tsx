@@ -7,14 +7,19 @@ interface ConfettiEffectProps {
 
 export function ConfettiEffect({ trigger }: ConfettiEffectProps) {
   useEffect(() => {
-    if (trigger) {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#005293', '#FFCD00', '#10B981'],
-      });
-    }
+    if (!trigger) return;
+
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+    if (prefersReducedMotion) return;
+
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#005293', '#FFCD00', '#10B981'],
+    });
   }, [trigger]);
 
   return null;
