@@ -113,4 +113,26 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A2", infinitive: "hälsa", imperativ: "hälsa", presens: "hälsar", preteritum: "hälsade", supinum: "hälsat", grupp: "1" },
   { cefr: "A1", infinitive: "bygga", imperativ: "bygg", presens: "bygger", preteritum: "byggde", supinum: "byggt", grupp: "2a" },
   { cefr: "A1", infinitive: "ställa", imperativ: "ställ", presens: "ställer", preteritum: "ställde", supinum: "ställt", grupp: "2a" },
+  // Appended for #334: the twelve most frequent partikelverb base verbs still
+  // missing from this table, which between them block ~40 particle-verb
+  // entries whose baseInfinitive cannot resolve. Append-only — the row order
+  // above is frozen by verbData.orderPin.test.ts.
+  //
+  // presens/preteritum/supinum for all twelve match public/data/swedish_verbs.csv
+  // (lines 57, 75, 77, 81, 86, 102, 107, 139, 149, 204, 230, 320) and were
+  // each re-checked against SAOL/SO rather than copied on trust. The CSV
+  // carries no imperativ for any of them, so every imperativ below is
+  // supplied here and verified individually.
+  { cefr: "A1", infinitive: "slå", imperativ: "slå", presens: "slår", preteritum: "slog", supinum: "slagit", grupp: "4" },
+  { cefr: "A1", infinitive: "dra", imperativ: "dra", presens: "drar", preteritum: "drog", supinum: "dragit", grupp: "4" },
+  { cefr: "A1", infinitive: "köra", imperativ: "kör", presens: "kör", preteritum: "körde", supinum: "kört", grupp: "2a" }, // presens "kör" not "körer": an -r stem takes no -er ending
+  { cefr: "A1", infinitive: "arbeta", imperativ: "arbeta", presens: "arbetar", preteritum: "arbetade", supinum: "arbetat", grupp: "1" },
+  { cefr: "A1", infinitive: "hänga", imperativ: "häng", presens: "hänger", preteritum: "hängde", supinum: "hängt", grupp: "2a" }, // weak throughout in modern standard Swedish; the strong intransitive "hang/hungit" is archaic and deliberately not shipped
+  { cefr: "A1", infinitive: "sitta", imperativ: "sitt", presens: "sitter", preteritum: "satt", supinum: "suttit", grupp: "4" }, // preteritum "satt" is also sätta's supinum — two different verbs, both forms correct
+  { cefr: "A1", infinitive: "falla", imperativ: "fall", presens: "faller", preteritum: "föll", supinum: "fallit", grupp: "4" },
+  { cefr: "A1", infinitive: "kasta", imperativ: "kasta", presens: "kastar", preteritum: "kastade", supinum: "kastat", grupp: "1" },
+  { cefr: "A1", infinitive: "bryta", imperativ: "bryt", presens: "bryter", preteritum: "bröt", supinum: "brutit", grupp: "4" },
+  { cefr: "A1", infinitive: "åka", imperativ: "åk", presens: "åker", preteritum: "åkte", supinum: "åkt", grupp: "2b" }, // 2b not 2a: the stem "åk" ends voiceless, so preteritum takes -te
+  { cefr: "A2", infinitive: "plocka", imperativ: "plocka", presens: "plockar", preteritum: "plockade", supinum: "plockat", grupp: "1" },
+  { cefr: "A1", infinitive: "titta", imperativ: "titta", presens: "tittar", preteritum: "tittade", supinum: "tittat", grupp: "1" },
 ];
