@@ -10,6 +10,8 @@ const DEFAULTS = {
   autoplayAudio: true,
   muteAudio: false,
   dailyGoal: 20,
+  // Particle mode's own budget, stored independently of dailyGoal (#245).
+  particleDailyGoal: 12,
   cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
 };
 
@@ -148,6 +150,9 @@ describe('#240: settings store versioning', () => {
       autoplayAudio: false,
       muteAudio: true,
       dailyGoal: 33,
+      // Not in the stored object: a key added after this store was written
+      // arrives from the defaults, which is exactly what the merge is for.
+      particleDailyGoal: DEFAULTS.particleDailyGoal,
       cefrLevels: ['A2', 'B1'],
     });
 
@@ -166,6 +171,7 @@ describe('#240: settings store versioning', () => {
         autoplayAudio: false,
         muteAudio: false,
         dailyGoal: 33,
+        particleDailyGoal: DEFAULTS.particleDailyGoal,
         cefrLevels: ['A2', 'B1'],
       },
     });

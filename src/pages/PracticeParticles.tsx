@@ -6,17 +6,23 @@ import { ArrowLeft } from 'lucide-react';
 import { ParticleVerbCard } from '@/components/ParticleVerbCard';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
-import { PARTICLE_DAILY_GOAL_DEFAULT, type ParticleSittingCard } from '@/lib/particleQueue';
+import { buildFreeParticlePractice, type ParticleSittingCard } from '@/lib/particleQueue';
 import type { Grade } from '@/lib/srs';
+
+// A free round never records, so it is a separate kind rather than a flag on
+// the same session — the same distinction Practice.tsx draws.
+type ParticleSessionKind = 'scheduled' | 'free';
 
 export default function PracticeParticles() {
   const navigate = useNavigate();
-  const { isLoading: settingsLoading } = useSettings();
+  const { settings, isLoading: settingsLoading } = useSettings();
   const { getParticleSitting, recordAnswer, srsStates, isLoading } = useSrsProgress();
 
   const [cards, setCards] = useState<ParticleSittingCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sessionComplete, setSessionComplete] = useState(false);
+  const [sessionKind, setSessionKind] = useState<ParticleSessionKind>('scheduled');
+  const [freePool, setFreePool] = useState<ParticleSittingCard[]>([]);
 
   // getParticleSitting is recreated on every answer, because it closes over
   // srsStates. Keep the latest in a ref so the load effect below can call it
@@ -33,13 +39,23 @@ export default function PracticeParticles() {
     if (loadedRef.current || isLoading || settingsLoading) return;
     loadedRef.current = true;
 
-    const sitting = getSittingRef.current(PARTICLE_DAILY_GOAL_DEFAULT);
+    const sitting = getSittingRef.current(settings.particleDailyGoal);
     setCards(sitting.cards);
     setCurrentIndex(0);
     if (sitting.cards.length === 0) {
       setSessionComplete(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, settingsLoading]);
+
+  // The empty queue is a routine state, not an error: ~70 cards are all live
+  // after about 24 days at defaults, after which particle mode is pure
+  // review with a frequently empty queue. Offer practice that records
+  // nothing rather than a dead end (red line P19).
+  useEffect(() => {
+    if (!sessionComplete || isLoading) return;
+    setFreePool(buildFreeParticlePractice(srsStates));
+  }, [sessionComplete, isLoading, srsStates]);
 
   const advance = () => {
     if (currentIndex < cards.length - 1) {
@@ -49,10 +65,21 @@ export default function PracticeParticles() {
     }
   };
 
+  const startFreePractice = () => {
+    if (freePool.length === 0) return;
+    setCards(freePool);
+    setCurrentIndex(0);
+    setSessionKind('free');
+    setSessionComplete(false);
+  };
+
   const handleAnswer = (grade: Grade) => {
     const card = cards[currentIndex];
     if (!card) return;
-    if (card.itemId) {
+    // A free round is explicitly not scheduled: recording it would move real
+    // intervals for items the learner chose to revisit early, which is the
+    // opposite of what "keep practising" should cost them.
+    if (card.itemId && sessionKind !== 'free') {
       // 'typed' is the only modality particle items use in v1: the answer is
       // two to four characters, so the mobile-friction argument for multiple
       // choice does not apply, and safe distractors would each need a human
@@ -78,16 +105,29 @@ export default function PracticeParticles() {
           <p className="text-xl text-muted-foreground">
             {cards.length === 0
               ? 'No particle verbs are ready for you yet — keep practising conjugation and they will unlock.'
-              : "You've finished today's particle verbs."}
+              : sessionKind === 'free'
+                ? "You've finished this free-practice round — nothing here was saved to your progress."
+                : "You've finished today's particle verbs."}
           </p>
-          <Button
-            onClick={() => navigate('/')}
-            variant="ghost"
-            size="lg"
-            className="text-lg px-8 py-6 w-full max-w-xs"
-          >
-            Back to Home
-          </Button>
+          <div className="flex flex-col items-center gap-3">
+            <Button
+              onClick={startFreePractice}
+              size="lg"
+              variant="secondary"
+              className="text-lg px-8 py-6 w-full max-w-xs"
+              disabled={freePool.length === 0}
+            >
+              Keep practising
+            </Button>
+            <Button
+              onClick={() => navigate('/')}
+              variant="ghost"
+              size="lg"
+              className="text-lg px-8 py-6 w-full max-w-xs"
+            >
+              Back to Home
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -118,6 +158,11 @@ export default function PracticeParticles() {
           </span>
         </div>
         <Progress value={progressPercent} className="h-3 bg-muted-foreground" />
+        {sessionKind === 'free' && (
+          <p className="text-xs text-center text-muted-foreground">
+            Free practice — this round isn't saved to your progress
+          </p>
+        )}
       </div>
 
       <div className="flex items-center justify-center">

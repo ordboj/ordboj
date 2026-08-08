@@ -6,6 +6,18 @@ export interface Settings {
   autoplayAudio: boolean;
   muteAudio: boolean;
   dailyGoal: number;
+  // Particle practice is time the learner is *adding*, so it gets its own
+  // budget rather than quietly eating the conjugation one. Stored
+  // independently and never derived from dailyGoal: deriving it would make
+  // one slider silently move two queues.
+  //
+  // It paces the particle queue and nothing else. It must never appear in a
+  // streak or adherence calculation — the day still counts when
+  // answeredToday >= dailyGoal, with particle cards counting toward that
+  // total, so turning this mode on can never make a streak harder to keep
+  // (docs/learning/particle-verb-practice.md, "Two goals, one adherence
+  // line").
+  particleDailyGoal: number;
   cefrLevels: string[];
 }
 
@@ -15,6 +27,10 @@ const DEFAULT_SETTINGS: Settings = {
   autoplayAudio: true,
   muteAudio: false,
   dailyGoal: 20,
+  // Twelve, not fifty: additional time on top of an existing commitment, and
+  // the standing rule is a number the median learner hits on a bad day. About
+  // four minutes at three particle cards a minute.
+  particleDailyGoal: 12,
   cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
 };
 

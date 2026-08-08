@@ -272,6 +272,37 @@ export function buildParticleSitting({
   };
 }
 
+// How many not-yet-due items a "keep practising" round draws.
+export const FREE_PARTICLE_PRACTICE_SIZE = 5;
+
+// Items the learner has met that are NOT yet due, nearest future due date
+// first. Reads state and never writes it, so drawing this pool — or drawing
+// it repeatedly — cannot disturb a single real interval.
+export function buildFreeParticlePractice(
+  srsStates: Record<string, SrsState>,
+  now: number = Date.now(),
+  entries: ParticleVerbData[] = getVerifiedParticleVerbs(),
+): ParticleSittingCard[] {
+  const candidates: Array<{ card: ParticleSittingCard; dueAt: number }> = [];
+  for (const entry of entries) {
+    const kinds: ParticleCardKind[] = hasRecallItem(entry) ? ['cloze', 'recall'] : ['cloze'];
+    for (const kind of kinds) {
+      if (kind === 'introduction') continue;
+      const itemId = particleItemId(entry.id, kind === 'recall' ? 'recall' : 'cloze');
+      const state = srsStates[itemId];
+      if (!state || state.dueAt <= now) continue;
+      candidates.push({
+        card: { kind, entry, itemId, countsTowardGoal: false },
+        dueAt: state.dueAt,
+      });
+    }
+  }
+  return candidates
+    .sort((a, b) => a.dueAt - b.dueAt)
+    .slice(0, FREE_PARTICLE_PRACTICE_SIZE)
+    .map(({ card }) => card);
+}
+
 // Count for the Home entry point. Reviews only: introductions and first
 // clozes are not "due" in any sense the learner would recognise, and a badge
 // that counts them would never reach zero.
