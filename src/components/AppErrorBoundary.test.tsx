@@ -343,6 +343,10 @@ describe('RouteChunk chunk-load retry and recovery (#220)', () => {
       await vi.advanceTimersByTimeAsync(600);
       await vi.advanceTimersByTimeAsync(0);
 
+      // No backoff timer may remain: vi.waitFor advances fake timers 50ms
+      // per poll, so this keeps the 300/600ms budget pinned.
+      expect(vi.getTimerCount()).toBe(0);
+
       // Root cause of the #335 CI flake: retryImport()'s *promise chain*
       // settling (guaranteed by the timer advances above) is not the same
       // event as React committing the resulting DOM update. Error-boundary
@@ -379,19 +383,18 @@ describe('RouteChunk chunk-load retry and recovery (#220)', () => {
   // DOM" - only React's own Suspense/lazy re-render is between them. That
   // re-render is scheduled by react-dom's Scheduler via a real MessageChannel
   // task (jsdom implements MessageChannel), which vi.useFakeTimers() does
-  // not intercept: setTimeout, setInterval, Date, queueMicrotask and
-  // requestAnimationFrame are faked, but MessageChannel/postMessage delivery
-  // is not. So `await vi.advanceTimersByTimeAsync(0)` can return before that
-  // MessageChannel task has actually run, and a bare `screen.getByText(...)`
-  // right after it is checking the DOM before React has committed.
-  // `vi.waitFor` closes that gap by polling with vitest's real timers until
-  // the commit lands (or failing loudly if it never does), which is the same
-  // fix the flaky test above needed - the fail-first proof lives in this
-  // commit's message, not in the test body: removing the vi.waitFor wrapper
-  // below makes this test fail on every run. If this ever starts passing
-  // without the `vi.waitFor` wrapper below, the fix for #335 has been
-  // silently invalidated by an upstream change in fake-timers or react-dom's
-  // scheduling and needs re-review, not deletion.
+  // not intercept: setTimeout, setInterval, Date and requestAnimationFrame
+  // are faked, but queueMicrotask, process.nextTick and MessageChannel/
+  // postMessage delivery are not. So `await vi.advanceTimersByTimeAsync(0)`
+  // can return before that MessageChannel task has actually run, and a bare
+  // `screen.getByText(...)` right after it is checking the DOM before React
+  // has committed. `vi.waitFor` closes that gap by polling with vitest's
+  // real timers until the commit lands (or failing loudly if it never
+  // does), which is the same fix the flaky test above needed - the
+  // fail-first proof lives in this commit's message, not in the test body:
+  // removing the vi.waitFor wrapper below makes this test fail on every
+  // run. This guarantee is checked by hand (see that commit message), not
+  // by an assertion in this file.
   it("regression #335: a resolved chunk import still needs vi.waitFor, because fake timers do not advance React's MessageChannel commit", async () => {
     vi.useFakeTimers();
     try {
@@ -467,13 +470,19 @@ describe('RouteChunk chunk-load retry and recovery (#220)', () => {
       await vi.advanceTimersByTimeAsync(600);
       await vi.advanceTimersByTimeAsync(0);
 
+      // No backoff timer may remain: vi.waitFor advances fake timers 50ms
+      // per poll, so this keeps the 300/600ms budget pinned.
+      expect(vi.getTimerCount()).toBe(0);
+
       // See the matching comment in the "recovers automatically" test above
       // for the root cause of the #335 CI flake this test was reported
       // against (CI runs 31280020229, 31280581936): the "retry" button's
       // commit can occasionally land a beat after the timer advances above,
       // under CI's timing only. `vi.waitFor` tolerates that without
       // weakening what is asserted.
-      const retryButton = await vi.waitFor(() => screen.getByRole('button', { name: 'retry' }));
+      const retryButton = await vi.waitFor(() => screen.getByRole('button', { name: 'retry' }), {
+        timeout: 3000,
+      });
       fireEvent.click(retryButton);
 
       expect(reloadSpy).toHaveBeenCalledTimes(1);
