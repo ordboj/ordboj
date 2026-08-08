@@ -520,9 +520,15 @@ export function useSrsProgress(cefrLevels?: string[]) {
     return true;
   };
 
-  // Reset all progress
+  // Reset all progress. "Reset" means reset: the one-shot pre-v3 backup
+  // (see LEGACY_BACKUP_KEY above) is a migration safety net, not a
+  // recovery feature the learner can reach from the UI. If a restore path
+  // is ever built, this call needs to move behind it; until then, keeping
+  // a full copy of progress the learner explicitly asked to delete is a
+  // silent violation of "reset all progress".
   const resetProgress = () => {
     setSrsStates({});
+    localStorage.removeItem(LEGACY_BACKUP_KEY);
   };
 
   return {

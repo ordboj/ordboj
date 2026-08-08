@@ -120,5 +120,6 @@ Done.
   stored value (it is the map key); and an item that was never practised is
   no longer persisted at all, since it is derivable on load. A one-shot,
   never-overwritten copy of the pre-v3 payload is kept at
-  `swedish-verbs-srs-progress-backup-pre-v3`; "Reset all progress" does not
-  clear it today (open question, see PR #311).
+  `swedish-verbs-srs-progress-backup-pre-v3` as a migration safety net; it
+  has no read/restore path, so "Reset all progress" deletes it too — reset
+  means reset (see PR #311).
