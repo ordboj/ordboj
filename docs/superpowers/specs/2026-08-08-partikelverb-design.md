@@ -51,8 +51,6 @@ Rules:
   citation form (`höra av sig`) that is ungrammatical in 1st/2nd person.
 - The two items of one verb never appear in the same sitting (cloze feedback
   reveals the recall answer).
-- A verb is eligible for introduction only when its base verb has
-  `repetitions >= 2` on presens and preteritum in the conjugation store.
 - Never introduce two particle verbs sharing a base verb within the same week
   (semantic-set interference: bygga upp / bygga ut).
 - Introduction card (unscheduled, untested) appears at the top of the sitting;
