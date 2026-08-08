@@ -155,6 +155,7 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <Label htmlFor="autoplay-audio">Autoplay pronunciation</Label>
+              {/* Same 44px label-wrapper pattern as show-examples above. */}
               <label
                 htmlFor="autoplay-audio"
                 className="flex min-h-11 min-w-11 items-center justify-center cursor-pointer"
