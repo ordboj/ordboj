@@ -80,7 +80,7 @@ example sentences contain commas.
 export interface ParticleVerbData {
   id: string; // "pv:hora-av-sig" — ASCII-folded slug, stable, never positional
   cefr: 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
-  baseInfinitive: string; // "höra" — MUST resolve in VERB_DATA (display and data-integrity only)
+  baseInfinitive: string; // "höra" — required; format-constrained per #317, no VERB_DATA membership requirement
   particle: string; // "av" — the cloze answer
   reflexive: 'none' | 'beforeParticle' | 'afterParticle';
   lemma: string; // "höra av {refl}" — placeholder, never literal "sig"
@@ -118,8 +118,18 @@ Key constraints:
   Single-answer grading of ambiguous cloze is a correctness violation.
 - Glosses must be narrow enough to select one phrase for recall, or the recall
   item carries `acceptedRecall`.
-- Every `baseInfinitive` MUST resolve to a VERB_DATA verb — enforced by a
-  test assertion, so a miss is a data defect rather than an orphaned entry.
+- `baseInfinitive` is required, but VERB_DATA membership is **not** a
+  validity constraint (**amended 2026-08-08, #317** — full ruling:
+  `docs/product/2026-08-08-baseinfinitive-format-decision.md`). Format
+  assertions replace the old MUST-resolve rule: the field is non-empty, it
+  equals the first token of `lemma`, and entries sharing a base use the
+  identical NFC string (the 7-day interference rule joins on it). A base
+  absent from VERB_DATA is a coverage gap, not a data defect: the entry is
+  valid. The entry ships and is introduced on its own SRS schedule; the
+  feedback reference line renders from the embedded `forms` (#318), so no
+  VERB_DATA join exists at render time (the linguist appends the base in the
+  same PR where possible; otherwise the lead files a base-append ticket, per
+  the #262 pattern).
 - **CEFR bands come from SVALex** (CEFRLex project, UCLouvain/Språkbanken —
   graded lexicon derived from 12 CEFR-graded Swedish coursebooks incl.
   Rivstart; 429 verb+particle combinations, A1: 25 / A2: 70 / B1: 122 /
@@ -250,9 +260,11 @@ Feature:
 - F6. qa: provider tests, reflexive renderer tests, accepted-answer grading
   tests, export/import round-trip with mixed legacy + `pv:` keys, e2e of the
   mode, and a **dataset-integrity test**: ids unique across
-  `particleVerbData`, `acceptedParticles[0] === particle`, every
-  `baseInfinitive` resolves in VERB_DATA, `verified: false` entries never
-  enumerated by the provider.
+  `particleVerbData`, `acceptedParticles[0] === particle`,
+  `baseInfinitive` format assertions (non-empty; first token of `lemma`;
+  identical string across a shared base — amended per #317, no VERB_DATA
+  membership check), `verified: false` entries never enumerated by the
+  provider.
 
 Refuse-to-merge list (staff-engineer, adopted):
 
