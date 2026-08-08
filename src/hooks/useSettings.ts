@@ -28,7 +28,15 @@ export function useSettings() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
-        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
+        const parsed = JSON.parse(stored);
+        const merged = { ...DEFAULT_SETTINGS, ...parsed };
+        // A stored empty cefrLevels predates the guard against unselecting every
+        // level (#137). Without this, those users silently fall from "all verbs"
+        // to "zero verbs" and see a false permanent "all caught up".
+        if (Array.isArray(merged.cefrLevels) && merged.cefrLevels.length === 0) {
+          merged.cefrLevels = DEFAULT_SETTINGS.cefrLevels;
+        }
+        setSettings(merged);
       } catch (e) {
         console.error('Failed to load settings', e);
       }
