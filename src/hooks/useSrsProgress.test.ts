@@ -321,6 +321,68 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
   });
 });
 
+// Integration-level proof (issue #11) that the hook's getDueItems - and
+// therefore Home.tsx's dueCount, which is just getDueItems().length - picks
+// up srs.ts's local-end-of-day isDue boundary rather than some independent
+// (and possibly stale) comparison. isDue is unit-tested in isolation in
+// srs.test.ts; this exercises the real load -> getDueItems path through
+// localStorage so a regression where the hook stopped calling isDue (or
+// wrapped it with its own now/boundary logic) would show up here too.
+describe('getDueItems - local day boundary (issue #11)', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'Europe/Stockholm';
+  });
+
+  afterEach(() => {
+    process.env.TZ = originalTz;
+  });
+
+  it('includes an item due later the same local day and excludes one due at the start of the next local day', async () => {
+    const now = new Date(2026, 0, 15, 10, 0, 0, 0).getTime(); // Jan 15, 2026 10:00 local
+    vi.setSystemTime(now);
+
+    const dueLaterToday = new Date(2026, 0, 15, 22, 0, 0, 0).getTime(); // same local day, 12h ahead
+    const dueStartOfTomorrow = new Date(2026, 0, 16, 0, 0, 0, 0).getTime(); // next local day, 14h ahead
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        items: {
+          '1-presens': {
+            itemId: '1-presens',
+            repetitions: 1,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            dueAt: dueLaterToday,
+          },
+          '2-presens': {
+            itemId: '2-presens',
+            repetitions: 1,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            dueAt: dueStartOfTomorrow,
+          },
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const due = await result.current.getDueItems();
+    const dueIds = due.map((i) => i.itemId);
+
+    // Note the excluded item is *further* from `now` in raw ms (14h) than
+    // the included one (12h) - only the calendar-day boundary, not ms
+    // distance, explains why one is due and the other isn't.
+    expect(dueIds).toContain('1-presens');
+    expect(dueIds).not.toContain('2-presens');
+  });
+});
+
 describe('importData legacy rebase', () => {
   it('applies the one-time ease rebase when importing a legacy (unversioned) export', async () => {
     const { result } = renderHook(() => useSrsProgress());
