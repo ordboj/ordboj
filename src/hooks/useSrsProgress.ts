@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { SrsState, initializeSrsState, calculateNextReview, isDue, Grade } from '@/lib/srs';
 import { getVerbs, Form, Verb, conjugateVerb } from '@/lib/verbs';
 
@@ -64,6 +64,20 @@ export interface PracticeItem {
 export function useSrsProgress(cefrLevels?: string[]) {
   const [srsStates, setSrsStates] = useState<Record<string, SrsState>>({});
   const [isLoading, setIsLoading] = useState(true);
+
+  // getDueItems reads srsStates via this ref rather than as a direct
+  // dependency so its identity stays stable across grading. A session's
+  // queue is built once at practice start (see Practice.tsx's effect,
+  // which depends on getDueItems); recordAnswer updates srsStates on every
+  // grade, and if getDueItems depended on srsStates directly it would be
+  // recreated after every answer, re-running that effect, re-shuffling the
+  // queue, and desyncing the displayed card from dueItems[currentIndex]
+  // (#128). The ref lets getDueItems always see the latest saved state
+  // when it's actually invoked, without changing on every grade.
+  const srsStatesRef = useRef<Record<string, SrsState>>({});
+  useEffect(() => {
+    srsStatesRef.current = srsStates;
+  }, [srsStates]);
 
   // Load from localStorage and initialize
   useEffect(() => {
@@ -148,7 +162,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
         }
 
         const itemId = `${verb.id}-${form}`;
-        const state = srsStates[itemId];
+        const state = srsStatesRef.current[itemId];
         if (state && isDue(state)) {
           dueItems.push({
             verbId: verb.id,
@@ -167,7 +181,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
     }
 
     return dueItems;
-  }, [srsStates, cefrLevels]);
+  }, [cefrLevels]);
 
   // Record answer
   const recordAnswer = (itemId: string, grade: Grade) => {
