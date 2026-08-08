@@ -322,11 +322,11 @@ export function useSrsProgress(cefrLevels?: string[]) {
       // Forward-compat guard. A store stamped with a version this build does
       // not know was written by a newer one, and its items may carry meaning
       // this code cannot see. Persisting over it would rewrite that newer
-      // envelope as version 2 and silently discard whatever the newer build
-      // recorded — the destructive half of a downgrade, on data that has no
-      // backup. So the session runs read-only instead: the learner can
-      // practise, nothing is written, and their real progress survives the
-      // downgrade intact.
+      // envelope as version STORAGE_VERSION (3) and silently discard whatever
+      // the newer build recorded — the destructive half of a downgrade, on
+      // data that has no backup. So the session runs read-only instead: the
+      // learner can practise, nothing is written, and their real progress
+      // survives the downgrade intact.
       const fromNewerBuild =
         loaded.storedVersion !== undefined && loaded.storedVersion > STORAGE_VERSION;
       if (fromNewerBuild) {

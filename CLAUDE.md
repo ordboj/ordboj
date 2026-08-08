@@ -106,13 +106,21 @@ Done.
 
 - `swedish_verbs.csv` has ~1537 rows; `VERB_DATA` in `verbData.ts` has ~50.
   They have drifted and only the TS table ships.
-- Verb ids come from array index (`String(index + 1)`), so SRS items keyed on
-  them break if the verb table is reordered or extended.
+- SRS conjugation progress is keyed `<infinitive>-<form>` as of #291 (see
+  `src/lib/itemIds.ts`), so a stored item stays attached to its verb across a
+  reorder or insert in `VERB_DATA`. `Verb.id` (`src/lib/verbs.ts`) is still
+  positional (`String(index + 1)`); `conjugationItemId` resolves that
+  positional ref to the current infinitive before building the key. The
+  follow-up is to make `Verb.id` the infinitive itself, at which point the
+  legacy-id resolution branch in `itemIds.ts` can be deleted.
 - The manifest carries many Radix and utility packages the Lovable scaffold
   installed; several are likely unused.
 - The settings store (`swedish-verbs-settings`) is still unversioned. The SRS
-  progress store is versioned (`STORAGE_VERSION = 2`, `{version, items}`
-  envelope with legacy migration in `useSrsProgress.ts`); new fields there
-  mean a v2→v3 bump, not greenfield versioning. `dueAt` is clamped to the
-  next local day and `isDue` uses an end-of-local-day boundary (`srs.ts`) —
-  the old "due today is ambiguous" issue is resolved.
+  progress store is versioned (`STORAGE_VERSION = 3`, `{version, items}`
+  envelope with legacy migration in `useSrsProgress.ts`); it now carries both
+  the original legacy-shape migration and a v2→v3 migration that rewrites
+  positional item ids (`1-presens`) to infinitive-based ones
+  (`vara-presens`); new fields there mean a v3→v4 bump, not greenfield
+  versioning. `dueAt` is clamped to the next local day and `isDue` uses an
+  end-of-local-day boundary (`srs.ts`) — the old "due today is ambiguous"
+  issue is resolved.
