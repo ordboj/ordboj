@@ -13,9 +13,11 @@ validity constraint on it.** A particle-verb entry is valid when its
 string also appears in the 56-row `VERB_DATA` table is a coverage fact, not a
 data defect. The F6 membership assertions are deleted and replaced by the
 format assertions. Issue #315 already removed the base-verb introduction
-gate from the particle queue on main, so a base absent from `VERB_DATA` has
-no runtime effect at all: the entry is introduced normally, on its own SRS
-schedule (section 3).
+gate from the particle queue on main, so a base absent from `VERB_DATA` never
+blocks an entry. Issue #316 later added a soft ordering tiebreak
+(`isBaseStarted`): an absent base reads as "not started" and sorts later
+inside its own CEFR band. The effect is ordering only, never exclusion
+(section 3).
 
 **Runner-up: keep MUST-resolve and force every new base into `VERB_DATA`
 before its particle verb can merge.** It lost because it inverts the
@@ -34,17 +36,23 @@ and would force one for every future base outside the table.
   an unresolvable base must be `verified: false`.
 - `src/data/particleVerbData.test.ts:294` — embedded-forms drift check: an
   absent base is reported as drift, so it also fails on absence.
-- `src/lib/particleQueue.ts:120` (`isBaseRecentlyUsed`, called at line 216) —
+- `src/lib/particleQueue.ts:198` (`isBaseRecentlyUsed`, called at line 296) —
   the 7-day interference rule joins particle entries **to each other** on the
   `baseInfinitive` string. It never touches `VERB_DATA`. This is why the
   field stays required.
+- `src/lib/particleQueue.ts` (`isBaseStarted`, added by #316) — the only
+  remaining `VERB_DATA` join on `baseInfinitive`. An unknown base returns
+  `false`. The result orders introductions inside a CEFR band. It can never
+  exclude an entry.
 - Since #318 (PR #324), the feedback reference line renders from `forms`
   embedded on the entry, never from a `VERB_DATA` join. The render path has
   no membership dependency left.
 
 ## 2. The format assertions (qa implements, F6)
 
-Delete the two membership tests (`particleVerbData.test.ts:44` and `:52`).
+Delete the two membership tests, "resolves every verified entry base verb
+in VERB_DATA" and "marks every entry with an unresolvable base as
+unverified".
 Add one test with these three assertions over every entry in
 `PARTICLE_VERB_DATA`, verified or not:
 
@@ -65,24 +73,26 @@ Add one test with these three assertions over every entry in
 
 Other tests in the file:
 
-- **Keep unchanged:** the `unverifiedReason` test (`:61`), the verified-gate
-  accessor test (`:68`), and the #262 pin test (`:91`). The pin test asserts
-  that the six #262 bases resolve; that is a pinned historical acceptance
-  criterion of #262, still true, and `VERB_DATA` is append-only — leave it.
-- **Modify:** the drift check (`:294`). When the base is absent from
-  `VERB_DATA`, `continue` — skip the entry instead of reporting drift. The
-  embedded `forms` are the authoritative, linguist-verified strings (#318);
-  the `VERB_DATA` comparison is an opportunistic cross-check that only
-  applies where a base row exists.
+- **Keep unchanged:** "gives every unverified entry a stated reason", "never
+  exposes an unverified entry through the shipping accessor", and "flips
+  every #262 particle verb to verified..." (the #262 pin test). The pin test
+  asserts that the six #262 bases resolve; that is a pinned historical
+  acceptance criterion of #262, still true, and `VERB_DATA` is append-only —
+  leave it.
+- **Modify:** "keeps every embedded form in step with its VERB_DATA base"
+  (the drift check). When the base is absent from `VERB_DATA`, `continue` —
+  skip the entry instead of reporting drift. The embedded `forms` are the
+  authoritative, linguist-verified strings (#318); the `VERB_DATA`
+  comparison is an opportunistic cross-check that only applies where a base
+  row exists.
 
 Acceptance: the suite passes on a dataset that contains a `verified: true`
 entry whose base is absent from `VERB_DATA`.
 
-The comment at `src/data/particleVerbData.ts:65` ("MUST resolve in VERB_DATA
-for any entry that ships: the introduction gate joins on it...") is now
-stale — the introduction gate it describes no longer exists (#315).
-`swedish-linguist` owns that file; the lead routes the comment fix to them
-once this decision lands.
+Two comments in `src/data/particleVerbData.ts` are now stale. Lines 65-67
+describe an introduction gate that #315 removed. Lines 100-103 state that a
+dataset test enforces base resolution in `VERB_DATA`; this PR deleted that
+test. `swedish-linguist` owns the file. Ticket #339 covers both fixes.
 
 ## 3. Runtime meaning of an absent base (unchanged code, defined semantics)
 
@@ -90,9 +100,11 @@ Issue #315 removed the base-verb introduction gate from the particle queue.
 An entry whose base is absent from `VERB_DATA` is introduced normally, on
 its own SRS schedule, exactly like any other entry. It renders correctly:
 since #318 the feedback reference line comes from the entry's own embedded
-`forms`, not from a `VERB_DATA` join, so there is no dependency left for an
-absent base to break. `docs/learning/particle-verb-practice.md` line 54
-records this: "introduction prerequisite | none — removed by issue #315".
+`forms`, not from a `VERB_DATA` join, so no render-time dependency is left
+for an absent base to break; the only remaining join is the #316 ordering
+tiebreak, which cannot exclude the entry. `docs/learning/particle-verb-practice.md`
+line 54 records this: "introduction prerequisite | none — removed by issue
+#315; introduction order uses a soft base-verb tiebreak (see #316)".
 
 To keep the field meaningful going forward:
 
