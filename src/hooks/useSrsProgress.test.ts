@@ -120,7 +120,7 @@ describe('persistence - the irreplaceable-progress invariant', () => {
     const stored = localStorage.getItem(STORAGE_KEY);
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored as string);
-    expect(parsed.version).toBe(2);
+    expect(parsed.version).toBe(3);
     expect(parsed.items['1-presens'].repetitions).toBe(1);
 
     first.unmount();
@@ -320,7 +320,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     expect(result.current.srsStates['1-presens']!.easeFactor).toBe(2.4);
   });
 
-  it('persists the migration as a version 2 envelope and does not re-rebase an already-versioned payload on remount (one-shot)', async () => {
+  it('persists the migration as a version 3 envelope and does not re-rebase an already-versioned payload on remount (one-shot)', async () => {
     const legacyBlob = {
       '1-presens': {
         itemId: '1-presens',
@@ -338,7 +338,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     first.unmount();
 
     const storedAfterFirst = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(storedAfterFirst.version).toBe(2);
+    expect(storedAfterFirst.version).toBe(3);
 
     // Prove the rebase does not run again on a versioned payload: knock the
     // persisted ease back under the rebase threshold from outside. If load
@@ -848,7 +848,7 @@ describe('#241: forward-compat guard against a newer store', () => {
     await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(2));
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.version).toBe(2);
+    expect(stored.version).toBe(3);
     expect(stored.items['1-presens'].repetitions).toBe(2);
   });
 
@@ -873,3 +873,63 @@ describe('#241: forward-compat guard against a newer store', () => {
     expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
   });
 });
+
+// Issue #53: storage v3 stops persisting untouched items, so most items in a
+// real store (and every item in an exported backup) have no key in the
+// on-disk map. If getDueItems required a stored entry to consider an item
+// due, importing one of v3's own sparse exports would make the rest of the
+// deck vanish from practice with no error - the same "silent progress loss"
+// class of bug CLAUDE.md calls out, just triggered by a normal backup/
+// restore instead of a corrupt file.
+describe('#53: getDueItems treats a missing key as new/due-now', () => {
+  it('surfaces an item with no stored state as due, and still respects a future dueAt for an item that does have state', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // A sparse v3-shaped backup: only one of the eight fixture items
+    // (2 verbs x 4 forms) carries a stored entry, with a future dueAt. This
+    // is exactly the shape toStoredItems/exportData now produce.
+    const sparseBackup = JSON.stringify({
+      version: 3,
+      items: {
+        '1-presens': {
+          repetitions: 2,
+          intervalDays: 6,
+          easeFactor: 2.5,
+          dueAt: FIXED_NOW + 5 * 24 * 60 * 60 * 1000, // not due
+        },
+      },
+    });
+
+    act(() => {
+      result.current.importData(sparseBackup);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']).toBeDefined());
+
+    // Only one key exists in srsStates now - setSrsStates replaces the map
+    // wholesale, so every other conjugation item genuinely has no entry.
+    expect(Object.keys(result.current.srsStates)).toEqual(['1-presens']);
+
+    const due = await result.current.getDueItems();
+    const dueIds = due.map((item) => item.itemId);
+
+    // The one item with stored state is not due (its dueAt is 5 days out).
+    expect(dueIds).not.toContain('1-presens');
+    // Every item with no stored state at all is still offered - a missing
+    // key means "never practised", which is due now, not "not due". (7
+    // available items total: 2 verbs x 4 forms, minus prova's unavailable
+    // imperativ - see "skips forms whose conjugation is (not available)"
+    // above - minus the one item with stored (future) state.)
+    expect(dueIds.sort()).toEqual(
+      ['1-preteritum', '1-supinum', '1-imperativ', '2-presens', '2-preteritum', '2-supinum'].sort(),
+    );
+  });
+});
+
+// Issue #53's explicit reject list ([], {"x":1}, a settings export) is
+// already exercised above: 'rejects a top-level JSON array' (array shape),
+// 'rejects a valid-JSON payload shaped like a settings export' (object with
+// no SrsState-shaped values, which {"x":1} also is). That rejection logic
+// predates this PR and is unchanged by it - a dedicated test restating the
+// same three literal payloads would pass identically against the pre-#53
+// code, proving nothing about this change, so it is not duplicated here.

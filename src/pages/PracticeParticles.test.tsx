@@ -293,7 +293,7 @@ describe('particle practice flow', () => {
 
     it('shows the read-only banner above an active card when the stored version is newer than this build', async () => {
       const clozeId = particleItemId('pv:tycka-om', 'cloze');
-      seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) }, 3);
+      seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) }, 99);
 
       renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
@@ -302,7 +302,7 @@ describe('particle practice flow', () => {
     });
 
     it('shows the read-only banner on the session-complete screen when the stored version is newer than this build', async () => {
-      seed({}, 3);
+      seed({}, 99);
 
       renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
