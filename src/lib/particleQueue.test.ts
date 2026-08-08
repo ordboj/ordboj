@@ -11,6 +11,7 @@ import {
   MAX_NEW_PER_PARTICLE_PER_SITTING,
 } from '@/lib/particleQueue';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
+import { getVerifiedParticleVerbs } from '@/lib/particleVerbs';
 import { verbs } from '@/lib/verbs';
 import type { SrsState } from '@/lib/srs';
 import type { ParticleVerbData } from '@/data/particleVerbData';
@@ -368,6 +369,12 @@ describe('introduction ordering (issue #316)', () => {
       const before = entries.map((e) => e.id);
       orderForIntroduction(entries, {});
       expect(entries.map((e) => e.id)).toEqual(before);
+    });
+
+    it('introduces 30 verbs before it leaves A1/A2', () => {
+      const first30 = orderForIntroduction(getVerifiedParticleVerbs(), {}).slice(0, 30);
+      const late = first30.filter((entry) => entry.cefr !== 'A1' && entry.cefr !== 'A2');
+      expect(late.map((entry) => entry.id)).toEqual([]);
     });
   });
 
