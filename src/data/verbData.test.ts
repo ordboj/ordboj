@@ -16,16 +16,24 @@ const verbDataSource = readFileSync(join(here, 'verbData.ts'), 'utf-8');
 
 // Split the VERB_DATA array literal into one chunk per row, each chunk
 // carrying any comment lines that precede it.
-function rowsWithPrecedingComments(
-  source: string,
-): Array<{ infinitive: string; commentBlock: string; hasGrupp: boolean }> {
+function rowsWithPrecedingComments(source: string): Array<{
+  infinitive: string;
+  commentBlock: string;
+  hasGrupp: boolean;
+  imperativNotApplicable: boolean;
+}> {
   const startMarker = 'export const VERB_DATA: VerbData[] = [';
   const start = source.indexOf(startMarker);
   expect(start).toBeGreaterThan(-1);
   const body = source.slice(start + startMarker.length);
   const lines = body.split('\n');
 
-  const rows: Array<{ infinitive: string; commentBlock: string; hasGrupp: boolean }> = [];
+  const rows: Array<{
+    infinitive: string;
+    commentBlock: string;
+    hasGrupp: boolean;
+    imperativNotApplicable: boolean;
+  }> = [];
   let pendingComment: string[] = [];
 
   for (const line of lines) {
@@ -40,6 +48,7 @@ function rowsWithPrecedingComments(
         infinitive: rowMatch[1],
         commentBlock: pendingComment.join('\n'),
         hasGrupp: /\bgrupp:\s*"/.test(trimmed),
+        imperativNotApplicable: /\bimperativNotApplicable:\s*true\b/.test(trimmed),
       });
       pendingComment = [];
     }
@@ -148,6 +157,75 @@ describe('VERB_DATA - grupp field contract', () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+// Issue #124: fill missing imperativ forms; stop showing "(not available)".
+// Same "flag, don't guess" contract as the grupp field above: every row
+// with an empty imperativ must be explained, either because the verb is a
+// modal with no natural imperativ (imperativNotApplicable: true) or because
+// a human explicitly deferred it (a "NEEDS HUMAN CHECK" comment) rather than
+// risk teaching a guessed, possibly-wrong Swedish form.
+describe('VERB_DATA - imperativ field contract (issue #124)', () => {
+  it('flags every row with an empty imperativ as either imperativNotApplicable or explicitly deferred with a human-review comment', () => {
+    const unexplainedEmpty = VERB_DATA.filter((v, i) => {
+      if (v.imperativ !== '') return false;
+      if (v.imperativNotApplicable) return false;
+      const parsedRow = parsedRows[i];
+      return !/NEEDS HUMAN CHECK/.test(parsedRow.commentBlock);
+    });
+    expect(unexplainedEmpty.map((v) => v.infinitive)).toEqual([]);
+  });
+
+  it('never sets imperativNotApplicable: true on a row that also has a non-empty imperativ (contradicts itself)', () => {
+    const contradictions = VERB_DATA.filter((v) => v.imperativNotApplicable && v.imperativ !== '');
+    expect(contradictions.map((v) => v.infinitive)).toEqual([]);
+  });
+
+  it('marks exactly the three known modal verbs (kunna, få, vilja) as imperativNotApplicable, nothing else', () => {
+    const flagged = VERB_DATA.filter((v) => v.imperativNotApplicable).map((v) => v.infinitive);
+    expect(flagged.sort()).toEqual(['få', 'kunna', 'vilja'].sort());
+  });
+
+  // Known, documented gap: "te sig" (reflexive particle verb) and "anse"
+  // (irregular, unattested imperativ use) are deliberately left unfilled
+  // rather than guessed. If this list shrinks, update it (more verbs got
+  // filled in - good). If it grows without an accompanying "NEEDS HUMAN
+  // CHECK" comment, the test above already catches that. Pinning the exact
+  // set here makes any *silent* change to this set loud.
+  it('leaves exactly "te sig" and "anse" unfilled (deliberately deferred, not modal, not guessed)', () => {
+    const deferred = VERB_DATA.filter((v) => v.imperativ === '' && !v.imperativNotApplicable).map(
+      (v) => v.infinitive,
+    );
+    expect(deferred.sort()).toEqual(['anse', 'te sig'].sort());
+  });
+
+  it('fills a non-empty imperativ for every non-modal, non-deferred row (the mechanical fill is complete)', () => {
+    const deferredOrModal = new Set(['te sig', 'anse', 'kunna', 'få', 'vilja']);
+    const stillMissing = VERB_DATA.filter(
+      (v) => v.imperativ === '' && !deferredOrModal.has(v.infinitive),
+    );
+    expect(stillMissing.map((v) => v.infinitive)).toEqual([]);
+  });
+
+  // Pin the exact mechanically-derived imperativ for a representative
+  // sample across grupp 1/2/3/4, so a future edit can't silently reintroduce
+  // a wrong or empty imperativ for verbs the fill already covers.
+  it.each([
+    ['ta', 'ta'],
+    ['se', 'se'],
+    ['gå', 'gå'],
+    ['säga', 'säg'],
+    ['skriva', 'skriv'],
+    ['börja', 'börja'],
+    ['tycka', 'tyck'],
+    ['använda', 'använd'],
+    ['lägga', 'lägg'],
+    ['ligga', 'ligg'],
+  ])('pins the filled imperativ "%s" -> "%s"', (infinitive, imperativ) => {
+    const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+    expect(row).toBeDefined();
+    expect(row?.imperativ).toBe(imperativ);
   });
 });
 

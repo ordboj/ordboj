@@ -6,6 +6,7 @@ import {
   getFormHint,
   getVerbs,
   getVerbGrupp,
+  getAllConjugatedVerbs,
   type Form,
 } from '@/lib/verbs';
 import { VERB_DATA } from '@/data/verbData';
@@ -22,13 +23,14 @@ describe('conjugateVerb - known verb', () => {
       preteritum: 'var',
       supinum: 'varit',
       imperativ: 'var',
+      imperativNotApplicable: false,
       cefr: 'A1',
     });
   });
 });
 
 describe('conjugateVerb - unknown verb fallback', () => {
-  it('falls back to id "unknown" and "(not available)" for every conjugated form', async () => {
+  it('falls back to id "unknown" and "(not available)" for every conjugated form except imperativ, which falls back to an empty string', async () => {
     const result = await conjugateVerb('this-infinitive-does-not-exist');
     expect(result).toEqual({
       id: 'unknown',
@@ -36,18 +38,58 @@ describe('conjugateVerb - unknown verb fallback', () => {
       presens: '(not available)',
       preteritum: '(not available)',
       supinum: '(not available)',
-      imperativ: '(not available)',
+      imperativ: '',
     });
   });
 });
 
-describe('conjugateVerb - "(not available)" fallback for a known verb missing one form', () => {
-  it('reports "(not available)" for a verb whose imperativ is an empty string in VERB_DATA', async () => {
-    const source = VERB_DATA.find((v) => v.infinitive === 'kunna');
-    expect(source?.imperativ).toBe(''); // pins the fixture assumption this test relies on
+// Issue #124: conjugateVerb() must stop mapping a missing/nonexistent
+// imperativ to the literal placeholder string "(not available)", and must
+// distinguish "genuinely doesn't exist for this verb" (modal verbs, via
+// imperativNotApplicable) from "empty for some other reason" using the same
+// flag surfaced from VERB_DATA.
+describe('conjugateVerb - imperativ for a modal verb (issue #124)', () => {
+  it.each(['kunna', 'få', 'vilja'])(
+    'reports "%s" as imperativ: "" with imperativNotApplicable: true, never the literal "(not available)" placeholder',
+    async (infinitive) => {
+      const source = VERB_DATA.find((v) => v.infinitive === infinitive);
+      expect(source?.imperativNotApplicable).toBe(true); // pins the fixture assumption
 
-    const result = await conjugateVerb('kunna');
-    expect(result.imperativ).toBe('(not available)');
+      const result = await conjugateVerb(infinitive);
+      expect(result.imperativ).toBe('');
+      expect(result.imperativ).not.toBe('(not available)');
+      expect(result.imperativNotApplicable).toBe(true);
+    },
+  );
+
+  it('sets imperativNotApplicable: false (not undefined) for an ordinary verb with a real imperativ', async () => {
+    const result = await conjugateVerb('vara');
+    expect(result.imperativNotApplicable).toBe(false);
+  });
+});
+
+describe('getAllConjugatedVerbs - imperativ placeholder removed (issue #124)', () => {
+  it('never emits the literal "(not available)" placeholder string for imperativ, on any verb', async () => {
+    const all = await getAllConjugatedVerbs();
+    const offenders = all.filter((v) => v.imperativ === '(not available)');
+    expect(offenders.map((v) => v.infinitive)).toEqual([]);
+  });
+
+  it('flags every modal verb with imperativNotApplicable: true and an empty imperativ', async () => {
+    const all = await getAllConjugatedVerbs();
+    for (const infinitive of ['kunna', 'få', 'vilja']) {
+      const verb = all.find((v) => v.infinitive === infinitive);
+      expect(verb).toBeDefined();
+      expect(verb?.imperativ).toBe('');
+      expect(verb?.imperativNotApplicable).toBe(true);
+    }
+  });
+
+  it('marks an ordinary verb with a real imperativ as imperativNotApplicable: false, not undefined', async () => {
+    const all = await getAllConjugatedVerbs();
+    const vara = all.find((v) => v.infinitive === 'vara');
+    expect(vara?.imperativ).toBe('var');
+    expect(vara?.imperativNotApplicable).toBe(false);
   });
 });
 
