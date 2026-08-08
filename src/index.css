@@ -96,3 +96,18 @@ All colors MUST be HSL.
     cursor: pointer;
   }
 }
+
+/* Global prefers-reduced-motion rule (issue #110 AC). Confetti draws to a
+   canvas and is not reachable by CSS, so it keeps its own matchMedia guard
+   in ConfettiEffect.tsx; everything else (dialog/select/tooltip animate-in,
+   Home's transition-all/hover effects, etc.) is covered here. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

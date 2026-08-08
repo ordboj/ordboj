@@ -190,7 +190,7 @@ export default function Progress() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
+          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 min-h-11">
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
@@ -335,13 +335,23 @@ export default function Progress() {
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
                   <TableHead
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => toggleSort('infinitive')}
+                    aria-sort={
+                      sortField === 'infinitive'
+                        ? sortDirection === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    className="hover:bg-muted/50"
                   >
-                    <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex min-h-11 items-center gap-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      onClick={() => toggleSort('infinitive')}
+                    >
                       Verb
                       <ArrowUpDown className="w-4 h-4" />
-                    </div>
+                    </button>
                   </TableHead>
                   <TableHead>Presens</TableHead>
                   <TableHead>Preteritum</TableHead>
@@ -349,13 +359,23 @@ export default function Progress() {
                   <TableHead>Imperativ</TableHead>
                   <TableHead>Grupp</TableHead>
                   <TableHead
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => toggleSort('difficulty')}
+                    aria-sort={
+                      sortField === 'difficulty'
+                        ? sortDirection === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    className="hover:bg-muted/50"
                   >
-                    <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex min-h-11 items-center gap-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      onClick={() => toggleSort('difficulty')}
+                    >
                       Difficulty
                       <ArrowUpDown className="w-4 h-4" />
-                    </div>
+                    </button>
                   </TableHead>
                   <TableHead>SRS Stage</TableHead>
                 </TableRow>
@@ -377,7 +397,24 @@ export default function Progress() {
                       onClick={() => setSelectedVerb(verb)}
                     >
                       <TableCell className="font-medium">
-                        <span lang="sv">{verb.infinitive}</span>
+                        {/* No aria-label here on purpose: a button's own
+                            aria-label becomes its enclosing cell's, and then
+                            the row's, accessible name (name-from-content),
+                            which would prefix every row's name with "View
+                            details for" and break row lookup by verb name
+                            (e2e/full-loop.spec.ts). The visible infinitive
+                            text is an adequate accessible name for a button
+                            inside the "Verb" column. */}
+                        <button
+                          type="button"
+                          className="inline-flex min-h-11 min-w-11 items-center justify-start text-left underline-offset-2 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedVerb(verb);
+                          }}
+                        >
+                          <span lang="sv">{verb.infinitive}</span>
+                        </button>
                       </TableCell>
                       <TableCell>
                         <span lang="sv">{verb.presens}</span>

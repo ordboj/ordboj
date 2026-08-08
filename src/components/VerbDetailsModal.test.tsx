@@ -96,6 +96,35 @@ describe('VerbDetailsModal - imperativNotApplicable flag hides the imperativ row
   });
 });
 
+// Issue #110 AC: touch targets must be at least 44px. Both pronounce
+// buttons here were 40px (the infinitive one: size="icon" default h-10 w-10,
+// no explicit size class) and 32px (h-8 w-8, the per-form one) before this fix.
+describe('VerbDetailsModal - pronounce button touch targets (issue #110 AC)', () => {
+  it('renders the infinitive pronounce button at 44px (h-11 w-11) with an aria-label', () => {
+    renderWithProviders(
+      <VerbDetailsModal verb={VERB} srsStage={0} srsStates={{}} onClose={vi.fn()} />,
+    );
+
+    const button = screen.getByRole('button', { name: `Pronounce ${VERB.infinitive}` });
+    expect(button).toHaveClass('h-11');
+    expect(button).toHaveClass('w-11');
+  });
+
+  it('renders each per-form pronounce button at 44px (h-11 w-11) with an aria-label, not the old 32px (h-8 w-8)', () => {
+    renderWithProviders(
+      <VerbDetailsModal verb={VERB} srsStage={0} srsStates={{}} onClose={vi.fn()} />,
+    );
+
+    const formButton = screen.getByRole('button', {
+      name: `Pronounce ${getFormLabel('presens')}`,
+    });
+    expect(formButton).toHaveClass('h-11');
+    expect(formButton).toHaveClass('w-11');
+    expect(formButton).not.toHaveClass('h-8');
+    expect(formButton).not.toHaveClass('w-8');
+  });
+});
+
 describe("VerbDetailsModal - lang='sv' on Swedish word display", () => {
   it("wraps the infinitive display with lang='sv' spans/paragraphs", () => {
     renderWithProviders(
