@@ -174,6 +174,44 @@ describe('getDueItems filtering', () => {
     );
   });
 
+  // Regression for issue #137: an empty cefrLevels array used to fall
+  // through the `cefrLevels && cefrLevels.length > 0 ? filter : allVerbs`
+  // ternary straight to "allVerbs", so a Settings state with zero levels
+  // selected silently practiced every verb. cefrLevels === [] must now be
+  // honored as "nothing in scope", matching zero verbs.
+  it('#137: cefrLevels: [] matches zero verbs and does not fall back to all verbs', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const { result } = renderHook(() => useSrsProgress([]));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const due = await result.current.getDueItems();
+    expect(due).toEqual([]);
+  });
+
+  // Contrast case pinning the documented contract: omitting the argument
+  // entirely (undefined) is the only way to opt out of filtering and see
+  // every verb; an explicit empty array is not treated the same way.
+  it('#137: cefrLevels: undefined (argument omitted) includes every verb, unlike an explicit empty array', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    const filtered = renderHook(() => useSrsProgress([]));
+    await waitFor(() => expect(filtered.result.current.isLoading).toBe(false));
+    const dueWithEmptyArray = await filtered.result.current.getDueItems();
+
+    const unfiltered = renderHook(() => useSrsProgress(undefined));
+    await waitFor(() => expect(unfiltered.result.current.isLoading).toBe(false));
+    const dueWithUndefined = await unfiltered.result.current.getDueItems();
+
+    expect(dueWithEmptyArray).toEqual([]);
+    expect(dueWithUndefined.length).toBeGreaterThan(0);
+    // "prova" (verbId '2') has no attested imperativ in this fixture, so
+    // '2-imperativ' is excluded regardless of the CEFR filter - compare
+    // against ALL_ITEM_IDS minus that one unavailable form.
+    expect(dueWithUndefined.map((i) => i.itemId).sort()).toEqual(
+      ALL_ITEM_IDS.filter((id) => id !== '2-imperativ').sort(),
+    );
+  });
+
   it('shuffles deterministically when Math.random is stubbed', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const { result } = renderHook(() => useSrsProgress());
