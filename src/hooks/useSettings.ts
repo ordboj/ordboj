@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 export interface Settings {
   practiceMode: 'typing' | 'multiple-choice';
@@ -36,12 +37,35 @@ export function useSettings() {
     setIsLoading(false);
   }, []);
 
+  // Persist to localStorage whenever settings change. Kept out of
+  // updateSettings's setState updater (below) rather than inline: a setState
+  // updater must stay pure, since React may invoke it more than once per
+  // commit (e.g. StrictMode's double-invoke), which would double-fire the
+  // toast on failure. Living in its own effect, the write - and the toast
+  // below - run exactly once per committed settings change.
+  useEffect(() => {
+    if (!isLoading) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      } catch (e) {
+        // Quota or storage failure: keep the in-memory session alive; the
+        // next successful write persists the full current settings anyway.
+        // Surface it, though - the in-memory state has now diverged from
+        // storage and a silent failure here is how progress quietly
+        // disappears (see issue #138).
+        console.error('Failed to save settings', e);
+        toast({
+          title: 'Settings not saved',
+          description:
+            "Your latest setting could not be saved to this device's storage. It's still in effect for this session, but free up storage soon or it may be lost.",
+          variant: 'destructive',
+        });
+      }
+    }
+  }, [settings, isLoading]);
+
   const updateSettings = (newSettings: Partial<Settings>) => {
-    setSettings(prev => {
-      const updated = { ...prev, ...newSettings };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
+    setSettings((prev) => ({ ...prev, ...newSettings }));
   };
 
   return { settings, updateSettings, isLoading };
