@@ -5,7 +5,7 @@
 //   src/data/verbData.ts           — the small hand-curated table that ships
 //
 // This script does three things, all deterministic and pure functions of
-// the two files on disk (no clock, no random, no network):
+// the files on disk (no clock, no random, no network):
 //
 //   1. Classifies every CSV row into grupp 1 / 2a / 2b / 3 / 4 / deponens
 //      using morphological pattern matching, and validates it (charset,
@@ -17,22 +17,30 @@
 //      fails the build (non-zero exit) if any shipped row does not pass.
 //      This is what "the shipped table has zero validator failures" means
 //      in practice: an enforced invariant, not an aspiration.
-//   3. Re-emits src/data/verbData.ts. Growing VERB_DATA (the next ticket)
-//      means adding infinitives to NEW_PROMOTIONS below and re-running this
-//      script: each candidate is looked up in the CSV, classified and
-//      validated the same way, and only appended to the array literal if it
-//      passes — otherwise it is reported and left out, never guessed in.
-//      NEW_PROMOTIONS is empty in this change, so step 3 is a verified
-//      round-trip of the existing 56 rows: the script reconstructs the file
-//      from parsed blocks and *asserts* the result is byte-identical to the
-//      input before writing anything, rather than trusting its own parser.
+//   3. Classifies and validates a candidate promotion list the same way,
+//      then writes only the PASSING candidates as ready-to-paste row lines
+//      to docs/verb-data/proposed-rows.txt, and the REJECTED candidates to
+//      the same file as commented-out lines with their reasons.
 //
-// IMPORTANT — VERB_DATA row order is pinned (src/data/verbData.orderPin.test.ts):
-// a learner's SRS progress is keyed by array index, so this script only
-// ever APPENDS new rows at the end. It must never reorder, delete or
-// rewrite the text of an existing row.
+// This script NEVER writes src/data/verbData.ts, in any mode, for any
+// input. Per docs/product/2026-08-08-verb-source-of-truth-decision.md R1
+// ("Applies to build scripts too: no codegen writes verbData.ts") and
+// section 4b (which supersedes ticket #41's original "emits verbData.ts in
+// exact current format" acceptance clause), the shipped table has exactly
+// one writer: a human, editing it by hand in a reviewed PR. This script's
+// job stops at producing a validated, human-reviewable proposal. Per R3,
+// promotion is manual and batched (at most 50 rows per PR); per R4, no PR
+// that extends VERB_DATA merges before issue #8 (stable SRS ids +
+// migration) is resolved — that gate is enforced on the board today and
+// will become CI-enforced per R4/R5 once #8 closes.
 //
-// Classifier design note (read before extending NEW_PROMOTIONS): several
+// `readFileSync(VERB_DATA_PATH)` / `parseVerbDataTs()` below are still
+// used — for the shipped-row validation gate (step 2) and to know which
+// infinitives are already shipped (so a promotion candidate already present
+// is skipped, never duplicated) — but the parsed result is read-only. There
+// is no reconstruction step and nothing is ever written back to that path.
+//
+// Classifier design note (read before adding to the promotion list): several
 // real Swedish spelling-simplification rules apply at the stem/suffix
 // boundary and are NOT modelled here on purpose:
 //   - stem ending "-nd" + preteritum "-de" simplifies ("vänd" -> "vände",
@@ -53,7 +61,7 @@
 // a human confirming the grupp by hand (as all shipped grupp-4 rows already
 // are) is the correct and expected path, not a gap in the script.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -62,13 +70,38 @@ const ROOT = join(here, '..');
 const CSV_PATH = join(ROOT, 'public/data/swedish_verbs.csv');
 const VERB_DATA_PATH = join(ROOT, 'src/data/verbData.ts');
 const REVIEW_PATH = join(ROOT, 'scripts/verb-data-review.csv');
+const PROMOTIONS_LIST_PATH = join(ROOT, 'scripts/verb-data-promotions.txt');
+const PROPOSED_ROWS_PATH = join(ROOT, 'docs/verb-data/proposed-rows.txt');
 
-// Infinitives to add to VERB_DATA on this run, beyond what is already
-// shipped. Empty for #41 (this ticket builds the pipeline; growing the
-// table past 50 is the next ticket, per the issue title). A future ticket
-// populates this and re-runs the script; anything that fails validation is
-// reported and left out, never force-included.
-const NEW_PROMOTIONS = [];
+// Candidate infinitives to classify/validate for promotion this run, beyond
+// what is already shipped. Configurable two ways (checked in this order),
+// so the promotion path has a real input surface instead of a hardcoded
+// constant nothing can populate:
+//   --promote=inf1,inf2   comma-separated infinitives on the command line
+//   scripts/verb-data-promotions.txt   one infinitive per line, blank lines
+//                                       and lines starting with "#" ignored
+// Neither present -> empty list (today's default: this ticket builds the
+// pipeline, growing VERB_DATA past 50 is the next one). Passing candidates
+// are written to docs/verb-data/proposed-rows.txt for a human to paste into
+// verbData.ts by hand in a reviewed PR (R3); nothing here ever writes
+// verbData.ts itself.
+function resolvePromotions() {
+  const cliArg = process.argv.find((a) => a.startsWith('--promote='));
+  if (cliArg) {
+    return cliArg
+      .slice('--promote='.length)
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
+  if (existsSync(PROMOTIONS_LIST_PATH)) {
+    return readFileSync(PROMOTIONS_LIST_PATH, 'utf8')
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !l.startsWith('#'));
+  }
+  return [];
+}
 
 // ---------------------------------------------------------------------
 // Charset
@@ -106,7 +139,14 @@ function charsetFailures(row) {
 // ---------------------------------------------------------------------
 const MODAL_VERBS = new Set(['kunna', 'få', 'vilja', 'skola', 'måste', 'böra', 'lär']);
 
-const VOICELESS_FINAL = new Set(['k', 'p', 't', 's', 'x']);
+// f/k/p/s/t/x are the voiceless consonants that can end a grupp-2 stem;
+// CLAUDE.md's k/p/t/s/x list omitted "f" (e.g. a stem like "skif-" would
+// have been mis-flagged as a false 2a/2b contradiction — real Swedish
+// correctly rejected as a data error, the failure class that sank #165).
+// No CSV row exercises this today (confirmed: zero contradictions fire
+// across all 1538 rows either way), so this is a latent-defect fix, not an
+// observed regression.
+const VOICELESS_FINAL = new Set(['f', 'k', 'p', 't', 's', 'x']);
 
 // ---------------------------------------------------------------------
 // Particle stripping — classify the verb, not the particle (CLAUDE.md:
@@ -299,17 +339,17 @@ function parseCsv(text) {
 
 // ---------------------------------------------------------------------
 // verbData.ts parsing — regex-based, mirrors scripts/validate-verb-forms.mjs.
-// Captures both the parsed field values (for validation) and the exact raw
-// line block for each row (for lossless reconstruction).
+// Read-only: captures parsed field values (for the shipped-row validation
+// gate) and per-row comment text (for the noNaturalImperativ / NEEDS HUMAN
+// REVIEW escape hatches). Nothing derived from this parse is ever written
+// back to VERB_DATA_PATH.
 // ---------------------------------------------------------------------
 const START_MARKER = 'export const VERB_DATA: VerbData[] = [';
 const FIELD_RE = /(cefr|infinitive|imperativ|presens|preteritum|supinum|grupp)\s*:\s*"([^"]*)"/g;
 
 // The file on disk may use CRLF (Windows checkout) or LF line endings.
-// Detecting and reusing whatever is actually there — rather than assuming
-// '\n' — is what makes the reconstructed output byte-identical to the
-// input; a mismatched EOL would fail the self-check below on every run on
-// a CRLF checkout.
+// Detecting it (rather than assuming '\n') keeps line splitting/joining
+// correct for both checkout styles during parsing.
 function detectEol(text) {
   return text.includes('\r\n') ? '\r\n' : '\n';
 }
@@ -361,13 +401,34 @@ function formatNewRow({ cefr, infinitive, imperativ, presens, preteritum, supinu
 }
 
 // ---------------------------------------------------------------------
+// Required-file reads. A raw ENOENT stack is not actionable for whoever
+// sees the CI job go red; name the path and point at the decision doc that
+// governs where these files are allowed to live.
+// ---------------------------------------------------------------------
+function readRequiredFile(path, hint) {
+  try {
+    return readFileSync(path, 'utf8');
+  } catch (err) {
+    if (err && err.code === 'ENOENT') {
+      console.error(`missing ${path}${hint ? ' — ' + hint : ''}`);
+      process.exit(1);
+    }
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------
 function main() {
   const checkOnly = process.argv.includes('--check');
+  const promotions = resolvePromotions();
 
   // --- Step 1: classify + validate every CSV row, write the review file ---
-  const csvText = readFileSync(CSV_PATH, 'utf8');
+  const csvText = readRequiredFile(
+    CSV_PATH,
+    'see docs/product/2026-08-08-verb-source-of-truth-decision.md R2 if the CSV has moved',
+  );
   const csvRows = parseCsv(csvText);
 
   const reviewRows = csvRows.map((row) => {
@@ -402,8 +463,10 @@ function main() {
   ].join('\n');
 
   // --- Step 2: re-validate the currently shipped rows against their own
-  // stored forms; this is the "zero validator failures" gate. ---
-  const verbDataText = readFileSync(VERB_DATA_PATH, 'utf8');
+  // stored forms; this is the "zero validator failures" gate. Read-only:
+  // parsed.blocks / parsed.header / parsed.footer are used for the gate
+  // below and for existingInfinitives dedup in step 3, never written back. ---
+  const verbDataText = readRequiredFile(VERB_DATA_PATH);
   const parsed = parseVerbDataTs(verbDataText);
 
   const shippedFailures = [];
@@ -460,14 +523,16 @@ function main() {
     process.exit(1);
   }
 
-  // --- Step 3: promote NEW_PROMOTIONS (empty for #41) and reconstruct the
-  // file. Reconstruction is verified byte-identical to the input before any
-  // write happens, whenever there is nothing new to add. ---
+  // --- Step 3: classify/validate the requested promotion candidates (see
+  // resolvePromotions above) and write the result to a human-review file.
+  // This NEVER touches verbData.ts — a human pastes approved rows in by
+  // hand in a reviewed PR (R3). Candidates already shipped are skipped
+  // (not duplicated, not reported as a failure). ---
   const promotionFailures = [];
-  const newBlocks = [];
+  const promotedRows = [];
   const existingInfinitives = new Set(parsed.blocks.map((b) => b.fields.infinitive));
 
-  for (const candidate of NEW_PROMOTIONS) {
+  for (const candidate of promotions) {
     if (existingInfinitives.has(candidate)) continue;
     const csvRow = csvRows.find((r) => r.infinitive === candidate);
     if (!csvRow) {
@@ -489,40 +554,37 @@ function main() {
       });
       continue;
     }
-    newBlocks.push({
-      lines: [
-        formatNewRow({
-          cefr: csvRow['cefr levels'] ?? '',
-          infinitive: candidate,
-          imperativ: csvRow.imperativ ?? '',
-          presens: csvRow.presens ?? '',
-          preteritum: csvRow.preteritum ?? '',
-          supinum: csvRow.supinum ?? '',
-          grupp: result.grupp,
-        }),
-      ],
-    });
-  }
-
-  const allBlocks = [...parsed.blocks, ...newBlocks];
-  const rebuilt =
-    parsed.header +
-    allBlocks.map((b) => b.lines.join(parsed.eol)).join(parsed.eol) +
-    parsed.eol +
-    parsed.footer;
-
-  if (newBlocks.length === 0 && rebuilt !== verbDataText) {
-    console.error(
-      'FAIL: reconstructed verbData.ts is not byte-identical to the input even though no rows were added. ' +
-        'The parser/serializer in this script has drifted from the file format — refusing to write a file ' +
-        'that could silently corrupt or reformat the shipped table.',
+    promotedRows.push(
+      formatNewRow({
+        cefr: csvRow['cefr levels'] ?? '',
+        infinitive: candidate,
+        imperativ: csvRow.imperativ ?? '',
+        presens: csvRow.presens ?? '',
+        preteritum: csvRow.preteritum ?? '',
+        supinum: csvRow.supinum ?? '',
+        grupp: result.grupp,
+      }),
     );
-    process.exit(1);
   }
 
   if (!checkOnly) {
     writeFileSync(REVIEW_PATH, reviewCsv + '\n', 'utf8');
-    writeFileSync(VERB_DATA_PATH, rebuilt, 'utf8');
+
+    mkdirSync(dirname(PROPOSED_ROWS_PATH), { recursive: true });
+    const proposedLines = [
+      '// Generated by scripts/build-verb-data.mjs from public/data/swedish_verbs.csv.',
+      '// NOT consumed by the app and NOT auto-merged into src/data/verbData.ts.',
+      '// Per docs/product/2026-08-08-verb-source-of-truth-decision.md R3, a human',
+      '// pastes the PASSING lines below into VERB_DATA by hand in a reviewed PR,',
+      '// at most 50 rows per PR, gated on issue #8 per R4. REJECTED lines are kept',
+      '// commented out with their reasons for reference; do not paste those in.',
+      '',
+      ...promotedRows,
+      ...promotionFailures.map(
+        (f) => `// REJECTED "${f.infinitive}": ${f.reasons.join('; ')}`,
+      ),
+    ];
+    writeFileSync(PROPOSED_ROWS_PATH, proposedLines.join('\n') + '\n', 'utf8');
   }
 
   console.log(
@@ -530,20 +592,20 @@ function main() {
       ` Review file: ${REVIEW_PATH}${checkOnly ? ' (not written, --check)' : ''}`,
   );
   console.log(
-    `Shipped table: ${parsed.blocks.length} rows, 0 validator failures. New promotions: ${newBlocks.length} added, ${promotionFailures.length} rejected.`,
+    `Shipped table: ${parsed.blocks.length} rows, 0 validator failures. Promotion candidates: ${promotions.length} requested, ${promotedRows.length} passed, ${promotionFailures.length} rejected.`,
   );
   if (promotionFailures.length > 0) {
-    console.log('Rejected promotions (not written to verbData.ts):');
+    console.log('Rejected promotion candidates:');
     for (const f of promotionFailures) {
       console.log(`  ${f.infinitive}: ${f.reasons.join('; ')}`);
     }
   }
   console.log(
     checkOnly
-      ? 'verbData.ts unchanged (--check mode).'
-      : rebuilt === verbDataText
-        ? 'verbData.ts re-emitted, byte-identical to before (no new promotions this run).'
-        : `verbData.ts re-emitted with ${newBlocks.length} new row(s) appended.`,
+      ? 'verbData.ts unchanged (--check mode; proposed-rows.txt not written).'
+      : promotedRows.length > 0
+        ? `verbData.ts unchanged. ${promotedRows.length} candidate row(s) written to ${PROPOSED_ROWS_PATH} for human review.`
+        : 'verbData.ts unchanged. No promotion candidates passed this run.',
   );
 }
 
