@@ -145,6 +145,23 @@ describe('Practice page - one full session', () => {
   });
 });
 
+// Issue #129: the shadcn Progress primitive's default track (bg-secondary)
+// is nearly as saturated as its bg-primary fill, so at 0-1% the bar read as
+// full instead of empty. bg-muted was tried next but only clears ~1.01:1
+// contrast against this page's background - still invisible. Pin the token
+// that actually clears WCAG 1.4.11's 3:1 (bg-muted-foreground, ~3.8:1 here)
+// so a regression back to either prior value fails loudly.
+describe('Practice page - issue #129: progress bar track contrast', () => {
+  it("renders the header progress bar's track with a token that has real contrast against the page background", async () => {
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    const track = await screen.findByRole('progressbar');
+    expect(track).toHaveClass('bg-muted-foreground');
+    expect(track).not.toHaveClass('bg-muted');
+    expect(track).not.toHaveClass('bg-secondary');
+  });
+});
+
 // Issue #27: on an empty due queue, the completion screen must offer two
 // distinct, independently-gated actions -- "Keep practising" (free
 // practice, never touches SRS state) and "Extra reviews (N)" (touches SRS

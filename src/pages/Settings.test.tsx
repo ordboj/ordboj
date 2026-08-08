@@ -8,6 +8,12 @@ import Settings from '@/pages/Settings';
 // (srs-engine). Both are mocked here as boundaries this suite does not own,
 // so the page's own markup is what's under test - specifically, issue #92
 // asks for the no-op Interface Language control to be gone for good.
+const updateSettingsMock = vi.fn();
+
+// Mutable so individual tests (issue #137) can control how many CEFR levels
+// are "currently selected" without re-mocking the module per test.
+let mockCefrLevels: string[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
     settings: {
@@ -16,9 +22,11 @@ vi.mock('@/hooks/useSettings', () => ({
       autoplayAudio: true,
       muteAudio: false,
       dailyGoal: 20,
-      cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
+      get cefrLevels() {
+        return mockCefrLevels;
+      },
     },
-    updateSettings: vi.fn(),
+    updateSettings: updateSettingsMock,
   }),
 }));
 
@@ -44,6 +52,8 @@ vi.mock('@/hooks/useSrsProgress', () => ({
 }));
 
 beforeEach(() => {
+  mockCefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  updateSettingsMock.mockClear();
   mocks.resetProgress.mockClear();
   mocks.exportData.mockClear();
   mocks.exportData.mockImplementation(() => '{}');
@@ -76,6 +86,42 @@ describe('Settings page - issue #92: remove the no-op Interface Language setting
     expect(screen.getByText('Show example sentences')).toBeInTheDocument();
     expect(screen.getByText('Autoplay pronunciation')).toBeInTheDocument();
     expect(screen.getByText('CEFR Levels to Practice')).toBeInTheDocument();
+  });
+});
+
+// Issue #137: unchecking the last remaining CEFR level checkbox must not
+// produce an empty cefrLevels selection. An empty selection is silently
+// treated elsewhere as "no filter = every verb", so a UI state that looks
+// like "nothing chosen" must be unreachable from the checkbox handler.
+describe('Settings page - issue #137: CEFR checkbox guard against zero selection', () => {
+  beforeEach(() => {
+    updateSettingsMock.mockClear();
+  });
+
+  it('does not call updateSettings when unchecking the only remaining selected level', async () => {
+    mockCefrLevels = ['A1'];
+    const user = userEvent.setup();
+    renderWithProviders(<Settings />, { route: '/settings' });
+
+    const a1 = screen.getByRole('checkbox', { name: 'A1' });
+    expect(a1).toHaveAttribute('aria-checked', 'true');
+
+    await user.click(a1);
+
+    // The guard must swallow this click entirely: no settings update fires
+    // with an empty (or any) cefrLevels array as a result of it.
+    expect(updateSettingsMock).not.toHaveBeenCalled();
+  });
+
+  it('still allows unchecking a level when more than one is selected', async () => {
+    mockCefrLevels = ['A1', 'A2'];
+    const user = userEvent.setup();
+    renderWithProviders(<Settings />, { route: '/settings' });
+
+    const a1 = screen.getByRole('checkbox', { name: 'A1' });
+    await user.click(a1);
+
+    expect(updateSettingsMock).toHaveBeenCalledWith({ cefrLevels: ['A2'] });
   });
 });
 

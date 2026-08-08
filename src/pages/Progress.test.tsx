@@ -30,6 +30,20 @@ vi.mock('@/hooks/useSettings', () => ({
   }),
 }));
 
+// Issue #129: same track-contrast fix as Practice.tsx's header bar, applied
+// to the mastery summary bar on this page. Pinned separately because it's a
+// second, independent call site of the shared Progress primitive.
+describe('Progress page - issue #129: mastery bar track contrast', () => {
+  it("renders the mastery summary bar's track with a token that has real contrast against the card surface", async () => {
+    renderWithProviders(<Progress />, { route: '/progress' });
+
+    const track = await screen.findByRole('progressbar');
+    expect(track).toHaveClass('bg-muted-foreground');
+    expect(track).not.toHaveClass('bg-muted');
+    expect(track).not.toHaveClass('bg-secondary');
+  });
+});
+
 describe("Progress page - issue #132: no raw '(not available)' placeholder", () => {
   it('renders an em dash, not the raw literal string, for a verb whose imperativ is genuinely absent', async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
