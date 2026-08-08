@@ -44,9 +44,15 @@ test.describe('regression #103: queue no longer desyncs after answering', () => 
     await page.getByRole('button', { name: 'Next Card' }).click();
 
     // Fixed: the second card is shown, not a blank page. The header,
-    // progress counter and answer input are all still present.
+    // progress counter and answer input are all still present. The counter
+    // reads "1 / 2", not "2 / 2": ticket #13's same-sitting relearning
+    // queue counts the numerator by resolved items, not queue position, so
+    // the first card's still-unresolved wrong answer does not tick it (the
+    // 2-item queue is too short for its 3-item requeue gap to ever clear
+    // this sitting, so the lapse stays pending and the sitting simply ends
+    // once both cards have been shown).
     await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
-    await expect(page.getByText('2 / 2')).toBeVisible();
+    await expect(page.getByText('1 / 2')).toBeVisible();
     const answerInput = page.getByPlaceholder('Type your answer...');
     await expect(answerInput).toBeVisible();
     await expect(answerInput).toHaveCount(1);

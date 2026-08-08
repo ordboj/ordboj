@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -87,6 +87,29 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+  # Guards the verb data itself rather than the code: rejects mojibake and
+  # casing corruption in the conjugation form fields of both
+  # swedish_verbs.csv and src/data/verbData.ts. Wrong Swedish is worse than
+  # missing Swedish, and this is the defect class (issue #45, plus the SVor /
+  # SOV rows fixed in #158) that reaches a learner as a confidently wrong
+  # answer. The script is dependency-free plain Node, so this job deliberately
+  # skips `npm ci` and finishes in seconds.
+  validate-verbs:
+    name: Validate verb data
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Validate verb forms
+        run: npm run validate:verbs
 
   test:
     name: Unit tests

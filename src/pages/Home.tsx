@@ -15,16 +15,12 @@ export default function Home() {
   const { settings, isLoading: settingsLoading, updateSettings } = useSettings();
   const { getDueItems, isLoading } = useSrsProgress(settings.cefrLevels);
   const [dueCount, setDueCount] = useState(0);
-  const [selectedLevels, setSelectedLevels] = useState<string[]>(settings.cefrLevels);
+  const selectedLevels = settings.cefrLevels;
   const [totalVerbs, setTotalVerbs] = useState(0);
 
   useEffect(() => {
     loadVoices();
   }, []);
-
-  useEffect(() => {
-    setSelectedLevels(settings.cefrLevels);
-  }, [settings.cefrLevels]);
 
   // getDueItems is recreated whenever srsStates changes, which happens
   // continuously while a practice session elsewhere updates progress. Keep
@@ -64,7 +60,6 @@ export default function Home() {
 
     if (newLevels.length === 0) return; // Prevent unselecting all
 
-    setSelectedLevels(newLevels);
     updateSettings({ cefrLevels: newLevels });
   };
 
@@ -96,7 +91,7 @@ export default function Home() {
               <BookOpen className="w-8 h-8 text-primary" />
               Ready to Practice?
             </CardTitle>
-            <CardDescription className="text-lg space-y-1">
+            <div className="text-muted-foreground text-lg space-y-1">
               {dueCount > 0 ? (
                 <>
                   <div className="text-primary font-semibold">
@@ -109,7 +104,7 @@ export default function Home() {
               ) : (
                 <span>All caught up! Great work! 🎉</span>
               )}
-            </CardDescription>
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* CEFR Level Selector */}
@@ -138,7 +133,7 @@ export default function Home() {
               <p className="text-xs text-muted-foreground text-center">
                 {selectedLevels.length === allLevels.length
                   ? 'All levels selected'
-                  : `Selected: ${selectedLevels.sort().join(', ')}`}
+                  : `Selected: ${[...selectedLevels].sort().join(', ')}`}
               </p>
             </div>
 

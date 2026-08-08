@@ -15,6 +15,11 @@
 //        not assume every '4' row shows vowel gradation.
 export type Grupp = '1' | '2a' | '2b' | '3' | '4';
 
+// The conjugated fields that can carry a documented alternate accepted form,
+// e.g. preteritum "lade" alongside the primary "la" for lägga. "infinitive"
+// is excluded: this app does not model alternate dictionary-form spellings.
+export type AlternateFormField = 'imperativ' | 'presens' | 'preteritum' | 'supinum';
+
 export interface VerbData {
   cefr: string;
   infinitive: string;
@@ -25,6 +30,12 @@ export interface VerbData {
   // Conjugation class. Omitted (undefined) means the group could not be
   // human-verified against the stored forms and needs review — never guess.
   grupp?: Grupp;
+  // Additional forms accepted as correct for a field, beyond the primary
+  // form stored above (e.g. lägga preteritum: primary "la", alternate
+  // "lade" — both are standard SAOL forms). Optional and per-field; omitted
+  // or empty means "no documented alternate", which is true for almost every
+  // row and requires no change to existing data.
+  alternates?: Partial<Record<AlternateFormField, string[]>>;
 }
 
 export const VERB_DATA: VerbData[] = [
@@ -41,7 +52,11 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "ta", imperativ: "ta", presens: "tar", preteritum: "tog", supinum: "tagit", grupp: "4" },
   { cefr: "A1", infinitive: "se", imperativ: "se", presens: "ser", preteritum: "såg", supinum: "sett", grupp: "4" },
   { cefr: "A1", infinitive: "gå", imperativ: "gå", presens: "går", preteritum: "gick", supinum: "gått", grupp: "4" },
-  { cefr: "A1", infinitive: "säga", imperativ: "säg", presens: "säger", preteritum: "sa", supinum: "sagt", grupp: "4" },
+  // preteritum: "sa" is the primary stored form and "sade" the equally
+  // correct SAOL alternate. Both are standard modern Swedish; "sade" is the
+  // more written/formal of the two. Order matters — index 0 is what the app
+  // displays, hints and speaks (see the #123 decision doc, P1/P5).
+  { cefr: "A1", infinitive: "säga", imperativ: "säg", presens: "säger", preteritum: "sa", supinum: "sagt", grupp: "4", alternates: { preteritum: ["sade"] } },
   { cefr: "A1", infinitive: "äga", imperativ: "äg", presens: "äger", preteritum: "ägde", supinum: "ägt", grupp: "2a" },
   { cefr: "A1", infinitive: "betyda", imperativ: "betyd", presens: "betyder", preteritum: "betydde", supinum: "betytt", grupp: "2a" },
   { cefr: "A1", infinitive: "ge", imperativ: "ge", presens: "ger", preteritum: "gav", supinum: "gett", grupp: "4" },
@@ -66,11 +81,10 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "tänka", imperativ: "tänk", presens: "tänker", preteritum: "tänkte", supinum: "tänkt", grupp: "2b" },
   { cefr: "A1", infinitive: "söka", imperativ: "sök", presens: "söker", preteritum: "sökte", supinum: "sökt", grupp: "2b" },
   { cefr: "A1", infinitive: "ligga", imperativ: "ligg", presens: "ligger", preteritum: "låg", supinum: "legat", grupp: "4" },
-  // "lägga" has two accepted preteritum forms, "la" and "lade" (SAOL). The
-  // short form is stored here for consistency with "säga" -> "sa" above.
-  // Until the app accepts alternate answers, a learner typing "lade" is
-  // marked wrong even though it is correct: a product gap, not a data error.
-  { cefr: "A1", infinitive: "lägga", imperativ: "lägg", presens: "lägger", preteritum: "la", supinum: "lagt", grupp: "4" },
+  // preteritum: same pair as "säga" above — "la" primary, "lade" the equally
+  // correct SAOL alternate. The short form is primary for consistency with
+  // "sa", and because P5 sizes the hint blanks to the primary.
+  { cefr: "A1", infinitive: "lägga", imperativ: "lägg", presens: "lägger", preteritum: "la", supinum: "lagt", grupp: "4", alternates: { preteritum: ["lade"] } },
   { cefr: "A1", infinitive: "anse", imperativ: "", presens: "anser", preteritum: "ansåg", supinum: "ansett", grupp: "4" }, // NEEDS HUMAN CHECK: formal stative "to deem/consider" (like "se" pattern, possibly imperativ "anse"), uncertain if naturally used — not guessed
   { cefr: "A1", infinitive: "öva", imperativ: "öva", presens: "övar", preteritum: "övade", supinum: "övat", grupp: "1" },
   { cefr: "A1", infinitive: "handla", imperativ: "handla", presens: "handlar", preteritum: "handlade", supinum: "handlat", grupp: "1" },

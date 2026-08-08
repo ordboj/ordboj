@@ -189,6 +189,33 @@ describe('getDueItems filtering', () => {
     const second = await result.current.getDueItems();
     expect(first.map((i) => i.itemId)).toEqual(second.map((i) => i.itemId));
   });
+
+  // Regression test for issue #137: an explicit empty cefrLevels selection
+  // must never be silently widened back to "no filter = every verb". The
+  // two calls below are the entire contract: `undefined` (caller did not
+  // opt in to filtering) means "all verbs in scope", while `[]` (caller
+  // explicitly selected nothing) means zero verbs in scope. These are
+  // deliberately different outcomes for what a naive `cefrLevels?.length`
+  // check would treat identically.
+  it('issue #137: treats an explicit empty cefrLevels array as "match nothing", not as "no filter"', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    const noFilter = renderHook(() => useSrsProgress(undefined));
+    await waitFor(() => expect(noFilter.result.current.isLoading).toBe(false));
+    const dueWithNoFilter = await noFilter.result.current.getDueItems();
+    // Sanity check: with no filter argument at all, verbs from both CEFR
+    // levels in the fixture are in scope.
+    expect(dueWithNoFilter.some((item) => item.verbId === '1')).toBe(true);
+    expect(dueWithNoFilter.some((item) => item.verbId === '2')).toBe(true);
+
+    const emptyFilter = renderHook(() => useSrsProgress([]));
+    await waitFor(() => expect(emptyFilter.result.current.isLoading).toBe(false));
+    const dueWithEmptyFilter = await emptyFilter.result.current.getDueItems();
+
+    // The bug this guards against: an empty array silently falling back to
+    // "all verbs" (i.e. behaving like the `undefined` case above).
+    expect(dueWithEmptyFilter).toEqual([]);
+  });
 });
 
 describe('corrupt localStorage', () => {
@@ -324,6 +351,71 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     const second = renderHook(() => useSrsProgress());
     await waitFor(() => expect(second.result.current.isLoading).toBe(false));
     expect(second.result.current.srsStates['1-presens'].easeFactor).toBe(1.3);
+  });
+});
+
+// Integration-level proof (issue #11) that the hook's getDueItems - and
+// therefore Home.tsx's dueCount, which is just getDueItems().length - picks
+// up srs.ts's local-end-of-day isDue boundary rather than some independent
+// (and possibly stale) comparison. isDue is unit-tested in isolation in
+// srs.test.ts; this exercises the real load -> getDueItems path through
+// localStorage so a regression where the hook stopped calling isDue (or
+// wrapped it with its own now/boundary logic) would show up here too.
+describe('getDueItems - local day boundary (issue #11)', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'Europe/Stockholm';
+  });
+
+  afterEach(() => {
+    // Assigning undefined would store the literal string "undefined" as
+    // the timezone; delete the key instead.
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
+  });
+
+  it('includes an item due later the same local day and excludes one due at the start of the next local day', async () => {
+    const now = new Date(2026, 0, 15, 10, 0, 0, 0).getTime(); // Jan 15, 2026 10:00 local
+    vi.setSystemTime(now);
+
+    const dueLaterToday = new Date(2026, 0, 15, 22, 0, 0, 0).getTime(); // same local day, 12h ahead
+    const dueStartOfTomorrow = new Date(2026, 0, 16, 0, 0, 0, 0).getTime(); // next local day, 14h ahead
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        items: {
+          '1-presens': {
+            itemId: '1-presens',
+            repetitions: 1,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            dueAt: dueLaterToday,
+          },
+          '2-presens': {
+            itemId: '2-presens',
+            repetitions: 1,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            dueAt: dueStartOfTomorrow,
+          },
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const due = await result.current.getDueItems();
+    const dueIds = due.map((i) => i.itemId);
+
+    // Note the excluded item is *further* from `now` in raw ms (14h) than
+    // the included one (12h) - only the calendar-day boundary, not ms
+    // distance, explains why one is due and the other isn't.
+    expect(dueIds).toContain('1-presens');
+    expect(dueIds).not.toContain('2-presens');
   });
 });
 

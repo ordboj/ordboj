@@ -167,6 +167,62 @@ describe('VERB_DATA - grupp field contract', () => {
   });
 });
 
+// Issue #123: VerbData gains an optional `alternates` field so documented
+// SAOL alternate forms (e.g. "lade" beside primary "la" for lägga) can be
+// stored without touching any existing row. Pin that contract at the data
+// level, independent of the checker that consumes it (src/lib/verbs.ts).
+describe('VERB_DATA - alternates field (issue #123)', () => {
+  it('does not require the field on rows without a documented alternate: the overwhelming majority of rows omit it', () => {
+    const withAlternates = VERB_DATA.filter((v) => v.alternates !== undefined);
+    // Shape assertion, not a census: #123 must not have touched any row it
+    // didn't need to, but the linguist verifying and adding further pairs
+    // (out of scope for #123, see decision doc §6) shouldn't break this test.
+    expect(withAlternates.length).toBeGreaterThan(0);
+    expect(withAlternates.length).toBeLessThan(VERB_DATA.length);
+  });
+
+  it('pins the documented alternate for lägga preteritum: primary "la", alternate "lade"', () => {
+    const row = VERB_DATA.find((v) => v.infinitive === 'lägga');
+    expect(row).toBeDefined();
+    expect(row?.preteritum).toBe('la');
+    expect(row?.alternates?.preteritum).toEqual(['lade']);
+  });
+
+  it('pins the documented alternate for säga preteritum: primary "sa", alternate "sade"', () => {
+    const row = VERB_DATA.find((v) => v.infinitive === 'säga');
+    expect(row).toBeDefined();
+    expect(row?.preteritum).toBe('sa');
+    expect(row?.alternates?.preteritum).toEqual(['sade']);
+  });
+
+  it('never documents an alternate identical to its own primary form (would be a no-op that hides a real data error)', () => {
+    for (const verb of VERB_DATA) {
+      if (!verb.alternates) continue;
+      for (const [field, alts] of Object.entries(verb.alternates) as Array<
+        ['imperativ' | 'presens' | 'preteritum' | 'supinum', string[]]
+      >) {
+        const primary = verb[field];
+        for (const alt of alts) {
+          expect(alt).not.toBe(primary);
+        }
+      }
+    }
+  });
+
+  it('never documents an empty-string alternate or an empty alternates array (would silently accept "" as correct)', () => {
+    for (const verb of VERB_DATA) {
+      if (!verb.alternates) continue;
+      for (const alts of Object.values(verb.alternates)) {
+        expect(alts).toBeDefined();
+        expect((alts as string[]).length).toBeGreaterThan(0);
+        for (const alt of alts as string[]) {
+          expect(alt.trim().length).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+});
+
 // Issue #132 / PR #179: swedish-linguist audited all 50 shipped verbs'
 // imperativ forms. Genuine modal verbs (kunna, få, vilja) have no Swedish
 // imperativ at all and stay empty *with* an explanation; genuinely
