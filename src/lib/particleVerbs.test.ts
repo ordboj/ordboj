@@ -292,6 +292,51 @@ describe('the four-form reference line', () => {
       expect(getPhraseForms(shipped)).not.toBeNull();
     }
   });
+
+  it('reads embedded forms even when the base verb does not resolve in VERB_DATA (#318 — no VERB_DATA join)', () => {
+    // Before #318 this returned null: the function looked baseInfinitive up
+    // in VERB_DATA and bailed when it was not found, regardless of any forms
+    // supplied on the entry. Embedding the forms on the data row means an
+    // unresolvable base is no longer why the reference line fails to render.
+    const noJoinNeeded = entry({
+      id: 'pv:test-unresolvable-base',
+      baseInfinitive: 'zzznotarealverb',
+      forms: { presens: 'X-pres', preteritum: 'X-pret', supinum: 'X-sup' },
+    });
+    expect(getPhraseForms(noJoinNeeded)).toEqual({
+      infinitive: renderLemma(noJoinNeeded),
+      presens: 'X-pres',
+      preteritum: 'X-pret',
+      supinum: 'X-sup',
+    });
+  });
+
+  it('reads presens/preteritum/supinum from entry.forms rather than joining VERB_DATA, even when the base does resolve (#318)', () => {
+    // baseInfinitive below ("gå") resolves fine in VERB_DATA, whose real
+    // presens is "går". The embedded forms are deliberately different
+    // stand-ins. If getPhraseForms still joined against VERB_DATA it would
+    // return gå's real conjugation ("går ut", "gick ut", "gått ut") and
+    // ignore the stand-ins entirely.
+    const stubbed = entry({
+      id: 'pv:test-stubbed-forms',
+      baseInfinitive: 'gå',
+      particle: 'ut',
+      lemma: 'gå ut',
+      forms: { presens: 'STUB-pres', preteritum: 'STUB-pret', supinum: 'STUB-sup' },
+    });
+    expect(getPhraseForms(stubbed)).toEqual({
+      infinitive: 'gå ut',
+      presens: 'STUB-pres',
+      preteritum: 'STUB-pret',
+      supinum: 'STUB-sup',
+    });
+  });
+
+  it('returns null for a verified entry whose forms have not been embedded, rather than guessing', () => {
+    const missingForms = entry({ id: 'pv:test-missing-forms', baseInfinitive: 'gå' });
+    expect(missingForms.forms).toBeUndefined();
+    expect(getPhraseForms(missingForms)).toBeNull();
+  });
 });
 
 describe('particle core-sense lines', () => {

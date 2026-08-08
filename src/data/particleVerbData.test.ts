@@ -274,6 +274,67 @@ describe('particle verb dataset - glosses', () => {
   });
 });
 
+describe('particle verb dataset - embedded reference forms (#318)', () => {
+  // #318: the reference line renders from forms embedded on the data row,
+  // never from a VERB_DATA join at render time. That only holds if every
+  // verified entry actually carries the three forms — a verified entry
+  // missing `forms` would (per lib/particleVerbs.getPhraseForms) render no
+  // reference line at all, silently.
+  it('gives every verified entry non-empty embedded presens/preteritum/supinum forms', () => {
+    const missing = VERIFIED.filter(
+      (entry) =>
+        !entry.forms ||
+        !entry.forms.presens?.trim() ||
+        !entry.forms.preteritum?.trim() ||
+        !entry.forms.supinum?.trim(),
+    );
+    expect(missing.map((entry) => entry.id)).toEqual([]);
+  });
+});
+
+describe('particle verb dataset - excludedParticles (#318)', () => {
+  it('ships excludedParticles annotations, and none of them overlaps acceptedParticles for the same frame', () => {
+    // A single assertion on purpose: an empty-overlaps check alone would
+    // pass vacuously on a dataset that ships no excludedParticles data at
+    // all (as pre-#318 data did), which would prove nothing. Requiring at
+    // least one annotated frame makes the "no overlap" half meaningful.
+    const annotatedIds: string[] = [];
+    const overlaps: string[] = [];
+    for (const entry of PARTICLE_VERB_DATA) {
+      const accepted = new Set(entry.acceptedParticles.map((particle) => particle.toLowerCase()));
+      for (const example of entry.examples) {
+        if (!example.excludedParticles || example.excludedParticles.length === 0) continue;
+        annotatedIds.push(entry.id);
+        for (const excluded of example.excludedParticles) {
+          if (accepted.has(excluded.toLowerCase())) {
+            overlaps.push(`${entry.id}: "${excluded}" is both accepted and excluded`);
+          }
+        }
+      }
+    }
+    expect(annotatedIds.length).toBeGreaterThan(0);
+    expect(overlaps).toEqual([]);
+  });
+
+  it('pins the #318 exclusions for komma ihåg, tala om, and ta slut', () => {
+    // Named regression fixture: the general check above would also catch a
+    // dropped or corrupted annotation, but this names exactly which entries
+    // and values #318 introduced, so a partial revert reports by name.
+    const expectations: Array<[string, string[]]> = [
+      ['pv:komma-ihag', ['in', 'fram']],
+      ['pv:tala-om', ['till']],
+      ['pv:ta-slut', ['bort']],
+    ];
+    for (const [id, particles] of expectations) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      for (const example of found!.examples) {
+        expect(example.excludedParticles, `${id}: "${example.sv}"`).toEqual(particles);
+      }
+    }
+  });
+});
+
 describe('particle verb dataset - CEFR', () => {
   it('records where every band came from', () => {
     for (const entry of PARTICLE_VERB_DATA) {
