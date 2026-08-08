@@ -687,6 +687,135 @@ describe('promotion input surface', () => {
 });
 
 // ---------------------------------------------------------------------
+// Deponens stem coherence — isCoherentDeponens() (PR #290 remediation).
+// An s-final row is deponens-SHAPED (infinitive/presens/preteritum/supinum
+// all end in "s") only necessarily, not sufficiently: the stripped forms
+// must also agree on one stem. A row that is s-final but stem-incoherent
+// must fall to the residual grupp 4 bucket with a reason, never to
+// 'deponens'/'pass'; a residual grupp 4 must also never contradict a
+// row's own declared grupp for an unmodelled spelling simplification.
+// ---------------------------------------------------------------------
+describe('deponens stem-coherence classifier (residual grupp 4 vs deponens)', () => {
+  const shipped = buildVerbDataTs([VALID_SHIPPED_ROW]);
+
+  it('classifies an s-final row of four unrelated stems as residual grupp 4, needs-check, with a non-empty reason — never deponens or pass', () => {
+    const csv = buildCsv([
+      { infinitive: 'xyzs', imperativ: 'xyzs', presens: 'qqs', preteritum: 'zzs', supinum: 'wws' },
+    ]);
+    setupFixture(csv, shipped);
+    const result = run();
+    expect(result.status).toBe(0);
+    const row = findReviewRow(readFileSync(reviewPath(), 'utf8'), 'xyzs');
+    expect(row.grupp).toBe('4');
+    expect(row.status).toBe('needs-check');
+    expect(row.grupp).not.toBe('deponens');
+    expect(row.reasons.length).toBeGreaterThan(0);
+    expect(row.reasons).toContain('grupp needs human verification');
+  });
+
+  it('classifies the genuinely irregular deponens verb "finnas" (finnas/finns/fanns/funnits) as residual grupp 4, needs-check — not deponens', () => {
+    const csv = buildCsv([
+      {
+        infinitive: 'finnas',
+        imperativ: 'finn',
+        presens: 'finns',
+        preteritum: 'fanns',
+        supinum: 'funnits',
+      },
+    ]);
+    setupFixture(csv, shipped);
+    const result = run();
+    expect(result.status).toBe(0);
+    const row = findReviewRow(readFileSync(reviewPath(), 'utf8'), 'finnas');
+    expect(row.grupp).toBe('4');
+    expect(row.status).toBe('needs-check');
+    expect(row.grupp).not.toBe('deponens');
+    expect(row.reasons).toContain('grupp needs human verification');
+  });
+
+  it('still classifies stem-coherent deponens verbs (hoppas, trivas) as deponens, pass', () => {
+    const csv = buildCsv([
+      {
+        infinitive: 'hoppas',
+        imperativ: 'hoppas',
+        presens: 'hoppas',
+        preteritum: 'hoppades',
+        supinum: 'hoppats',
+      },
+      {
+        infinitive: 'trivas',
+        imperativ: 'trivs',
+        presens: 'trivs',
+        preteritum: 'trivdes',
+        supinum: 'trivts',
+      },
+    ]);
+    setupFixture(csv, shipped);
+    const result = run();
+    expect(result.status).toBe(0);
+    const reviewCsv = readFileSync(reviewPath(), 'utf8');
+    expect(findReviewRow(reviewCsv, 'hoppas')).toEqual({
+      grupp: 'deponens',
+      status: 'pass',
+      reasons: '',
+    });
+    expect(findReviewRow(reviewCsv, 'trivas')).toEqual({
+      grupp: 'deponens',
+      status: 'pass',
+      reasons: '',
+    });
+  });
+
+  it('emits grupp 4 (not empty) for a regular-looking residual strong verb, without upgrading it to pass', () => {
+    const csv = buildCsv([
+      {
+        infinitive: 'springa',
+        imperativ: 'spring',
+        presens: 'springer',
+        preteritum: 'sprang',
+        supinum: 'sprungit',
+      },
+    ]);
+    setupFixture(csv, shipped);
+    const result = run();
+    expect(result.status).toBe(0);
+    const row = findReviewRow(readFileSync(reviewPath(), 'utf8'), 'springa');
+    expect(row.grupp).toBe('4');
+    expect(row.grupp).not.toBe('');
+    expect(row.status).not.toBe('pass');
+  });
+
+  it('does not flag a declared-grupp shipped row as a grupp-4 contradiction when its forms rely on an unmodelled spelling simplification (vända, declared 2a)', () => {
+    const trivialCsv = buildCsv([
+      {
+        infinitive: 'kalla',
+        imperativ: 'kalla',
+        presens: 'kallar',
+        preteritum: 'kallade',
+        supinum: 'kallat',
+      },
+    ]);
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'vända',
+          imperativ: 'vänd',
+          presens: 'vänder',
+          preteritum: 'vände',
+          supinum: 'vänt',
+          grupp: '2a',
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Shipped table: 2 rows, 0 validator failures');
+  });
+});
+
+// ---------------------------------------------------------------------
 // npm script / CI wiring (static config regression, real repo files)
 // ---------------------------------------------------------------------
 describe('npm script and CI wiring', () => {

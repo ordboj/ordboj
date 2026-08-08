@@ -55,11 +55,19 @@
 // classifies and cross-checks forms that are ALREADY present in the data,
 // and any row whose regular forms don't line up with one of the four
 // mechanical patterns below — including every case above — falls through
-// to 'needs-check' (grupp 4 / irregular bucket), never a guessed pass.
+// to the residual grupp 4 bucket ("starka och oregelbundna verb", the same
+// definition as the `Grupp` doc comment in src/data/verbData.ts), with
+// status 'needs-check' — never a guessed pass.
 // 'needs-check' is not a validator failure; CLAUDE.md requires grupp 4
 // verbs to be verified individually against a reference, never derived, so
 // a human confirming the grupp by hand (as all shipped grupp-4 rows already
 // are) is the correct and expected path, not a gap in the script.
+// Because grupp 4 here means "matched nothing mechanical", it is evidence
+// of absence, not evidence of a wrong grupp: a residual '4' never
+// contradicts a row's own declared grupp (see classifyAndValidate), or
+// every shipped row that relies on an unmodelled spelling simplification
+// ("vända" -> "vände", "betyda" -> "betytt") would fail the shipped-table
+// gate for being correct Swedish.
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -154,7 +162,7 @@ const VOICELESS_FINAL = new Set(['f', 'k', 'p', 't', 's', 'x']);
 // ---------------------------------------------------------------------
 function splitParticle(inf, pres, pret, sup) {
   const sp = inf.indexOf(' ');
-  if (sp === -1) return { inf, pres, pret, sup };
+  if (sp === -1) return { inf, pres, pret, sup, particleConfirmed: true };
   const particle = inf.slice(sp); // e.g. " sig"
   if (pres.endsWith(particle) && pret.endsWith(particle) && sup.endsWith(particle)) {
     return {
@@ -162,21 +170,59 @@ function splitParticle(inf, pres, pret, sup) {
       pres: pres.slice(0, pres.length - particle.length),
       pret: pret.slice(0, pret.length - particle.length),
       sup: sup.slice(0, sup.length - particle.length),
+      particleConfirmed: true,
     };
   }
   // Couldn't confirm a shared particle across all forms — classify as-is.
-  // This will almost certainly fail to match any mechanical pattern below
-  // and fall through to 'needs-check', which is the safe outcome.
-  return { inf, pres, pret, sup };
+  // This will almost certainly fail to match any mechanical pattern below,
+  // and `particleConfirmed: false` keeps it out of the residual grupp 4
+  // bucket as well: a row whose particle appears in the infinitive but not
+  // in every conjugated form is a structural data defect, not evidence of a
+  // strong verb. It gets an empty grupp cell and 'needs-check'.
+  return { inf, pres, pret, sup, particleConfirmed: false };
 }
 
 // ---------------------------------------------------------------------
-// Classifier. Returns { grupp, contradiction } where grupp is one of
-// '1' | '2a' | '2b' | '3' | 'deponens' | null (null = needs-check /
-// irregular, never guessed), and contradiction is a human-readable reason
-// string, present only when two fields disagree about the SAME row (a real
-// data bug), never merely because a form doesn't match a regular pattern.
+// Deponens (CLAUDE.md: "hoppas / hoppas / hoppades / hoppats" — the -s
+// belongs to the verb in every form; these are not passives).
+//
+// Ending in "s" is necessary but nowhere near sufficient: four unrelated
+// s-final stems satisfy it. A real deponens is a grupp 1/2 verb wearing an
+// -s, so its stripped forms must still agree on ONE stem:
+//   grupp 1   hoppas  / hoppas / hoppades / hoppats   (stem "hopp")
+//   grupp 2a  trivas  / trivs  / trivdes  / trivts    (stem "triv")
+//   grupp 2b  tyckas  / tycks  / tycktes  / tyckts    (stem "tyck")
+// Anything else — including genuinely irregular deponens verbs (finnas /
+// finns / fanns / funnits) and the stem-boundary simplifications this
+// script deliberately doesn't model (skämmas / skäms, not "skämms") —
+// returns false and goes to a human, never to 'pass'.
 // ---------------------------------------------------------------------
+function isCoherentDeponens({ inf, pres, pret, sup }) {
+  const infStem = inf.slice(0, -1); // "hoppas" -> "hoppa"
+  if (infStem.length < 2 || !infStem.endsWith('a')) return false;
+  const stem = infStem.slice(0, -1); // -> "hopp"
+  const grupp1 = pres === stem + 'as' && pret === stem + 'ades' && sup === stem + 'ats';
+  const grupp2a = pres === stem + 's' && pret === stem + 'des' && sup === stem + 'ts';
+  const grupp2b = pres === stem + 's' && pret === stem + 'tes' && sup === stem + 'ts';
+  return grupp1 || grupp2a || grupp2b;
+}
+
+// ---------------------------------------------------------------------
+// Classifier. Returns { grupp, contradiction, note } where grupp is one of
+// '1' | '2a' | '2b' | '3' | '4' | 'deponens' | null. '4' is the residual
+// strong/irregular bucket: the forms are structurally sound but match no
+// mechanical pattern, so the row is reported as grupp 4 and still gets
+// status 'needs-check' — a human verifies it, the script never claims it.
+// null means the grupp is not reportable at all (a cross-field
+// contradiction, or an unconfirmed particle).
+// `contradiction` is a human-readable reason string, present only when two
+// fields disagree about the SAME row (a real data bug), never merely
+// because a form doesn't match a regular pattern. `note` explains a
+// needs-check verdict without being a validator failure.
+// ---------------------------------------------------------------------
+const DEPONENS_NOTE =
+  'deponens-shaped (infinitive and all three forms end in "s") but the s-forms do not agree on one stem the way a regular grupp 1/2 deponens does; grupp needs human verification';
+
 function classifyCore({ inf, pres, pret, sup }) {
   if (
     inf.length > 1 &&
@@ -185,7 +231,9 @@ function classifyCore({ inf, pres, pret, sup }) {
     pret.endsWith('s') &&
     sup.endsWith('s')
   ) {
-    return { grupp: 'deponens', contradiction: null };
+    return isCoherentDeponens({ inf, pres, pret, sup })
+      ? { grupp: 'deponens', contradiction: null, note: null }
+      : { grupp: '4', contradiction: null, note: DEPONENS_NOTE };
   }
 
   if (inf.endsWith('a')) {
@@ -207,6 +255,7 @@ function classifyCore({ inf, pres, pret, sup }) {
         return {
           grupp: null,
           contradiction: `presens "${pres}" implies grupp ${presSignal === '1' ? '1' : '2'} but preteritum/supinum imply grupp ${pretSupSignal}`,
+          note: null,
         };
       }
       if (pretSupSignal === '2a' || pretSupSignal === '2b') {
@@ -216,32 +265,36 @@ function classifyCore({ inf, pres, pret, sup }) {
           return {
             grupp: null,
             contradiction: `stem "${stem}" ends in voiceless "${finalConsonant}" (k/p/t/s/x) but preteritum "${pret}" is the grupp 2a (voiced) -de pattern; expected grupp 2b -te`,
+            note: null,
           };
         }
         if (pretSupSignal === '2b' && !isVoiceless) {
           return {
             grupp: null,
             contradiction: `stem "${stem}" ends in voiced "${finalConsonant}" but preteritum "${pret}" is the grupp 2b (voiceless) -te pattern; expected grupp 2a -de`,
+            note: null,
           };
         }
       }
-      return { grupp: pretSupSignal, contradiction: null };
+      return { grupp: pretSupSignal, contradiction: null, note: null };
     }
     // Neither a full regular match nor an unambiguous cross-field
     // disagreement — either a genuine strong/irregular verb (vara, komma,
     // sätta, ...) or a stem-boundary spelling simplification this script
-    // deliberately does not model (see header note). Never guess: defer.
-    return { grupp: null, contradiction: null };
+    // deliberately does not model (see header note). Both belong in the
+    // residual grupp 4 bucket, reported but never claimed: status stays
+    // 'needs-check' so a human verifies the class against a reference.
+    return { grupp: '4', contradiction: null, note: null };
   }
 
   // Infinitive doesn't end in "a": grupp 3 candidate (bo/tro/ro-style short
   // stem) if presens/preteritum/supinum all agree with the grupp 3 pattern;
   // otherwise an irregular verb whose infinitive happens to be short
-  // (se, ge, gå, stå, bli, ...) — defer, don't guess.
+  // (se, ge, gå, stå, bli, ...) — residual grupp 4, needs-check.
   if (pres === inf + 'r' && pret === inf + 'dde' && sup === inf + 'tt') {
-    return { grupp: '3', contradiction: null };
+    return { grupp: '3', contradiction: null, note: null };
   }
-  return { grupp: null, contradiction: null };
+  return { grupp: '4', contradiction: null, note: null };
 }
 
 function classifyAndValidate(infinitive, imperativ, presens, preteritum, supinum, declaredGrupp) {
@@ -254,13 +307,22 @@ function classifyAndValidate(infinitive, imperativ, presens, preteritum, supinum
   const emptyImperativ = (imperativ ?? '').trim() === '';
 
   const core = splitParticle(infinitive, presens, preteritum, supinum);
-  const { grupp, contradiction } = classifyCore(core);
+  const classified = classifyCore(core);
+  const { contradiction, note } = classified;
+  // An unconfirmed particle means the forms were never reduced to one verb,
+  // so nothing about them is reportable — not even the residual grupp 4.
+  const grupp = core.particleConfirmed ? classified.grupp : null;
   if (contradiction) reasons.push(`contradiction: ${contradiction}`);
 
+  // Residual '4' means "matched no mechanical pattern", which is not
+  // evidence that a declared grupp is wrong — every shipped row relying on
+  // an unmodelled spelling simplification lands there. Only a positive
+  // grupp 1/2a/2b/3 match can contradict a declared grupp.
   if (
     declaredGrupp !== undefined &&
     grupp !== null &&
     grupp !== 'deponens' &&
+    grupp !== '4' &&
     declaredGrupp !== grupp
   ) {
     reasons.push(
@@ -268,14 +330,17 @@ function classifyAndValidate(infinitive, imperativ, presens, preteritum, supinum
     );
   }
 
+  const mechanicallyConfirmed = grupp !== null && grupp !== '4';
+
   let status;
   if (reasons.length > 0) {
     status = 'fail';
   } else if (emptyImperativ && !isModal) {
     status = 'fail';
     reasons.push('empty imperativ on non-modal verb');
-  } else if (grupp === null) {
+  } else if (!mechanicallyConfirmed) {
     status = 'needs-check';
+    if (note) reasons.push(note);
   } else {
     status = 'pass';
   }
