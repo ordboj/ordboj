@@ -280,13 +280,16 @@ describe("PracticeCard - multiple-choice distractor policy (#139)", () => {
 
   it("produces exactly 4 unique, non-empty options including the correct answer, for several verb/form pairs", async () => {
     // General validity check across a spread of forms and conjugation
-    // groups (grupp 1, 2a, 2b, 3, 4), doubling as evidence that option
-    // building always terminates (no unbounded retry loop can hang the
-    // component under waitFor's timeout).
+    // groups (grupp 1, 2a, 2b, 4 - each with enough same/adjacent-group
+    // candidates to fill all 3 distractor slots), doubling as evidence that
+    // option building always terminates (no unbounded retry loop can hang
+    // the component under waitFor's timeout). Grupp '3' has only 3 verbs
+    // total and legitimately degrades below 4 options; that's covered by
+    // the dedicated degrade test below, not here.
     const cases: Array<{ infinitive: string; form: "presens" | "preteritum" | "supinum" }> = [
       { infinitive: "tycka", form: "presens" }, // grupp 2b
       { infinitive: "höra", form: "preteritum" }, // grupp 2a
-      { infinitive: "tro", form: "supinum" }, // grupp 3
+      { infinitive: "börja", form: "preteritum" }, // grupp 1
       { infinitive: "komma", form: "presens" }, // grupp 4
     ];
 
@@ -316,6 +319,66 @@ describe("PracticeCard - multiple-choice distractor policy (#139)", () => {
       }
 
       unmount();
+    }
+  });
+
+  it("falls back to typing mode instead of rendering the empty/unavailable form as a multiple-choice option", async () => {
+    // "kunna" has no imperativ (imperativ: "" -> conjugateVerb falls back to
+    // "(not available)"). Requesting multiple-choice mode for that pair must
+    // not render "(not available)" as a clickable, gradeable "correct"
+    // button — the card degrades to the typing input instead.
+    renderWithProviders(
+      <PracticeCard
+        infinitive="kunna"
+        form="imperativ"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />
+    );
+
+    const input = await screen.findByPlaceholderText("Type your answer...");
+    expect(input).toBeInTheDocument();
+    // No option grid at all - the multiple-choice grid ("grid-cols-1") never
+    // renders, so there is no button offering "(not available)" as a choice.
+    expect(document.querySelector(".grid-cols-1")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "(not available)" })).not.toBeInTheDocument();
+  });
+
+  it("degrades to fewer options rather than leak a cross-group distractor when a grupp-3 target has too few in-group candidates", async () => {
+    // Grupp '3' has exactly three verbs total ("tro", "te sig", "ro") and no
+    // adjacent group (only 2a<->2b are adjacent), so a grupp-'3' target has
+    // at most 2 valid in-group distractors available. The hard group
+    // constraint (P14) means the option list must shrink to 3 total options
+    // (1 correct + 2 distractors), never pad to 4 with a cross-group verb.
+    renderWithProviders(
+      <PracticeCard
+        infinitive="tro"
+        form="presens"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("button").length).toBeGreaterThan(0);
+    });
+
+    const optionTexts = screen.getAllByRole("button").map((b) => b.textContent);
+    expect(optionTexts).toHaveLength(3);
+    expect(optionTexts).toContain("tror");
+
+    const allVerbs = await getAllConjugatedVerbs();
+    const distractorTexts = optionTexts.filter((t) => t !== "tror");
+    for (const text of distractorTexts) {
+      const sourceVerb = allVerbs.find((v) => v.presens === text);
+      expect(sourceVerb, `distractor "${text}" should map to a known verb`).toBeDefined();
+      expect(getVerbGrupp(sourceVerb!.infinitive)).toBe("3");
     }
   });
 });

@@ -60,19 +60,31 @@ export function PracticeCard({
   }, [infinitive, form]);
 
   const correctAnswer = conjugated?.[form] || '';
+  // A verb's conjugated form is only ever '' before data loads, or the
+  // literal placeholder for a form that verb doesn't have (modal verbs have
+  // no imperativ, etc). Neither is a real answer, so neither may be offered
+  // as the correct multiple-choice button.
+  const isAnswerAvailable = correctAnswer !== '' && correctAnswer !== '(not available)';
+  // Multiple choice with no valid correct answer has nothing to test; fall
+  // back to typing mode rather than render a card whose "correct" button is
+  // the unavailable-form placeholder.
+  const effectiveMode = mode === 'multiple-choice' && !isAnswerAvailable ? 'typing' : mode;
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
 
   // Generate multiple choice options.
   //
   // Distractor policy (learning-designer decision, P14 in
-  // docs/learning/2026-08-08-ux-pedagogy-red-lines.md): distractors must
-  // share the target verb's conjugation group (or an adjacent group) and,
-  // where known, its CEFR level; they must be the same form as the target;
-  // they must never be a correct form of the target verb in a different
-  // slot; and an empty or "(not available)" conjugated form is never a
-  // valid option. Candidates are ranked once and the top three taken, so
-  // building the option list is a single bounded pass with no unbounded
-  // retry loop.
+  // docs/learning/2026-08-08-ux-pedagogy-red-lines.md, RED LINE): distractors
+  // must come from the target verb's conjugation group or an adjacent group
+  // (never cross-group, no exceptions) and, where known, match its CEFR
+  // level; they must be the same form as the target; they must never be a
+  // correct form of the target verb in a different slot; and an empty or
+  // "(not available)" conjugated form is never a valid option. Candidates
+  // that don't satisfy the group constraint are excluded before ranking, so
+  // if fewer than three qualify the option list degrades to fewer
+  // distractors rather than fill the remaining slots cross-group. Candidates
+  // are ranked once and the top three taken, so building the option list is
+  // a single bounded pass with no unbounded retry loop.
   useEffect(() => {
     const generateOptions = async () => {
       const allVerbs = await getAllConjugatedVerbs();
@@ -95,15 +107,18 @@ export function PracticeCard({
           const value = v[form];
           if (!value || value === '(not available)') return acc;
           if (seen.has(value) || targetOwnForms.has(value)) return acc;
-          seen.add(value);
 
           const vGrupp = getVerbGrupp(v.infinitive);
-          let score = 0;
-          if (targetGrupp && vGrupp === targetGrupp) {
-            score += 20;
-          } else if (targetGrupp && vGrupp && adjacentGrupp[targetGrupp]?.includes(vGrupp)) {
-            score += 10;
-          }
+          const isSameGroup = targetGrupp !== undefined && vGrupp === targetGrupp;
+          const isAdjacentGroup =
+            targetGrupp !== undefined &&
+            vGrupp !== undefined &&
+            (adjacentGrupp[targetGrupp]?.includes(vGrupp) ?? false);
+          // P14 hard constraint: same or adjacent group only, never cross-group.
+          if (!isSameGroup && !isAdjacentGroup) return acc;
+
+          seen.add(value);
+          let score = isSameGroup ? 20 : 10;
           if (conjugated?.cefr && v.cefr === conjugated.cefr) {
             score += 1;
           }
@@ -120,10 +135,10 @@ export function PracticeCard({
       setOptions([correctAnswer, ...distractors].sort(() => Math.random() - 0.5));
     };
 
-    if (correctAnswer && conjugated) {
+    if (isAnswerAvailable && conjugated) {
       generateOptions();
     }
-  }, [correctAnswer, form, infinitive, conjugated]);
+  }, [correctAnswer, isAnswerAvailable, form, infinitive, conjugated]);
 
   const handleSubmit = (answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
@@ -251,7 +266,7 @@ export function PracticeCard({
           {/* Input Area */}
           {!showFeedback && (
             <div className="space-y-4">
-              {mode === 'typing' ? (
+              {effectiveMode === 'typing' ? (
                 <div className="space-y-4">
                   <Input
                     value={userAnswer}
