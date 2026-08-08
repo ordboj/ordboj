@@ -11,6 +11,8 @@ import {
   getAcceptedAnswers,
   getAlternatesDisclosure,
   isAcceptedAnswer,
+  isImperativNotApplicable,
+  getAllConjugatedVerbs,
   type Form,
 } from '@/lib/verbs';
 import { VERB_DATA } from '@/data/verbData';
@@ -54,6 +56,71 @@ describe('conjugateVerb - "(not available)" fallback for a known verb missing on
     const result = await conjugateVerb('kunna');
     expect(result.imperativ).toBe('(not available)');
   });
+});
+
+// Issue #124: modal verbs (kunna, få, vilja) grammatically have no
+// imperativ in Swedish. isImperativNotApplicable() and the
+// ConjugatedVerb.imperativNotApplicable field let a consumer tell that
+// apart from "not filled in yet" instead of relying solely on the
+// "(not available)" placeholder string.
+describe('isImperativNotApplicable (issue #124)', () => {
+  it.each(['kunna', 'få', 'vilja'] as const)('returns true for modal verb "%s"', (infinitive) => {
+    expect(isImperativNotApplicable(infinitive)).toBe(true);
+  });
+
+  it('returns false for a non-modal verb that has a real imperativ', () => {
+    expect(isImperativNotApplicable('vara')).toBe(false);
+  });
+
+  it('returns false for a verb not found in VERB_DATA (lookup miss) - never guesses "true" for an unknown verb', () => {
+    expect(isImperativNotApplicable('this-infinitive-does-not-exist')).toBe(false);
+  });
+
+  // "te sig" and "anse" have an empty imperativ pending human review
+  // (issue #132), which is a different fact from "grammatically confirmed
+  // absent" (issue #124). Conflating the two would let the UI treat an
+  // unconfirmed gap as a settled grammatical fact.
+  it.each(['te sig', 'anse'] as const)(
+    'returns false for "%s" even though its imperativ is still empty (empty-pending-review is not the same as confirmed-absent)',
+    (infinitive) => {
+      expect(isImperativNotApplicable(infinitive)).toBe(false);
+    },
+  );
+});
+
+describe('conjugateVerb / getAllConjugatedVerbs - imperativNotApplicable flag (issue #124)', () => {
+  it('flags kunna imperativNotApplicable: true', async () => {
+    const result = await conjugateVerb('kunna');
+    expect(result.imperativNotApplicable).toBe(true);
+  });
+
+  it('does not flag a non-modal verb (vara) even though it has a real imperativ', async () => {
+    const result = await conjugateVerb('vara');
+    expect(result.imperativNotApplicable).toBeFalsy();
+  });
+
+  it('does not flag the unknown-verb fallback: the app has no basis to claim the form does not exist', async () => {
+    const result = await conjugateVerb('this-infinitive-does-not-exist');
+    expect(result.imperativNotApplicable).toBeFalsy();
+  });
+
+  it('flags exactly the three modal verbs (få, kunna, vilja) across the whole table, no more, no fewer', async () => {
+    const all = await getAllConjugatedVerbs();
+    const flagged = all
+      .filter((v) => v.imperativNotApplicable)
+      .map((v) => v.infinitive)
+      .sort();
+    expect(flagged).toEqual(['få', 'kunna', 'vilja']);
+  });
+
+  it.each(['te sig', 'anse'] as const)(
+    'does not flag "%s" even though its imperativ is still "(not available)" pending human review',
+    async (infinitive) => {
+      const result = await conjugateVerb(infinitive);
+      expect(result.imperativ).toBe('(not available)');
+      expect(result.imperativNotApplicable).toBeFalsy();
+    },
+  );
 });
 
 describe('getVerbs - id scheme', () => {

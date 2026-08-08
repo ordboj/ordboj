@@ -399,7 +399,19 @@ export default function Progress() {
                         <span lang="sv">{verb.supinum}</span>
                       </TableCell>
                       <TableCell>
-                        {verb.imperativ === '(not available)' ? (
+                        {/* imperativNotApplicable (#124) explicitly flags the
+                            common, confirmed case: modal verbs, which
+                            grammatically have no imperativ. The
+                            "(not available)" literal-string check stays as a
+                            fallback for a couple of verbs (e.g. "te sig",
+                            "anse" in verbData.ts) whose imperativ is
+                            intentionally empty pending human review and are
+                            deliberately not flagged imperativNotApplicable --
+                            that field means "confirmed absent," not
+                            "unconfirmed." This can go away once
+                            swedish-linguist fills those forms or adds a field
+                            for "known empty, not yet confirmed why." */}
+                        {verb.imperativNotApplicable || verb.imperativ === '(not available)' ? (
                           <span className="text-muted-foreground">
                             <span aria-hidden="true">—</span>
                             <span className="sr-only">not applicable</span>
