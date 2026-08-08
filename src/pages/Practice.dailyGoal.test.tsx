@@ -6,9 +6,10 @@ import Practice from '@/pages/Practice';
 
 // Issue #26 acceptance criteria, exercised end-to-end against the REAL
 // useSrsProgress + useSettings hooks (not mocked) - this is the "what a
-// user actually sees" level of coverage: dailyGoal default 12 / range 5-50,
-// session ends at answeredToday >= dailyGoal OR queue.length === 0,
-// answeredToday persisted as {date, count}, header shows "n / dailyGoal".
+// user actually sees" level of coverage: dailyGoal default 50 / range 5-120
+// (docs/learning/session-shape-and-daily-goal.md), session ends at
+// answeredToday >= dailyGoal OR queue.length === 0, answeredToday persisted
+// as {date, count}, header shows "n / dailyGoal".
 // Only the verbs module (swedish-linguist, real ~50-verb A1 table) is left
 // unmocked deliberately, so the queue is large enough to prove the
 // goal-based ending fires well before the queue would ever empty.
@@ -29,6 +30,8 @@ beforeEach(() => {
 
 describe('Practice page - bounded session integration (issue #26, real hooks)', () => {
   it('ends the session once answeredToday reaches dailyGoal, even though many due items remain', async () => {
+    // 5 is DAILY_GOAL_MIN: the smallest goal that survives the load-time
+    // sanitization (anything lower coerces to the default 50).
     localStorage.setItem(
       SETTINGS_KEY,
       JSON.stringify({
@@ -36,26 +39,25 @@ describe('Practice page - bounded session integration (issue #26, real hooks)', 
         showExamples: false,
         autoplayAudio: false,
         muteAudio: true,
-        dailyGoal: 2,
+        dailyGoal: 5,
         cefrLevels: ['A1'],
       }),
     );
     const user = userEvent.setup();
     renderWithProviders(<Practice />, { route: '/practice' });
 
-    expect(await screen.findByText('0 / 2')).toBeInTheDocument();
+    expect(await screen.findByText('0 / 5')).toBeInTheDocument();
 
-    await answerCardWrong(user);
-    expect(await screen.findByText('1 / 2')).toBeInTheDocument();
-
-    await answerCardWrong(user);
+    for (let i = 0; i < 5; i++) {
+      await answerCardWrong(user);
+    }
 
     // Bounded by dailyGoal, not by the due queue (the real A1 table has far
-    // more than 2 due items available).
+    // more than 5 due items available).
     expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
 
     const stored = JSON.parse(localStorage.getItem(DAILY_COUNT_KEY) as string);
-    expect(stored.count).toBe(2);
+    expect(stored.count).toBe(5);
   });
 
   it("does not re-show a completed day's session: a fresh mount with answeredToday already at dailyGoal goes straight to the completion screen", async () => {
@@ -68,11 +70,11 @@ describe('Practice page - bounded session integration (issue #26, real hooks)', 
         showExamples: false,
         autoplayAudio: false,
         muteAudio: true,
-        dailyGoal: 2,
+        dailyGoal: 5,
         cefrLevels: ['A1'],
       }),
     );
-    localStorage.setItem(DAILY_COUNT_KEY, JSON.stringify({ version: 1, date: todayKey, count: 2 }));
+    localStorage.setItem(DAILY_COUNT_KEY, JSON.stringify({ version: 1, date: todayKey, count: 5 }));
 
     renderWithProviders(<Practice />, { route: '/practice' });
 

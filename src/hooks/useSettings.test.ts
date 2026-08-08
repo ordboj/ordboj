@@ -9,7 +9,8 @@ const DEFAULTS = {
   showExamples: false,
   autoplayAudio: true,
   muteAudio: false,
-  dailyGoal: 12,
+  // docs/learning/session-shape-and-daily-goal.md: 10 minutes x 5 items.
+  dailyGoal: 50,
   cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
 };
 
@@ -114,6 +115,47 @@ describe('issue #92: interfaceLanguage removal', () => {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
     expect(stored.dailyGoal).toBe(42);
     expect(Object.keys(DEFAULTS)).not.toContain('interfaceLanguage');
+  });
+});
+
+// docs/learning/session-shape-and-daily-goal.md: dailyGoal range 5-120. A
+// stored 0 or NaN would otherwise soft-brick practice (answeredToday >= 0
+// is met before the first card), so invalid values coerce to the default
+// on load rather than clamping to a bound.
+describe('dailyGoal sanitization on load (issue #26)', () => {
+  it.each([
+    ['zero (soft-brick guard)', 0],
+    ['negative', -5],
+    ['below the minimum', 4],
+    ['above the maximum', 121],
+    ['a string', '25'],
+    ['null', null],
+  ])('coerces %s to the default', async (_label, value) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, dailyGoal: value }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.dailyGoal).toBe(50);
+  });
+
+  it('keeps a valid stored value at the range bounds', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, dailyGoal: 5 }));
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.settings.dailyGoal).toBe(5);
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, dailyGoal: 120 }));
+    const { result: result2 } = renderHook(() => useSettings());
+    await waitFor(() => expect(result2.current.isLoading).toBe(false));
+    expect(result2.current.settings.dailyGoal).toBe(120);
+  });
+
+  it('rounds a fractional stored value instead of rejecting it', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, dailyGoal: 24.6 }));
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.settings.dailyGoal).toBe(25);
   });
 });
 
