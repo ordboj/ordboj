@@ -396,8 +396,26 @@ function parseVerbDataTs(text) {
   return { header, blocks, footer: trailingFooter + footer, eol };
 }
 
-function formatNewRow({ cefr, infinitive, imperativ, presens, preteritum, supinum, grupp }) {
-  return `  { cefr: "${cefr}", infinitive: "${infinitive}", imperativ: "${imperativ}", presens: "${presens}", preteritum: "${preteritum}", supinum: "${supinum}", grupp: "${grupp}" },`;
+// `grupp` is optional: `src/data/verbData.ts`'s `Grupp` type has no
+// 'deponens' member, so a deponens promotion candidate must be emitted
+// WITHOUT a `grupp` field (see the deponens branch in main() below) —
+// pasting `grupp: "deponens"` verbatim would break `npm run typecheck`.
+// `comment` (optional) is appended as a trailing `//` comment, e.g. the
+// NEEDS HUMAN REVIEW marker the shipped-table gate treats as an escape
+// hatch for a missing `grupp`.
+function formatNewRow({
+  cefr,
+  infinitive,
+  imperativ,
+  presens,
+  preteritum,
+  supinum,
+  grupp,
+  comment,
+}) {
+  const grouppField = grupp !== undefined ? `, grupp: "${grupp}"` : '';
+  const commentSuffix = comment ? ` // ${comment}` : '';
+  return `  { cefr: "${cefr}", infinitive: "${infinitive}", imperativ: "${imperativ}", presens: "${presens}", preteritum: "${preteritum}", supinum: "${supinum}"${grouppField} },${commentSuffix}`;
 }
 
 // ---------------------------------------------------------------------
@@ -488,6 +506,19 @@ function main() {
       f.grupp,
     );
 
+    // The missing-grupp gate runs BEFORE the explained-empty-imperativ
+    // early-continue below, on purpose: a shipped row with
+    // noNaturalImperativ: true (or a 'modal verb' / 'NEEDS HUMAN CHECK'
+    // comment) must still declare a grupp or carry its own NEEDS HUMAN
+    // REVIEW marker. Checking this first closes the hole where an
+    // explained-empty row could skip the missing-grupp check entirely.
+    if (!block.hasGrupp && !/NEEDS HUMAN REVIEW/i.test(commentBlock)) {
+      shippedFailures.push({
+        infinitive: f.infinitive,
+        reasons: ['grupp omitted without a NEEDS HUMAN REVIEW comment'],
+      });
+      continue;
+    }
     // classifyAndValidate already fails empty-imperativ-on-non-modal using
     // the CSV-only MODAL_VERBS heuristic; the shipped table additionally
     // carries noNaturalImperativ / review comments as first-class evidence,
@@ -499,13 +530,6 @@ function main() {
       result.reasons[0] === 'empty imperativ on non-modal verb' &&
       explainedEmpty
     ) {
-      continue;
-    }
-    if (!block.hasGrupp && !/NEEDS HUMAN REVIEW/i.test(commentBlock)) {
-      shippedFailures.push({
-        infinitive: f.infinitive,
-        reasons: ['grupp omitted without a NEEDS HUMAN REVIEW comment'],
-      });
       continue;
     }
     if (result.status === 'fail') {
@@ -554,16 +578,29 @@ function main() {
       });
       continue;
     }
+    const rowFields = {
+      cefr: csvRow['cefr levels'] ?? '',
+      infinitive: candidate,
+      imperativ: csvRow.imperativ ?? '',
+      presens: csvRow.presens ?? '',
+      preteritum: csvRow.preteritum ?? '',
+      supinum: csvRow.supinum ?? '',
+    };
+    // `Grupp` (src/data/verbData.ts) has no 'deponens' member. Emit a
+    // deponens candidate WITHOUT a `grupp` field, plus a NEEDS HUMAN REVIEW
+    // comment — the marker the shipped-table gate already treats as the
+    // escape hatch for an omitted `grupp` — so the pasted row stays
+    // gate-clean and typecheck-clean. The review CSV (step 1 above) still
+    // reports 'deponens' in its grupp column; that's a report, not a paste
+    // target, and the AC asks for the deponens bucket there.
     promotedRows.push(
-      formatNewRow({
-        cefr: csvRow['cefr levels'] ?? '',
-        infinitive: candidate,
-        imperativ: csvRow.imperativ ?? '',
-        presens: csvRow.presens ?? '',
-        preteritum: csvRow.preteritum ?? '',
-        supinum: csvRow.supinum ?? '',
-        grupp: result.grupp,
-      }),
+      result.grupp === 'deponens'
+        ? formatNewRow({
+            ...rowFields,
+            comment:
+              "NEEDS HUMAN REVIEW: deponens verb — Grupp has no 'deponens' member; a human must pick the underlying conjugation grupp before pasting",
+          })
+        : formatNewRow({ ...rowFields, grupp: result.grupp }),
     );
   }
 
@@ -580,9 +617,7 @@ function main() {
       '// commented out with their reasons for reference; do not paste those in.',
       '',
       ...promotedRows,
-      ...promotionFailures.map(
-        (f) => `// REJECTED "${f.infinitive}": ${f.reasons.join('; ')}`,
-      ),
+      ...promotionFailures.map((f) => `// REJECTED "${f.infinitive}": ${f.reasons.join('; ')}`),
     ];
     writeFileSync(PROPOSED_ROWS_PATH, proposedLines.join('\n') + '\n', 'utf8');
   }
