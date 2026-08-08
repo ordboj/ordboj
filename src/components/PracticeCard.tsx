@@ -38,6 +38,11 @@ interface PracticeCardProps {
   showExamples: boolean;
   autoplayAudio: boolean;
   muteAudio: boolean;
+  // Whether, if this card is answered wrong, the item is still eligible to
+  // re-queue into the same sitting (docs/learning/lapse-handling.md). Drives
+  // the "you'll see this again" feedback copy; the re-queue decision itself
+  // is made by the caller (Practice.tsx).
+  willRequeueIfWrong?: boolean;
   repetitions?: number;
   onAnswer: (grade: Grade) => void;
 }
@@ -49,6 +54,7 @@ export function PracticeCard({
   showExamples,
   autoplayAudio,
   muteAudio,
+  willRequeueIfWrong = false,
   repetitions = 0,
   onAnswer,
 }: PracticeCardProps) {
@@ -149,19 +155,22 @@ export function PracticeCard({
     }
   }, [correctAnswer, isAnswerAvailable, form, infinitive, conjugated]);
 
-  const handleSubmit = useCallback((answer: string) => {
-    const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
-    setIsCorrect(correct);
-    setSubmittedAnswer(answer);
-    setShowFeedback(true);
+  const handleSubmit = useCallback(
+    (answer: string) => {
+      const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+      setIsCorrect(correct);
+      setSubmittedAnswer(answer);
+      setShowFeedback(true);
 
-    if (correct) {
-      setShowConfetti(true);
-      if (autoplayAudio) {
-        speakSwedish(correctAnswer, muteAudio);
+      if (correct) {
+        setShowConfetti(true);
+        if (autoplayAudio) {
+          speakSwedish(correctAnswer, muteAudio);
+        }
       }
-    }
-  }, [correctAnswer, autoplayAudio, muteAudio]);
+    },
+    [correctAnswer, autoplayAudio, muteAudio],
+  );
 
   // Auto-submit when answer is correct
   useEffect(() => {
@@ -376,6 +385,13 @@ export function PracticeCard({
                   </>
                 )}
               </div>
+
+              {!isCorrect && willRequeueIfWrong && (
+                <p className="text-sm text-muted-foreground text-center">
+                  You'll see this one again later in today's session — one more correct answer and
+                  it's done.
+                </p>
+              )}
 
               {!isCorrect && (
                 <div className="flex flex-wrap items-center justify-center gap-4 text-center">

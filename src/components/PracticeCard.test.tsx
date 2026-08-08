@@ -315,6 +315,79 @@ describe('PracticeCard - multiple-choice mode', () => {
   });
 });
 
+describe('PracticeCard - willRequeueIfWrong feedback copy', () => {
+  // docs/learning/lapse-handling.md: the same-sitting re-queue decision is
+  // made by the caller (Practice.tsx); PracticeCard's only job is to render
+  // the "you'll see this again" copy when told to, and never claim a
+  // re-queue that isn't happening. All three cases are asserted in one test
+  // (rather than three) because the "does not show" cases are, on their
+  // own, vacuously true against code that doesn't have the prop at all --
+  // pairing them with the true-case assertion is what makes the whole test
+  // actually fail against pre-feature code, instead of proving nothing.
+  it('shows the re-queue notice only for a wrong answer, and only when willRequeueIfWrong is true', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        willRequeueIfWrong={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    let input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'totallywrong');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    expect(await screen.findByText('Not quite')).toBeInTheDocument();
+    expect(screen.getByText(/you'll see this one again/i)).toBeInTheDocument();
+    unmount();
+
+    // Same wrong answer, but willRequeueIfWrong is false (the default): no
+    // notice, because no re-queue is actually going to happen.
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+    input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'totallywrong');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    expect(await screen.findByText('Not quite')).toBeInTheDocument();
+    expect(screen.queryByText(/you'll see this one again/i)).not.toBeInTheDocument();
+    unmount();
+
+    // willRequeueIfWrong true, but the answer is correct: still no notice,
+    // because there is nothing to re-queue.
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        willRequeueIfWrong={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+    input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'är');
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    expect(screen.queryByText(/you'll see this one again/i)).not.toBeInTheDocument();
+  });
+});
+
 describe('PracticeCard - on-screen special-character keys (issue #134: no answer leak)', () => {
   // Only single Swedish/Latin letter buttons qualify — excludes "Hint",
   // "Check Answer", "⌫" and multi-char option buttons.
