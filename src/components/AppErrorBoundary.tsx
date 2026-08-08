@@ -209,15 +209,6 @@ export function RouteCrashFallback({ reset }: { reset: () => void }) {
   );
 }
 
-/** Convenience wrapper for per-route usage in App.tsx. */
-export function RouteErrorBoundary({ children }: { children: ReactNode }) {
-  return (
-    <AppErrorBoundary fallback={(reset) => <RouteCrashFallback reset={reset} />}>
-      {children}
-    </AppErrorBoundary>
-  );
-}
-
 interface RouteChunkProps {
   /** A component created via lazyRoute() (src/lib/utils.ts). */
   component: LazyExoticComponent<ComponentType>;
