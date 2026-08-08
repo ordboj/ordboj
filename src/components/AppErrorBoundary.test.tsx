@@ -259,8 +259,9 @@ describe('RouteCrashFallback keeps the rest of the app navigable', () => {
   // href assertion cannot catch someone swapping the plain <a> for a
   // <Link> (see #89). Clicking is the only thing that tells them apart: a
   // <Link> calls history.push and moves the MemoryRouter's in-memory
-  // location, while a plain <a> is a jsdom no-op that the router never
-  // observes, so the location must stay put.
+  // location, while a plain <a> does not navigate under jsdom (jsdom raises
+  // "Not implemented: navigation" instead), so MemoryRouter never observes
+  // it and the location must stay put.
   it('clicking "Reload from the start" does not change the in-memory router location (a Link would navigate; a plain anchor is a jsdom no-op)', async () => {
     const user = userEvent.setup();
     render(
@@ -278,5 +279,15 @@ describe('RouteCrashFallback keeps the rest of the app navigable', () => {
     await user.click(reloadLink);
 
     expect(screen.getByTestId('location-display')).toHaveTextContent('/practice');
+
+    // Positive control: the same harness MUST be able to observe a real
+    // navigation, otherwise the assertion above could pass simply because
+    // the click never reached the DOM. The sibling <Link>Home</Link> in the
+    // same fallback proves the click path and the location display work.
+    // Uses an exact match (not toHaveTextContent) because "/" is a
+    // substring of "/practice", so a substring check here would pass
+    // vacuously even if the location never actually changed.
+    await user.click(screen.getByRole('link', { name: 'Home' }));
+    expect(screen.getByTestId('location-display').textContent).toBe('/');
   });
 });
