@@ -125,6 +125,63 @@ describe('Settings page - issue #137: CEFR checkbox guard against zero selection
   });
 });
 
+// Issue #327: the Switch primitive itself stays h-6 (24px, below the 44px
+// touch-target minimum). Each switch is wrapped in a native <label
+// htmlFor={id}> sized to min-h-11 min-w-11 (Tailwind 11 = 44px) so the
+// clickable box meets the target without touching the generated
+// ui/switch.tsx. jsdom cannot compute real layout, so this pins the class
+// contract that produces the 44px box, not pixel geometry.
+describe('Settings page - issue #327: 44px touch target on the Switch controls', () => {
+  it.each([
+    { id: 'show-examples', name: /show example sentences/i },
+    { id: 'autoplay-audio', name: /autoplay pronunciation/i },
+  ])('wraps the "$id" switch in a min-h-11 min-w-11 label bound via htmlFor', ({ id, name }) => {
+    renderWithProviders(<Settings />, { route: '/settings' });
+
+    const switchEl = document.getElementById(id) as HTMLElement;
+    expect(switchEl).not.toBeNull();
+    expect(switchEl.getAttribute('role')).toBe('switch');
+
+    const label = switchEl.closest('label');
+    expect(label).not.toBeNull();
+    expect(label).toHaveClass('min-h-11');
+    expect(label).toHaveClass('min-w-11');
+    expect(label).toHaveAttribute('for', id);
+
+    // Sanity check that the id is still reachable by its accessible name,
+    // i.e. the enlarged wrapper didn't detach the control from its text.
+    expect(screen.getByRole('switch', { name })).toBe(switchEl);
+  });
+
+  it('toggles showExamples via onCheckedChange when the enlarged label (not the switch button) is clicked', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Settings />, { route: '/settings' });
+
+    const switchEl = document.getElementById('show-examples') as HTMLElement;
+    const label = switchEl.closest('label') as HTMLElement;
+
+    // Click the label itself, not the switch, to prove the enlarged hit
+    // area - not just the underlying 24px button - actually activates it.
+    expect(label).not.toBe(switchEl);
+    await user.click(label);
+
+    expect(updateSettingsMock).toHaveBeenCalledWith({ showExamples: true });
+  });
+
+  it('toggles autoplayAudio via onCheckedChange when its enlarged label is clicked', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Settings />, { route: '/settings' });
+
+    const switchEl = document.getElementById('autoplay-audio') as HTMLElement;
+    const label = switchEl.closest('label') as HTMLElement;
+
+    await user.click(label);
+
+    // autoplayAudio starts true in the mocked settings, so clicking flips it off.
+    expect(updateSettingsMock).toHaveBeenCalledWith({ autoplayAudio: false });
+  });
+});
+
 describe('Settings page - issue #93: guard Reset All Progress with a real confirmation', () => {
   it('opens a confirmation dialog naming the exact consequence when the trigger is clicked, without resetting yet', async () => {
     const user = userEvent.setup();

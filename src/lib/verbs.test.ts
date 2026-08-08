@@ -411,6 +411,26 @@ describe('isAcceptedAnswer', () => {
     // "lade" is only a documented alternate for lägga's preteritum, not its presens.
     expect(isAcceptedAnswer('lägga', 'presens', 'lade')).toBe(false);
   });
+
+  // Issue #328: a learner's keyboard or input method can produce å/ä/ö as an
+  // NFD (decomposed) sequence — a base letter plus a combining ring/diaeresis
+  // above — instead of the single NFC (composed) code point VERB_DATA stores.
+  // Both sequences render identically and must count as the same answer.
+  it('accepts an answer typed in NFD (decomposed) Unicode against the NFC-stored form, for å, ä and ö', () => {
+    const gårNfd = 'går'.normalize('NFD');
+    const agerNfd = 'äger'.normalize('NFD');
+    const forsokerNfd = 'försöker'.normalize('NFD');
+
+    // Sanity check on the fixture itself: NFD really is a different code
+    // sequence here, so this test would fail without the #328 fix.
+    expect(gårNfd).not.toBe('går');
+    expect(agerNfd).not.toBe('äger');
+    expect(forsokerNfd).not.toBe('försöker');
+
+    expect(isAcceptedAnswer('gå', 'presens', gårNfd)).toBe(true);
+    expect(isAcceptedAnswer('äga', 'presens', agerNfd)).toBe(true);
+    expect(isAcceptedAnswer('försöka', 'presens', forsokerNfd)).toBe(true);
+  });
 });
 
 // Product policy P1 (docs/product/2026-08-08-alternate-answers-decision.md):
