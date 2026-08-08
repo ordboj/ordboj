@@ -60,6 +60,13 @@ describe('Settings page - issue #93: reset confirmation reaches the real reset p
     const user = userEvent.setup();
     renderWithProviders(<Settings />, { route: '/settings' });
 
+    // The backup is written on load, before reset ever runs - pin that half
+    // of the behaviour here (async: the migration load awaits getVerbs()),
+    // before the confirm click below removes it.
+    await waitFor(() => {
+      expect(localStorage.getItem(LEGACY_BACKUP_KEY)).toBe(preV3Store);
+    });
+
     await user.click(screen.getByRole('button', { name: /reset all progress/i }));
     const dialog = await screen.findByRole('alertdialog');
     // The AlertDialogAction ("confirm") inside the dialog, distinct from the
@@ -79,15 +86,12 @@ describe('Settings page - issue #93: reset confirmation reaches the real reset p
       expect(JSON.parse(stored as string)).toEqual({ version: 3, items: {} });
     });
 
-    // The exact set of localStorage keys present is unchanged by reset,
-    // aside from the one-shot pre-v3 backup the load path wrote before reset
-    // ever ran: settings is untouched, and no other key appears or
-    // disappears.
-    expect(storedKeys()).toEqual([LEGACY_BACKUP_KEY, SETTINGS_KEY, SRS_KEY].sort());
+    // Reset means reset: the one-shot pre-v3 backup the load path wrote is a
+    // migration safety net, not a second undo history, so "reset all
+    // progress" removes it along with the live store. Only the unrelated
+    // settings key survives untouched.
+    expect(storedKeys()).toEqual([SETTINGS_KEY, SRS_KEY].sort());
     expect(localStorage.getItem(SETTINGS_KEY)).toBe(JSON.stringify({ practiceMode: 'typing' }));
-    // The backup is the untouched pre-migration seed, byte for byte - reset
-    // clears the live store, not the safety net that exists for exactly the
-    // case where clearing the live store was a mistake.
-    expect(localStorage.getItem(LEGACY_BACKUP_KEY)).toBe(preV3Store);
+    expect(localStorage.getItem(LEGACY_BACKUP_KEY)).toBeNull();
   });
 });

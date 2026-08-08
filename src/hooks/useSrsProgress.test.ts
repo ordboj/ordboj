@@ -959,3 +959,79 @@ describe('#53: explicit reject list ([], {"x":1}, settings export)', () => {
     }
   });
 });
+
+// #189 finding 13: migrateConjugationKeys re-keys a legacy positional id
+// ("1-presens") onto the canonical verb id ("vara-presens") on every read.
+// Two edge cases were previously argued only in a comment above the
+// implementation and had no test pinning them.
+describe('migrateConjugationKeys - #189 finding 13 edge cases', () => {
+  // Both variants seed the same two items in opposite key order, since
+  // Object.entries order is the only thing that could make an
+  // insertion-order-dependent implementation look correct by accident.
+  it.each([
+    ['positional key first', ['1-presens', 'vara-presens']],
+    ['canonical key first', ['vara-presens', '1-presens']],
+  ] as const)(
+    'an already-canonical key wins a collision with its legacy positional twin (%s)',
+    async (_label, keyOrder) => {
+      vi.mocked(getVerbs).mockResolvedValue([{ id: 'vara', infinitive: 'vara', cefr: 'A1' }]);
+
+      const states: Record<string, unknown> = {
+        '1-presens': {
+          itemId: '1-presens',
+          repetitions: 9,
+          intervalDays: 300,
+          easeFactor: 2.6,
+          dueAt: FIXED_NOW,
+        },
+        'vara-presens': {
+          itemId: 'vara-presens',
+          repetitions: 3,
+          intervalDays: 16,
+          easeFactor: 2.5,
+          dueAt: FIXED_NOW,
+        },
+      };
+      const orderedItems: Record<string, unknown> = {};
+      for (const key of keyOrder) orderedItems[key] = states[key];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, items: orderedItems }));
+
+      const { result } = renderHook(() => useSrsProgress());
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      // The canonical key's own progress survives, not the legacy twin's.
+      expect(result.current.srsStates['vara-presens']?.repetitions).toBe(3);
+      // The legacy positional key is discarded, not kept alongside the winner.
+      expect(result.current.srsStates['1-presens']).toBeUndefined();
+    },
+  );
+
+  it("keeps a positional key past the end of today's verb table verbatim in state, dropping nothing", async () => {
+    // Default fixture mock (2 verbs): position 999 has no canonicalVerbIds
+    // entry at all, so the key cannot be a stale-but-resolvable rewrite - it
+    // is simply out of range.
+    const outOfRangeState = {
+      itemId: '999-presens',
+      repetitions: 4,
+      intervalDays: 10,
+      easeFactor: 2.5,
+      dueAt: FIXED_NOW,
+    };
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: 2, items: { '999-presens': outOfRangeState } }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.srsStates['999-presens']).toMatchObject({ repetitions: 4 });
+
+    // Verbatim in the persisted store too - an out-of-range key is not
+    // derivable, so the save path must never treat it as prunable.
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+      expect(stored.items['999-presens']).toMatchObject({ repetitions: 4 });
+    });
+  });
+});
