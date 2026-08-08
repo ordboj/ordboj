@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Volume2, CheckCircle2, XCircle } from 'lucide-react';
 import {
   conjugateVerb,
@@ -90,6 +91,11 @@ export function PracticeCard({
   const effectiveMode = mode === 'multiple-choice' && !isAnswerAvailable ? 'typing' : mode;
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
   const alternatesDisclosure = getAlternatesDisclosure(infinitive, form);
+  // Only ever read here for the post-answer feedback chip below — grupp
+  // predicts the answer's ending pattern, so it must never be rendered
+  // before the learner has submitted (RED LINE, see issue #228). undefined
+  // renders as absent, never guessed (src/lib/verbs.ts:29-32).
+  const grupp = getVerbGrupp(infinitive);
 
   // Generate multiple choice options.
   //
@@ -371,6 +377,12 @@ export function PracticeCard({
                   </>
                 )}
               </div>
+
+              {grupp && (
+                <div className="flex justify-center">
+                  <Badge variant="outline">grupp {grupp}</Badge>
+                </div>
+              )}
 
               {alternatesDisclosure && (
                 <p className="text-sm text-muted-foreground text-center">{alternatesDisclosure}</p>
