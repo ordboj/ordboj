@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,8 +39,8 @@ export default function Home() {
   useEffect(() => {
     const loadVerbCount = async () => {
       const allVerbs = await getVerbs();
-      const filteredVerbs = allVerbs.filter(verb => 
-        verb.cefr && selectedLevels.includes(verb.cefr)
+      const filteredVerbs = allVerbs.filter(
+        (verb) => verb.cefr && selectedLevels.includes(verb.cefr),
       );
       setTotalVerbs(filteredVerbs.length);
     };
@@ -50,15 +50,22 @@ export default function Home() {
   const handleLevelToggle = (level: string, checked: boolean) => {
     const newLevels = checked
       ? [...selectedLevels, level]
-      : selectedLevels.filter(l => l !== level);
-    
+      : selectedLevels.filter((l) => l !== level);
+
     if (newLevels.length === 0) return; // Prevent unselecting all
-    
+
     setSelectedLevels(newLevels);
     updateSettings({ cefrLevels: newLevels });
   };
 
   const allLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
+  const handleNavKeyDown = (path: string) => (event: KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      navigate(path);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
@@ -68,18 +75,13 @@ export default function Home() {
           <Button
             variant="outline"
             size="icon"
-            className="absolute right-0 top-0"
+            className="absolute right-0 top-0 h-11 w-11"
             onClick={() => updateSettings({ muteAudio: !settings.muteAudio })}
+            aria-label={settings.muteAudio ? 'Unmute audio' : 'Mute audio'}
           >
-            {settings.muteAudio ? (
-              <VolumeX className="h-5 w-5" />
-            ) : (
-              <Volume2 className="h-5 w-5" />
-            )}
+            {settings.muteAudio ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
           </Button>
-          <h1 className="text-5xl font-bold text-primary mb-2">
-            Ordböj
-          </h1>
+          <h1 className="text-5xl font-bold text-primary mb-2">Ordböj</h1>
           <p className="text-xl text-muted-foreground">
             Master Swedish verbs with spaced repetition
           </p>
@@ -132,8 +134,8 @@ export default function Home() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                {selectedLevels.length === allLevels.length 
-                  ? 'All levels selected' 
+                {selectedLevels.length === allLevels.length
+                  ? 'All levels selected'
                   : `Selected: ${selectedLevels.sort().join(', ')}`}
               </p>
             </div>
@@ -144,7 +146,11 @@ export default function Home() {
               size="lg"
               disabled={isLoading || settingsLoading || dueCount === 0}
             >
-              {isLoading || settingsLoading ? 'Loading...' : dueCount > 0 ? 'Start Practice' : 'No Cards Due'}
+              {isLoading || settingsLoading
+                ? 'Loading...'
+                : dueCount > 0
+                  ? 'Start Practice'
+                  : 'No Cards Due'}
             </Button>
 
             {dueCount === 0 && (
@@ -157,29 +163,33 @@ export default function Home() {
 
         {/* Stats & Settings */}
         <div className="grid grid-cols-2 gap-4">
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-shadow"
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            role="button"
+            tabIndex={0}
             onClick={() => navigate('/progress')}
+            onKeyDown={handleNavKeyDown('/progress')}
+            aria-label="Progress: track your learning"
           >
             <CardHeader className="text-center">
               <Trophy className="w-8 h-8 mx-auto text-accent mb-2" />
               <CardTitle className="text-lg">Progress</CardTitle>
-              <CardDescription>
-                Track your learning
-              </CardDescription>
+              <CardDescription>Track your learning</CardDescription>
             </CardHeader>
           </Card>
 
           <Card
-            className="cursor-pointer hover:shadow-lg transition-shadow"
+            className="cursor-pointer hover:shadow-lg transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            role="button"
+            tabIndex={0}
             onClick={() => navigate('/settings')}
+            onKeyDown={handleNavKeyDown('/settings')}
+            aria-label="Settings: customize your practice"
           >
             <CardHeader className="text-center">
               <Settings className="w-8 h-8 mx-auto text-primary mb-2" />
               <CardTitle className="text-lg">Settings</CardTitle>
-              <CardDescription>
-                Customize your practice
-              </CardDescription>
+              <CardDescription>Customize your practice</CardDescription>
             </CardHeader>
           </Card>
         </div>

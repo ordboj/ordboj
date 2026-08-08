@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -45,6 +45,7 @@ export function PracticeCard({
   const [pattern, setPattern] = useState<VerbPattern | null>(null);
   const [shuffledLetters, setShuffledLetters] = useState<string[]>([]);
   const [options, setOptions] = useState<string[]>([]);
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
   // Load verb data
   useEffect(() => {
@@ -177,6 +178,14 @@ export function PracticeCard({
     }
   };
 
+  // Move focus to the feedback message so screen reader users get it
+  // immediately, in addition to the aria-live announcement.
+  useEffect(() => {
+    if (showFeedback) {
+      feedbackRef.current?.focus();
+    }
+  }, [showFeedback]);
+
   if (!conjugated || !pattern) {
     return (
       <Card className="w-full max-w-2xl shadow-xl">
@@ -280,18 +289,22 @@ export function PracticeCard({
           {showFeedback && (
             <div className="space-y-4">
               <div
-                className={`flex items-center justify-center gap-3 p-4 rounded-lg ${
+                ref={feedbackRef}
+                tabIndex={-1}
+                role="status"
+                aria-live="polite"
+                className={`flex items-center justify-center gap-3 p-4 rounded-lg outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
                   isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
                 }`}
               >
                 {isCorrect ? (
                   <>
-                    <CheckCircle2 className="w-8 h-8" />
+                    <CheckCircle2 className="w-8 h-8" aria-hidden="true" />
                     <span className="text-2xl font-bold">Correct!</span>
                   </>
                 ) : (
                   <>
-                    <XCircle className="w-8 h-8" />
+                    <XCircle className="w-8 h-8" aria-hidden="true" />
                     <span className="text-2xl font-bold">Not quite</span>
                   </>
                 )}
@@ -320,10 +333,11 @@ export function PracticeCard({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 hover:bg-primary/10"
+                              className="h-11 w-11 hover:bg-primary/10"
                               onClick={() => handlePronounceForm(part.form)}
+                              aria-label={`Pronounce ${getFormLabel(part.form)}: ${part.text}`}
                             >
-                              <Volume2 className="w-3 h-3" />
+                              <Volume2 className="w-4 h-4" />
                             </Button>
                           )}
                         </div>
@@ -333,12 +347,7 @@ export function PracticeCard({
                       </div>
                     ))}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePronounce}
-                    className="w-full gap-2"
-                  >
+                  <Button variant="outline" onClick={handlePronounce} className="w-full gap-2 h-11">
                     <Volume2 className="w-4 h-4" />
                     Pronounce answer
                   </Button>
