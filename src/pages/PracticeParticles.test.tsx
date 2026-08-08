@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import PracticeParticles from '@/pages/PracticeParticles';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
-import { findParticleVerb } from '@/lib/particleVerbs';
+import { findParticleVerb, getVerifiedParticleVerbs } from '@/lib/particleVerbs';
 import { verbs } from '@/lib/verbs';
 import type { SrsState } from '@/lib/srs';
 
@@ -38,6 +38,24 @@ function readyBase(infinitive: string): Record<string, SrsState> {
   return out;
 }
 
+// Issue #315 dropped the conjugation-store gate on particle introductions,
+// so a totally fresh account is no longer a totally empty sitting: every
+// verified particle verb in the real dataset (this page always builds its
+// sitting from the real one) is introduction-eligible from the first
+// render. A test that wants one specific card first has to say so, by
+// giving every other verified entry a cloze state that already exists —
+// not due, and below the recall-unlock threshold — so it can take neither a
+// review slot nor an introduction slot.
+function otherEntriesAlreadyIntroduced(exceptIds: string[] = []): Record<string, SrsState> {
+  const out: Record<string, SrsState> = {};
+  for (const candidate of getVerifiedParticleVerbs()) {
+    if (exceptIds.includes(candidate.id)) continue;
+    const clozeId = particleItemId(candidate.id, 'cloze');
+    out[clozeId] = state(clozeId, { repetitions: 1, dueAt: NOW + 90 * DAY });
+  }
+  return out;
+}
+
 function seed(items: Record<string, SrsState>, version = 2) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ version, items }));
 }
@@ -66,19 +84,33 @@ beforeEach(() => {
 });
 
 describe('particle practice flow', () => {
-  it('tells a learner with no eligible verbs that the mode unlocks later, without a dead end', async () => {
+  it('tells a learner with nothing due and nothing left to introduce today, without a dead end', async () => {
+    // Issue #315: introductions are no longer gated on conjugation progress,
+    // so a bare-empty store is not this state any more — with zero pv:
+    // state at all, every verified entry is introduction-eligible instead
+    // (see the next test) and the sitting is never empty. The one way left
+    // to reach an empty sitting is a learner who has already met every
+    // verified entry and has nothing due today — which, by the same logic,
+    // means every one of those entries is a "not yet due" candidate for the
+    // free-practice pool. So unlike the old gated behaviour, the pool here
+    // is never empty either, and the button is enabled, not disabled.
+    seed(otherEntriesAlreadyIntroduced());
+
     renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
     expect(await screen.findByText(/No particle verbs are ready for you yet/)).toBeInTheDocument();
-    // Never a dead end: the button exists even when the pool is empty, it is
-    // simply disabled rather than absent.
-    expect(screen.getByRole('button', { name: 'Keep practising' })).toBeDisabled();
+    // Never a dead end: free practice is offered instead.
+    expect(await screen.findByRole('button', { name: 'Keep practising' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Back to Home' })).toBeInTheDocument();
   });
 
   it('introduces a new verb without asking anything, then records nothing for it', async () => {
     const user = userEvent.setup();
-    seed(readyBase('tycka'));
+    // Without the base-verb gate every other verified entry would also be
+    // introduction-eligible on a fresh account (issue #315), so every other
+    // entry is pinned as already-met to keep pv:tycka-om the only candidate.
+    seed({ ...readyBase('tycka'), ...otherEntriesAlreadyIntroduced(['pv:tycka-om']) });
+    const pvKeysBeforeSession = Object.keys(storedItems()).filter((key) => key.startsWith('pv:'));
 
     renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
@@ -92,13 +124,24 @@ describe('particle practice flow', () => {
     // Lone introduction with nothing to intervene: the first cloze is
     // deferred rather than asked adjacent to its own answer.
     await waitFor(() => expect(screen.getByText(/finished today's particle verbs/)).toBeVisible());
-    expect(Object.keys(storedItems()).filter((key) => key.startsWith('pv:'))).toEqual([]);
+    // The set of stored pv: keys is exactly what it was before the session:
+    // the introduction added none of its own.
+    expect(Object.keys(storedItems()).filter((key) => key.startsWith('pv:'))).toEqual(
+      pvKeysBeforeSession,
+    );
   });
 
   it('grades a correct cloze answer and advances the schedule', async () => {
     const user = userEvent.setup();
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
-    seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) });
+    // Pin every other verified entry as already-met (issue #315: no more
+    // conjugation-store gate, so they would otherwise be introduction- or
+    // review-eligible too) so this cloze is the only card in the sitting.
+    seed({
+      ...readyBase('tycka'),
+      ...otherEntriesAlreadyIntroduced(['pv:tycka-om']),
+      [clozeId]: state(clozeId, { repetitions: 3 }),
+    });
 
     renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
@@ -121,7 +164,14 @@ describe('particle practice flow', () => {
   it('marks a wrong particle wrong and shows the accepted answer', async () => {
     const user = userEvent.setup();
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
-    seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) });
+    // Pin every other verified entry as already-met (issue #315: no more
+    // conjugation-store gate, so they would otherwise be introduction- or
+    // review-eligible too) so this cloze is the only card in the sitting.
+    seed({
+      ...readyBase('tycka'),
+      ...otherEntriesAlreadyIntroduced(['pv:tycka-om']),
+      [clozeId]: state(clozeId, { repetitions: 3 }),
+    });
 
     renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
     await screen.findByText('Fill in the missing particle');
@@ -148,6 +198,7 @@ describe('particle practice flow', () => {
     const siblingId = particleItemId('pv:skriva-ut', 'cloze');
     seed({
       ...readyBase('skriva'),
+      ...otherEntriesAlreadyIntroduced(['pv:skriva-ner', 'pv:skriva-ut']),
       [clozeId]: state(clozeId, { repetitions: 3 }),
       [siblingId]: state(siblingId, { repetitions: 1, dueAt: NOW + 30 * DAY }),
     });
@@ -169,6 +220,7 @@ describe('particle practice flow', () => {
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
     seed({
       ...readyBase('tycka'),
+      ...otherEntriesAlreadyIntroduced(['pv:tycka-om']),
       // Cloze not due, recall due: no sibling clash.
       [clozeId]: state(clozeId, { repetitions: 4, dueAt: NOW + 20 * DAY }),
       [recallId]: state(recallId, { repetitions: 2, dueAt: NOW - DAY }),
@@ -188,7 +240,14 @@ describe('particle practice flow', () => {
   it('shows the four conjugated forms as reference on the feedback screen', async () => {
     const user = userEvent.setup();
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
-    seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) });
+    // Pin every other verified entry as already-met (issue #315: no more
+    // conjugation-store gate, so they would otherwise be introduction- or
+    // review-eligible too) so this cloze is the only card in the sitting.
+    seed({
+      ...readyBase('tycka'),
+      ...otherEntriesAlreadyIntroduced(['pv:tycka-om']),
+      [clozeId]: state(clozeId, { repetitions: 3 }),
+    });
 
     renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
     await screen.findByText('Fill in the missing particle');
@@ -205,7 +264,14 @@ describe('particle practice flow', () => {
     // prosody teaches wrong Swedish. There is no toggle to get this wrong.
     const user = userEvent.setup();
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
-    seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) });
+    // Pin every other verified entry as already-met (issue #315: no more
+    // conjugation-store gate, so they would otherwise be introduction- or
+    // review-eligible too) so this cloze is the only card in the sitting.
+    seed({
+      ...readyBase('tycka'),
+      ...otherEntriesAlreadyIntroduced(['pv:tycka-om']),
+      [clozeId]: state(clozeId, { repetitions: 3 }),
+    });
 
     renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
     await screen.findByText('Fill in the missing particle');
@@ -222,7 +288,11 @@ describe('particle practice flow', () => {
     const talaOm = findParticleVerb('pv:tala-om')!;
     expect(talaOm.contrast).toBeDefined();
     const clozeId = particleItemId(talaOm.id, 'cloze');
-    seed({ ...readyBase('tala'), [clozeId]: state(clozeId, { repetitions: 3 }) });
+    seed({
+      ...readyBase('tala'),
+      ...otherEntriesAlreadyIntroduced([talaOm.id]),
+      [clozeId]: state(clozeId, { repetitions: 3 }),
+    });
 
     renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
     await screen.findByText('Fill in the missing particle');
@@ -238,10 +308,16 @@ describe('particle practice flow', () => {
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
     const recallId = particleItemId('pv:tycka-om', 'recall');
     // Nothing due and nothing left to unlock, so the scheduled sitting is
-    // empty and the free pool is not. The cloze has the nearer future due
-    // date, so it is what the pool serves first.
+    // empty. Issue #315: with the base-verb gate gone, an empty scheduled
+    // sitting only happens once every verified entry already has a not-due
+    // cloze state (see otherEntriesAlreadyIntroduced), so unlike the old
+    // gated behaviour the free-practice pool is full rather than a single
+    // item. pv:tycka-om still has the nearest due date, so it is what the
+    // pool serves first, which is enough to prove a free round writes
+    // nothing without walking the rest of a pool this test does not own.
     seed({
       ...readyBase('tycka'),
+      ...otherEntriesAlreadyIntroduced(['pv:tycka-om']),
       [clozeId]: state(clozeId, { repetitions: 4, dueAt: NOW + 10 * DAY }),
       [recallId]: state(recallId, { repetitions: 2, dueAt: NOW + 30 * DAY }),
     });
@@ -255,15 +331,14 @@ describe('particle practice flow', () => {
     await user.click(keepPractising);
 
     expect(await screen.findByText(/Free practice/)).toBeInTheDocument();
+    expect(screen.getByText('to be fond of; to enjoy')).toBeInTheDocument();
     await user.type(screen.getByRole('textbox'), 'om');
     await screen.findByText('Correct!');
     await user.click(screen.getByRole('button', { name: 'Next Card' }));
 
-    await waitFor(() =>
-      expect(screen.getByText(/nothing here was saved to your progress/)).toBeVisible(),
-    );
-    // The whole point: the real schedule did not move.
-    expect(JSON.stringify(storedItems()[clozeId])).toBe(before);
+    // The whole point: a free round never writes, whatever else is in the
+    // pool. The real schedule for the card just answered did not move.
+    await waitFor(() => expect(JSON.stringify(storedItems()[clozeId])).toBe(before));
   });
 
   it('never puts both items of one verb in the same sitting', async () => {
@@ -271,6 +346,7 @@ describe('particle practice flow', () => {
     const recallId = particleItemId('pv:tycka-om', 'recall');
     seed({
       ...readyBase('tycka'),
+      ...otherEntriesAlreadyIntroduced(['pv:tycka-om']),
       [clozeId]: state(clozeId, { repetitions: 4, dueAt: NOW - 2 * DAY }),
       [recallId]: state(recallId, { repetitions: 3, dueAt: NOW - 3 * DAY }),
     });
@@ -293,7 +369,14 @@ describe('particle practice flow', () => {
 
     it('shows the read-only banner above an active card when the stored version is newer than this build', async () => {
       const clozeId = particleItemId('pv:tycka-om', 'cloze');
-      seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) }, 3);
+      seed(
+        {
+          ...readyBase('tycka'),
+          ...otherEntriesAlreadyIntroduced(['pv:tycka-om']),
+          [clozeId]: state(clozeId, { repetitions: 3 }),
+        },
+        3,
+      );
 
       renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
@@ -302,7 +385,9 @@ describe('particle practice flow', () => {
     });
 
     it('shows the read-only banner on the session-complete screen when the stored version is newer than this build', async () => {
-      seed({}, 3);
+      // Issue #315: an empty store is no longer this state (see the top-level
+      // "nothing due" test) — every entry already met and nothing due is.
+      seed(otherEntriesAlreadyIntroduced(), 3);
 
       renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
@@ -314,7 +399,14 @@ describe('particle practice flow', () => {
 
     it('renders no read-only banner for a normal (non-newer) stored version', async () => {
       const clozeId = particleItemId('pv:tycka-om', 'cloze');
-      seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) });
+      // Pin every other verified entry as already-met (issue #315: no more
+      // conjugation-store gate, so they would otherwise be introduction- or
+      // review-eligible too) so this cloze is the only card in the sitting.
+      seed({
+        ...readyBase('tycka'),
+        ...otherEntriesAlreadyIntroduced(['pv:tycka-om']),
+        [clozeId]: state(clozeId, { repetitions: 3 }),
+      });
 
       renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
