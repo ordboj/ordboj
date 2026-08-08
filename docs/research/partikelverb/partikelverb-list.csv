@@ -523,7 +523,6 @@
 522,gå emot,gå,emot,"walk into; oppose, go against",B1,9,plain,
 523,gå för sig,gå,för,"be suitable, be permissible",B1,9,refl,
 524,gå förbi,gå,förbi,"pass by, overtake",B1,9,plain,
-525,gå i,gå,i,"get into (water); fit into; sink in, be believed (impersonal) | check: the ""be believed"" sense cannot be confirmed",C1,9,plain,NEEDS HUMAN CHECK
 526,gå ifrån,gå,ifrån,leave one's post briefly; abandon (a partner),B1,9,plain,
 527,gå igång,gå,igång,start (an engine),B1,9,plain,
 528,gå itu,gå,itu,break in two,B1,9,plain,
@@ -564,7 +563,6 @@
 563,komma om,komma,om,overtake,B1,9,plain,
 564,komma runt,komma,runt,get around (an obstacle or problem),B1,9,plain,
 565,komma sig upp,komma,upp,advance in life,B1,9,refl,
-566,komma upp sig,komma,upp,"rise socially or professionally | check: form doubtful; ""komma sig upp"" is the standard order",B1,9,refl,NEEDS HUMAN CHECK
 567,känna på,känna,på,try out what something feels like,B1,9,plain,
 568,ligga av sig,ligga,av,get rusty from disuse,B1,9,refl,
 569,ligga bakom,ligga,bakom,"be behind, be the cause of",B1,9,plain,
@@ -618,7 +616,6 @@
 617,säga efter,säga,efter,repeat after someone,B1,9,plain,
 618,säga emot,säga,emot,"contradict, object",B1,9,plain,
 619,säga ifrån,säga,ifrån,speak up in protest,B1,9,plain,
-620,säga om,säga,om,"say again; object to (impersonal) | check: the ""object to"" sense cannot be confirmed",C1,9,plain,NEEDS HUMAN CHECK
 621,säga till om,säga,till,have authority over,B1,9,v+p+prep,
 622,sätta av,sätta,av,drop off (a passenger); set aside (money); dash off,B2,9,plain,
 623,sätta efter,sätta,efter,set off in pursuit,B1,9,plain,
@@ -691,7 +688,6 @@
 690,dra ihop sig,dra,ihop,"contract; be approaching (impersonal, e.g. storm)",C1,9,refl,
 691,dra in på,dra,in,cut down on,B1,9,v+p+prep,
 692,dra ner på,dra,ner,cut back on,B1,9,v+p+prep,
-693,dra omkring,dra,omkring,"scatter about, make a mess of things | check: source gloss ""scatter about"" disputed — I read this as ""to roam, to wander about""",B1,9,plain,NEEDS HUMAN CHECK
 694,dra på,dra,på,"pull on (clothing, with effort); speed up; carry (an illness) around",B1,9,plain,
 695,dra sig fram,dra,fram,scrape by financially,B1,9,refl,
 696,dra sig tillbaka,dra,tillbaka,"retreat, move away; retire from activity",B1,9,refl,
@@ -739,7 +735,6 @@
 738,slå an,slå,an,strike (a chord),B1,9,plain,
 739,slå an på,slå,an,"appeal to, charm",B1,9,v+p+prep,
 740,slå av på,slå,av,ease off (the pace),B1,9,v+p+prep,
-741,slå av sig,slå,av,go flat (a drink) | check: cannot confirm,B1,9,refl,NEEDS HUMAN CHECK
 742,slå bort,slå,bort,knock away; pour off; brush aside (criticism),B1,9,plain,
 743,slå i,slå,i,hammer in; bump (a toe); pour into; make someone believe a lie,B1,9,plain,
 744,slå ifrån,slå,ifrån,switch off (power),B1,9,plain,
@@ -791,7 +786,6 @@
 790,binda in,binda,in,bind (books) in hard covers,B2,9,plain,
 791,binda upp,binda,upp,"tie up high (hair, plants)",C1,9,plain,
 792,binda upp sig,binda,upp,commit oneself,B2,9,refl,
-793,binda åt,binda,åt,tie tightly | check: cannot confirm,B2,9,plain,NEEDS HUMAN CHECK
 794,bita av,bita,av,bite off; cut someone short rudely,B2,9,plain,
 795,bita ifrån,bita,ifrån,defend oneself sharply in words,B2,9,refl,
 796,bjuda emot,bjuda,emot,"be repugnant, feel distasteful (impersonal)",C1,9,plain,
@@ -837,7 +831,6 @@
 836,falla på,falla,på,"set in (darkness, an urge)",B2,9,plain,
 837,falla undan,falla,undan,"stop resisting, give in (to)",B2,9,plain,
 838,falla ut,falla,ut,"fall out; turn out, develop",B2,9,plain,
-839,falla ut med,falla,ut,yield as a result (e.g. a win) | check: cannot confirm,B2,9,v+p+prep,NEEDS HUMAN CHECK
 840,fara på,fara,på,attack fiercely,B2,9,plain,
 841,fara upp,fara,upp,jump up abruptly,B2,9,plain,
 842,fara ut mot,fara,ut,lash out verbally at,B2,9,v+p+prep,
@@ -848,7 +841,6 @@
 847,flyga upp,flyga,upp,fly up; jump up abruptly; fly open (a door),B2,9,plain,
 848,flyta in,flyta,in,float in; come in steadily (money),B2,9,plain,
 849,fresta på,fresta,på,"be a strain, be taxing",B2,9,plain,
-850,frysa om,frysa,om,"freeze again | check: source gloss ""freeze again"" disputed — I read om as body-part (""jag fryser om fötterna"")",B2,9,plain,NEEDS HUMAN CHECK
 851,frysa på,frysa,på,"turn much colder, freeze over (weather)",B2,9,plain,
 852,frysa till,frysa,till,freeze to ice,C1,9,plain,
 853,frysa ut,frysa,ut,"ostracize, freeze out socially",B2,9,plain,
@@ -903,9 +895,7 @@
 902,kosta på,kosta,på,invest money in; be taxing (impersonal),C1,9,plain,
 903,kränga av sig,kränga,av,pull off (clothes) hastily,B2,9,refl,
 904,kränga på sig,kränga,på,pull on (clothes) hastily,B2,9,refl,
-905,kränga till,kränga,till,"lurch, heel over briefly | check: cannot confirm",B2,9,plain,NEEDS HUMAN CHECK
 906,kännas vid,kännas,vid,"acknowledge, own up to",B2,9,plain,
-907,ladda in,ladda,in,shovel in (food) | check: slang; cannot confirm,B2,9,plain,NEEDS HUMAN CHECK
 908,ladda om,ladda,om,reload,B2,9,plain,
 909,ladda ur,ladda,ur,discharge (a battery),B2,9,plain,
 910,leva kvar,leva,kvar,"survive, live on",B2,9,plain,
@@ -924,7 +914,6 @@
 923,lura ur,lura,ur,coax (secrets) out by trickery,B2,9,plain,
 924,lura ut,lura,ut,entice someone out; figure out,B2,9,plain,
 925,lysa upp,lysa,upp,light up (a room); brighten (a face),B2,9,plain,
-926,lysa ut,lysa,ut,"shine out; advertise (a vacancy) | check: standard term is the compound ""utlysa""",B2,9,plain,NEEDS HUMAN CHECK
 927,låsa sig ute,låsa,ute,lock oneself out,B2,9,refl,
 928,låsa upp,låsa,upp,unlock,B2,9,plain,
 929,lämna av,lämna,av,"drop off, deliver",B2,9,plain,
@@ -941,7 +930,6 @@
 940,måla ut,måla,ut,portray negatively,B2,9,plain,
 941,mäta ut,mäta,ut,measure out a position; seize property for debt,B2,9,plain,
 942,nöta in,nöta,in,drill in by repetition,B2,9,plain,
-943,nötas av,nötas,av,"wear through by friction | check: deponent base ""nötas""; class needs confirming",B2,9,plain,NEEDS HUMAN CHECK
 944,ordna in,ordna,in,arrange into a system,B2,9,plain,
 945,ordna om,ordna,om,rearrange,B2,9,plain,
 946,ordna upp,ordna,upp,"put in order, sort out",B2,9,plain,
@@ -955,13 +943,11 @@
 954,plöja upp,plöja,upp,plough up (a field),B2,9,plain,
 955,prata av sig,prata,av,unburden oneself by talking,B2,9,refl,
 956,prata bort,prata,bort,chat away (time); talk someone's objections aside,B2,9,plain,
-957,prata omkull,prata,omkull,talk someone into submission | check: cannot confirm,B2,9,plain,NEEDS HUMAN CHECK
 958,prata på,prata,på,keep on talking,B2,9,plain,
 959,pröva på,pröva,på,"get a taste of, experience",B2,9,plain,
 960,pröva ut,pröva,ut,"test until right, calibrate",B2,9,plain,
 961,pyssla om,pyssla,om,"tend to, care for",B2,9,plain,
 962,reda upp,reda,upp,straighten out (a tangled situation),B2,9,plain,
-963,resa upp,resa,upp,"raise upright; travel north; spend (money) travelling | check: the ""spend money travelling"" sense cannot be confirmed",B2,9,plain,NEEDS HUMAN CHECK
 964,rikta in sig på,rikta,in,"aim for, set one's sights on",B2,9,refl,
 965,rusta ner,rusta,ner,"disarm, reduce armaments",B2,9,plain,
 966,rusta upp,rusta,upp,rearm; renovate,B2,9,plain,
@@ -1001,7 +987,6 @@
 1000,smälla ihop,smälla,ihop,slam shut; concoct (an excuse),B2,9,plain,
 1001,smälla till,smälla,till,"swat, strike",B2,9,plain,
 1002,smälla upp,smälla,upp,throw up (buildings) quickly,B2,9,plain,
-1003,snappa till sig,snappa,till,"snatch up | check: identical gloss to ""snappa åt sig""; one of the pair is likely wrong",B2,9,refl,NEEDS HUMAN CHECK
 1004,snappa upp,snappa,upp,pick up (news) by chance,B2,9,plain,
 1005,snappa åt sig,snappa,åt,snatch up,B2,9,refl,
 1006,spåra ur,spåra,ur,derail (a train); degenerate (a discussion),B2,9,plain,
@@ -1028,7 +1013,6 @@
 1027,stryka under,stryka,under,underline; emphasize,B2,9,plain,
 1028,stryka ut,stryka,ut,spread out evenly (paint); erase,B2,9,plain,
 1029,stråla samman,stråla,samman,converge from different directions,B2,9,plain,
-1030,stråla ut,stråla,ut,"radiate outward from a point (impersonal) | check: ""(impersonal)"" tag looks wrong",C1,9,plain,NEEDS HUMAN CHECK
 1031,stöta bort,stöta,bort,"push away, repel (people)",B2,9,plain,
 1032,stöta ihop med,stöta,ihop,run into unexpectedly,B2,9,v+p+prep,
 1033,stöta på,stöta,på,"bump into (a person); prompt, remind; make a pass at",B2,9,plain,
@@ -1050,7 +1034,6 @@
 1049,tona fram,tona,fram,emerge into view,B2,9,plain,
 1050,tona ut,tona,ut,fade out (sound),B2,9,plain,
 1051,trycka av,trycka,av,pull the trigger,B2,9,plain,
-1052,trycka på,trycka,på,press (a button); apply pressure to hurry,B2,9,plain,
 1053,trycka upp,trycka,upp,push up into; call (an elevator); print a large run,B2,9,plain,
 1054,träda emellan,träda,emellan,"intervene, mediate",B2,9,plain,
 1055,träda fram,träda,fram,"come forward, reveal oneself",B2,9,plain,
