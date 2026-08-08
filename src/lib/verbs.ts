@@ -112,6 +112,18 @@ export function isAcceptedAnswer(infinitive: string, form: Form, answer: string)
 export function getAlternatesDisclosure(infinitive: string, form: Form): string | null {
   const accepted = getAcceptedAnswers(infinitive, form);
   if (accepted.length < 2) return null;
+  // #43/C6a (docs/learning/2026-08-08-verb-data-conventions.md): a
+  // sense-conditioned pair (e.g. lyda preteritum "lydde" for "obey" vs
+  // "löd" for "read as/state") gets a per-form override instead of the
+  // generic line below. The generic line asserts interchangeability, which
+  // is false Swedish for forms tied to different senses. `form` is never
+  // 'infinitive' here: that case always has accepted.length === 1 (see
+  // getAcceptedAnswers) and already returned above.
+  if (form !== 'infinitive') {
+    const verb = VERB_DATA.find((v) => v.infinitive === infinitive);
+    const override = verb?.alternatesNote?.[form];
+    if (override) return override;
+  }
   if (accepted.length === 2) {
     return `Both ${accepted[0]} and ${accepted[1]} are correct.`;
   }
