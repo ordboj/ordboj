@@ -208,6 +208,111 @@ describe('calculateNextReview - MAX_INTERVAL_DAYS clamp', () => {
   });
 });
 
+describe('calculateNextReview - hinted-but-correct (issue #30)', () => {
+  // Acceptance criterion: "When hintsUsed > 0, srs.ts uses the
+  // halved-interval branch (per #12 constants) instead of the full ease
+  // bump for a correct answer."
+  it('halves the interval and dings ease by 0.05 instead of the full +0.05 credit, on a correct-but-hinted answer', () => {
+    let state = initializeSrsState('x');
+    state = calculateNextReview(state, 5); // clean: rep1, interval1, ease2.55
+    state = calculateNextReview(state, 5); // clean: rep2, interval6, ease2.60
+
+    const hinted = calculateNextReview(state, 5, 1);
+
+    // Hinted branch: ease - 0.05 (not the +0.05 full-credit bump).
+    expect(hinted.easeFactor).toBeCloseTo(2.55, 5);
+    // Interval halved and rounded: round(6 * 0.5) = 3.
+    expect(hinted.intervalDays).toBe(3);
+    // Repetitions are left untouched by the hinted branch (not a lapse,
+    // not a fresh success rep).
+    expect(hinted.repetitions).toBe(2);
+    expect(hinted.lastGrade).toBe(5);
+  });
+
+  it('is indistinguishable from a clean correct answer when hintsUsed is 0 (explicit default check)', () => {
+    const base = initializeSrsState('x');
+    const explicit = calculateNextReview(base, 5, 0);
+    const implicit = calculateNextReview(base, 5);
+    expect(explicit).toEqual(implicit);
+    // And it takes the full-credit path, not the hinted path.
+    expect(explicit.easeFactor).toBeCloseTo(2.55, 5);
+  });
+
+  it('floors the halved interval at 1 day for a fresh item (intervalDays 0 -> hinted correct)', () => {
+    const state = initializeSrsState('x'); // intervalDays: 0
+    const hinted = calculateNextReview(state, 5, 1);
+    // round(0 * 0.5) = 0, floored to 1.
+    expect(hinted.intervalDays).toBe(1);
+  });
+
+  it('never lets ease drop below the 1.3 floor from repeated hinted-but-correct answers', () => {
+    let state: SrsState = { ...initializeSrsState('x'), easeFactor: 1.32 };
+    state = calculateNextReview(state, 5, 1); // 1.32 -> 1.27, floored to 1.3
+    expect(state.easeFactor).toBe(1.3);
+    state = calculateNextReview(state, 5, 2); // still floored
+    expect(state.easeFactor).toBe(1.3);
+  });
+
+  it('a wrong answer with hintsUsed > 0 still takes the full lapse branch, not the hinted branch (hints only soften correct answers)', () => {
+    let state = initializeSrsState('x');
+    state = calculateNextReview(state, 5); // rep1, interval1
+    state = calculateNextReview(state, 5); // rep2, interval6, ease2.60
+
+    const lapsed = calculateNextReview(state, 0, 3); // wrong, despite 3 hints used
+    expect(lapsed.repetitions).toBe(0);
+    expect(lapsed.intervalDays).toBe(1);
+    expect(lapsed.easeFactor).toBeCloseTo(2.4, 5); // 2.60 - 0.20, the lapse delta
+  });
+
+  it('any positive hintsUsed (not just 1) routes into the hinted branch identically', () => {
+    let state = initializeSrsState('x');
+    state = calculateNextReview(state, 5); // rep1, interval1, ease2.55
+    state = calculateNextReview(state, 5); // rep2, interval6, ease2.60
+
+    const hintedOnce = calculateNextReview(state, 5, 1);
+    const hintedMany = calculateNextReview(state, 5, 4);
+    expect(hintedMany).toEqual(hintedOnce);
+  });
+
+  it('a 10+ review run mixing clean, hinted, and lapsed answers matches the documented table', () => {
+    // grade/hints pairs: C, C, C(hinted), C, W, C, C(hinted), C, C, C
+    const steps: Array<[Grade, number]> = [
+      [5, 0],
+      [5, 0],
+      [5, 1],
+      [5, 0],
+      [0, 0],
+      [5, 0],
+      [5, 2],
+      [5, 0],
+      [5, 0],
+      [5, 0],
+    ];
+    const expected: Array<{ repetitions: number; intervalDays: number; easeFactor: number }> = [
+      { repetitions: 1, intervalDays: 1, easeFactor: 2.55 },
+      { repetitions: 2, intervalDays: 6, easeFactor: 2.6 },
+      { repetitions: 2, intervalDays: 3, easeFactor: 2.55 }, // hinted: round(6*0.5)=3, ease-0.05
+      { repetitions: 3, intervalDays: 8, easeFactor: 2.6 }, // round(3*2.60)=8
+      { repetitions: 0, intervalDays: 1, easeFactor: 2.4 }, // lapse
+      { repetitions: 1, intervalDays: 1, easeFactor: 2.45 },
+      { repetitions: 1, intervalDays: 1, easeFactor: 2.4 }, // hinted at rep1/interval1: round(1*0.5)=1, ease-0.05 (floor keeps at 1)
+      { repetitions: 2, intervalDays: 6, easeFactor: 2.45 },
+      { repetitions: 3, intervalDays: 15, easeFactor: 2.5 }, // round(6*2.45)=15
+      { repetitions: 4, intervalDays: 38, easeFactor: 2.55 }, // round(15*2.5)=38 (round-half-away-from-zero => 37.5 -> 38)
+    ];
+
+    let state = initializeSrsState('x');
+    steps.forEach(([grade, hints], i) => {
+      state = calculateNextReview(state, grade, hints);
+      expect(state.easeFactor).toBeCloseTo(expected[i].easeFactor, 5);
+      expect({ repetitions: state.repetitions, intervalDays: state.intervalDays }).toEqual({
+        repetitions: expected[i].repetitions,
+        intervalDays: expected[i].intervalDays,
+      });
+    });
+  });
+});
+
 describe('isDue', () => {
   it('is due exactly at the boundary (dueAt === now)', () => {
     const state: SrsState = { ...initializeSrsState('x'), dueAt: FIXED_NOW };

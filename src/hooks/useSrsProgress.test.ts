@@ -151,6 +151,49 @@ describe('recordAnswer', () => {
   });
 });
 
+describe('recordAnswer - hint usage forwarding (issue #30)', () => {
+  it('forwards a positive hintsUsed to the scheduler, taking the halved-interval branch instead of the full-credit branch', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // Two clean corrects first: rep2, interval6, ease2.60.
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(2));
+    expect(result.current.srsStates['1-presens'].intervalDays).toBe(6);
+
+    // Third answer is correct but hinted: the interval must halve (round(6*0.5)=3),
+    // not follow the SM-2 progression (which would give 16).
+    act(() => {
+      result.current.recordAnswer('1-presens', 5, 1);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].intervalDays).toBe(3));
+    expect(result.current.srsStates['1-presens'].repetitions).toBe(2); // untouched by hinted branch
+    expect(result.current.srsStates['1-presens'].easeFactor).toBeCloseTo(2.55, 5); // -0.05, not +0.05
+
+    // And the halved interval is what actually gets persisted to localStorage.
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored.items['1-presens'].intervalDays).toBe(3);
+  });
+
+  it('omitting hintsUsed (existing two-arg call sites) still takes the full-credit branch, unaffected', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5); // no third arg
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+    expect(result.current.srsStates['1-presens'].intervalDays).toBe(1);
+    expect(result.current.srsStates['1-presens'].easeFactor).toBeCloseTo(2.55, 5);
+  });
+});
+
 describe('getDueItems filtering', () => {
   it('respects the cefrLevels filter', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
