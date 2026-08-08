@@ -32,12 +32,8 @@ export default function Practice() {
 
   const handleAnswer = ({ correct, hintsUsed }: AnswerResult) => {
     const currentItem = dueItems[currentIndex];
-    // recordAnswer only accepts a binary Grade today; it does not yet have
-    // a halved-interval branch for hinted answers, so hintsUsed can't be
-    // forwarded to the scheduler until useSrsProgress/srs.ts (srs-engine)
-    // grow one. See issue #30.
     const grade: Grade = correct ? 5 : 0;
-    recordAnswer(currentItem.itemId, grade);
+    recordAnswer(currentItem.itemId, grade, hintsUsed);
 
     if (currentIndex < dueItems.length - 1) {
       setCurrentIndex(currentIndex + 1);

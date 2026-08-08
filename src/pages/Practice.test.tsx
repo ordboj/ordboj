@@ -86,8 +86,8 @@ describe('Practice page - one full session', () => {
     expect(screen.getByText(/completed all due cards/i)).toBeInTheDocument();
 
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(2);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, '1-presens', 5);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '1-preteritum', 5);
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, '1-presens', 5, 0);
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '1-preteritum', 5, 0);
   });
 
   // Issue #30 acceptance criterion: "When hintsUsed > 0, srs.ts uses the
