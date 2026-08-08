@@ -8,6 +8,7 @@ import {
   Grade,
 } from '@/lib/srs';
 import { getVerbs, getAllConjugatedVerbs, Form, Verb } from '@/lib/verbs';
+import { conjugationItemId } from '@/lib/itemIds';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -169,7 +170,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
 
       for (const verb of verbs) {
         for (const form of forms) {
-          const itemId = `${verb.id}-${form}`;
+          const itemId = conjugationItemId(verb.id, form);
           if (!newStates[itemId]) {
             newStates[itemId] = initializeSrsState(itemId);
           }
@@ -243,7 +244,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
           continue;
         }
 
-        const itemId = `${verb.id}-${form}`;
+        const itemId = conjugationItemId(verb.id, form);
         const state = srsStates[itemId];
         if (state && isDue(state)) {
           dueItems.push({

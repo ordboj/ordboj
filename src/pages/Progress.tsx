@@ -22,7 +22,8 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Search, ArrowUpDown, Trophy } from 'lucide-react';
-import { getAllConjugatedVerbs, ConjugatedVerb } from '@/lib/verbs';
+import { getAllConjugatedVerbs, ConjugatedVerb, type Form } from '@/lib/verbs';
+import { conjugationItemId } from '@/lib/itemIds';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { VerbDetailsModal } from '@/components/VerbDetailsModal';
@@ -56,12 +57,12 @@ export default function Progress() {
 
   const getSrsStage = useCallback(
     (verbId: string): number => {
-      const forms = ['presens', 'preteritum', 'supinum', 'imperativ'];
+      const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
       let totalReps = 0;
       let count = 0;
 
       forms.forEach((form) => {
-        const itemId = `${verbId}-${form}`;
+        const itemId = conjugationItemId(verbId, form);
         const state = srsStates[itemId];
         if (state) {
           totalReps += state.repetitions;
