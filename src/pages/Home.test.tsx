@@ -207,17 +207,17 @@ describe('Home page - regression #103 (due count recompute on unrelated render)'
 // Issue #110 AC: clickable Cards need a full keyboard path (role, tabIndex,
 // onKeyDown), not just an onClick that only a mouse/touch user can reach.
 describe('Home - keyboard access for the Progress/Settings stat cards (issue #110 AC)', () => {
-  it('is reachable by keyboard: the Progress card is a focusable button-role element', async () => {
+  it('is reachable by keyboard: the Progress card is a focusable link-role element', async () => {
     renderWithProviders(<Home />, { route: '/' });
 
-    const progressCard = await screen.findByRole('button', { name: /progress/i });
+    const progressCard = await screen.findByRole('link', { name: /progress/i });
     expect(progressCard).toHaveAttribute('tabIndex', '0');
   });
 
   it('navigates to /progress when the Progress card is activated with Enter', async () => {
     renderWithProviders(<Home />, { route: '/' });
 
-    const progressCard = await screen.findByRole('button', { name: /progress/i });
+    const progressCard = await screen.findByRole('link', { name: /progress/i });
     fireEvent.keyDown(progressCard, { key: 'Enter' });
 
     expect(navigateMock).toHaveBeenCalledWith('/progress');
@@ -226,7 +226,7 @@ describe('Home - keyboard access for the Progress/Settings stat cards (issue #11
   it('navigates to /progress when the Progress card is activated with Space', async () => {
     renderWithProviders(<Home />, { route: '/' });
 
-    const progressCard = await screen.findByRole('button', { name: /progress/i });
+    const progressCard = await screen.findByRole('link', { name: /progress/i });
     fireEvent.keyDown(progressCard, { key: ' ' });
 
     expect(navigateMock).toHaveBeenCalledWith('/progress');
@@ -235,7 +235,7 @@ describe('Home - keyboard access for the Progress/Settings stat cards (issue #11
   it('navigates to /settings when the Settings card is activated with Enter', async () => {
     renderWithProviders(<Home />, { route: '/' });
 
-    const settingsCard = await screen.findByRole('button', { name: /settings/i });
+    const settingsCard = await screen.findByRole('link', { name: /settings/i });
     fireEvent.keyDown(settingsCard, { key: 'Enter' });
 
     expect(navigateMock).toHaveBeenCalledWith('/settings');
@@ -244,10 +244,32 @@ describe('Home - keyboard access for the Progress/Settings stat cards (issue #11
   it('does not navigate on an unrelated key (e.g. Tab)', async () => {
     renderWithProviders(<Home />, { route: '/' });
 
-    const progressCard = await screen.findByRole('button', { name: /progress/i });
+    const progressCard = await screen.findByRole('link', { name: /progress/i });
     fireEvent.keyDown(progressCard, { key: 'Tab' });
 
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+});
+
+// Issue #329: the Progress/Settings stat cards navigate to routes rather
+// than performing an in-page action, so role=link is the accurate ARIA
+// role (not role=button). Pin the role precisely so a regression back to
+// role=button is loud, even though findByRole('link', ...) above would
+// also fail on that regression (belt and suspenders: this test fails for
+// a different, more specific reason if only the role attribute regresses).
+describe('Home - navigation cards expose role=link, not role=button (issue #329)', () => {
+  it('does not expose the Progress card under role=button', async () => {
+    renderWithProviders(<Home />, { route: '/' });
+
+    await screen.findByRole('link', { name: /progress/i });
+    expect(screen.queryByRole('button', { name: /progress/i })).not.toBeInTheDocument();
+  });
+
+  it('does not expose the Settings card under role=button', async () => {
+    renderWithProviders(<Home />, { route: '/' });
+
+    await screen.findByRole('link', { name: /settings/i });
+    expect(screen.queryByRole('button', { name: /settings/i })).not.toBeInTheDocument();
   });
 });
 
