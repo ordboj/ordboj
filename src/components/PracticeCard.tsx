@@ -387,29 +387,38 @@ export function PracticeCard({
             </div>
           )}
 
-          {/* Feedback */}
+          {/* Feedback status: this node stays mounted at all times (visually
+              hidden via sr-only until an answer is submitted) rather than
+              being inserted together with its text, so the aria-live
+              announcement is a reliable in-place content mutation instead of
+              a mount-plus-content change several AT/browser pairs miss. */}
+          <div
+            role={showFeedback ? 'status' : undefined}
+            aria-live="polite"
+            className={
+              showFeedback
+                ? `flex items-center justify-center gap-3 p-4 rounded-lg ${
+                    isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
+                  }`
+                : 'sr-only'
+            }
+          >
+            {showFeedback &&
+              (isCorrect ? (
+                <>
+                  <CheckCircle2 className="w-8 h-8" />
+                  <span className="text-2xl font-bold">Correct!</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-8 h-8" />
+                  <span className="text-2xl font-bold">Not quite</span>
+                </>
+              ))}
+          </div>
+
           {showFeedback && (
             <div className="space-y-4">
-              <div
-                role="status"
-                aria-live="polite"
-                className={`flex items-center justify-center gap-3 p-4 rounded-lg ${
-                  isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
-                }`}
-              >
-                {isCorrect ? (
-                  <>
-                    <CheckCircle2 className="w-8 h-8" />
-                    <span className="text-2xl font-bold">Correct!</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-8 h-8" />
-                    <span className="text-2xl font-bold">Not quite</span>
-                  </>
-                )}
-              </div>
-
               {grupp && (
                 <div className="flex justify-center">
                   <Badge variant="outline">grupp {grupp}</Badge>
@@ -474,9 +483,8 @@ export function PracticeCard({
                   </div>
                   <Button
                     variant="outline"
-                    size="sm"
                     onClick={handlePronounce}
-                    className="w-full gap-2"
+                    className="w-full gap-2 min-h-11"
                   >
                     <Volume2 className="w-4 h-4" />
                     Pronounce answer
