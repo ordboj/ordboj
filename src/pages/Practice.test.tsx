@@ -630,7 +630,11 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     mocks.srsStates = {
       '2-presens': futureState('2-presens', now + 3 * DAY_MS), // ha -> "har"
       '1-presens': futureState('1-presens', now + 1 * DAY_MS), // vara -> "är"
-      '4-presens': futureState('4-presens', now + 2 * DAY_MS), // unna -> "unnar"
+      // "komma" (id 7), not "unna" (id 4): #42 re-tagged "unna" A1 -> B2, so
+      // under the STABLE_SETTINGS cefrLevels: ['A1'] filter it would no
+      // longer be in the free-practice pool at all and this fixture's
+      // 3-item assumption would silently break.
+      '7-presens': futureState('7-presens', now + 2 * DAY_MS), // komma -> "kommer"
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -651,10 +655,10 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
-    // Second nearest (unna, +2 days).
+    // Second nearest (komma, +2 days).
     expect(await screen.findByText('2 / 3')).toBeInTheDocument();
     input = await screen.findByPlaceholderText('Type your answer...');
-    await user.type(input, 'unnar');
+    await user.type(input, 'kommer');
     await user.click(screen.getByRole('button', { name: /check answer/i }));
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /next card/i }));
@@ -709,7 +713,11 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
       '1-presens': futureState('1-presens', now + 1 * DAY_MS), // vara
       '2-presens': futureState('2-presens', now + 2 * DAY_MS), // ha
       '3-presens': futureState('3-presens', now + 3 * DAY_MS), // kunna
-      '4-presens': futureState('4-presens', now + 4 * DAY_MS), // unna
+      // "komma" (id 7), not "unna" (id 4): #42 re-tagged "unna" A1 -> B2, so
+      // it would be filtered out under cefrLevels: ['A1'] before the cap
+      // logic even runs, leaving only 5 eligible items and letting this
+      // test pass without ever exercising the 6-down-to-5 cap it names.
+      '7-presens': futureState('7-presens', now + 4 * DAY_MS), // komma
       '5-presens': futureState('5-presens', now + 5 * DAY_MS), // få
       '6-presens': futureState('6-presens', now + 6 * DAY_MS), // bli
     };

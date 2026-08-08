@@ -1023,8 +1023,10 @@ describe('PracticeCard - multiple-choice distractor policy (#139)', () => {
     // (which are all irregular/grupp '4' or '3'). VERB_DATA has 10 grupp-'1'
     // verbs total (9 excluding "unna" itself) — enough that all 3
     // distractors should be drawn from grupp '1' under the scoring policy
-    // (same-group score strictly beats every other candidate, since every
-    // row shares the same CEFR level). Under the old fixed-pool
+    // (same-group score of 20 strictly beats any cross-group candidate
+    // regardless of the +1 same-CEFR tie-break; unna is tagged B2 per #42
+    // while its grupp-1 peers are A1, so the CEFR bonus never applies here
+    // and does not change which group wins). Under the old fixed-pool
     // implementation this could never happen: none of the 8 pool verbs are
     // grupp '1'.
     renderWithProviders(
