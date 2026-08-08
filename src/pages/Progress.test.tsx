@@ -150,7 +150,16 @@ describe('Progress page - imperativNotApplicable flag hides imperativ regardless
 
     const infinitiveCell = await screen.findByText('flagga-fixture');
     const row = infinitiveCell.closest('tr') as HTMLElement;
-    expect(within(row).getByText('—')).toBeInTheDocument();
+    // The row now also has an unrelated empty-grupp em-dash cell (main's
+    // Progress.tsx change), rendered with its own sr-only "not available"
+    // label vs. this flag's sr-only "not applicable" label. Scope to the
+    // specific cell carrying the "not applicable" label so this stays a
+    // targeted assertion about the imperativ column, not a bare-em-dash
+    // count that would pass by accident.
+    const imperativCell = within(row)
+      .getByText('not applicable', { selector: '.sr-only' })
+      .closest('td') as HTMLElement;
+    expect(within(imperativCell).getByText('—')).toBeInTheDocument();
     expect(within(row).queryByText('realimperativvalue')).not.toBeInTheDocument();
 
     vi.resetModules();

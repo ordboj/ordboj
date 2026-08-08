@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { VerbDetailsModal } from '@/components/VerbDetailsModal';
-import type { ConjugatedVerb } from '@/lib/verbs';
+import { getFormLabel, type ConjugatedVerb } from '@/lib/verbs';
 
 // PR #199 (issue #112, AC #4): the "New" stage badge used an off-palette
 // bg-purple-500 utility that doesn't map to a design token. It must use an
@@ -48,7 +48,7 @@ describe('VerbDetailsModal - imperativNotApplicable flag hides the imperativ row
     );
 
     expect(screen.queryByText('realimperativvalue')).not.toBeInTheDocument();
-    expect(screen.queryByText('Imperative (command)')).not.toBeInTheDocument();
+    expect(screen.queryByText(getFormLabel('imperativ'))).not.toBeInTheDocument();
   });
 
   it('still shows the Imperative row for a verb with a real imperativ and no flag (baseline, unaffected by #124)', () => {
@@ -56,7 +56,7 @@ describe('VerbDetailsModal - imperativNotApplicable flag hides the imperativ row
       <VerbDetailsModal verb={VERB} srsStage={0} srsStates={{}} onClose={vi.fn()} />,
     );
 
-    const label = screen.getByText('Imperative (command)');
+    const label = screen.getByText(getFormLabel('imperativ'));
     expect(label).toBeInTheDocument();
     // VERB's preteritum and imperativ happen to share the same text ("var"),
     // so scope to the imperativ row's own container rather than a bare
