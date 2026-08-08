@@ -66,12 +66,12 @@ beforeEach(() => {
 });
 
 describe('route-level crash containment (issue #18)', () => {
-  it('a route that throws renders the RouteErrorBoundary fallback, not a blank page or an unhandled exception', () => {
+  it('a route that throws renders the RouteErrorBoundary fallback, not a blank page or an unhandled exception', async () => {
     window.history.pushState({}, '', '/practice');
 
     expect(() => render(<App />)).not.toThrow();
 
-    expect(screen.getByText(/this page hit a snag/i)).toBeInTheDocument();
+    expect(await screen.findByText(/this page hit a snag/i)).toBeInTheDocument();
     // The rest of the chrome (Toaster/Sonner/TooltipProvider) survives too -
     // this is a route boundary catching, not the outer AppErrorBoundary.
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
@@ -114,11 +114,11 @@ describe('route-level crash containment (issue #18)', () => {
     expect(screen.queryByText(/this page hit a snag/i)).not.toBeInTheDocument();
   });
 
-  it('a route that never throws is unaffected: Settings renders normally without any fallback', () => {
+  it('a route that never throws is unaffected: Settings renders normally without any fallback', async () => {
     window.history.pushState({}, '', '/settings');
     render(<App />);
 
-    expect(screen.getByText('Settings Page')).toBeInTheDocument();
+    expect(await screen.findByText('Settings Page')).toBeInTheDocument();
     expect(screen.queryByText(/this page hit a snag/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
   });
