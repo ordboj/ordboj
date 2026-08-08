@@ -146,8 +146,9 @@ export function PracticeCard({
   };
 
   const handleNext = () => {
-    // Calculate grade based on correctness
-    const grade: Grade = isCorrect ? 5 : 0;
+    // Calculate grade: wrong = 0, correct-with-hint = 3, correct unaided = 5.
+    const hintUsed = revealedHints.length > 0;
+    const grade: Grade = isCorrect ? (hintUsed ? 3 : 5) : 0;
     onAnswer(grade);
   };
 

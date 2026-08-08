@@ -11,7 +11,7 @@ import { Grade } from '@/lib/srs';
 export default function Practice() {
   const navigate = useNavigate();
   const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
-  const { getDueItems, recordAnswer, isLoading } = useSrsProgress(settings.cefrLevels);
+  const { getDueItems, recordAnswerWithRequeue, isLoading } = useSrsProgress(settings.cefrLevels);
 
   const [dueItems, setDueItems] = useState<PracticeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -32,9 +32,10 @@ export default function Practice() {
 
   const handleAnswer = (grade: Grade) => {
     const currentItem = dueItems[currentIndex];
-    recordAnswer(currentItem.itemId, grade);
+    const newQueue = recordAnswerWithRequeue(currentItem, grade, dueItems, currentIndex);
+    setDueItems(newQueue);
 
-    if (currentIndex < dueItems.length - 1) {
+    if (currentIndex < newQueue.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       setPracticeComplete(true);
