@@ -10,11 +10,17 @@ afterEach(() => {
 // jsdom does not implement matchMedia. src/hooks/use-mobile.tsx and some
 // Radix-adjacent UI primitives call it during render.
 //
-// This is a plain function, not a vi.fn(), on purpose: vitest.config.ts sets
-// restoreMocks: true, which calls mockRestore() on every vi.fn() before each
-// test. A vi.fn().mockImplementation(...) here would have its implementation
-// stripped after the first test, leaving window.matchMedia() returning
-// undefined and crashing anything (e.g. sonner) that dereferences the result.
+// This is a plain function, not a vi.fn(), as defensive hardening: it makes
+// this stub immune to any future restoreMocks/spy interaction, whatever
+// that interaction turns out to be. It is not a fix for a real wipe -
+// vitest's restoreMocks (mockRestore()) only resets vi.spyOn() spies back to
+// their original implementation; a vi.fn().mockImplementation(...) here
+// would have kept its implementation across tests exactly like this plain
+// function does. The App.test.tsx failure this was chasing was actually
+// fixed by removing that file's `vi.mock('sonner', ...)`: sonner.tsx reads
+// window.matchMedia() itself when its `theme={theme}` prop is `"system"`,
+// and the mock was preventing that branch (and this matchMedia stub) from
+// ever being exercised in the first place.
 if (!window.matchMedia) {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
