@@ -36,17 +36,24 @@ export interface VerbData {
   // or empty means "no documented alternate", which is true for almost every
   // row and requires no change to existing data.
   alternates?: Partial<Record<AlternateFormField, string[]>>;
+  // True only for verbs that grammatically have no imperativ at all in
+  // Swedish — modal/auxiliary verbs (kunna, få, vilja, ...). Distinguishes
+  // that fact from "not filled in yet": every other row must have a
+  // non-empty imperativ, and an empty imperativ without this flag set is a
+  // data bug, not a deliberate gap. Omitted (undefined) is equivalent to
+  // false and is the correct value for every non-modal verb.
+  noNaturalImperativ?: boolean;
 }
 
 export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "vara", imperativ: "var", presens: "är", preteritum: "var", supinum: "varit", grupp: "4" },
   { cefr: "A1", infinitive: "ha", imperativ: "ha", presens: "har", preteritum: "hade", supinum: "haft", grupp: "4" },
-  { cefr: "A1", infinitive: "kunna", imperativ: "", presens: "kan", preteritum: "kunde", supinum: "kunnat", grupp: "4" }, // modal verb: no imperativ in Swedish, empty is correct
+  { cefr: "A1", infinitive: "kunna", imperativ: "", presens: "kan", preteritum: "kunde", supinum: "kunnat", grupp: "4", noNaturalImperativ: true }, // modal verb: no imperativ in Swedish, empty is correct
   { cefr: "A1", infinitive: "unna", imperativ: "unna", presens: "unnar", preteritum: "unnade", supinum: "unnat", grupp: "1" },
-  { cefr: "A1", infinitive: "få", imperativ: "", presens: "får", preteritum: "fick", supinum: "fått", grupp: "4" }, // modal verb: no imperativ in Swedish, empty is correct
+  { cefr: "A1", infinitive: "få", imperativ: "", presens: "får", preteritum: "fick", supinum: "fått", grupp: "4", noNaturalImperativ: true }, // modal verb: no imperativ in Swedish, empty is correct
   { cefr: "A1", infinitive: "bli", imperativ: "bli", presens: "blir", preteritum: "blev", supinum: "blivit", grupp: "4" },
   { cefr: "A1", infinitive: "komma", imperativ: "kom", presens: "kommer", preteritum: "kom", supinum: "kommit", grupp: "4" },
-  { cefr: "A1", infinitive: "vilja", imperativ: "", presens: "vill", preteritum: "ville", supinum: "velat", grupp: "4" }, // modal verb: no imperativ in Swedish, empty is correct
+  { cefr: "A1", infinitive: "vilja", imperativ: "", presens: "vill", preteritum: "ville", supinum: "velat", grupp: "4", noNaturalImperativ: true }, // modal verb: no imperativ in Swedish, empty is correct
   { cefr: "A1", infinitive: "göra", imperativ: "gör", presens: "gör", preteritum: "gjorde", supinum: "gjort", grupp: "4" },
   { cefr: "A1", infinitive: "finna", imperativ: "finn", presens: "finner", preteritum: "fann", supinum: "funnit", grupp: "4" },
   { cefr: "A1", infinitive: "ta", imperativ: "ta", presens: "tar", preteritum: "tog", supinum: "tagit", grupp: "4" },
@@ -96,4 +103,14 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "tala", imperativ: "tala", presens: "talar", preteritum: "talade", supinum: "talat", grupp: "1" },
   { cefr: "A1", infinitive: "bära", imperativ: "bär", presens: "bär", preteritum: "bar", supinum: "burit", grupp: "4" },
   { cefr: "A1", infinitive: "höra", imperativ: "hör", presens: "hör", preteritum: "hörde", supinum: "hört", grupp: "2a" },
+  // Appended for #262: unlocks verified:false particle verbs (stänga av,
+  // sätta på, stiga upp, hälsa på, bygga ut, ställa in) whose base verb was
+  // missing from VERB_DATA. Append-only — existing row order above is
+  // frozen by verbData.orderPin.test.ts.
+  { cefr: "A1", infinitive: "stänga", imperativ: "stäng", presens: "stänger", preteritum: "stängde", supinum: "stängt", grupp: "2a" },
+  { cefr: "A1", infinitive: "sätta", imperativ: "sätt", presens: "sätter", preteritum: "satte", supinum: "satt", grupp: "4" },
+  { cefr: "A1", infinitive: "stiga", imperativ: "stig", presens: "stiger", preteritum: "steg", supinum: "stigit", grupp: "4" },
+  { cefr: "A2", infinitive: "hälsa", imperativ: "hälsa", presens: "hälsar", preteritum: "hälsade", supinum: "hälsat", grupp: "1" },
+  { cefr: "A1", infinitive: "bygga", imperativ: "bygg", presens: "bygger", preteritum: "byggde", supinum: "byggt", grupp: "2a" },
+  { cefr: "A1", infinitive: "ställa", imperativ: "ställ", presens: "ställer", preteritum: "ställde", supinum: "ställt", grupp: "2a" },
 ];

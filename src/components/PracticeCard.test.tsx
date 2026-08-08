@@ -1163,6 +1163,157 @@ describe('PracticeCard - multiple-choice distractor policy (#139)', () => {
   });
 });
 
+// Issue #124: ConjugatedVerb.imperativNotApplicable flags a form as
+// grammatically confirmed absent (modal verbs), distinct from a merely
+// empty/placeholder value. These fixtures give the flagged verb a REAL,
+// non-empty stored imperativ value that is NOT the "(not available)"
+// sentinel, so any assertion that still treats it as unavailable can only
+// be explained by the new flag itself -- not by the pre-#124 string
+// comparison, which would see a normal-looking answer and treat it as
+// available. Against pre-#124 code (no such field exists on VERB_DATA or
+// ConjugatedVerb) these fixtures behave like an ordinary verb with a real
+// imperativ, so every assertion below fails there for the right reason.
+describe('PracticeCard - imperativNotApplicable flag drives unavailable-form handling regardless of the stored value (issue #124)', () => {
+  it('degrades multiple-choice to typing for a flagged form even though the stored value is a real, non-empty string', async () => {
+    vi.resetModules();
+    vi.doMock('@/data/verbData', () => ({
+      VERB_DATA: [
+        {
+          cefr: 'A1',
+          infinitive: 'flagga-fixture',
+          presens: 'flaggarx',
+          preteritum: 'flaggadex',
+          supinum: 'flaggatx',
+          imperativ: 'realimperativvalue',
+          grupp: '1',
+          noNaturalImperativ: true,
+        },
+      ],
+    }));
+
+    const { PracticeCard: MockedPracticeCard } = await import('@/components/PracticeCard');
+    renderWithProviders(
+      <MockedPracticeCard
+        infinitive="flagga-fixture"
+        form="imperativ"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    expect(input).toBeInTheDocument();
+    // No multiple-choice option grid at all - it degraded to typing.
+    expect(document.querySelector('.grid-cols-1')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'realimperativvalue' })).not.toBeInTheDocument();
+
+    vi.resetModules();
+    vi.doUnmock('@/data/verbData');
+  });
+
+  it("never offers a flagged verb's real imperativ value as a multiple-choice distractor for a different verb in the same group", async () => {
+    vi.resetModules();
+    // Exactly two verbs, both grupp '1', so the flagged fixture is the
+    // ONLY same-group distractor candidate available for the target verb
+    // -- deterministic: pre-#124 code (no flag concept) would always
+    // include it since it's the sole candidate, post-#124 code must always
+    // exclude it.
+    vi.doMock('@/data/verbData', () => ({
+      VERB_DATA: [
+        {
+          cefr: 'A1',
+          infinitive: 'target-fixture',
+          presens: 'targetpresens',
+          preteritum: 'targetpret',
+          supinum: 'targetsup',
+          imperativ: 'targetimperativ',
+          grupp: '1',
+        },
+        {
+          cefr: 'A1',
+          infinitive: 'flagga-fixture',
+          presens: 'flaggarx',
+          preteritum: 'flaggadex',
+          supinum: 'flaggatx',
+          imperativ: 'realimperativvalue',
+          grupp: '1',
+          noNaturalImperativ: true,
+        },
+      ],
+    }));
+
+    const { PracticeCard: MockedPracticeCard } = await import('@/components/PracticeCard');
+    renderWithProviders(
+      <MockedPracticeCard
+        infinitive="target-fixture"
+        form="imperativ"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
+    });
+
+    const optionTexts = screen.getAllByRole('button').map((b) => b.textContent);
+    expect(optionTexts).toContain('targetimperativ');
+    expect(optionTexts).not.toContain('realimperativvalue');
+
+    vi.resetModules();
+    vi.doUnmock('@/data/verbData');
+  });
+
+  it('does not mark the flagged form as Swedish (lang="sv") in the post-answer "Complete pattern" reveal, even though its real value is still displayed', async () => {
+    vi.resetModules();
+    vi.doMock('@/data/verbData', () => ({
+      VERB_DATA: [
+        {
+          cefr: 'A1',
+          infinitive: 'flagga-fixture',
+          presens: 'flaggarx',
+          preteritum: 'flaggadex',
+          supinum: 'flaggatx',
+          imperativ: 'realimperativvalue',
+          grupp: '1',
+          noNaturalImperativ: true,
+        },
+      ],
+    }));
+
+    const { PracticeCard: MockedPracticeCard } = await import('@/components/PracticeCard');
+    const user = userEvent.setup();
+    renderWithProviders(
+      <MockedPracticeCard
+        infinitive="flagga-fixture"
+        form="imperativ"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'realimperativvalue');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    const patternValue = screen.getByText('realimperativvalue');
+    expect(patternValue).not.toHaveAttribute('lang', 'sv');
+
+    vi.resetModules();
+    vi.doUnmock('@/data/verbData');
+  });
+});
+
 const VARA_PRETERITUM_ANSWER = 'var';
 
 // #32 originally faded the sibling-form pattern cue in and out of the
@@ -1221,5 +1372,112 @@ describe('PracticeCard - repetitions does not affect the recall heading (superse
     const completePattern = screen.getByText('Complete pattern:').closest('div');
     expect(completePattern).toHaveTextContent('är');
     expect(completePattern).toHaveTextContent('varit');
+  });
+});
+
+// Issue #228 (AC): a "grupp X" text badge in the post-answer feedback area.
+// Grupp predicts the answer's ending pattern, so the RED LINE is that it
+// must never render before the learner submits an answer (src/lib/verbs.ts:
+// 29-32 is the "never guessed" contract for undefined grupp).
+describe('PracticeCard - grupp badge (issue #228)', () => {
+  it('shows "grupp 4" in feedback only after answering, never on the pre-answer recall screen — typing mode', async () => {
+    // "vara" is grupp '4' in VERB_DATA (swedish-linguist owned fixture).
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    // RED LINE: nothing about the grupp is on the page before submission.
+    expect(screen.queryByText(/grupp/i)).not.toBeInTheDocument();
+
+    await user.type(input, VARA_PRESENS_ANSWER);
+    expect(screen.queryByText(/grupp/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    expect(screen.getByText('grupp 4')).toBeInTheDocument();
+  });
+
+  it('shows "grupp 4" in feedback only after choosing an option, never while the options are on screen — multiple-choice mode', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText(/grupp/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: VARA_PRESENS_ANSWER }));
+    await screen.findByText('Correct!');
+
+    expect(screen.getByText('grupp 4')).toBeInTheDocument();
+  });
+
+  it('never renders a grupp badge — before or after answering — for a verb whose grupp is unknown (never guessed, src/lib/verbs.ts:29-32)', async () => {
+    const user = userEvent.setup();
+
+    // Comparison case first: a known-grupp verb really does show the badge
+    // once answered, so this whole scenario is not vacuous against a build
+    // that never wires the badge up at all.
+    const { unmount } = renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+    let input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, VARA_PRESENS_ANSWER);
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    expect(await screen.findByText('grupp 4')).toBeInTheDocument();
+    unmount();
+
+    // Now the real assertion: an infinitive absent from VERB_DATA has an
+    // undefined grupp per getVerbGrupp's documented contract, and that must
+    // render as absent, not as a guessed/placeholder badge.
+    renderWithProviders(
+      <PracticeCard
+        infinitive="zzz-not-a-real-verb-fixture"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+    input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'whatever');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await waitFor(() => {
+      expect(screen.queryByText('Correct!') || screen.queryByText('Not quite')).toBeTruthy();
+    });
+
+    expect(screen.queryByText(/grupp/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument();
   });
 });

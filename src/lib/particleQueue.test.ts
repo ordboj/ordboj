@@ -171,8 +171,8 @@ describe('introductions', () => {
         }),
       ],
     });
-    expect(sitting.cards[0].kind).toBe('introduction');
-    expect(sitting.cards[0].entry.id).toBe('pv:new-one');
+    expect(sitting.cards[0]!.kind).toBe('introduction');
+    expect(sitting.cards[0]!.entry.id).toBe('pv:new-one');
   });
 
   it('never introduces two verbs sharing a base verb in one sitting', () => {
@@ -278,7 +278,7 @@ describe('first cloze placement', () => {
     const kinds = sitting.cards.map((card) => card.kind);
     expect(kinds[0]).toBe('introduction');
     expect(kinds[kinds.length - 1]).toBe('cloze');
-    expect(sitting.cards[sitting.cards.length - 1].entry.id).toBe('pv:new-one');
+    expect(sitting.cards[sitting.cards.length - 1]!.entry.id).toBe('pv:new-one');
     expect(sitting.deferredFirstClozes).toEqual([]);
   });
 
@@ -292,7 +292,7 @@ describe('first cloze placement', () => {
     // Two intervening items is the floor, and it is satisfied here.
     const sitting = sittingWithReviews(2, 12);
     expect(sitting.deferredFirstClozes).toEqual([]);
-    expect(sitting.cards[sitting.cards.length - 1].kind).toBe('cloze');
+    expect(sitting.cards[sitting.cards.length - 1]!.kind).toBe('cloze');
   });
 
   it('defers the first cloze when fewer than two items would intervene', () => {
@@ -301,7 +301,7 @@ describe('first cloze placement', () => {
     const sitting = sittingWithReviews(1, 12);
     expect(sitting.deferredFirstClozes).toEqual(['pv:new-one']);
     expect(sitting.cards.filter((card) => card.kind === 'cloze')).toHaveLength(1);
-    expect(sitting.cards.filter((card) => card.kind === 'cloze')[0].entry.id).toBe('pv:review-0');
+    expect(sitting.cards.filter((card) => card.kind === 'cloze')[0]!.entry.id).toBe('pv:review-0');
   });
 
   it('defers the first cloze of a lone introduction with no reviews at all', () => {
@@ -344,7 +344,7 @@ describe('recall items', () => {
       entries: [target],
     });
     expect(sitting.cards.map((card) => card.kind)).toEqual(['recall']);
-    expect(sitting.cards[0].itemId).toBe(recallId);
+    expect(sitting.cards[0]!.itemId).toBe(recallId);
   });
 
   it('never gives a reflexive verb a recall item', () => {
@@ -427,7 +427,7 @@ describe('sibling separation', () => {
       entries: [target],
     });
     expect(sitting.cards).toHaveLength(1);
-    expect(sitting.cards[0].itemId).toBe(clozeId);
+    expect(sitting.cards[0]!.itemId).toBe(clozeId);
   });
 
   it('serves the recall alone when only it is due', () => {

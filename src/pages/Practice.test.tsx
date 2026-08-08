@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => {
     >,
     srsLoading: false,
     settingsLoading: false,
+    srsReadOnly: false,
   };
 });
 
@@ -61,6 +62,7 @@ vi.mock('@/hooks/useSrsProgress', () => ({
     // would hide any regression of that fix instead of testing it.
     getDueItems: async () => mocks.dueItems,
     recordAnswer: mocks.recordAnswer,
+    isReadOnly: mocks.srsReadOnly,
     exportData: () => '{}',
     importData: () => true,
     resetProgress: () => undefined,
@@ -81,6 +83,7 @@ beforeEach(() => {
   mocks.recordAnswer.mockClear();
   mocks.srsLoading = false;
   mocks.settingsLoading = false;
+  mocks.srsReadOnly = false;
   mocks.dueItems = [
     { verbId: '1', infinitive: 'vara', form: 'presens', itemId: '1-presens' },
     { verbId: '1', infinitive: 'vara', form: 'preteritum', itemId: '1-preteritum' },
@@ -203,7 +206,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     // completedItemIds) does not advance past what has actually resolved.
     for (const id of ['v2-presens', 'v3-presens', 'v4-presens']) {
       input = await screen.findByPlaceholderText('Type your answer...');
-      await user.type(input, ANSWERS[id]);
+      await user.type(input, ANSWERS[id]!);
       await user.click(screen.getByRole('button', { name: /check answer/i }));
       await screen.findByText('Correct!');
       await user.click(screen.getByRole('button', { name: /next card/i }));
@@ -212,7 +215,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     // Cards 5-6: v5, v6, also correct.
     for (const id of ['v5-presens', 'v6-presens']) {
       input = await screen.findByPlaceholderText('Type your answer...');
-      await user.type(input, ANSWERS[id]);
+      await user.type(input, ANSWERS[id]!);
       await user.click(screen.getByRole('button', { name: /check answer/i }));
       await screen.findByText('Correct!');
       await user.click(screen.getByRole('button', { name: /next card/i }));
@@ -323,7 +326,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
           heading.textContent?.includes(inf),
         );
         expect(infinitive).toBeDefined();
-        await user.type(input, answerByInfinitive[infinitive as string]);
+        await user.type(input, answerByInfinitive[infinitive as string]!);
         await user.click(screen.getByRole('button', { name: /check answer/i }));
         await screen.findByText('Correct!');
       }
@@ -524,7 +527,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
 
       // Still Jan 15 for one filler...
       input = await screen.findByPlaceholderText('Type your answer...');
-      await user.type(input, fillers[0][1]);
+      await user.type(input, fillers[0]![1]);
       await user.click(screen.getByRole('button', { name: /check answer/i }));
       await screen.findByText('Correct!');
       await user.click(screen.getByRole('button', { name: /next card/i }));
@@ -825,7 +828,7 @@ describe('Practice page - regression #103 (mid-session deck reshuffle)', () => {
       expect(await screen.findByText(`${i + 1} / 3`)).toBeInTheDocument();
 
       const input = await screen.findByPlaceholderText('Type your answer...');
-      await user.type(input, expectedAnswers[i].answer);
+      await user.type(input, expectedAnswers[i]!.answer);
       await user.click(screen.getByRole('button', { name: /check answer/i }));
       expect(await screen.findByText('Correct!')).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: /next card/i }));
@@ -835,5 +838,39 @@ describe('Practice page - regression #103 (mid-session deck reshuffle)', () => {
     expect(answeredOrder).toEqual(expectedAnswers.map((e) => e.itemId));
     // No repeats, none skipped, all three seen exactly once.
     expect(new Set(answeredOrder).size).toBe(3);
+  });
+});
+
+// Issue #263: when useSrsProgress reports isReadOnly (the store on disk was
+// written by a build newer than this one understands), nothing this session
+// records will be saved. The learner must be told, both while a round is in
+// progress and on the session-complete screen -- the two places
+// Practice.tsx renders <ReadOnlyBanner />.
+describe('Practice page - read-only progress banner (issue #263)', () => {
+  const BANNER_TEXT = /your progress from this session won.t be saved/i;
+
+  it('shows the read-only banner above an active round when isReadOnly is true', async () => {
+    mocks.srsReadOnly = true;
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    expect(await screen.findByText('1 / 2')).toBeInTheDocument();
+    const banner = screen.getByRole('status');
+    expect(banner).toHaveTextContent(BANNER_TEXT);
+  });
+
+  it('shows the read-only banner on the session-complete screen when isReadOnly is true', async () => {
+    mocks.srsReadOnly = true;
+    mocks.dueItems = [];
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(BANNER_TEXT);
+  });
+
+  it('renders no read-only banner when isReadOnly is false', async () => {
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    expect(await screen.findByText('1 / 2')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

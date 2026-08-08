@@ -38,8 +38,8 @@ function readyBase(infinitive: string): Record<string, SrsState> {
   return out;
 }
 
-function seed(items: Record<string, SrsState>) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, items }));
+function seed(items: Record<string, SrsState>, version = 2) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version, items }));
 }
 
 function storedItems(): Record<string, SrsState> {
@@ -48,7 +48,16 @@ function storedItems(): Record<string, SrsState> {
 
 beforeEach(() => {
   localStorage.clear();
-  vi.useFakeTimers({ shouldAdvanceTime: true, now: NOW });
+  // Fake only Date: the page has no production setTimeout/debounce to
+  // control (auto-submit and the feedback transition are plain synchronous
+  // React state updates), so the sole reason to touch the clock at all is
+  // pinning Date.now() for SRS due-date math. Faking setTimeout too (the
+  // old shouldAdvanceTime setup did, implicitly) ties @testing-library's
+  // internal waitFor polling to the fake clock, which only ever moved
+  // because shouldAdvanceTime chased the real host clock — exactly the
+  // real-time dependency that starved under parallel-worker/CI contention.
+  // Leaving setTimeout real removes that dependency entirely.
+  vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
   return () => vi.useRealTimers();
 });
 
@@ -64,7 +73,7 @@ describe('particle practice flow', () => {
   });
 
   it('introduces a new verb without asking anything, then records nothing for it', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     seed(readyBase('tycka'));
 
     renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
@@ -83,7 +92,7 @@ describe('particle practice flow', () => {
   });
 
   it('grades a correct cloze answer and advances the schedule', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
     seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) });
 
@@ -101,12 +110,12 @@ describe('particle practice flow', () => {
 
     await user.click(screen.getByRole('button', { name: 'Next Card' }));
 
-    await waitFor(() => expect(storedItems()[clozeId].repetitions).toBe(4));
-    expect(storedItems()[clozeId].dueAt).toBeGreaterThan(NOW);
+    await waitFor(() => expect(storedItems()[clozeId]!.repetitions).toBe(4));
+    expect(storedItems()[clozeId]!.dueAt).toBeGreaterThan(NOW);
   });
 
   it('marks a wrong particle wrong and shows the accepted answer', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
     seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) });
 
@@ -120,13 +129,13 @@ describe('particle practice flow', () => {
     expect(screen.getByText('upp')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Next Card' }));
-    await waitFor(() => expect(storedItems()[clozeId].repetitions).toBe(0));
+    await waitFor(() => expect(storedItems()[clozeId]!.repetitions).toBe(0));
   });
 
   it('accepts every documented alternative on an ambiguous frame, and says so', async () => {
     // skriva ner / ned / upp are all correct in this frame. Marking one wrong
     // would be marking correct Swedish wrong.
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     const clozeId = particleItemId('pv:skriva-ner', 'cloze');
     // `skriva` has a second entry (skriva ut). Give it state so it is not a
     // new verb — an introduction would legitimately take the first slot and
@@ -151,7 +160,7 @@ describe('particle practice flow', () => {
   });
 
   it('asks a recall card for the whole phrase and accepts a leading att', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     const recallId = particleItemId('pv:tycka-om', 'recall');
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
     seed({
@@ -173,7 +182,7 @@ describe('particle practice flow', () => {
   });
 
   it('shows the four conjugated forms as reference on the feedback screen', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
     seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) });
 
@@ -190,7 +199,7 @@ describe('particle practice flow', () => {
   it('offers no pronunciation control anywhere on a particle card', async () => {
     // Web Speech cannot be trusted to place particle stress, and wrong
     // prosody teaches wrong Swedish. There is no toggle to get this wrong.
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
     seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) });
 
@@ -205,7 +214,7 @@ describe('particle practice flow', () => {
   });
 
   it('names the prepositional twin on a card that has one', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     const talaOm = findParticleVerb('pv:tala-om')!;
     expect(talaOm.contrast).toBeDefined();
     const clozeId = particleItemId(talaOm.id, 'cloze');
@@ -221,7 +230,7 @@ describe('particle practice flow', () => {
   });
 
   it('runs a free-practice round that records nothing', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
     const recallId = particleItemId('pv:tycka-om', 'recall');
     // Nothing due and nothing left to unlock, so the scheduled sitting is
@@ -269,5 +278,44 @@ describe('particle practice flow', () => {
     expect(await screen.findByText('Fill in the missing particle')).toBeInTheDocument();
     expect(screen.getByText('1 / 1')).toBeInTheDocument();
     expect(screen.queryByText('Produce the whole phrase')).not.toBeInTheDocument();
+  });
+
+  // Issue #263: a store written by a build newer than this one (version >
+  // the current STORAGE_VERSION) puts useSrsProgress into isReadOnly mode --
+  // real localStorage, real hook, so this exercises the actual version
+  // guard in useSrsProgress.ts, not a mock's opinion of it.
+  describe('read-only progress banner', () => {
+    const BANNER_TEXT = /your progress from this session won.t be saved/i;
+
+    it('shows the read-only banner above an active card when the stored version is newer than this build', async () => {
+      const clozeId = particleItemId('pv:tycka-om', 'cloze');
+      seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) }, 3);
+
+      renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+
+      expect(await screen.findByText('Fill in the missing particle')).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(BANNER_TEXT);
+    });
+
+    it('shows the read-only banner on the session-complete screen when the stored version is newer than this build', async () => {
+      seed({}, 3);
+
+      renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+
+      expect(
+        await screen.findByText(/No particle verbs are ready for you yet/),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(BANNER_TEXT);
+    });
+
+    it('renders no read-only banner for a normal (non-newer) stored version', async () => {
+      const clozeId = particleItemId('pv:tycka-om', 'cloze');
+      seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) });
+
+      renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+
+      expect(await screen.findByText('Fill in the missing particle')).toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
   });
 });

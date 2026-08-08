@@ -52,10 +52,13 @@ function rowsWithPrecedingComments(source: string): Array<{
       const commentParts = [...pendingComment];
       if (trailingCommentMatch) commentParts.push(trailingCommentMatch[0]);
       rows.push({
-        infinitive: rowMatch[1],
+        // rowMatch[1] / imperativMatch[1] are the regexes' capture groups:
+        // present whenever the row matched, but string | undefined under
+        // noUncheckedIndexedAccess (#105).
+        infinitive: rowMatch[1]!,
         commentBlock: commentParts.join('\n'),
         hasGrupp: /\bgrupp:\s*"/.test(trimmed),
-        imperativ: imperativMatch ? imperativMatch[1] : '',
+        imperativ: imperativMatch ? (imperativMatch[1] ?? '') : '',
       });
       pendingComment = [];
     }
@@ -312,6 +315,50 @@ describe('VERB_DATA - imperativ audit (issue #132)', () => {
   });
 });
 
+// Issue #124: modal verbs (kunna, få, vilja) are now explicitly flagged
+// noNaturalImperativ: true, distinguishing "grammatically has none" from
+// "not filled in yet" -- "te sig" and "anse" (below) stay unflagged because
+// their empty imperativ is still pending human review (issue #132), not a
+// confirmed grammatical absence.
+describe('VERB_DATA - noNaturalImperativ flag (issue #124)', () => {
+  it.each(['kunna', 'få', 'vilja'] as const)(
+    'flags modal verb "%s" noNaturalImperativ: true',
+    (infinitive) => {
+      const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+      expect(row).toBeDefined();
+      expect(row?.noNaturalImperativ).toBe(true);
+    },
+  );
+
+  it('does not flag a non-modal verb that has a real imperativ', () => {
+    const row = VERB_DATA.find((v) => v.infinitive === 'vara');
+    expect(row?.noNaturalImperativ).toBeFalsy();
+  });
+
+  it.each(['te sig', 'anse'] as const)(
+    'does not flag "%s" (empty pending human review, not a confirmed grammatical absence)',
+    (infinitive) => {
+      const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+      expect(row?.noNaturalImperativ).toBeFalsy();
+    },
+  );
+
+  it('flags noNaturalImperativ only on rows whose imperativ is genuinely empty, never on a row with a real imperativ value', () => {
+    for (const verb of VERB_DATA) {
+      if (verb.noNaturalImperativ) {
+        expect(verb.imperativ).toBe('');
+      }
+    }
+  });
+
+  it('flags noNaturalImperativ on exactly the three modal verbs (no accidental extra row flagged)', () => {
+    const flagged = VERB_DATA.filter((v) => v.noNaturalImperativ)
+      .map((v) => v.infinitive)
+      .sort();
+    expect(flagged).toEqual(['få', 'kunna', 'vilja']);
+  });
+});
+
 describe('swedish_verbs.csv - mojibake guard', () => {
   // The source CSV legitimately contains parentheses, slashes and periods
   // for alternate forms and abbreviations (e.g. "ta (el. taga)",
@@ -361,7 +408,18 @@ describe('swedish_verbs.csv - issue #125 naive-template conjugation audit (PR #1
     const csv = readFileSync(csvPath, 'utf-8');
     const lines = csv.split(/\r?\n/).filter(Boolean);
     return lines.slice(1).map((line) => {
-      const [cefr, grammar, infinitive, imperativ, presens, preteritum, supinum] = line.split(',');
+      // Destructured split() elements are string | undefined under
+      // noUncheckedIndexedAccess (#105); a short row yields '' fields rather
+      // than undefined so CsvRow stays all-string.
+      const [
+        cefr = '',
+        grammar = '',
+        infinitive = '',
+        imperativ = '',
+        presens = '',
+        preteritum = '',
+        supinum = '',
+      ] = line.split(',');
       return { cefr, grammar, infinitive, imperativ, presens, preteritum, supinum };
     });
   }
