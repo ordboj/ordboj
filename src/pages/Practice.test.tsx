@@ -15,6 +15,14 @@ import { MAX_REQUEUES_PER_DAY } from '@/lib/srs';
 const mocks = vi.hoisted(() => {
   return {
     recordAnswer: vi.fn(),
+    // Persisted per-day requeue ledger (issue #222), now owned by
+    // useSrsProgress. Practice.tsx reads this directly for the cap check
+    // and calls recordRequeue(itemId) at the moment a retry is spliced in;
+    // the mock mirrors that contract by mutating this map in place so a
+    // re-render (driven by Practice.tsx's own state updates, same pattern
+    // as recordAnswer/dueItems below) observes the increment.
+    requeuesToday: {} as Record<string, number>,
+    recordRequeue: vi.fn(),
     dueItems: [] as Array<{ verbId: string; infinitive: string; form: string; itemId: string }>,
     // Keyed by itemId ("<verbId>-<form>"), same shape as srs.ts's SrsState.
     // Practice.tsx's free-practice pool reads this directly (it does not go
@@ -68,6 +76,8 @@ vi.mock('@/hooks/useSrsProgress', () => ({
     resetProgress: () => undefined,
     srsStates: mocks.srsStates,
     initializeAllItems: () => undefined,
+    requeuesToday: mocks.requeuesToday,
+    recordRequeue: mocks.recordRequeue,
   }),
 }));
 
@@ -81,9 +91,11 @@ vi.mock('@/hooks/useSettings', () => ({
 
 beforeEach(() => {
   mocks.recordAnswer.mockClear();
+  mocks.recordRequeue.mockClear();
   mocks.srsLoading = false;
   mocks.settingsLoading = false;
   mocks.srsReadOnly = false;
+  mocks.requeuesToday = {};
   mocks.dueItems = [
     { verbId: '1', infinitive: 'vara', form: 'presens', itemId: '1-presens' },
     { verbId: '1', infinitive: 'vara', form: 'preteritum', itemId: '1-preteritum' },
@@ -94,6 +106,17 @@ beforeEach(() => {
   // when they need to simulate a specific re-due/lapse scenario.
   mocks.recordAnswer.mockImplementation((itemId: string) => {
     mocks.dueItems = mocks.dueItems.filter((item) => item.itemId !== itemId);
+  });
+  // Honest default: recordRequeue increments the persisted per-day count,
+  // the way the real hook's setRequeues does. This is what makes
+  // requeuesToday-driven cap checks (MAX_REQUEUES_PER_DAY) observable
+  // across the same-pass local copy Practice.tsx keeps and the next
+  // render's read of the hook value.
+  mocks.recordRequeue.mockImplementation((itemId: string) => {
+    mocks.requeuesToday = {
+      ...mocks.requeuesToday,
+      [itemId]: (mocks.requeuesToday[itemId] ?? 0) + 1,
+    };
   });
 });
 

@@ -41,7 +41,7 @@ describe('useSrsProgress against real VERB_DATA', () => {
     await waitFor(() => expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull());
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.version).toBe(2);
+    expect(stored.version).toBe(3);
     expect(Object.keys(stored.items)).toHaveLength(VERB_DATA.length * 4);
   }, 10000);
 });

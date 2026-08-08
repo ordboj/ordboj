@@ -42,16 +42,19 @@ beforeEach(() => {
 });
 
 describe('#246: mixed legacy + pv: key round trip', () => {
-  it('exports both kinds of key in one version-2 envelope', async () => {
+  it('exports both kinds of key in one version-3 envelope', async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, items: MIXED_ITEMS }));
 
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const exported = JSON.parse(result.current.exportData());
-    // No version bump: the pv: namespace is disjoint from <digits>-<form>,
-    // which is the entire reason this feature needed no migration.
-    expect(exported.version).toBe(2);
+    // The particle feature itself needed no version bump: the pv: namespace
+    // is disjoint from <digits>-<form>. exportData always writes the
+    // current STORAGE_VERSION regardless of what version the loaded store
+    // was, so this reads 3 now (#222's unrelated v2 -> v3 requeue-ledger
+    // bump), not because loading a mixed-key store bumps anything itself.
+    expect(exported.version).toBe(3);
     for (const [key, value] of Object.entries(MIXED_ITEMS)) {
       expect(exported.items[key]).toEqual(value);
     }

@@ -151,6 +151,20 @@ export const REQUEUE_GAP_ITEMS = 3;
 // sitting again, so one intractable verb cannot trap the learner.
 export const MAX_REQUEUES_PER_DAY = 2;
 
+// The local calendar day an event belongs to, as "YYYY-MM-DD". This is the
+// scope key for the per-item-per-day requeue cap above, so it has to agree
+// with the same local-day boundary isDue uses (the browser's timezone, day
+// ends at local 23:59:59.999). Built from the local date components rather
+// than by dividing the timestamp, so it is exact on 23- and 25-hour DST days
+// and across month and year boundaries. `now` is injectable so callers and
+// tests can ask about a fixed instant.
+export function localDayKey(now: number = Date.now()): string {
+  const d = new Date(now);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
 // Pure eligibility check: does a lapsed item qualify to be re-inserted into
 // the current sitting right now? `itemsSinceLapse` is the number of other
 // items answered since this item's most recent lapse this sitting;
