@@ -6,6 +6,8 @@ import {
   getFormHint,
   getVerbs,
   getVerbGrupp,
+  getAllConjugatedVerbs,
+  availableForms,
   type Form,
 } from '@/lib/verbs';
 import { VERB_DATA } from '@/data/verbData';
@@ -28,26 +30,95 @@ describe('conjugateVerb - known verb', () => {
 });
 
 describe('conjugateVerb - unknown verb fallback', () => {
-  it('falls back to id "unknown" and "(not available)" for every conjugated form', async () => {
+  // Regression (issue #39): conjugateVerb() used to fall back to the literal
+  // string "(not available)" for every form of a verb it couldn't find. A
+  // missing form is a data fact, not display text a learner could type as
+  // an answer, so the fallback is now an empty string throughout.
+  it('falls back to id "unknown" and an empty string for every conjugated form (no sentinel string)', async () => {
     const result = await conjugateVerb('this-infinitive-does-not-exist');
     expect(result).toEqual({
       id: 'unknown',
       infinitive: 'this-infinitive-does-not-exist',
-      presens: '(not available)',
-      preteritum: '(not available)',
-      supinum: '(not available)',
-      imperativ: '(not available)',
+      presens: '',
+      preteritum: '',
+      supinum: '',
+      imperativ: '',
     });
   });
 });
 
-describe('conjugateVerb - "(not available)" fallback for a known verb missing one form', () => {
-  it('reports "(not available)" for a verb whose imperativ is an empty string in VERB_DATA', async () => {
+describe('conjugateVerb - missing-form fallback for a known verb (no "(not available)" sentinel)', () => {
+  // Regression (issue #39): a verb present in VERB_DATA but missing one
+  // form (e.g. "kunna" has no imperativ) used to surface "(not available)"
+  // for that form. It must now come through as the empty string VERB_DATA
+  // actually stores, with no sentinel text substituted.
+  it('reports an empty string for a verb whose imperativ is an empty string in VERB_DATA', async () => {
     const source = VERB_DATA.find((v) => v.infinitive === 'kunna');
     expect(source?.imperativ).toBe(''); // pins the fixture assumption this test relies on
 
     const result = await conjugateVerb('kunna');
-    expect(result.imperativ).toBe('(not available)');
+    expect(result.imperativ).toBe('');
+  });
+});
+
+describe('no "(not available)" sentinel ever leaks from real VERB_DATA (issue #39 regression, exhaustive)', () => {
+  it('conjugateVerb() never returns the literal sentinel string for any real verb x form', async () => {
+    for (const verb of VERB_DATA) {
+      const result = await conjugateVerb(verb.infinitive);
+      for (const form of ['presens', 'preteritum', 'supinum', 'imperativ'] as const) {
+        expect(result[form]).not.toBe('(not available)');
+      }
+    }
+  });
+
+  it('getAllConjugatedVerbs() never returns the literal sentinel string for any real verb x form', async () => {
+    const all = await getAllConjugatedVerbs();
+    expect(all.length).toBeGreaterThan(0);
+    for (const verb of all) {
+      for (const form of ['presens', 'preteritum', 'supinum', 'imperativ'] as const) {
+        expect(verb[form]).not.toBe('(not available)');
+      }
+    }
+  });
+});
+
+describe('availableForms', () => {
+  it('reports all five forms, in the stable pedagogical order, for a verb that has every form', async () => {
+    // "vara" has real, non-empty presens/preteritum/supinum/imperativ.
+    expect(availableForms('vara')).toEqual([
+      'infinitive',
+      'presens',
+      'preteritum',
+      'supinum',
+      'imperativ',
+    ]);
+  });
+
+  it('omits imperativ for a modal verb that has no imperativ form in VERB_DATA', () => {
+    const source = VERB_DATA.find((v) => v.infinitive === 'kunna');
+    expect(source?.imperativ).toBe(''); // pins the fixture assumption
+
+    expect(availableForms('kunna')).toEqual(['infinitive', 'presens', 'preteritum', 'supinum']);
+  });
+
+  it('returns only ["infinitive"] for an infinitive not present in VERB_DATA at all', () => {
+    expect(availableForms('this-infinitive-does-not-exist')).toEqual(['infinitive']);
+  });
+
+  it('accepts an already-conjugated verb object, not just an infinitive string, and agrees with the string form', async () => {
+    const conjugated = await conjugateVerb('kunna');
+    expect(availableForms(conjugated)).toEqual(availableForms('kunna'));
+  });
+
+  it('never lists a form whose value is the empty string, for every real verb in VERB_DATA', async () => {
+    for (const verb of VERB_DATA) {
+      const conjugated = await conjugateVerb(verb.infinitive);
+      const forms = availableForms(conjugated);
+      for (const form of forms) {
+        if (form === 'infinitive') continue;
+        expect(conjugated[form as Exclude<Form, 'infinitive'>]).not.toBe('');
+      }
+    }
   });
 });
 

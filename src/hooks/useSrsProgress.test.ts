@@ -32,9 +32,13 @@ const FIXTURE_CONJUGATIONS: Record<string, ConjugatedVerb> = {
     presens: 'provar',
     preteritum: 'provade',
     supinum: 'provat',
-    // "prova" has no attested imperativ in this fixture; the hook's
-    // getDueItems must skip this form entirely.
-    imperativ: '(not available)',
+    // "prova" has no attested imperativ in this fixture. Per issue #39,
+    // a non-existent form is represented as the empty string (the literal
+    // "(not available)" sentinel was removed and is no longer produced by
+    // verbs.ts, and is no longer a value availableForms() treats as
+    // present) -- the hook must never create an SRS item for it at all,
+    // not merely filter it out of the due set.
+    imperativ: '',
   },
 };
 
@@ -48,10 +52,10 @@ vi.mock('@/lib/verbs', async (importOriginal) => {
         FIXTURE_CONJUGATIONS[infinitive] ?? {
           id: 'unknown',
           infinitive,
-          presens: '(not available)',
-          preteritum: '(not available)',
-          supinum: '(not available)',
-          imperativ: '(not available)',
+          presens: '',
+          preteritum: '',
+          supinum: '',
+          imperativ: '',
         }
       );
     }),
@@ -59,6 +63,9 @@ vi.mock('@/lib/verbs', async (importOriginal) => {
 });
 
 const FIXED_NOW = new Date('2026-01-01T00:00:00.000Z').getTime();
+// "2-imperativ" is deliberately absent: "prova" has no imperativ in the
+// fixture above, and per issue #39 no SRS item is ever created for a form
+// that does not exist for a given verb.
 const ALL_ITEM_IDS = [
   '1-presens',
   '1-preteritum',
@@ -67,7 +74,6 @@ const ALL_ITEM_IDS = [
   '2-presens',
   '2-preteritum',
   '2-supinum',
-  '2-imperativ',
 ];
 
 beforeEach(() => {
@@ -83,7 +89,7 @@ afterEach(() => {
 });
 
 describe('cold start', () => {
-  it('initializes every verb x form combination when localStorage is empty', async () => {
+  it('initializes every verb x form combination that actually exists when localStorage is empty', async () => {
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -98,6 +104,18 @@ describe('cold start', () => {
         dueAt: FIXED_NOW,
       });
     }
+  });
+
+  // Regression (issue #39 acceptance criterion): "no SRS item is ever
+  // created for a form that does not exist for a given verb." "prova" has
+  // no imperativ in this fixture, so no "2-imperativ" item may exist at
+  // all -- not created-then-hidden, never created.
+  it('never creates an SRS item for a form that does not exist for the verb (prova has no imperativ)', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.srsStates['2-imperativ']).toBeUndefined();
+    expect(Object.keys(result.current.srsStates)).not.toContain('2-imperativ');
   });
 });
 
@@ -162,7 +180,7 @@ describe('getDueItems filtering', () => {
     expect(due.some((item) => item.verbId === '1')).toBe(false);
   });
 
-  it('skips forms whose conjugation is "(not available)"', async () => {
+  it('skips forms that do not exist for the verb (empty-string conjugation)', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const { result } = renderHook(() => useSrsProgress(['B1']));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
