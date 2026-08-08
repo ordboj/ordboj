@@ -12,6 +12,9 @@ import {
   getFormHint,
   getAllConjugatedVerbs,
   getVerbGrupp,
+  getAcceptedAnswers,
+  getAlternatesDisclosure,
+  isAcceptedAnswer,
   type ConjugatedVerb,
   type VerbPattern,
   type Grupp,
@@ -85,6 +88,7 @@ export function PracticeCard({
   // the unavailable-form placeholder.
   const effectiveMode = mode === 'multiple-choice' && !isAnswerAvailable ? 'typing' : mode;
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
+  const alternatesDisclosure = getAlternatesDisclosure(infinitive, form);
 
   // Generate multiple choice options.
   //
@@ -100,6 +104,11 @@ export function PracticeCard({
   // distractors rather than fill the remaining slots cross-group. Candidates
   // are ranked once and the top three taken, so building the option list is
   // a single bounded pass with no unbounded retry loop.
+  //
+  // Product policy P7 (docs/product/2026-08-08-alternate-answers-decision.md):
+  // a candidate is also rejected when it is anywhere in the card's accepted
+  // set (primary or alternate) -- otherwise a documented alternate (e.g.
+  // "lade") could render as a second correct button alongside the primary.
   useEffect(() => {
     const generateOptions = async () => {
       const allVerbs = await getAllConjugatedVerbs();
@@ -114,6 +123,9 @@ export function PracticeCard({
           .map((f) => conjugated?.[f])
           .filter((value): value is string => !!value && value !== '(not available)'),
       );
+      const acceptedForCard = new Set(
+        getAcceptedAnswers(infinitive, form).map((accepted) => accepted.trim().toLowerCase()),
+      );
 
       const seen = new Set<string>([correctAnswer]);
       const candidates = allVerbs
@@ -122,6 +134,7 @@ export function PracticeCard({
           const value = v[form];
           if (!value || value === '(not available)') return acc;
           if (seen.has(value) || targetOwnForms.has(value)) return acc;
+          if (acceptedForCard.has(value.trim().toLowerCase())) return acc;
 
           const vGrupp = getVerbGrupp(v.infinitive);
           const isSameGroup = targetGrupp !== undefined && vGrupp === targetGrupp;
@@ -157,7 +170,7 @@ export function PracticeCard({
 
   const handleSubmit = useCallback(
     (answer: string) => {
-      const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+      const correct = isAcceptedAnswer(infinitive, form, answer);
       setIsCorrect(correct);
       setSubmittedAnswer(answer);
       setShowFeedback(true);
@@ -169,19 +182,36 @@ export function PracticeCard({
         }
       }
     },
-    [correctAnswer, autoplayAudio, muteAudio],
+    [infinitive, form, correctAnswer, autoplayAudio, muteAudio],
   );
 
-  // Auto-submit when answer is correct
+  // Auto-submit when the typed value matches an accepted answer -- except
+  // product policy P4: suppress it while the normalized typed value is a
+  // strict prefix of another accepted answer for this card. The shipped data
+  // stores the short form as primary ("la", "sa"), so this can't be written
+  // as "primary waits, alternate fires" -- it has to check the whole accepted
+  // set both ways. A learner who means the shorter form submits deliberately
+  // with Check Answer or Enter.
   useEffect(() => {
-    if (userAnswer && !showFeedback) {
-      const isAnswerCorrect =
-        userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
-      if (isAnswerCorrect) {
-        handleSubmit(userAnswer);
-      }
-    }
-  }, [userAnswer, showFeedback, correctAnswer, handleSubmit]);
+    if (!userAnswer || showFeedback) return;
+
+    const normalized = userAnswer.trim().toLowerCase();
+    const normalizedAccepted = getAcceptedAnswers(infinitive, form).map((accepted) =>
+      accepted.trim().toLowerCase(),
+    );
+    const matchIndex = normalizedAccepted.indexOf(normalized);
+    if (matchIndex === -1) return;
+
+    const isPrefixOfAnotherAccepted = normalizedAccepted.some(
+      (candidate, index) =>
+        index !== matchIndex &&
+        candidate.length > normalized.length &&
+        candidate.startsWith(normalized),
+    );
+    if (isPrefixOfAnotherAccepted) return;
+
+    handleSubmit(userAnswer);
+  }, [userAnswer, showFeedback, infinitive, form, handleSubmit]);
 
   const handleHint = () => {
     if (revealedHints.length < correctAnswer.length) {
@@ -385,6 +415,10 @@ export function PracticeCard({
                   </>
                 )}
               </div>
+
+              {alternatesDisclosure && (
+                <p className="text-sm text-muted-foreground text-center">{alternatesDisclosure}</p>
+              )}
 
               {!isCorrect && willRequeueIfWrong && (
                 <p className="text-sm text-muted-foreground text-center">

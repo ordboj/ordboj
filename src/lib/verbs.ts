@@ -34,6 +34,73 @@ export function getVerbGrupp(infinitive: string): Grupp | undefined {
   return VERB_DATA.find((v) => v.infinitive === infinitive)?.grupp;
 }
 
+// Documented alternate accepted forms for a verb + form, e.g. "lade" for
+// lägga's preteritum alongside the primary stored form "la". Returns [] for
+// verbs not found, forms with no documented alternate (the common case),
+// and "infinitive" (alternates are not modeled for the dictionary form).
+export function getAlternateForms(infinitive: string, form: Form): string[] {
+  if (form === 'infinitive') return [];
+  const verb = VERB_DATA.find((v) => v.infinitive === infinitive);
+  return verb?.alternates?.[form] ?? [];
+}
+
+// Ordered accepted-answer list per product policy P1
+// (docs/product/2026-08-08-alternate-answers-decision.md): index 0 is always
+// the primary — the form the app displays, hints and pronounces — with any
+// documented alternates after it, and the list always has at least one
+// entry. Looks the primary up from VERB_DATA itself rather than trusting a
+// caller-supplied value, so it can't drift from what the data actually says.
+// An unknown verb or a form with no primary value (e.g. imperativ stored as
+// "" for a modal verb) falls back to the same "(not available)" sentinel
+// conjugateVerb already uses, so the accepted set always matches what's
+// actually displayed on the card.
+export function getAcceptedAnswers(infinitive: string, form: Form): string[] {
+  if (form === 'infinitive') return [infinitive];
+  const verb = VERB_DATA.find((v) => v.infinitive === infinitive);
+  const primary = verb?.[form] || '(not available)';
+  return [primary, ...(verb?.alternates?.[form] ?? [])];
+}
+
+// True if `answer` matches the primary form or any documented alternate for
+// this verb + form, case-insensitive and trimmed (product policy P2) — the
+// same normalization the UI already applied to the primary form alone.
+export function isAcceptedAnswer(infinitive: string, form: Form, answer: string): boolean {
+  const normalized = answer.trim().toLowerCase();
+  return getAcceptedAnswers(infinitive, form).some(
+    (candidate) => candidate.trim().toLowerCase() === normalized,
+  );
+}
+
+// Human-facing disclosure line for the feedback panel, per product policy P6:
+// when a card has more than one accepted answer, name them so the learner
+// learns they're a pair rather than believing one is wrong. Returns null when
+// there's nothing to disclose (the common case). PracticeCard renders whatever
+// string this returns and composes no Swedish of its own.
+//
+// Wording signed off by swedish-linguist. It names the *whole* accepted set,
+// primary included, rather than only the alternates. The earlier placeholder
+// ("Also correct: lade") misfires in the case that matters most: a learner who
+// actually typed "lade" got "Correct!" followed by "Also correct: lade", which
+// reads as though the app is offering them the word they just used. Naming
+// both forms is true regardless of which one was typed, and it states the
+// pairing outright — which is the stated pedagogical payoff of #123, that the
+// learner leaves knowing "la" and "lade" are the same form and not that one of
+// them is an error.
+//
+// English frame with the Swedish forms inline, matching the rest of the card's
+// copy (sentence case, no shouting). Only 2-form sets exist in the data today;
+// the 3+ branch is here so adding a third form can't silently produce "a, b
+// and are correct".
+export function getAlternatesDisclosure(infinitive: string, form: Form): string | null {
+  const accepted = getAcceptedAnswers(infinitive, form);
+  if (accepted.length < 2) return null;
+  if (accepted.length === 2) {
+    return `Both ${accepted[0]} and ${accepted[1]} are correct.`;
+  }
+  const allButLast = accepted.slice(0, -1).join(', ');
+  return `${allButLast} and ${accepted[accepted.length - 1]} are all correct.`;
+}
+
 // Get all conjugated verbs efficiently (no file reads needed!)
 export async function getAllConjugatedVerbs(): Promise<ConjugatedVerb[]> {
   return VERB_DATA.map((verb, index) => ({
