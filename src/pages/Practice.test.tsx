@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { renderWithProviders } from "@/test/renderWithProviders";
-import Practice from "@/pages/Practice";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { renderWithProviders } from '@/test/renderWithProviders';
+import Practice from '@/pages/Practice';
 
 // Practice.tsx composes useSrsProgress (srs-engine) and useSettings
 // (srs-engine) with PracticeCard (ui-craft). Those two hooks are mocked here
@@ -20,12 +20,12 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/hooks/useSrsProgress", () => ({
+vi.mock('@/hooks/useSrsProgress', () => ({
   useSrsProgress: () => ({
     isLoading: mocks.srsLoading,
     getDueItems: async () => mocks.dueItems,
     recordAnswer: mocks.recordAnswer,
-    exportData: () => "{}",
+    exportData: () => '{}',
     importData: () => true,
     resetProgress: () => undefined,
     srsStates: {},
@@ -33,16 +33,16 @@ vi.mock("@/hooks/useSrsProgress", () => ({
   }),
 }));
 
-vi.mock("@/hooks/useSettings", () => ({
+vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
     isLoading: mocks.settingsLoading,
     settings: {
-      practiceMode: "typing",
+      practiceMode: 'typing',
       showExamples: false,
       autoplayAudio: false,
       muteAudio: true,
       dailyGoal: 20,
-      cefrLevels: ["A1"],
+      cefrLevels: ['A1'],
     },
     updateSettings: vi.fn(),
   }),
@@ -53,51 +53,68 @@ beforeEach(() => {
   mocks.srsLoading = false;
   mocks.settingsLoading = false;
   mocks.dueItems = [
-    { verbId: "1", infinitive: "vara", form: "presens", itemId: "1-presens" },
-    { verbId: "1", infinitive: "vara", form: "preteritum", itemId: "1-preteritum" },
+    { verbId: '1', infinitive: 'vara', form: 'presens', itemId: '1-presens' },
+    { verbId: '1', infinitive: 'vara', form: 'preteritum', itemId: '1-preteritum' },
   ];
 });
 
-describe("Practice page - one full session", () => {
-  it("walks through both due cards and lands on the completion screen, recording each answer", async () => {
+describe('Practice page - one full session', () => {
+  it('walks through both due cards and lands on the completion screen, recording each answer', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<Practice />, { route: "/practice" });
+    renderWithProviders(<Practice />, { route: '/practice' });
 
     // Card 1 of 2: "vara" presens -> "är"
-    expect(await screen.findByText("1 / 2")).toBeInTheDocument();
-    const firstInput = await screen.findByPlaceholderText("Type your answer...");
-    await user.type(firstInput, "är");
-    expect(await screen.findByText("Correct!")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /next card/i }));
+    expect(await screen.findByText('1 / 2')).toBeInTheDocument();
+    const firstInput = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(firstInput, 'är');
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next card/i }));
 
     // Card 2 of 2: "vara" preteritum -> "var"
-    expect(await screen.findByText("2 / 2")).toBeInTheDocument();
-    const secondInput = await screen.findByPlaceholderText("Type your answer...");
-    await user.type(secondInput, "var");
-    expect(await screen.findByText("Correct!")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /next card/i }));
+    expect(await screen.findByText('2 / 2')).toBeInTheDocument();
+    const secondInput = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(secondInput, 'var');
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next card/i }));
 
     // Session complete screen.
     expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
     expect(screen.getByText(/completed all due cards/i)).toBeInTheDocument();
 
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(2);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, "1-presens", 5);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, "1-preteritum", 5);
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, '1-presens', 5);
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '1-preteritum', 5);
   });
 
-  it("shows the completion screen immediately when there are no due cards", async () => {
+  it('shows the completion screen immediately when there are no due cards', async () => {
     mocks.dueItems = [];
-    renderWithProviders(<Practice />, { route: "/practice" });
+    renderWithProviders(<Practice />, { route: '/practice' });
 
     expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
   });
 
-  it("shows a loading state before settings and progress have loaded", async () => {
+  it('shows a loading state before settings and progress have loaded', async () => {
     mocks.settingsLoading = true;
-    renderWithProviders(<Practice />, { route: "/practice" });
+    renderWithProviders(<Practice />, { route: '/practice' });
 
     expect(screen.getByText(/Loading practice cards/i)).toBeInTheDocument();
-    expect(screen.queryByText("1 / 2")).not.toBeInTheDocument();
+    expect(screen.queryByText('1 / 2')).not.toBeInTheDocument();
+  });
+});
+
+// Issue #129: the shadcn Progress primitive's default track (bg-secondary)
+// is nearly as saturated as its bg-primary fill, so at 0-1% the bar read as
+// full instead of empty. bg-muted was tried next but only clears ~1.01:1
+// contrast against this page's background - still invisible. Pin the token
+// that actually clears WCAG 1.4.11's 3:1 (bg-muted-foreground, ~3.8:1 here)
+// so a regression back to either prior value fails loudly.
+describe('Practice page - issue #129: progress bar track contrast', () => {
+  it("renders the header progress bar's track with a token that has real contrast against the page background", async () => {
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    const track = await screen.findByRole('progressbar');
+    expect(track).toHaveClass('bg-muted-foreground');
+    expect(track).not.toHaveClass('bg-muted');
+    expect(track).not.toHaveClass('bg-secondary');
   });
 });
