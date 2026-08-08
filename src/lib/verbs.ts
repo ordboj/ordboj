@@ -34,6 +34,19 @@ export function getVerbGrupp(infinitive: string): Grupp | undefined {
   return VERB_DATA.find(v => v.infinitive === infinitive)?.grupp;
 }
 
+// Every string accepted as correct for a verb + grammatical form: the
+// canonical stored form (e.g. preteritum "la" for lägga) plus any
+// documented alternates (e.g. "lade" — SAOL accepts both). Returns an
+// empty array for an unknown verb or a form with no stored value.
+// Callers should compare case-insensitively against every entry returned.
+export function getAcceptableForms(infinitive: string, form: Form): string[] {
+  const verb = VERB_DATA.find(v => v.infinitive === infinitive);
+  if (!verb) return [];
+  const canonical = verb[form];
+  const alternates = verb.alternates?.[form] ?? [];
+  return canonical ? [canonical, ...alternates] : [...alternates];
+}
+
 // Get all conjugated verbs efficiently (no file reads needed!)
 export async function getAllConjugatedVerbs(): Promise<ConjugatedVerb[]> {
   return VERB_DATA.map((verb, index) => ({
