@@ -62,9 +62,11 @@ export interface ParticleVerbData {
   id: string;
   cefr: ParticleVerbCefr;
   cefrEvidence: CefrEvidence;
-  // MUST resolve in VERB_DATA for any entry that ships: the introduction
-  // gate joins on it, so an unresolvable base is content that can never be
-  // reached. Enforced in particleVerbData.test.ts.
+  // Required, and format-constrained, not membership-constrained (#317).
+  // Must equal the first token of lemma, and must be NFC-normalized; three
+  // format assertions in particleVerbData.test.ts enforce this. VERB_DATA
+  // membership is not required. The feedback reference line renders from
+  // this entry's own embedded forms, never a VERB_DATA join (#318).
   baseInfinitive: string;
   // The cloze answer.
   particle: string;
