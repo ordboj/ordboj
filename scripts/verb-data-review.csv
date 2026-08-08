@@ -1,0 +1,1539 @@
+line,cefr,infinitive,grupp,promoted,status,issues
+2,A1,vara,4,true,pass,
+3,A1,ha,4,true,pass,
+4,A1,kunna,4,true,pass,
+5,A1,unna,1,true,pass,
+6,A1,få,4,true,pass,
+7,A1,bli,4,true,pass,
+8,A1,komma,4,true,pass,
+9,A1,vilja,4,true,pass,
+10,A1,göra,4,true,pass,
+11,A1,finna,4,true,pass,
+12,A1,ta (el. taga),4,true,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+13,A1,se,4,true,pass,
+14,A1,gå,4,true,pass,
+15,A1,säga,4,true,pass,
+16,A1,äga,2a,true,pass,
+17,A1,betyda,2a,true,pass,
+18,A1,ge (formellt giva),4,true,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+19,A1,skriva,4,true,pass,
+20,A1,te sig,3,true,pass,
+21,A1,riva,4,true,pass,
+22,A1,börja,1,true,pass,
+23,A1,tro,3,true,pass,
+24,A1,tycka,2b,true,pass,
+25,A1,veta,4,true,pass,
+26,A1,försöka,2b,true,pass,
+27,A1,behöva,2a,true,pass,
+28,A1,känna,2a,true,pass,
+29,A1,läsa,2b,true,pass,
+30,A1,ro,3,true,pass,
+31,A1,låta,4,true,pass,
+32,A1,stå,4,true,pass,
+33,A1,visa,1,true,pass,
+34,A1,använda,2a,true,pass,
+35,A1,vända,2a,true,pass,
+36,A1,hålla,4,true,pass,
+37,A1,tänka,2b,true,pass,
+38,A1,söka,2b,true,pass,
+39,A1,ligga,4,true,pass,
+40,A1,lägga,4,true,pass,
+41,A1,anse,4,true,pass,
+42,A1,öva,1,true,pass,
+43,A1,handla,1,true,pass,
+44,A1,öka,1,true,pass,
+45,A1,skapa,1,true,pass,
+46,A1,kapa,1,true,pass,
+47,A1,gälla,2a,true,pass,
+48,A1,verka,1,true,pass,
+49,A1,tala,1,true,pass,
+50,A1,bära,4,true,pass,
+51,A1,höra,2a,true,pass,
+52,A1,innebära,1,false,pass,
+53,A1,välja,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+54,A1,förstå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+55,A1,spela,1,false,pass,
+56,A1,hitta,1,false,pass,
+57,A1,dra,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+58,A1,leda,1,false,pass,
+59,A1,lyckas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+60,A1,lära,2a,false,pass,
+61,A1,sätta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+62,A1,lämna,1,false,pass,
+63,A1,bygga,2a,false,pass,
+64,A1,kalla,1,false,fail,"infinitive 'kalla' ends in a consonant cluster typical of grupp 2/4, but presens 'kallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+65,A1,leva,1,false,pass,
+66,A1,ställa,1,false,fail,"infinitive 'ställa' ends in a consonant cluster typical of grupp 2/4, but presens 'ställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+67,A1,följa,2a,false,pass,
+68,A1,ske,3,false,pass,
+69,A1,kräva,1,false,pass,
+70,A1,ena,1,false,pass,
+71,A1,svara,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+72,A1,fortsätta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+73,A1,bruka,1,false,pass,
+74,A1,mena,1,false,pass,
+75,A1,slå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+76,A1,hända,2a,false,pass,
+77,A1,arbeta,1,false,pass,
+78,A1,fungera (vardagl. funka),1,false,pass,
+79,A1,beta,1,false,pass,
+80,A1,köpa,2b,false,pass,
+81,A1,sitta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+82,A1,åta sig,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+83,A1,berätta,1,false,pass,
+84,A1,rätta,1,false,pass,
+85,A1,sluta,1,false,pass,
+86,A1,åka,2b,false,pass,
+87,A1,betala,1,false,pass,
+88,A1,utveckla,1,false,pass,
+89,A1,föra,2a,false,pass,
+90,A1,hjälpa,2b,false,pass,
+91,A1,vinna,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+92,A1,vänta,1,false,pass,
+93,A1,jobba,1,false,pass,
+94,A1,klara,1,false,pass,
+95,A1,prata,1,false,pass,
+96,A1,fråga,1,false,pass,
+97,A1,anmäla,1,false,pass,
+98,A1,nå,3,false,pass,
+99,A1,bo,3,false,pass,
+100,A1,stämma,2a,false,pass,
+101,A1,dela,1,false,pass,
+102,A1,köra,2a,false,pass,
+103,A1,hoppas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+104,A1,förklara,1,false,pass,
+105,A1,tvinga,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+106,A1,påverka,1,false,pass,
+107,A1,titta,1,false,pass,
+108,A1,minska,1,false,pass,
+109,A1,bestämma,1,false,fail,"infinitive 'bestämma' ends in a consonant cluster typical of grupp 2/4, but presens 'bestämmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+110,A1,skicka,1,false,fail,"infinitive 'skicka' ends in a consonant cluster typical of grupp 2/4, but presens 'skickar' looks like grupp 1 — verify the pattern wasn't misapplied"
+111,A1,ändra,1,false,pass,
+112,A1,träffa,1,false,pass,
+113,A1,diskutera,1,false,pass,
+114,A1,driva,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+115,A1,sälja,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+116,A1,sakna,1,false,pass,
+117,A1,länka,1,false,fail,"infinitive 'länka' ends in a consonant cluster typical of grupp 2/4, but presens 'länkar' looks like grupp 1 — verify the pattern wasn't misapplied"
+118,A1,tyda,1,false,pass,
+119,A1,genomföra,2a,false,pass,
+120,A1,räkna,1,false,pass,
+121,A1,beskriva,1,false,pass,
+122,A1,möta,1,false,pass,
+123,A1,heta,2b,false,pass,
+124,A1,äta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+125,A1,flytta,1,false,pass,
+126,A1,utgöra,1,false,pass,
+127,A1,röra,1,false,pass,
+128,A1,dö,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+129,A1,växa,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+130,A1,våga,1,false,pass,
+131,A1,fatta,1,false,pass,
+132,A1,nämna,1,false,pass,
+133,A1,be (el. bedja),4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+134,A1,anta,1,false,pass,
+135,A1,föreslå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+136,A1,undra,1,false,pass,
+137,A1,lyssna,1,false,pass,
+138,A1,delta,1,false,pass,
+139,A1,falla,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+140,A1,starta,1,false,pass,
+141,A1,inse,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+142,A1,bidra,1,false,pass,
+143,A1,luta,1,false,pass,
+144,A1,bero,3,false,pass,
+145,A1,minnas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+146,A1,rösta,1,false,pass,
+147,A1,kommentera,1,false,pass,
+148,A1,gilla,1,false,fail,"infinitive 'gilla' ends in a consonant cluster typical of grupp 2/4, but presens 'gillar' looks like grupp 1 — verify the pattern wasn't misapplied"
+149,A1,bryta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+150,A1,innehålla,1,false,fail,"infinitive 'innehålla' ends in a consonant cluster typical of grupp 2/4, but presens 'innehållar' looks like grupp 1 — verify the pattern wasn't misapplied"
+151,A1,bjuda,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+152,A1,hävda,1,false,pass,
+153,A1,hamna,1,false,pass,
+154,A1,hinna,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+155,A1,må,3,false,pass,
+156,A1,släppa,1,false,pass,
+157,A1,passa,1,false,pass,
+158,A1,öppna,1,false,pass,
+159,A1,införa,1,false,pass,
+160,A1,erbjuda,1,false,pass,
+161,A1,ingå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+162,A1,bestå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+163,A1,konstatera,1,false,pass,
+164,A1,styra,1,false,pass,
+165,A1,förlora,1,false,pass,
+166,A1,påstå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+167,A1,besluta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+168,A1,avse,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+169,A1,stödja,1,false,pass,
+170,A1,glömma,2a,false,pass,
+171,A1,förändra,1,false,pass,
+172,A1,ange,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+173,A1,älska,1,false,pass,
+174,A1,presentera,1,false,pass,
+175,A1,stanna,1,false,pass,
+176,A1,byta,1,false,pass,
+177,A1,uppleva,1,false,pass,
+178,A1,samla,1,false,pass,
+179,A1,lösa,1,false,pass,
+180,A1,kolla,1,false,fail,"infinitive 'kolla' ends in a consonant cluster typical of grupp 2/4, but presens 'kollar' looks like grupp 1 — verify the pattern wasn't misapplied"
+181,A1,fylla,2a,false,pass,
+182,A1,drabba,1,false,pass,
+183,A1,fara,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+184,A1,tjäna,1,false,pass,
+185,A1,behandla,1,false,pass,
+186,A1,utföra,1,false,pass,
+187,A1,räcka,1,false,fail,"infinitive 'räcka' ends in a consonant cluster typical of grupp 2/4, but presens 'räckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+188,A1,fundera,1,false,pass,
+189,A1,uppstå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+190,A1,acceptera,1,false,pass,
+191,A1,bilda,1,false,pass,
+192,A1,försvinna,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+193,A1,sprida,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+194,A1,önska,1,false,pass,
+195,A1,publicera,1,false,pass,
+196,A1,tillhöra,1,false,pass,
+197,A1,omfatta,1,false,pass,
+198,A1,befinna,1,false,pass,
+199,A1,skilja,2a,false,pass,
+200,A1,döda,1,false,pass,
+201,A1,peka,1,false,pass,
+202,A1,ringa,2a,false,pass,
+203,A1,betrakta,1,false,pass,
+204,A1,hänga,2a,false,pass,
+205,A1,tillåta,1,false,pass,
+206,A1,förekomma,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+207,A1,stoppa,1,false,pass,
+208,A1,rycka,1,false,fail,"infinitive 'rycka' ends in a consonant cluster typical of grupp 2/4, but presens 'ryckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+209,A1,trycka,2b,false,pass,
+210,A1,kosta,1,false,pass,
+211,A1,uttrycka,1,false,fail,"infinitive 'uttrycka' ends in a consonant cluster typical of grupp 2/4, but presens 'uttryckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+212,A1,resa,2b,false,pass,
+213,A1,förbättra,1,false,pass,
+214,A1,rädda,1,false,pass,
+215,A1,agera,1,false,pass,
+216,A1,uppnå,3,false,pass,
+217,A1,jämföra (förk. jfr),1,false,pass,
+218,A1,hantera,1,false,pass,
+219,A1,förvänta,1,false,pass,
+220,A1,vika,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+221,A1,döma,2a,false,pass,
+222,A1,besöka,2b,false,pass,
+223,A1,täcka,1,false,fail,"infinitive 'täcka' ends in a consonant cluster typical of grupp 2/4, but presens 'täckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+224,A1,inleda,1,false,pass,
+225,A1,undvika,1,false,pass,
+226,A1,höja,1,false,pass,
+227,A1,råka,1,false,pass,
+228,A1,upptäcka,1,false,fail,"infinitive 'upptäcka' ends in a consonant cluster typical of grupp 2/4, but presens 'upptäckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+229,A1,erkänna,2a,false,pass,
+230,A1,kasta,1,false,pass,
+231,A1,bedöma,1,false,pass,
+232,A1,toppa,1,false,pass,
+233,A1,skydda,1,false,pass,
+234,A1,nyttja,1,false,pass,
+235,A1,utnyttja,1,false,pass,
+236,A1,pågå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+237,A1,försvara,1,false,pass,
+238,A1,lyfta,1,false,pass,
+239,A1,märka,1,false,pass,
+240,A1,ösa,1,false,pass,
+241,A1,ersätta,1,false,pass,
+242,A1,ägna,1,false,pass,
+243,A1,satsa,1,false,pass,
+244,A1,rida,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+245,A1,avsluta,1,false,pass,
+246,A1,sova,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+247,A1,föda,2a,false,pass,
+248,A1,skjuta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+249,A1,hämta,1,false,pass,
+250,A1,påpeka,1,false,pass,
+251,A1,bättra,1,false,pass,
+252,A1,skaffa,1,false,pass,
+253,A1,utgå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+254,A1,stärka,1,false,pass,
+255,A1,utsätta,1,false,pass,
+256,A1,kämpa,1,false,pass,
+257,A1,eka,1,false,pass,
+258,A1,hoppa,1,false,pass,
+259,A1,avgöra,1,false,pass,
+260,A1,sända,1,false,fail,"infinitive 'sända' ends in a consonant cluster typical of grupp 2/4, but presens 'sändar' looks like grupp 1 — verify the pattern wasn't misapplied"
+261,A1,missa,1,false,pass,
+262,A1,bedriva,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+263,A1,anföra,1,false,pass,
+264,A1,hindra,1,false,pass,
+265,A1,meddela,1,false,pass,
+266,A1,tillämpa,1,false,pass,
+267,A1,kritisera,1,false,pass,
+268,A1,springa,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+269,A1,uppfatta,1,false,pass,
+270,A1,stänga,2a,false,pass,
+271,A1,råda,1,false,pass,
+272,A1,slippa,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+273,A1,dyka,1,false,pass,
+274,A1,orka,1,false,pass,
+275,A1,kontrollera,1,false,pass,
+276,A1,planera,1,false,pass,
+277,A1,lova,1,false,pass,
+278,A1,citera,1,false,pass,
+279,A1,sköta,1,false,pass,
+280,A1,vägra,1,false,pass,
+281,A1,framgå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+282,A1,studera,1,false,pass,
+283,A1,tolka,1,false,pass,
+284,A1,behålla,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+285,A1,dricka,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+286,A1,bry sig,3,false,fail,"empty imperativ on non-modal verb (grupp 3, no mechanical or curated form available)"
+287,A1,notera,1,false,pass,
+288,A1,sänka,1,false,fail,"infinitive 'sänka' ends in a consonant cluster typical of grupp 2/4, but presens 'sänkar' looks like grupp 1 — verify the pattern wasn't misapplied"
+289,A1,medföra,1,false,pass,
+290,A1,ifrågasätta,1,false,pass,
+291,A1,stiga,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+292,A1,tiga,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+293,A1,väcka,1,false,fail,"infinitive 'väcka' ends in a consonant cluster typical of grupp 2/4, but presens 'väckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+294,A1,leta,1,false,pass,
+295,A1,riskera,1,false,pass,
+296,A1,tappa,1,false,pass,
+297,A1,spara,1,false,pass,
+298,A1,klicka,1,false,fail,"infinitive 'klicka' ends in a consonant cluster typical of grupp 2/4, but presens 'klickar' looks like grupp 1 — verify the pattern wasn't misapplied"
+299,A1,synas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+300,A1,fastställa,1,false,fail,"infinitive 'fastställa' ends in a consonant cluster typical of grupp 2/4, but presens 'fastställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+301,A1,tacka,1,false,fail,"infinitive 'tacka' ends in a consonant cluster typical of grupp 2/4, but presens 'tackar' looks like grupp 1 — verify the pattern wasn't misapplied"
+302,A1,hota,1,false,pass,
+303,A1,existera,1,false,pass,
+304,A2,rikta,1,false,pass,
+305,A2,locka,1,false,fail,"infinitive 'locka' ends in a consonant cluster typical of grupp 2/4, but presens 'lockar' looks like grupp 1 — verify the pattern wasn't misapplied"
+306,A2,redovisa,1,false,pass,
+307,A2,para,1,false,pass,
+308,A2,störa,1,false,pass,
+309,A2,rapportera,1,false,pass,
+310,A2,begära,2a,false,pass,
+311,A2,producera,1,false,pass,
+312,A2,begå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+313,A2,förstöra,1,false,pass,
+314,A2,grunda,1,false,fail,"infinitive 'grunda' ends in a consonant cluster typical of grupp 2/4, but presens 'grundar' looks like grupp 1 — verify the pattern wasn't misapplied"
+315,A2,skada,1,false,pass,
+316,A2,uppfylla,1,false,fail,"infinitive 'uppfylla' ends in a consonant cluster typical of grupp 2/4, but presens 'uppfyllar' looks like grupp 1 — verify the pattern wasn't misapplied"
+317,A2,akta,1,false,pass,
+318,A2,syfta,1,false,pass,
+319,A2,orsaka,1,false,pass,
+320,A2,plocka,1,false,fail,"infinitive 'plocka' ends in a consonant cluster typical of grupp 2/4, but presens 'plockar' looks like grupp 1 — verify the pattern wasn't misapplied"
+321,A2,sjunga,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+322,A2,vakna,1,false,pass,
+323,A2,träna,1,false,pass,
+324,A2,vidta,1,false,pass,
+325,A2,mana,1,false,pass,
+326,A2,uppmana,1,false,pass,
+327,A2,lida,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+328,A2,avslöja,1,false,pass,
+329,A2,återvända,1,false,fail,"infinitive 'återvända' ends in a consonant cluster typical of grupp 2/4, but presens 'återvändar' looks like grupp 1 — verify the pattern wasn't misapplied"
+330,A2,placera,1,false,pass,
+331,A2,ana,1,false,pass,
+332,A2,pröva,1,false,pass,
+333,A2,rekommendera,1,false,pass,
+334,A2,återkomma,1,false,fail,"infinitive 'återkomma' ends in a consonant cluster typical of grupp 2/4, but presens 'återkommar' looks like grupp 1 — verify the pattern wasn't misapplied"
+335,A2,bevisa,1,false,pass,
+336,A2,förbjuda,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+337,A2,uttala,1,false,pass,
+338,A2,fira,1,false,pass,
+339,A2,påminna,1,false,pass,
+340,A2,beröra,2a,false,pass,
+341,A2,anpassa,1,false,pass,
+342,A2,begränsa,1,false,pass,
+343,A2,fly,3,false,pass,
+344,A2,ladda,1,false,pass,
+345,A2,passera,1,false,pass,
+346,A2,främja,1,false,pass,
+347,A2,undersöka,1,false,pass,
+348,A2,testa,1,false,pass,
+349,A2,upphöra,1,false,pass,
+350,A2,reagera,1,false,pass,
+351,A2,hänvisa,1,false,pass,
+352,A2,förhindra,1,false,pass,
+353,A2,godkänna,1,false,pass,
+354,A2,beräkna,1,false,pass,
+355,A2,fixa,1,false,pass,
+356,A2,inträffa,1,false,pass,
+357,A2,överleva,1,false,pass,
+358,A2,låna,1,false,pass,
+359,A2,framhålla,1,false,fail,"infinitive 'framhålla' ends in a consonant cluster typical of grupp 2/4, but presens 'framhållar' looks like grupp 1 — verify the pattern wasn't misapplied"
+360,A2,laga,1,false,pass,
+361,A2,likna,1,false,pass,
+362,A2,lita,1,false,pass,
+363,A2,granska,1,false,pass,
+364,A2,bekräfta,1,false,pass,
+365,A2,förbli,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+366,A2,flyga,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+367,A2,gifta,1,false,pass,
+368,A2,träda,1,false,pass,
+369,A2,sjunka,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+370,A2,representera,1,false,pass,
+371,A2,motsvara,1,false,pass,
+372,A2,uppskatta,1,false,pass,
+373,A2,blanda,1,false,fail,"infinitive 'blanda' ends in a consonant cluster typical of grupp 2/4, but presens 'blandar' looks like grupp 1 — verify the pattern wasn't misapplied"
+374,A2,åstadkomma,1,false,fail,"infinitive 'åstadkomma' ends in a consonant cluster typical of grupp 2/4, but presens 'åstadkommar' looks like grupp 1 — verify the pattern wasn't misapplied"
+375,A2,framstå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+376,A2,leverera,1,false,pass,
+377,A2,gripa,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+378,A2,njuta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+379,A2,posta,1,false,pass,
+380,A2,runda,1,false,fail,"infinitive 'runda' ends in a consonant cluster typical of grupp 2/4, but presens 'rundar' looks like grupp 1 — verify the pattern wasn't misapplied"
+381,A2,bereda,1,false,pass,
+382,A2,uppmärksamma,1,false,fail,"infinitive 'uppmärksamma' ends in a consonant cluster typical of grupp 2/4, but presens 'uppmärksammar' looks like grupp 1 — verify the pattern wasn't misapplied"
+383,A2,skratta,1,false,pass,
+384,A2,underlätta,1,false,pass,
+385,A2,föreligga,1,false,fail,"infinitive 'föreligga' ends in a consonant cluster typical of grupp 2/4, but presens 'föreliggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+386,A2,garantera,1,false,pass,
+387,A2,utse,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+388,A2,framföra,1,false,pass,
+389,A2,utöva,1,false,pass,
+390,A2,fokusera,1,false,pass,
+391,A2,reda,1,false,pass,
+392,A2,ordna,1,false,pass,
+393,A2,närma sig,1,false,fail,"empty imperativ on non-modal verb (grupp 1, no mechanical or curated form available)"
+394,A2,skrika,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+395,A2,avskaffa,1,false,pass,
+396,A2,uppge,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+397,A2,definiera,1,false,pass,
+398,A2,beställa,2a,false,pass,
+399,A2,bevara,1,false,pass,
+400,A2,väga,2a,false,pass,
+401,A2,misslyckas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+402,A2,finansiera,1,false,pass,
+403,A2,klaga,1,false,pass,
+404,A2,skatta,1,false,pass,
+405,A2,upprätta,1,false,pass,
+406,A2,gynna,1,false,pass,
+407,A2,leka,1,false,pass,
+408,A2,upprepa,1,false,pass,
+409,A2,förutsätta,1,false,pass,
+410,A2,lätta,1,false,pass,
+411,A2,ropa,1,false,pass,
+412,A2,bekämpa,1,false,pass,
+413,A2,förstärka,1,false,pass,
+414,A2,betona,1,false,pass,
+415,A2,förbereda,1,false,pass,
+416,A2,koppla,1,false,pass,
+417,A2,forma,1,false,pass,
+418,A2,samarbeta,1,false,pass,
+419,A2,slänga,1,false,pass,
+420,A2,neka,1,false,pass,
+421,A2,tona,1,false,pass,
+422,A2,återstå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+423,A2,vila,1,false,pass,
+424,A2,framställa,1,false,fail,"infinitive 'framställa' ends in a consonant cluster typical of grupp 2/4, but presens 'framställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+425,A2,misstänka,1,false,fail,"infinitive 'misstänka' ends in a consonant cluster typical of grupp 2/4, but presens 'misstänkar' looks like grupp 1 — verify the pattern wasn't misapplied"
+426,A2,logga,1,false,fail,"infinitive 'logga' ends in a consonant cluster typical of grupp 2/4, but presens 'loggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+427,A2,erhålla,1,false,fail,"infinitive 'erhålla' ends in a consonant cluster typical of grupp 2/4, but presens 'erhållar' looks like grupp 1 — verify the pattern wasn't misapplied"
+428,A2,sticka,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+429,A2,mäta,1,false,pass,
+430,A2,medverka,1,false,pass,
+431,A2,fånga,1,false,pass,
+432,A2,blogga,1,false,fail,"infinitive 'blogga' ends in a consonant cluster typical of grupp 2/4, but presens 'bloggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+433,A2,prova,1,false,pass,
+434,A2,prägla,1,false,pass,
+435,A2,måla,1,false,pass,
+436,A2,identifiera,1,false,pass,
+437,A2,resultera,1,false,pass,
+438,A2,jaga,1,false,pass,
+439,A2,stöta,1,false,pass,
+440,A2,förneka,1,false,pass,
+441,A2,upprätthålla,1,false,fail,"infinitive 'upprätthålla' ends in a consonant cluster typical of grupp 2/4, but presens 'upprätthållar' looks like grupp 1 — verify the pattern wasn't misapplied"
+442,A2,analysera,1,false,pass,
+443,A2,uppmuntra,1,false,pass,
+444,A2,lyda,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+445,A2,kontakta,1,false,pass,
+446,A2,medge,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+447,A2,gränsa,1,false,pass,
+448,A2,ansluta,1,false,pass,
+449,A2,föredra,1,false,pass,
+450,A2,välkomna,1,false,pass,
+451,A2,tillverka,1,false,pass,
+452,A2,anklaga,1,false,pass,
+453,A2,förtjäna,1,false,pass,
+454,A2,avstå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+455,A2,variera,1,false,pass,
+456,A2,dominera,1,false,pass,
+457,A2,utreda,1,false,pass,
+458,A2,förvandla,1,false,pass,
+459,A2,påbörja,1,false,pass,
+460,A2,organisera,1,false,pass,
+461,A2,teckna,1,false,pass,
+462,A2,säkra,1,false,pass,
+463,A2,hälsa,1,false,pass,
+464,A2,hata,1,false,pass,
+465,A2,gissa,1,false,pass,
+466,A2,beakta,1,false,pass,
+467,A2,reglera,1,false,pass,
+468,A2,etablera,1,false,pass,
+469,A2,respektera,1,false,pass,
+470,A2,inta,1,false,pass,
+471,A2,rulla,1,false,fail,"infinitive 'rulla' ends in a consonant cluster typical of grupp 2/4, but presens 'rullar' looks like grupp 1 — verify the pattern wasn't misapplied"
+472,A2,motivera,1,false,pass,
+473,A2,snacka,1,false,fail,"infinitive 'snacka' ends in a consonant cluster typical of grupp 2/4, but presens 'snackar' looks like grupp 1 — verify the pattern wasn't misapplied"
+474,A2,förmedla,1,false,pass,
+475,A2,tillhandahålla,1,false,fail,"infinitive 'tillhandahålla' ends in a consonant cluster typical of grupp 2/4, but presens 'tillhandahållar' looks like grupp 1 — verify the pattern wasn't misapplied"
+476,A2,informera,1,false,pass,
+477,A2,utforma,1,false,pass,
+478,A2,mörda,1,false,pass,
+479,A2,sträcka,1,false,fail,"infinitive 'sträcka' ends in a consonant cluster typical of grupp 2/4, but presens 'sträckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+480,A2,säkerställa,1,false,fail,"infinitive 'säkerställa' ends in a consonant cluster typical of grupp 2/4, but presens 'säkerställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+481,A2,lysa,1,false,pass,
+482,A2,syna,1,false,pass,
+483,A2,servera,1,false,pass,
+484,A2,inrätta,1,false,pass,
+485,A2,strida,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+486,A2,skylla,1,false,fail,"infinitive 'skylla' ends in a consonant cluster typical of grupp 2/4, but presens 'skyllar' looks like grupp 1 — verify the pattern wasn't misapplied"
+487,A2,engagera,1,false,pass,
+488,A2,förefalla,1,false,fail,"infinitive 'förefalla' ends in a consonant cluster typical of grupp 2/4, but presens 'förefallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+489,A2,dölja,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+490,A2,sträva,1,false,pass,
+491,A2,vandra,1,false,pass,
+492,A2,registrera,1,false,pass,
+493,A2,argumentera,1,false,pass,
+494,A2,uppgå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+495,A2,gråta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+496,A2,förespråka,1,false,pass,
+497,A2,bevilja,1,false,pass,
+498,A2,förmå,3,false,pass,
+499,A2,formulera,1,false,pass,
+500,A2,bränna,2a,false,pass,
+501,A2,föreställa,1,false,fail,"infinitive 'föreställa' ends in a consonant cluster typical of grupp 2/4, but presens 'föreställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+502,A2,landa,1,false,fail,"infinitive 'landa' ends in a consonant cluster typical of grupp 2/4, but presens 'landar' looks like grupp 1 — verify the pattern wasn't misapplied"
+503,A2,låsa,1,false,pass,
+504,A2,varna,1,false,pass,
+505,A2,anställa,2a,false,pass,
+506,A2,syssla,1,false,pass,
+507,A2,drömma,1,false,fail,"infinitive 'drömma' ends in a consonant cluster typical of grupp 2/4, but presens 'drömmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+508,A2,överväga,1,false,pass,
+509,A2,lämpa sig,1,false,fail,"empty imperativ on non-modal verb (grupp 1, no mechanical or curated form available)"
+510,A2,lura,1,false,pass,
+511,A2,besvara,1,false,pass,
+512,A2,ljuga,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+513,A2,översätta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+514,A2,inkludera,1,false,pass,
+515,A2,förena,1,false,pass,
+516,A2,prioritera,1,false,pass,
+517,A2,tillägga,1,false,fail,"infinitive 'tillägga' ends in a consonant cluster typical of grupp 2/4, but presens 'tilläggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+518,A2,blåsa,2b,false,pass,
+519,A2,överlämna,1,false,pass,
+520,A2,fastna,1,false,pass,
+521,A2,motverka,1,false,pass,
+522,A2,komplettera,1,false,pass,
+523,A2,bota,1,false,pass,
+524,A2,bege sig,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+525,A2,lansera,1,false,pass,
+526,A2,basera,1,false,pass,
+527,A2,skära,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+528,A2,gömma,2a,false,pass,
+529,A2,uppträda,1,false,pass,
+530,A2,övergå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+531,A2,investera,1,false,pass,
+532,A2,uppkomma,1,false,fail,"infinitive 'uppkomma' ends in a consonant cluster typical of grupp 2/4, but presens 'uppkommar' looks like grupp 1 — verify the pattern wasn't misapplied"
+533,A2,somna,1,false,pass,
+534,A2,utesluta,1,false,pass,
+535,A2,anlända,2a,false,pass,
+536,A2,röja,1,false,pass,
+537,A2,rena,1,false,pass,
+538,A2,stjäla,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+539,A2,protestera,1,false,pass,
+540,A2,tillkomma,1,false,fail,"infinitive 'tillkomma' ends in a consonant cluster typical of grupp 2/4, but presens 'tillkommar' looks like grupp 1 — verify the pattern wasn't misapplied"
+541,A2,bemöta,1,false,pass,
+542,A2,tränga,1,false,pass,
+543,A2,överföra,1,false,pass,
+544,A2,brinna,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+545,A2,rinna,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+546,A2,rymma,1,false,fail,"infinitive 'rymma' ends in a consonant cluster typical of grupp 2/4, but presens 'rymmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+547,A2,sammanfatta,1,false,pass,
+548,A2,dröja,1,false,pass,
+549,A2,avbryta,1,false,pass,
+550,A2,gräva,2a,false,pass,
+551,A2,stryka,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+552,A2,roa,1,false,pass,
+553,A2,understryka,1,false,pass,
+554,A2,möjliggöra,1,false,pass,
+555,A2,markera,1,false,pass,
+556,A2,skaka,1,false,pass,
+557,A2,värna,1,false,pass,
+558,A2,skämma,1,false,fail,"infinitive 'skämma' ends in a consonant cluster typical of grupp 2/4, but presens 'skämmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+559,A2,vittna,1,false,pass,
+560,A2,spendera,1,false,pass,
+561,A2,ansvara,1,false,pass,
+562,A2,trivas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+563,A2,le,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+564,A2,oroa,1,false,pass,
+565,A2,knyta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+566,A2,förhålla sig,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+567,A2,tipsa,1,false,pass,
+568,A2,boka,1,false,pass,
+569,A2,återfinna,1,false,pass,
+570,A2,överge,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+571,A2,bringa,1,false,pass,
+572,A2,hylla,1,false,fail,"infinitive 'hylla' ends in a consonant cluster typical of grupp 2/4, but presens 'hyllar' looks like grupp 1 — verify the pattern wasn't misapplied"
+573,A2,resonera,1,false,pass,
+574,A2,tillbringa,1,false,pass,
+575,A2,längta,1,false,pass,
+576,A2,ryka,1,false,pass,
+577,A2,bete sig,3,false,fail,"empty imperativ on non-modal verb (grupp 3, no mechanical or curated form available)"
+578,A2,dansa,1,false,pass,
+579,A2,nöja sig,2a,false,fail,"empty imperativ on non-modal verb (grupp 2a, no mechanical or curated form available)"
+580,A2,kliva,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+581,A2,antyda,1,false,pass,
+582,A2,innefatta,1,false,pass,
+583,A2,kommunicera,1,false,pass,
+584,A2,genomgå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+585,A2,besegra,1,false,pass,
+586,A2,utfärda,1,false,pass,
+587,A2,stimulera,1,false,pass,
+588,A2,utöka,1,false,pass,
+589,A2,angripa,1,false,pass,
+590,A2,attackera,1,false,pass,
+591,A2,slita,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+592,A2,föreskriva,1,false,pass,
+593,A2,hyra,2a,false,pass,
+594,A2,löpa,1,false,pass,
+595,A2,tillföra,1,false,pass,
+596,A2,utarbeta,1,false,pass,
+597,A2,skrämma,1,false,fail,"infinitive 'skrämma' ends in a consonant cluster typical of grupp 2/4, but presens 'skrämmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+598,A2,tillsätta,1,false,pass,
+599,A2,yrka,1,false,pass,
+600,A2,tävla,1,false,pass,
+601,A2,utbilda,1,false,pass,
+602,A2,avvisa,1,false,pass,
+603,A2,umgås,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+604,A2,arrangera,1,false,pass,
+605,A2,pressa,1,false,pass,
+606,A2,fälla,2a,false,pass,
+607,A2,smaka,1,false,pass,
+608,A2,värdera,1,false,pass,
+609,A2,fördela,1,false,pass,
+610,A2,reducera,1,false,pass,
+611,A2,kopiera,1,false,pass,
+612,A2,förhandla,1,false,pass,
+613,A2,koncentrera,1,false,pass,
+614,B1,avgå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+615,B1,inneha,1,false,pass,
+616,B1,strunta,1,false,pass,
+617,B1,instämma,1,false,fail,"infinitive 'instämma' ends in a consonant cluster typical of grupp 2/4, but presens 'instämmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+618,B1,debattera,1,false,pass,
+619,B1,anordna,1,false,pass,
+620,B1,försäkra,1,false,pass,
+621,B1,begripa,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+622,B1,kränka,1,false,fail,"infinitive 'kränka' ends in a consonant cluster typical of grupp 2/4, but presens 'kränkar' looks like grupp 1 — verify the pattern wasn't misapplied"
+623,B1,krossa,1,false,pass,
+624,B1,övertyga,1,false,pass,
+625,B1,sörja,1,false,pass,
+626,B1,inspirera,1,false,pass,
+627,B1,tilldela,1,false,pass,
+628,B1,döpa,1,false,pass,
+629,B1,avsätta,1,false,pass,
+630,B1,kombinera,1,false,pass,
+631,B1,observera,1,false,pass,
+632,B1,intressera,1,false,pass,
+633,B1,klippa,2b,false,pass,
+634,B1,sparka,1,false,pass,
+635,B1,undervisa,1,false,pass,
+636,B1,yttra,1,false,pass,
+637,B1,försämra,1,false,pass,
+638,B1,odla,1,false,pass,
+639,B1,vidga,1,false,pass,
+640,B1,motsätta sig,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+641,B1,utvidga,1,false,pass,
+642,B1,intervjua,1,false,pass,
+643,B1,cykla,1,false,pass,
+644,B1,offra,1,false,pass,
+645,B1,installera,1,false,pass,
+646,B1,utge,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+647,B1,tillkännage,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+648,B1,utmana,1,false,pass,
+649,B1,bita,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+650,B1,skänka,1,false,fail,"infinitive 'skänka' ends in a consonant cluster typical of grupp 2/4, but presens 'skänkar' looks like grupp 1 — verify the pattern wasn't misapplied"
+651,B1,förse,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+652,B1,förverkliga,1,false,pass,
+653,B1,vistas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+654,B1,datera,1,false,pass,
+655,B1,erövra,1,false,pass,
+656,B1,vaka,1,false,pass,
+657,B1,straffa,1,false,pass,
+658,B1,fördöma,1,false,pass,
+659,B1,rasa,1,false,pass,
+660,B1,avlida,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+661,B1,flyta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+662,B1,binda,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+663,B1,belysa,1,false,pass,
+664,B1,övervaka,1,false,pass,
+665,B1,förlåta,1,false,pass,
+666,B1,uppdatera,1,false,pass,
+667,B1,motta,1,false,pass,
+668,B1,utspela sig,1,false,fail,"empty imperativ on non-modal verb (grupp 1, no mechanical or curated form available)"
+669,B1,kvarstå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+670,B1,låtsas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+671,B1,segla,1,false,pass,
+672,B1,tvätta,1,false,pass,
+673,B1,framkomma,1,false,fail,"infinitive 'framkomma' ends in a consonant cluster typical of grupp 2/4, but presens 'framkommar' looks like grupp 1 — verify the pattern wasn't misapplied"
+674,B1,skildra,1,false,pass,
+675,B1,försörja,2a,false,pass,
+676,B1,röka,2b,false,pass,
+677,B1,anfalla,1,false,fail,"infinitive 'anfalla' ends in a consonant cluster typical of grupp 2/4, but presens 'anfallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+678,B1,spåra,1,false,pass,
+679,B1,klä (el. kläda),3,false,pass,
+680,B1,konkurrera,1,false,pass,
+681,B1,tända,2a,false,pass,
+682,B1,backa,1,false,fail,"infinitive 'backa' ends in a consonant cluster typical of grupp 2/4, but presens 'backar' looks like grupp 1 — verify the pattern wasn't misapplied"
+683,B1,rita,1,false,pass,
+684,B1,ignorera,1,false,pass,
+685,B1,befria,1,false,pass,
+686,B1,beteckna,1,false,pass,
+687,B1,predika,1,false,pass,
+688,B1,reflektera,1,false,pass,
+689,B1,klargöra,1,false,pass,
+690,B1,tendera,1,false,pass,
+691,B1,glädja,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+692,B1,segra,1,false,pass,
+693,B1,inrikta,1,false,pass,
+694,B1,förvåna,1,false,pass,
+695,B1,packa,1,false,fail,"infinitive 'packa' ends in a consonant cluster typical of grupp 2/4, but presens 'packar' looks like grupp 1 — verify the pattern wasn't misapplied"
+696,B1,bortse,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+697,B1,redogöra,1,false,pass,
+698,B1,avslå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+699,B1,tillgodose,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+700,B1,tvivla,1,false,pass,
+701,B1,framträda,1,false,pass,
+702,B1,förlänga,1,false,pass,
+703,B1,spegla,1,false,pass,
+704,B1,städa,1,false,pass,
+705,B1,uppvisa,1,false,pass,
+706,B1,ansöka,2b,false,pass,
+707,B1,beklaga,1,false,pass,
+708,B1,uppföra,1,false,pass,
+709,B1,fria,1,false,pass,
+710,B1,bevaka,1,false,pass,
+711,B1,integrera,1,false,pass,
+712,B1,återgå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+713,B1,svänga,1,false,pass,
+714,B1,överstiga,1,false,pass,
+715,B1,skärpa,1,false,pass,
+716,B1,radera,1,false,pass,
+717,B1,frukta,1,false,pass,
+718,B1,tåla,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+719,B1,åberopa,1,false,pass,
+720,B1,lagra,1,false,pass,
+721,B1,skita,1,false,pass,
+722,B1,företräda,1,false,pass,
+723,B1,ångra,1,false,pass,
+724,B1,ingripa,1,false,pass,
+725,B1,tröttna,1,false,pass,
+726,B1,generera,1,false,pass,
+727,B1,krypa,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+728,B1,underteckna,1,false,pass,
+729,B1,förebygga,1,false,fail,"infinitive 'förebygga' ends in a consonant cluster typical of grupp 2/4, but presens 'förebyggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+730,B1,lukta,1,false,pass,
+731,B1,ursäkta,1,false,pass,
+732,B1,demonstrera,1,false,pass,
+733,B1,godta,1,false,pass,
+734,B1,andas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+735,B1,suga,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+736,B1,forska,1,false,pass,
+737,B1,rensa,1,false,pass,
+738,B1,utvärdera,1,false,pass,
+739,B1,glida,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+740,B1,introducera,1,false,pass,
+741,B1,försvåra,1,false,pass,
+742,B1,illustrera,1,false,pass,
+743,B1,tveka,1,false,pass,
+744,B1,förkasta,1,false,pass,
+745,B1,anlita,1,false,pass,
+746,B1,avfärda,1,false,pass,
+747,B1,överensstämma,1,false,fail,"infinitive 'överensstämma' ends in a consonant cluster typical of grupp 2/4, but presens 'överensstämmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+748,B1,ogilla,1,false,fail,"infinitive 'ogilla' ends in a consonant cluster typical of grupp 2/4, but presens 'ogillar' looks like grupp 1 — verify the pattern wasn't misapplied"
+749,B1,omvandla,1,false,pass,
+750,B1,duga,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+751,B1,störta,1,false,pass,
+752,B1,överta,1,false,pass,
+753,B1,återge,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+754,B1,koka,1,false,pass,
+755,B1,överklaga,1,false,pass,
+756,B1,vrida,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+757,B1,fästa,1,false,pass,
+758,B1,häva,1,false,pass,
+759,B1,upphäva,1,false,pass,
+760,B1,offentliggöra,1,false,pass,
+761,B1,kompensera,1,false,pass,
+762,B1,återställa,1,false,fail,"infinitive 'återställa' ends in a consonant cluster typical of grupp 2/4, but presens 'återställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+763,B1,förutse,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+764,B1,stötta,1,false,pass,
+765,B1,värma,1,false,pass,
+766,B1,ramla,1,false,pass,
+767,B1,skynda,1,false,fail,"infinitive 'skynda' ends in a consonant cluster typical of grupp 2/4, but presens 'skyndar' looks like grupp 1 — verify the pattern wasn't misapplied"
+768,B1,bada,1,false,pass,
+769,B1,referera,1,false,pass,
+770,B1,förvalta,1,false,pass,
+771,B1,regna,1,false,pass,
+772,B1,spekulera,1,false,pass,
+773,B1,upplösa,1,false,pass,
+774,B1,blockera,1,false,pass,
+775,B1,hysa,1,false,pass,
+776,B1,benämna,1,false,pass,
+777,B1,uppta,1,false,pass,
+778,B1,erinra,1,false,pass,
+779,B1,klättra,1,false,pass,
+780,B1,rusa,1,false,pass,
+781,B1,plugga,1,false,fail,"infinitive 'plugga' ends in a consonant cluster typical of grupp 2/4, but presens 'pluggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+782,B1,avveckla,1,false,pass,
+783,B1,bibehålla,1,false,fail,"infinitive 'bibehålla' ends in a consonant cluster typical of grupp 2/4, but presens 'bibehållar' looks like grupp 1 — verify the pattern wasn't misapplied"
+784,B1,smyga,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+785,B1,vårda,1,false,pass,
+786,B1,lista,1,false,pass,
+787,B1,lugna,1,false,pass,
+788,B1,hugga,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+789,B1,åtala,1,false,pass,
+790,B1,transportera,1,false,pass,
+791,B1,reta,1,false,pass,
+792,B1,ärva,1,false,pass,
+793,B1,föregå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+794,B1,smälta,1,false,pass,
+795,B1,styrka,1,false,pass,
+796,B1,frysa,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+797,B1,försvaga,1,false,pass,
+798,B1,simma,1,false,fail,"infinitive 'simma' ends in a consonant cluster typical of grupp 2/4, but presens 'simmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+799,B1,fotografera (vardagl. fota),1,false,pass,
+800,B1,påvisa,1,false,pass,
+801,B1,trampa,1,false,pass,
+802,B1,torka,1,false,pass,
+803,B1,spränga,1,false,pass,
+804,B1,känneteckna,1,false,pass,
+805,B1,fördjupa,1,false,pass,
+806,B1,vänja,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+807,B1,undgå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+808,B1,avrätta,1,false,pass,
+809,B1,fullfölja,1,false,pass,
+810,B1,foga,1,false,pass,
+811,B1,blunda,1,false,fail,"infinitive 'blunda' ends in a consonant cluster typical of grupp 2/4, but presens 'blundar' looks like grupp 1 — verify the pattern wasn't misapplied"
+812,B1,värva,1,false,pass,
+813,B1,sikta,1,false,pass,
+814,B1,avvika,1,false,pass,
+815,B1,verkställa,1,false,fail,"infinitive 'verkställa' ends in a consonant cluster typical of grupp 2/4, but presens 'verkställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+816,B1,svära,1,false,pass,
+817,B1,deklarera,1,false,pass,
+818,B1,imponera,1,false,pass,
+819,B1,frigöra,1,false,pass,
+820,B1,upplysa,1,false,pass,
+821,B1,färdas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+822,B1,brista,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+823,B1,överlåta,1,false,pass,
+824,B1,konsumera,1,false,pass,
+825,B1,förfölja,1,false,pass,
+826,B1,fordra,1,false,pass,
+827,B1,kika,1,false,pass,
+828,B1,svika,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+829,B1,utropa,1,false,pass,
+830,B1,gnälla,1,false,fail,"infinitive 'gnälla' ends in a consonant cluster typical of grupp 2/4, but presens 'gnällar' looks like grupp 1 — verify the pattern wasn't misapplied"
+831,B1,eftersträva,1,false,pass,
+832,B1,förflytta,1,false,pass,
+833,B1,härska,1,false,pass,
+834,B1,förknippa,1,false,pass,
+835,B1,inskränka,1,false,fail,"infinitive 'inskränka' ends in a consonant cluster typical of grupp 2/4, but presens 'inskränkar' looks like grupp 1 — verify the pattern wasn't misapplied"
+836,B1,prestera,1,false,pass,
+837,B1,regera,1,false,pass,
+838,B1,sortera,1,false,pass,
+839,B1,misshandla,1,false,pass,
+840,B1,bliva,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+841,B1,anlägga,1,false,fail,"infinitive 'anlägga' ends in a consonant cluster typical of grupp 2/4, but presens 'anläggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+842,B1,breda,1,false,pass,
+843,B2,marknadsföra,1,false,pass,
+844,B2,anstränga,2a,false,pass,
+845,B2,växla,1,false,pass,
+846,B2,förvärva,1,false,pass,
+847,B2,belöna,1,false,pass,
+848,B2,importera,1,false,pass,
+849,B2,behärska,1,false,pass,
+850,B2,utrota,1,false,pass,
+851,B2,uppfinna,1,false,pass,
+852,B2,inbilla,1,false,fail,"infinitive 'inbilla' ends in a consonant cluster typical of grupp 2/4, but presens 'inbillar' looks like grupp 1 — verify the pattern wasn't misapplied"
+853,B2,avge,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+854,B2,löna sig,1,false,fail,"empty imperativ on non-modal verb (grupp 1, no mechanical or curated form available)"
+855,B2,konstruera,1,false,pass,
+856,B2,åtgärda,1,false,pass,
+857,B2,släpa,1,false,pass,
+858,B2,utforska,1,false,pass,
+859,B2,invadera,1,false,pass,
+860,B2,justera,1,false,pass,
+861,B2,läcka,1,false,fail,"infinitive 'läcka' ends in a consonant cluster typical of grupp 2/4, but presens 'läckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+862,B2,efterlysa,1,false,pass,
+863,B2,samordna,1,false,pass,
+864,B2,mata,1,false,pass,
+865,B2,ålägga,1,false,fail,"infinitive 'ålägga' ends in a consonant cluster typical of grupp 2/4, but presens 'åläggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+866,B2,framkalla,1,false,fail,"infinitive 'framkalla' ends in a consonant cluster typical of grupp 2/4, but presens 'framkallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+867,B2,inbjuda,1,false,pass,
+868,B2,utplåna,1,false,pass,
+869,B2,bearbeta,1,false,pass,
+870,B2,snurra,1,false,fail,"infinitive 'snurra' ends in a consonant cluster typical of grupp 2/4, but presens 'snurrar' looks like grupp 1 — verify the pattern wasn't misapplied"
+871,B2,förvara,1,false,pass,
+872,B2,rota,1,false,pass,
+873,B2,sammanställa,1,false,fail,"infinitive 'sammanställa' ends in a consonant cluster typical of grupp 2/4, but presens 'sammanställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+874,B2,stirra,1,false,fail,"infinitive 'stirra' ends in a consonant cluster typical of grupp 2/4, but presens 'stirrar' looks like grupp 1 — verify the pattern wasn't misapplied"
+875,B2,uppenbara,1,false,pass,
+876,B2,maila,1,false,pass,
+877,B2,beordra,1,false,pass,
+878,B2,förbinda,1,false,fail,"infinitive 'förbinda' ends in a consonant cluster typical of grupp 2/4, but presens 'förbindar' looks like grupp 1 — verify the pattern wasn't misapplied"
+879,B2,fullgöra,1,false,pass,
+880,B2,missbruka,1,false,pass,
+881,B2,förvärra,1,false,fail,"infinitive 'förvärra' ends in a consonant cluster typical of grupp 2/4, but presens 'förvärrar' looks like grupp 1 — verify the pattern wasn't misapplied"
+882,B2,indikera,1,false,pass,
+883,B2,förnya,1,false,pass,
+884,B2,inhämta,1,false,pass,
+885,B2,dämpa,1,false,pass,
+886,B2,mobilisera,1,false,pass,
+887,B2,expandera,1,false,pass,
+888,B2,förkunna,1,false,pass,
+889,B2,böja,2a,false,pass,
+890,B2,förenkla,1,false,pass,
+891,B2,viga,1,false,pass,
+892,B2,tömma,1,false,fail,"infinitive 'tömma' ends in a consonant cluster typical of grupp 2/4, but presens 'tömmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+893,B2,utmärka,1,false,pass,
+894,B2,mista,1,false,pass,
+895,B2,besitta,1,false,pass,
+896,B2,initiera,1,false,pass,
+897,B2,härstamma,1,false,fail,"infinitive 'härstamma' ends in a consonant cluster typical of grupp 2/4, but presens 'härstammar' looks like grupp 1 — verify the pattern wasn't misapplied"
+898,B2,promenera,1,false,pass,
+899,B2,supa,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+900,B2,poängtera,1,false,pass,
+901,B2,ockupera,1,false,pass,
+902,B2,rekrytera,1,false,pass,
+903,B2,krama,1,false,pass,
+904,B2,provocera,1,false,pass,
+905,B2,samtala,1,false,pass,
+906,B2,omge,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+907,B2,företa,1,false,pass,
+908,B2,eliminera,1,false,pass,
+909,B2,filma,1,false,pass,
+910,B2,spana,1,false,pass,
+911,B2,motarbeta,1,false,pass,
+912,B2,tilltala,1,false,pass,
+913,B2,splittra,1,false,pass,
+914,B2,bosätta sig,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+915,B2,dokumentera,1,false,pass,
+916,B2,tillskriva,1,false,pass,
+917,B2,erfara,1,false,pass,
+918,B2,bromsa,1,false,pass,
+919,B2,bråka,1,false,pass,
+920,B2,balansera,1,false,pass,
+921,B2,stifta,1,false,pass,
+922,B2,korsa,1,false,pass,
+923,B2,avlägsna,1,false,pass,
+924,B2,infinna sig,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+925,B2,åtnjuta,1,false,pass,
+926,B2,förlita sig,1,false,fail,"empty imperativ on non-modal verb (grupp 1, no mechanical or curated form available)"
+927,B2,förlägga,1,false,fail,"infinitive 'förlägga' ends in a consonant cluster typical of grupp 2/4, but presens 'förläggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+928,B2,iaktta,1,false,pass,
+929,B2,bekänna,1,false,pass,
+930,B2,stava,1,false,pass,
+931,B2,exportera,1,false,pass,
+932,B2,surfa,1,false,pass,
+933,B2,plåga,1,false,pass,
+934,B2,utlova,1,false,pass,
+935,B2,återta,1,false,pass,
+936,B2,inträda,1,false,pass,
+937,B2,inviga,1,false,pass,
+938,B2,strömma,1,false,fail,"infinitive 'strömma' ends in a consonant cluster typical of grupp 2/4, but presens 'strömmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+939,B2,kartlägga,1,false,fail,"infinitive 'kartlägga' ends in a consonant cluster typical of grupp 2/4, but presens 'kartläggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+940,B2,övervinna,1,false,pass,
+941,B2,förtydliga,1,false,pass,
+942,B2,skåda,1,false,pass,
+943,B2,bevittna,1,false,pass,
+944,B2,klassa,1,false,pass,
+945,B2,begrava,2a,false,pass,
+946,B2,manipulera,1,false,pass,
+947,B2,minimera,1,false,pass,
+948,B2,explodera,1,false,pass,
+949,B2,operera,1,false,pass,
+950,B2,bomba,1,false,pass,
+951,B2,våldta,1,false,pass,
+952,B2,skruva,1,false,pass,
+953,B2,slutföra,1,false,pass,
+954,B2,återspegla,1,false,pass,
+955,B2,inkomma,1,false,fail,"infinitive 'inkomma' ends in a consonant cluster typical of grupp 2/4, but presens 'inkommar' looks like grupp 1 — verify the pattern wasn't misapplied"
+956,B2,utlösa,1,false,pass,
+957,B2,utnämna,1,false,pass,
+958,B2,pricka,1,false,fail,"infinitive 'pricka' ends in a consonant cluster typical of grupp 2/4, but presens 'prickar' looks like grupp 1 — verify the pattern wasn't misapplied"
+959,B2,befara,1,false,pass,
+960,B2,beundra,1,false,pass,
+961,B2,bistå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+962,B2,sno,3,false,pass,
+963,B2,omsätta,1,false,pass,
+964,B2,sy,3,false,pass,
+965,B2,invända,1,false,fail,"infinitive 'invända' ends in a consonant cluster typical of grupp 2/4, but presens 'invändar' looks like grupp 1 — verify the pattern wasn't misapplied"
+966,B2,underhålla,1,false,fail,"infinitive 'underhålla' ends in a consonant cluster typical of grupp 2/4, but presens 'underhållar' looks like grupp 1 — verify the pattern wasn't misapplied"
+967,B2,fiska,1,false,pass,
+968,B2,tillträda,1,false,pass,
+969,B2,utvisa,1,false,pass,
+970,B2,skälla,1,false,fail,"infinitive 'skälla' ends in a consonant cluster typical of grupp 2/4, but presens 'skällar' looks like grupp 1 — verify the pattern wasn't misapplied"
+971,B2,symbolisera,1,false,pass,
+972,B2,klämma,1,false,fail,"infinitive 'klämma' ends in a consonant cluster typical of grupp 2/4, but presens 'klämmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+973,B2,samverka,1,false,pass,
+974,B2,överskrida,1,false,pass,
+975,B2,aktivera,1,false,pass,
+976,B2,montera,1,false,pass,
+977,B2,utbryta,1,false,pass,
+978,B2,genomsyra,1,false,pass,
+979,B2,tjänstgöra,1,false,pass,
+980,B2,fastslå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+981,B2,återuppta,1,false,pass,
+982,B2,fördriva,1,false,pass,
+983,B2,släcka,2b,false,pass,
+984,B2,inbegripa,1,false,pass,
+985,B2,uppehålla,1,false,fail,"infinitive 'uppehålla' ends in a consonant cluster typical of grupp 2/4, but presens 'uppehållar' looks like grupp 1 — verify the pattern wasn't misapplied"
+986,B2,nicka,1,false,fail,"infinitive 'nicka' ends in a consonant cluster typical of grupp 2/4, but presens 'nickar' looks like grupp 1 — verify the pattern wasn't misapplied"
+987,B2,inge,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+988,B2,sammanfalla,1,false,fail,"infinitive 'sammanfalla' ends in a consonant cluster typical of grupp 2/4, but presens 'sammanfallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+989,B2,hälla,2a,false,pass,
+990,B2,käka,1,false,pass,
+991,B2,svälta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+992,B2,välta,1,false,pass,
+993,B2,fängsla,1,false,pass,
+994,B2,gratulera,1,false,pass,
+995,B2,vädja,1,false,pass,
+996,B2,lasta,1,false,pass,
+997,B2,smitta,1,false,pass,
+998,B2,påtala,1,false,pass,
+999,B2,klistra,1,false,pass,
+1000,B2,beskatta,1,false,pass,
+1001,B2,vakta,1,false,pass,
+1002,B2,förtrycka,1,false,fail,"infinitive 'förtrycka' ends in a consonant cluster typical of grupp 2/4, but presens 'förtryckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1003,B2,avta,1,false,pass,
+1004,B2,bläddra,1,false,pass,
+1005,B2,väva,2a,false,pass,
+1006,B2,spricka,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1007,B2,övertala,1,false,pass,
+1008,B2,härja,1,false,pass,
+1009,B2,annonsera,1,false,pass,
+1010,B2,bekymra,1,false,pass,
+1011,B2,distribuera,1,false,pass,
+1012,B2,bestrida,1,false,pass,
+1013,B2,vifta,1,false,pass,
+1014,B2,hacka,1,false,fail,"infinitive 'hacka' ends in a consonant cluster typical of grupp 2/4, but presens 'hackar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1015,B2,smälla,1,false,fail,"infinitive 'smälla' ends in a consonant cluster typical of grupp 2/4, but presens 'smällar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1016,B2,hänföra,1,false,pass,
+1017,B2,recensera,1,false,pass,
+1018,B2,diskriminera,1,false,pass,
+1019,B2,reformera,1,false,pass,
+1020,B2,fördubbla,1,false,pass,
+1021,B2,redigera,1,false,pass,
+1022,B2,baka,1,false,pass,
+1023,B2,kompromissa,1,false,pass,
+1024,B2,svälja,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1025,B2,tillstyrka,1,false,pass,
+1026,B2,skörda,1,false,pass,
+1027,B2,såga,1,false,pass,
+1028,B2,haka,1,false,pass,
+1029,B2,knacka,1,false,fail,"infinitive 'knacka' ends in a consonant cluster typical of grupp 2/4, but presens 'knackar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1030,B2,utkomma,1,false,fail,"infinitive 'utkomma' ends in a consonant cluster typical of grupp 2/4, but presens 'utkommar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1031,B2,skryta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1032,B2,ankomma,1,false,fail,"infinitive 'ankomma' ends in a consonant cluster typical of grupp 2/4, but presens 'ankommar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1033,B2,avsky,3,false,pass,
+1034,B2,förmoda,1,false,pass,
+1035,B2,pumpa,1,false,pass,
+1036,B2,slopa,1,false,pass,
+1037,B2,avvakta,1,false,pass,
+1038,B2,praktisera,1,false,pass,
+1039,B2,rusta,1,false,pass,
+1040,B2,trilla,1,false,fail,"infinitive 'trilla' ends in a consonant cluster typical of grupp 2/4, but presens 'trillar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1041,B2,handlägga,1,false,fail,"infinitive 'handlägga' ends in a consonant cluster typical of grupp 2/4, but presens 'handläggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1042,B2,missförstå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1043,B2,korrigera,1,false,pass,
+1044,B2,försätta,1,false,pass,
+1045,B2,återhämta,1,false,pass,
+1046,B2,donera,1,false,pass,
+1047,B2,överraska,1,false,pass,
+1048,B2,relatera,1,false,pass,
+1049,B2,administrera,1,false,pass,
+1050,B2,konvertera,1,false,pass,
+1051,B2,krympa,1,false,pass,
+1052,B2,underskatta,1,false,pass,
+1053,B2,skifta,1,false,pass,
+1054,B2,halka,1,false,pass,
+1055,B2,konfrontera,1,false,pass,
+1056,B2,kandidera,1,false,pass,
+1057,B2,plantera,1,false,pass,
+1058,B2,aktualisera,1,false,pass,
+1059,B2,undanröja,1,false,pass,
+1060,B2,isolera,1,false,pass,
+1061,B2,shoppa,1,false,pass,
+1062,B2,hedra,1,false,pass,
+1063,B2,tjata,1,false,pass,
+1064,B2,återfå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1065,B2,spänna,1,false,pass,
+1066,B2,marschera,1,false,pass,
+1067,B2,överdriva,1,false,pass,
+1068,B2,propagera,1,false,pass,
+1069,B2,renovera,1,false,pass,
+1070,B2,beröva,1,false,pass,
+1071,B2,slösa,1,false,pass,
+1072,B2,skämta,1,false,pass,
+1073,B2,underrätta,1,false,pass,
+1074,B2,dyrka,1,false,pass,
+1075,C1,omvända,1,false,fail,"infinitive 'omvända' ends in a consonant cluster typical of grupp 2/4, but presens 'omvändar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1076,C1,understödja,1,false,pass,
+1077,C1,anamma,1,false,fail,"infinitive 'anamma' ends in a consonant cluster typical of grupp 2/4, but presens 'anammar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1078,C1,arrestera,1,false,pass,
+1079,C1,införliva,1,false,pass,
+1080,C1,återkalla,1,false,fail,"infinitive 'återkalla' ends in a consonant cluster typical of grupp 2/4, but presens 'återkallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1081,C1,överträffa,1,false,pass,
+1082,C1,knäcka,1,false,fail,"infinitive 'knäcka' ends in a consonant cluster typical of grupp 2/4, but presens 'knäckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1083,C1,befästa,1,false,pass,
+1084,C1,undanta,1,false,pass,
+1085,C1,tysta,1,false,pass,
+1086,C1,stämpla,1,false,pass,
+1087,C1,påskynda,1,false,fail,"infinitive 'påskynda' ends in a consonant cluster typical of grupp 2/4, but presens 'påskyndar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1088,C1,trösta,1,false,pass,
+1089,C1,brottas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+1090,C1,stabilisera,1,false,pass,
+1091,C1,hämma,1,false,fail,"infinitive 'hämma' ends in a consonant cluster typical of grupp 2/4, but presens 'hämmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1092,C1,nominera,1,false,pass,
+1093,C1,viska,1,false,pass,
+1094,C1,förfoga,1,false,pass,
+1095,C1,heja,1,false,pass,
+1096,C1,flöda,1,false,pass,
+1097,C1,utebli,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1098,C1,spotta,1,false,pass,
+1099,C1,attrahera,1,false,pass,
+1100,C1,censurera,1,false,pass,
+1101,C1,lindra,1,false,pass,
+1102,C1,omnämna,1,false,pass,
+1103,C1,avspegla,1,false,pass,
+1104,C1,tydliggöra,1,false,pass,
+1105,C1,fortgå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1106,C1,applicera,1,false,pass,
+1107,C1,jämställa,1,false,fail,"infinitive 'jämställa' ends in a consonant cluster typical of grupp 2/4, but presens 'jämställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1108,C1,välsigna,1,false,pass,
+1109,C1,blomma,1,false,fail,"infinitive 'blomma' ends in a consonant cluster typical of grupp 2/4, but presens 'blommar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1110,C1,sopa,1,false,pass,
+1111,C1,prenumerera,1,false,pass,
+1112,C1,förfalla,1,false,fail,"infinitive 'förfalla' ends in a consonant cluster typical of grupp 2/4, but presens 'förfallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1113,C1,skrapa,1,false,pass,
+1114,C1,uppgradera,1,false,pass,
+1115,C1,anteckna,1,false,pass,
+1116,C1,legitimera,1,false,pass,
+1117,C1,kretsa,1,false,pass,
+1118,C1,intensifiera,1,false,pass,
+1119,C1,jubla,1,false,pass,
+1120,C1,effektivisera,1,false,pass,
+1121,C1,beskåda,1,false,pass,
+1122,C1,härröra,1,false,pass,
+1123,C1,peta,1,false,pass,
+1124,C1,tanka,1,false,fail,"infinitive 'tanka' ends in a consonant cluster typical of grupp 2/4, but presens 'tankar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1125,C1,klappa,1,false,pass,
+1126,C1,varva,1,false,pass,
+1127,C1,fostra,1,false,pass,
+1128,C1,förakta,1,false,pass,
+1129,C1,utbrista,1,false,pass,
+1130,C1,underlåta,1,false,pass,
+1131,C1,pyssla,1,false,pass,
+1132,C1,urholka,1,false,pass,
+1133,C1,skina,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1134,C1,envisas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+1135,C1,trygga,1,false,fail,"infinitive 'trygga' ends in a consonant cluster typical of grupp 2/4, but presens 'tryggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1136,C1,såra,1,false,pass,
+1137,C1,associera,1,false,pass,
+1138,C1,sucka,1,false,fail,"infinitive 'sucka' ends in a consonant cluster typical of grupp 2/4, but presens 'suckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1139,C1,tillgå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1140,C1,avlyssna,1,false,pass,
+1141,C1,signalera,1,false,pass,
+1142,A2,närma,1,false,pass,
+1143,A2,förhålla,1,false,fail,"infinitive 'förhålla' ends in a consonant cluster typical of grupp 2/4, but presens 'förhållar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1144,B1,motsätta,1,false,pass,
+1145,B2,bosätta,1,false,pass,
+1146,B2,åta,1,false,pass,
+1147,B2,revidera,1,false,pass,
+1148,B2,återupprätta,1,false,pass,
+1149,B2,prisa,1,false,pass,
+1150,B2,färga,1,false,pass,
+1151,B2,matcha,1,false,pass,
+1152,B2,adoptera,1,false,pass,
+1153,B2,verifiera,1,false,pass,
+1154,B2,tillfredsställa,1,false,fail,"infinitive 'tillfredsställa' ends in a consonant cluster typical of grupp 2/4, but presens 'tillfredsställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1155,B2,uppfostra,1,false,pass,
+1156,B2,förbruka,1,false,pass,
+1157,B2,beskylla,1,false,fail,"infinitive 'beskylla' ends in a consonant cluster typical of grupp 2/4, but presens 'beskyllar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1158,B2,reparera,1,false,pass,
+1159,C1,involvera,1,false,pass,
+1160,C1,härleda,1,false,pass,
+1161,C1,utbyta,1,false,pass,
+1162,C1,sponsra,1,false,pass,
+1163,C1,slakta,1,false,pass,
+1164,C1,uppröra,1,false,pass,
+1165,C1,summera,1,false,pass,
+1166,C1,underminera,1,false,pass,
+1167,C1,fullborda,1,false,pass,
+1168,C1,berömma,1,false,fail,"infinitive 'berömma' ends in a consonant cluster typical of grupp 2/4, but presens 'berömmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1169,C1,bestraffa,1,false,pass,
+1170,C1,närvara,1,false,pass,
+1171,C1,sola,1,false,pass,
+1172,C1,berika,1,false,pass,
+1173,C1,underkasta,1,false,pass,
+1174,C1,duscha,1,false,pass,
+1175,C1,tolerera,1,false,pass,
+1176,C1,urskilja,1,false,pass,
+1177,C1,förordna,1,false,pass,
+1178,C1,droppa,1,false,pass,
+1179,C1,tugga,1,false,fail,"infinitive 'tugga' ends in a consonant cluster typical of grupp 2/4, but presens 'tuggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1180,C1,reservera,1,false,pass,
+1181,C1,snöa,1,false,pass,
+1182,C1,implementera,1,false,pass,
+1183,C1,uppbära,1,false,pass,
+1184,C1,separera,1,false,pass,
+1185,C1,kidnappa,1,false,pass,
+1186,C1,framlägga,1,false,fail,"infinitive 'framlägga' ends in a consonant cluster typical of grupp 2/4, but presens 'framläggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1187,C1,förorsaka,1,false,pass,
+1188,C1,tortera,1,false,pass,
+1189,C1,befalla,1,false,fail,"infinitive 'befalla' ends in a consonant cluster typical of grupp 2/4, but presens 'befallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1190,C1,vålla,1,false,fail,"infinitive 'vålla' ends in a consonant cluster typical of grupp 2/4, but presens 'vållar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1191,C1,förutsäga,1,false,pass,
+1192,C1,begrunda,1,false,fail,"infinitive 'begrunda' ends in a consonant cluster typical of grupp 2/4, but presens 'begrundar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1193,C1,manifestera,1,false,pass,
+1194,C1,bekanta,1,false,pass,
+1195,C1,angå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1196,C1,äventyra,1,false,pass,
+1197,C1,sväva,1,false,pass,
+1198,C1,insistera,1,false,pass,
+1199,C1,exploatera,1,false,pass,
+1200,C1,förväxla,1,false,pass,
+1201,C1,utstå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1202,C1,bädda,1,false,pass,
+1203,C1,grilla,1,false,fail,"infinitive 'grilla' ends in a consonant cluster typical of grupp 2/4, but presens 'grillar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1204,C1,slappna,1,false,pass,
+1205,C1,tippa,1,false,pass,
+1206,C1,precisera,1,false,pass,
+1207,C1,skoja,1,false,pass,
+1208,C1,framhäva,1,false,pass,
+1209,C1,strypa,1,false,pass,
+1210,C1,författa,1,false,pass,
+1211,C1,bifoga,1,false,pass,
+1212,C1,parkera,1,false,pass,
+1213,C1,uträtta,1,false,pass,
+1214,C1,belasta,1,false,pass,
+1215,C1,fascinera,1,false,pass,
+1216,C1,gagna,1,false,pass,
+1217,C1,modifiera,1,false,pass,
+1218,C1,realisera,1,false,pass,
+1219,C1,skymta,1,false,pass,
+1220,C1,avlägga,1,false,fail,"infinitive 'avlägga' ends in a consonant cluster typical of grupp 2/4, but presens 'avläggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1221,C1,föreläsa,2b,false,pass,
+1222,C1,klassificera,1,false,pass,
+1223,C1,spruta,1,false,pass,
+1224,C1,spärra,1,false,fail,"infinitive 'spärra' ends in a consonant cluster typical of grupp 2/4, but presens 'spärrar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1225,C1,blomstra,1,false,pass,
+1226,C1,behaga,1,false,pass,
+1227,C1,drunkna,1,false,pass,
+1228,C1,steka,1,false,pass,
+1229,C1,bedra,1,false,pass,
+1230,C1,läka,1,false,pass,
+1231,C1,tillbe,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1232,C1,bubbla,1,false,pass,
+1233,C1,kväva,1,false,pass,
+1234,C1,motstå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1235,C1,irritera,1,false,pass,
+1236,C1,pendla,1,false,pass,
+1237,C1,trakassera,1,false,pass,
+1238,C1,ratificera,1,false,pass,
+1239,C1,kyssa,1,false,pass,
+1240,C1,avbilda,1,false,pass,
+1241,C1,tystna,1,false,pass,
+1242,C1,kriga,1,false,pass,
+1243,C1,omkomma,1,false,fail,"infinitive 'omkomma' ends in a consonant cluster typical of grupp 2/4, but presens 'omkommar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1244,C1,försumma,1,false,fail,"infinitive 'försumma' ends in a consonant cluster typical of grupp 2/4, but presens 'försummar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1245,C1,tillfoga,1,false,pass,
+1246,C1,cirkulera,1,false,pass,
+1247,C1,modernisera,1,false,pass,
+1248,C1,diktera,1,false,pass,
+1249,C1,knäppa,1,false,pass,
+1250,C1,studsa,1,false,pass,
+1251,C1,befordra,1,false,pass,
+1252,C1,intyga,1,false,pass,
+1253,C1,vinka,1,false,fail,"infinitive 'vinka' ends in a consonant cluster typical of grupp 2/4, but presens 'vinkar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1254,C1,dumpa,1,false,pass,
+1255,C1,kollapsa,1,false,pass,
+1256,C1,borra,1,false,fail,"infinitive 'borra' ends in a consonant cluster typical of grupp 2/4, but presens 'borrar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1257,C1,festa,1,false,pass,
+1258,C1,signera,1,false,pass,
+1259,C1,experimentera,1,false,pass,
+1260,C1,anvisa,1,false,pass,
+1261,C1,återvinna,1,false,pass,
+1262,C1,frakta,1,false,pass,
+1263,C1,anslå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1264,C1,anknyta,1,false,pass,
+1265,C1,avskeda,1,false,pass,
+1266,C1,förkorta,1,false,pass,
+1267,C1,påträffa,1,false,pass,
+1268,C1,disponera,1,false,pass,
+1269,C1,knuffa,1,false,pass,
+1270,C1,uthärda,1,false,pass,
+1271,C1,privatisera,1,false,pass,
+1272,C1,undkomma,1,false,fail,"infinitive 'undkomma' ends in a consonant cluster typical of grupp 2/4, but presens 'undkommar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1273,C1,blinka,1,false,fail,"infinitive 'blinka' ends in a consonant cluster typical of grupp 2/4, but presens 'blinkar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1274,C1,avlösa,1,false,pass,
+1275,C1,betvivla,1,false,pass,
+1276,C1,spinna,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1277,C1,proklamera,1,false,pass,
+1278,C1,utelämna,1,false,pass,
+1279,C1,exponera,1,false,pass,
+1280,C1,tillägna,1,false,pass,
+1281,C1,vidarebefordra,1,false,pass,
+1282,C1,frånta,1,false,pass,
+1283,C1,lagstifta,1,false,pass,
+1284,C1,stråla,1,false,pass,
+1285,C1,utvinna,1,false,pass,
+1286,C1,samtycka,1,false,fail,"infinitive 'samtycka' ends in a consonant cluster typical of grupp 2/4, but presens 'samtyckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1287,C1,underkänna,1,false,pass,
+1288,C1,utrusta,1,false,pass,
+1289,C1,förflyta,1,false,pass,
+1290,C1,färdigställa,1,false,fail,"infinitive 'färdigställa' ends in a consonant cluster typical of grupp 2/4, but presens 'färdigställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1291,C1,applådera,1,false,pass,
+1292,C1,avancera,1,false,pass,
+1293,C1,skingra,1,false,pass,
+1294,C1,underordna,1,false,pass,
+1295,C1,krocka,1,false,fail,"infinitive 'krocka' ends in a consonant cluster typical of grupp 2/4, but presens 'krockar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1296,C1,spola,1,false,pass,
+1297,C1,blöda,1,false,pass,
+1298,C1,kryssa,1,false,pass,
+1299,C1,råna,1,false,pass,
+1300,C1,anförtro,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1301,C1,filtrera,1,false,pass,
+1302,C1,subventionera,1,false,pass,
+1303,C1,stressa,1,false,pass,
+1304,C1,omfamna,1,false,pass,
+1305,C1,absorbera,1,false,pass,
+1306,C1,specificera,1,false,pass,
+1307,C1,klia,1,false,pass,
+1308,C1,tillgripa,1,false,pass,
+1309,C1,utdela,1,false,pass,
+1310,C1,kvalificera,1,false,pass,
+1311,C1,slicka,1,false,fail,"infinitive 'slicka' ends in a consonant cluster typical of grupp 2/4, but presens 'slickar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1312,C1,specialisera,1,false,pass,
+1313,C1,motbevisa,1,false,pass,
+1314,C1,kräkas,deponens,false,fail,"empty imperativ on non-modal verb (grupp deponens, no mechanical or curated form available)"
+1315,C1,lokalisera,1,false,pass,
+1316,C1,sammankalla,1,false,fail,"infinitive 'sammankalla' ends in a consonant cluster typical of grupp 2/4, but presens 'sammankallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1317,C1,fantisera,1,false,pass,
+1318,C1,förolämpa,1,false,pass,
+1319,C1,utbetala,1,false,pass,
+1320,C1,lossna,1,false,pass,
+1321,C1,borsta,1,false,pass,
+1322,C1,avtala,1,false,pass,
+1323,C1,delegera,1,false,pass,
+1324,C1,raka,1,false,pass,
+1325,C1,svida,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1326,C1,mala,1,false,pass,
+1327,C1,hurra,1,false,fail,"infinitive 'hurra' ends in a consonant cluster typical of grupp 2/4, but presens 'hurrar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1328,C1,spilla,1,false,fail,"infinitive 'spilla' ends in a consonant cluster typical of grupp 2/4, but presens 'spillar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1329,C1,pryda,1,false,pass,
+1330,C1,karakterisera,1,false,pass,
+1331,C1,komponera,1,false,pass,
+1332,C1,betjäna,1,false,pass,
+1333,C1,förhöra,1,false,pass,
+1334,C1,tillmäta,1,false,pass,
+1335,C1,bredda,1,false,pass,
+1336,C1,generalisera,1,false,pass,
+1337,C1,grubbla,1,false,pass,
+1338,C1,strukturera,1,false,pass,
+1339,C1,hosta,1,false,pass,
+1340,C1,rättfärdiga,1,false,pass,
+1341,C1,navigera,1,false,pass,
+1342,C1,darra,1,false,fail,"infinitive 'darra' ends in a consonant cluster typical of grupp 2/4, but presens 'darrar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1343,C1,bebo,3,false,pass,
+1344,C1,instifta,1,false,pass,
+1345,C1,inrymma,1,false,fail,"infinitive 'inrymma' ends in a consonant cluster typical of grupp 2/4, but presens 'inrymmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1346,C1,knipa,1,false,pass,
+1347,C1,sammanföra,1,false,pass,
+1348,C1,vilseleda,1,false,pass,
+1349,C1,försena,1,false,pass,
+1350,C2,eskalera,1,false,pass,
+1351,C2,avvärja,1,false,pass,
+1352,C2,härma,1,false,pass,
+1353,C2,repetera,1,false,pass,
+1354,C2,susa,1,false,pass,
+1355,C2,kulminera,1,false,pass,
+1356,C2,avskilja,1,false,pass,
+1357,C2,värdesätta,1,false,pass,
+1358,C2,accelerera,1,false,pass,
+1359,C2,frige,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1360,C2,addera,1,false,pass,
+1361,C2,beskydda,1,false,pass,
+1362,C2,blotta,1,false,pass,
+1363,C2,interagera,1,false,pass,
+1364,C2,rotera,1,false,pass,
+1365,C2,inspektera,1,false,pass,
+1366,C2,orientera,1,false,pass,
+1367,C2,smeka,1,false,pass,
+1368,C2,sammanträda,1,false,pass,
+1369,C2,förplikta,1,false,pass,
+1370,C2,häkta,1,false,pass,
+1371,C2,omringa,1,false,pass,
+1372,C2,ödelägga,1,false,fail,"infinitive 'ödelägga' ends in a consonant cluster typical of grupp 2/4, but presens 'ödeläggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1373,C2,besvära,1,false,pass,
+1374,C2,uppdra,1,false,pass,
+1375,C2,gunga,1,false,pass,
+1376,C2,vattna,1,false,pass,
+1377,C2,besätta,1,false,pass,
+1378,C2,återlämna,1,false,pass,
+1379,C2,sjösätta,1,false,pass,
+1380,C2,komplicera,1,false,pass,
+1381,C2,putsa,1,false,pass,
+1382,C2,bemästra,1,false,pass,
+1383,C2,stapla,1,false,pass,
+1384,C2,berättiga,1,false,pass,
+1385,C2,förråda,1,false,pass,
+1386,C2,lossa,1,false,pass,
+1387,C2,dofta,1,false,pass,
+1388,C2,alstra,1,false,pass,
+1389,C2,värka,1,false,pass,
+1390,C2,inställa,1,false,fail,"infinitive 'inställa' ends in a consonant cluster typical of grupp 2/4, but presens 'inställar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1391,C2,programmera,1,false,pass,
+1392,C2,gjuta,1,false,pass,
+1393,C2,smörja,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1394,C2,ådra,1,false,pass,
+1395,C2,konsultera,1,false,pass,
+1396,C2,återuppliva,1,false,pass,
+1397,C2,utsända,1,false,fail,"infinitive 'utsända' ends in a consonant cluster typical of grupp 2/4, but presens 'utsändar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1398,C2,förstora,1,false,pass,
+1399,C2,överträda,1,false,pass,
+1400,C2,imitera,1,false,pass,
+1401,C2,skissera,1,false,pass,
+1402,C2,flamma,1,false,fail,"infinitive 'flamma' ends in a consonant cluster typical of grupp 2/4, but presens 'flammar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1403,C2,försona,1,false,pass,
+1404,C2,utlämna,1,false,pass,
+1405,C2,annullera,1,false,pass,
+1406,C2,förvirra,1,false,fail,"infinitive 'förvirra' ends in a consonant cluster typical of grupp 2/4, but presens 'förvirrar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1407,C2,larma,1,false,pass,
+1408,C2,mätta,1,false,pass,
+1409,C2,övernatta,1,false,pass,
+1410,C2,instruera,1,false,pass,
+1411,C2,rengöra,1,false,pass,
+1412,C2,tillmötesgå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1413,C2,avla,1,false,pass,
+1414,C2,återbetala,1,false,pass,
+1415,C2,beväpna,1,false,pass,
+1416,C2,glänsa,1,false,pass,
+1417,C2,deponera,1,false,pass,
+1418,C2,medfölja,1,false,pass,
+1419,C2,koordinera,1,false,pass,
+1420,C2,pipa,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1421,C2,gräla,1,false,pass,
+1422,C2,ljuda,1,false,pass,
+1423,C2,debitera,1,false,pass,
+1424,C2,dundra,1,false,pass,
+1425,C2,rekonstruera,1,false,pass,
+1426,C2,arkivera,1,false,pass,
+1427,C2,strejka,1,false,pass,
+1428,C2,stinka,1,false,fail,"infinitive 'stinka' ends in a consonant cluster typical of grupp 2/4, but presens 'stinkar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1429,C2,frikänna,2a,false,pass,
+1430,C2,hetta,1,false,pass,
+1431,C2,rådfråga,1,false,pass,
+1432,C2,svälla,1,false,fail,"infinitive 'svälla' ends in a consonant cluster typical of grupp 2/4, but presens 'svällar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1433,C2,valla,1,false,fail,"infinitive 'valla' ends in a consonant cluster typical of grupp 2/4, but presens 'vallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1434,C2,anskaffa,1,false,pass,
+1435,C2,bestiga,1,false,pass,
+1436,C2,översvämma,1,false,fail,"infinitive 'översvämma' ends in a consonant cluster typical of grupp 2/4, but presens 'översvämmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1437,C2,rangordna,1,false,pass,
+1438,C2,grädda,1,false,pass,
+1439,C2,multiplicera,1,false,pass,
+1440,C2,koda,1,false,pass,
+1441,C2,bemanna,1,false,pass,
+1442,C2,dekorera,1,false,pass,
+1443,C2,ackumulera,1,false,pass,
+1444,C2,assistera,1,false,pass,
+1445,C2,efterfölja,1,false,pass,
+1446,C2,stelna,1,false,pass,
+1447,C2,restaurera,1,false,pass,
+1448,C2,stöna,1,false,pass,
+1449,C2,återse,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1450,C2,fresta,1,false,pass,
+1451,C2,yla,1,false,pass,
+1452,C2,ströva,1,false,pass,
+1453,C2,återupptäcka,1,false,fail,"infinitive 'återupptäcka' ends in a consonant cluster typical of grupp 2/4, but presens 'återupptäckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1454,C2,kila,1,false,pass,
+1455,C2,kalkylera,1,false,pass,
+1456,C2,betinga,1,false,pass,
+1457,C2,förorena,1,false,pass,
+1458,C2,infektera,1,false,pass,
+1459,C2,limma,1,false,fail,"infinitive 'limma' ends in a consonant cluster typical of grupp 2/4, but presens 'limmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1460,C2,innesluta,1,false,pass,
+1461,C2,eskortera,1,false,pass,
+1462,C2,förbrylla,1,false,fail,"infinitive 'förbrylla' ends in a consonant cluster typical of grupp 2/4, but presens 'förbryllar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1463,C2,diagnostisera,1,false,pass,
+1464,C2,sammanfoga,1,false,pass,
+1465,C2,adressera,1,false,pass,
+1466,C2,centrera,1,false,pass,
+1467,C2,förestå,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1468,C2,avdela,1,false,pass,
+1469,C2,returnera,1,false,pass,
+1470,C2,stadfästa,1,false,pass,
+1471,C2,massera,1,false,pass,
+1472,C2,förvarna,1,false,pass,
+1473,C2,ledsaga,1,false,pass,
+1474,C2,chockera,1,false,pass,
+1475,C2,vidröra,1,false,pass,
+1476,C2,snarka,1,false,pass,
+1477,C2,tunna,1,false,pass,
+1478,C2,fela,1,false,pass,
+1479,C2,ånga,1,false,pass,
+1480,C2,planlägga,1,false,fail,"infinitive 'planlägga' ends in a consonant cluster typical of grupp 2/4, but presens 'planläggar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1481,C2,kodifiera,1,false,pass,
+1482,C2,betyg(s)sätta,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1483,C2,gnida,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1484,C2,gnistra,1,false,pass,
+1485,C2,inkassera,1,false,pass,
+1486,C2,uppkalla,1,false,fail,"infinitive 'uppkalla' ends in a consonant cluster typical of grupp 2/4, but presens 'uppkallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1487,C2,försegla,1,false,pass,
+1488,C2,fasta,1,false,pass,
+1489,C2,inlämna,1,false,pass,
+1490,C2,sammankoppla,1,false,pass,
+1491,C2,mosa,1,false,pass,
+1492,C2,gradera,1,false,pass,
+1493,C2,brodera,1,false,pass,
+1494,C2,överväldiga,1,false,pass,
+1495,C2,rea,1,false,pass,
+1496,C2,böna,1,false,pass,
+1497,C2,avtäcka,1,false,fail,"infinitive 'avtäcka' ends in a consonant cluster typical of grupp 2/4, but presens 'avtäckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1498,C2,differentiera,1,false,pass,
+1499,C2,projektera,1,false,pass,
+1500,C2,bönfalla,1,false,fail,"infinitive 'bönfalla' ends in a consonant cluster typical of grupp 2/4, but presens 'bönfallar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1501,C2,klibba,1,false,pass,
+1502,C2,formge,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1503,C2,pina,1,false,pass,
+1504,C2,undervärdera,1,false,pass,
+1505,C2,auktorisera,1,false,pass,
+1506,C2,kurera,1,false,pass,
+1507,C2,avvara,1,false,pass,
+1508,C2,brådska,1,false,pass,
+1509,C2,anträffa,1,false,pass,
+1510,C2,överräcka,1,false,fail,"infinitive 'överräcka' ends in a consonant cluster typical of grupp 2/4, but presens 'överräckar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1511,C2,artikulera,1,false,pass,
+1512,C2,reklamera,1,false,pass,
+1513,C2,överse,4,false,fail,"empty imperativ on non-modal verb (grupp 4, no mechanical or curated form available)"
+1514,C2,flanera,1,false,pass,
+1515,C2,förbluffa,1,false,pass,
+1516,C2,pantsätta,1,false,pass,
+1517,C2,bullra,1,false,pass,
+1518,C2,måtta,1,false,pass,
+1519,C2,baktala,1,false,pass,
+1520,C2,slutta,1,false,pass,
+1521,C2,trasa,1,false,pass,
+1522,C2,förutbestämma,1,false,fail,"infinitive 'förutbestämma' ends in a consonant cluster typical of grupp 2/4, but presens 'förutbestämmar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1523,C2,avresa,1,false,pass,
+1524,C2,transplantera,1,false,pass,
+1525,C2,grönska,1,false,pass,
+1526,C2,skrynkla,1,false,pass,
+1527,C2,åska,1,false,pass,
+1528,C2,gravera,1,false,pass,
+1529,C2,maka,1,false,pass,
+1530,C2,subtrahera,1,false,pass,
+1531,C2,nolla,1,false,fail,"infinitive 'nolla' ends in a consonant cluster typical of grupp 2/4, but presens 'nollar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1532,C2,återgälda,1,false,pass,
+1533,C2,bräda,1,false,pass,
+1534,C2,mottaga,1,false,pass,
+1535,C2,docka,1,false,fail,"infinitive 'docka' ends in a consonant cluster typical of grupp 2/4, but presens 'dockar' looks like grupp 1 — verify the pattern wasn't misapplied"
+1536,C2,raffinera,1,false,pass,
+1537,C2,syra,1,false,pass,
+1538,C2,upphetsa,1,false,pass,
+1539,C2,planta,1,false,pass,
