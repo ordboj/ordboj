@@ -304,39 +304,40 @@ export function PracticeCard({
                     Complete pattern:
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2">
-                    {pattern.patternParts.map((part, index) => (
-                      <div key={index} className="flex items-center gap-1">
-                        <div
-                          className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
-                            part.isMissing
-                              ? 'bg-primary text-primary-foreground font-bold'
-                              : 'bg-background'
-                          }`}
-                        >
-                          <span
-                            className="text-lg"
-                            lang={
-                              part.isMissing || part.text !== '(not available)' ? 'sv' : undefined
-                            }
+                    {pattern.patternParts.map((part, index) => {
+                      const displayText = part.isMissing ? correctAnswer : part.text;
+                      return (
+                        <div key={index} className="flex items-center gap-1">
+                          <div
+                            className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
+                              part.isMissing
+                                ? 'bg-primary text-primary-foreground font-bold'
+                                : 'bg-background'
+                            }`}
                           >
-                            {part.isMissing ? correctAnswer : part.text}
-                          </span>
-                          {!part.isMissing && conjugated[part.form] !== '(not available)' && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 hover:bg-primary/10"
-                              onClick={() => handlePronounceForm(part.form)}
+                            <span
+                              className="text-lg"
+                              lang={displayText !== '(not available)' ? 'sv' : undefined}
                             >
-                              <Volume2 className="w-3 h-3" />
-                            </Button>
+                              {displayText}
+                            </span>
+                            {!part.isMissing && conjugated[part.form] !== '(not available)' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 hover:bg-primary/10"
+                                onClick={() => handlePronounceForm(part.form)}
+                              >
+                                <Volume2 className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                          {index < pattern.patternParts.length - 1 && (
+                            <span className="text-muted-foreground">–</span>
                           )}
                         </div>
-                        {index < pattern.patternParts.length - 1 && (
-                          <span className="text-muted-foreground">–</span>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <Button
                     variant="outline"

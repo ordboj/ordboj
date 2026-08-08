@@ -265,29 +265,20 @@ export default function Progress() {
                         <span lang="sv">{verb.infinitive}</span>
                       </TableCell>
                       <TableCell>
-                        {verb.presens === '(not available)' ? (
-                          verb.presens
-                        ) : (
-                          <span lang="sv">{verb.presens}</span>
-                        )}
+                        <span lang="sv">{verb.presens}</span>
                       </TableCell>
                       <TableCell>
-                        {verb.preteritum === '(not available)' ? (
-                          verb.preteritum
-                        ) : (
-                          <span lang="sv">{verb.preteritum}</span>
-                        )}
+                        <span lang="sv">{verb.preteritum}</span>
                       </TableCell>
                       <TableCell>
-                        {verb.supinum === '(not available)' ? (
-                          verb.supinum
-                        ) : (
-                          <span lang="sv">{verb.supinum}</span>
-                        )}
+                        <span lang="sv">{verb.supinum}</span>
                       </TableCell>
                       <TableCell>
                         {verb.imperativ === '(not available)' ? (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-muted-foreground">
+                            <span aria-hidden="true">—</span>
+                            <span className="sr-only">not applicable</span>
+                          </span>
                         ) : (
                           <span lang="sv">{verb.imperativ}</span>
                         )}

@@ -45,15 +45,22 @@ describe('Home - due-count DOM nesting (regression, issue #112 AC #1)', () => {
     // due-count branch (the one that used to nest divs) to render.
     const dueMessage = await screen.findByText(/conjugations due for review/i);
 
-    const nestingWarning = errorSpy.mock.calls.find((args) =>
-      args.some(
-        (a) =>
-          typeof a === 'string' &&
-          a.includes('validateDOMNesting') &&
-          a.includes('<div>') &&
-          a.includes('<p>'),
-      ),
-    );
+    // React logs this with a %s-templated format string as args[0] plus the
+    // interpolated tag names as separate args (e.g. args = [format, '<div>',
+    // 'p', ...]) — console.error never does the substitution itself, so
+    // "<p>" never appears as a literal substring anywhere in the raw args
+    // (the ancestor tag arg is the bare name "p", not "<p>"). A check for
+    // the literal substring "<p>" — on one arg or joined across all of
+    // them — passes vacuously whether or not the warning fired. Check the
+    // format string and tag-name args separately instead.
+    const nestingWarning = errorSpy.mock.calls.find(([message, ...rest]) => {
+      return (
+        typeof message === 'string' &&
+        message.includes('validateDOMNesting') &&
+        rest.includes('<div>') &&
+        rest.includes('p')
+      );
+    });
     expect(nestingWarning).toBeUndefined();
 
     // The due-count text must not be nested inside a <p> element (i.e. it
