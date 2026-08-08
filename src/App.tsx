@@ -1,20 +1,38 @@
+import { lazy, Suspense } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import Practice from './pages/Practice';
-import Progress from './pages/Progress';
-import Settings from './pages/Settings';
-import NotFound from './pages/NotFound';
 import {
   AppErrorBoundary,
   AppCrashFallback,
   RouteErrorBoundary,
 } from '@/components/AppErrorBoundary';
 
+// Route-level code splitting: each page (and its dependencies, e.g.
+// canvas-confetti pulled in by Practice) loads as a separate chunk on
+// first navigation instead of bloating the initial bundle.
+const Home = lazy(() => import('./pages/Home'));
+const Practice = lazy(() => import('./pages/Practice'));
+const Progress = lazy(() => import('./pages/Progress'));
+const Settings = lazy(() => import('./pages/Settings'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+
 const queryClient = new QueryClient();
+
+/** Minimal, dependency-free fallback shown while a route chunk loads. */
+function RouteLoadingFallback() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="min-h-screen flex items-center justify-center p-6 bg-background text-foreground"
+    >
+      <p className="text-muted-foreground">Loading…</p>
+    </div>
+  );
+}
 
 const App = () => (
   <AppErrorBoundary fallback={(reset) => <AppCrashFallback reset={reset} />}>
@@ -28,7 +46,9 @@ const App = () => (
               path="/"
               element={
                 <RouteErrorBoundary key="/">
-                  <Home />
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <Home />
+                  </Suspense>
                 </RouteErrorBoundary>
               }
             />
@@ -36,7 +56,9 @@ const App = () => (
               path="/practice"
               element={
                 <RouteErrorBoundary key="/practice">
-                  <Practice />
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <Practice />
+                  </Suspense>
                 </RouteErrorBoundary>
               }
             />
@@ -44,7 +66,9 @@ const App = () => (
               path="/progress"
               element={
                 <RouteErrorBoundary key="/progress">
-                  <Progress />
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <Progress />
+                  </Suspense>
                 </RouteErrorBoundary>
               }
             />
@@ -52,7 +76,9 @@ const App = () => (
               path="/settings"
               element={
                 <RouteErrorBoundary key="/settings">
-                  <Settings />
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <Settings />
+                  </Suspense>
                 </RouteErrorBoundary>
               }
             />
@@ -61,7 +87,9 @@ const App = () => (
               path="*"
               element={
                 <RouteErrorBoundary key="*">
-                  <NotFound />
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <NotFound />
+                  </Suspense>
                 </RouteErrorBoundary>
               }
             />
