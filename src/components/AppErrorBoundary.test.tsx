@@ -343,9 +343,95 @@ describe('RouteChunk chunk-load retry and recovery (#220)', () => {
       await vi.advanceTimersByTimeAsync(600);
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(screen.getByText('page loaded')).toBeInTheDocument();
+      // No backoff timer may remain: vi.waitFor advances fake timers 50ms
+      // per poll, so this keeps the 300/600ms budget pinned.
+      expect(vi.getTimerCount()).toBe(0);
+
+      // Root cause of the #335 CI flake: retryImport()'s *promise chain*
+      // settling (guaranteed by the timer advances above) is not the same
+      // event as React committing the resulting DOM update. Error-boundary
+      // and Suspense/lazy re-renders are ordinarily synchronous here, which
+      // is why a plain assertion right after the advances above passes
+      // every time locally - but react-dom's Scheduler can still defer a
+      // render slice through a real (not fake-timer-controlled) callback
+      // under load, which is exactly the kind of variance a CI runner has
+      // and an idle local machine does not. `vi.waitFor` (unlike
+      // `screen.findByText`, which vitest's fake timers make hang - it only
+      // recognizes Jest's fake timers) polls with vitest's own
+      // pre-captured *real* timers, so it tolerates that deferred case
+      // without weakening the assertion: it still fails loudly if the text
+      // never appears within the timeout.
+      await vi.waitFor(
+        () => {
+          expect(screen.getByText('page loaded')).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
       expect(screen.queryByText('loading...')).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'retry' })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Regression test for #335 (CI flake in the "recovers automatically" test
+  // above). This isolates the exact mechanism a plain synchronous assertion
+  // was unsafe against, with NO dependency on CI load or real elapsed time,
+  // so it reproduces every run rather than intermittently: unlike the flaky
+  // case, this import never rejects, so there is no retryImport() backoff
+  // (no setTimeout) standing between "resolve the chunk" and "commit the
+  // DOM" - only React's own Suspense/lazy re-render is between them. That
+  // re-render is scheduled by react-dom's Scheduler via a real MessageChannel
+  // task (jsdom implements MessageChannel), which vi.useFakeTimers() does
+  // not intercept: setTimeout, setInterval, Date and requestAnimationFrame
+  // are faked, but queueMicrotask, process.nextTick and MessageChannel/
+  // postMessage delivery are not. So `await vi.advanceTimersByTimeAsync(0)`
+  // can return before that MessageChannel task has actually run, and a bare
+  // `screen.getByText(...)` right after it is checking the DOM before React
+  // has committed. `vi.waitFor` closes that gap by polling with vitest's
+  // real timers until the commit lands (or failing loudly if it never
+  // does), which is the same fix the flaky test above needed - the
+  // fail-first proof lives in this commit's message, not in the test body:
+  // removing the vi.waitFor wrapper below makes this test fail on every
+  // run. This guarantee is checked by hand (see that commit message), not
+  // by an assertion in this file.
+  it("regression #335: a resolved chunk import still needs vi.waitFor, because fake timers do not advance React's MessageChannel commit", async () => {
+    vi.useFakeTimers();
+    try {
+      function Page() {
+        return <p>page loaded</p>;
+      }
+      // Resolves on the very first call - failCount 0 means retryImport()
+      // never hits its setTimeout-based backoff at all, so the only thing
+      // standing between "import resolved" and "DOM shows the page" is
+      // React's own re-render scheduling, isolating that mechanism.
+      const flakyImport = makeFlakyImport(Page, 0);
+      const LazyPage = lazyRoute(flakyImport);
+
+      render(
+        <RouteChunk
+          component={LazyPage}
+          loading={<p>loading...</p>}
+          fallback={(retry) => <button onClick={retry}>retry</button>}
+        />,
+      );
+
+      expect(screen.getByText('loading...')).toBeInTheDocument();
+
+      // Nothing left to advance a backoff timer past - the import already
+      // resolved synchronously on render. This flush exists only to settle
+      // any pending microtasks fake timers do control.
+      await vi.advanceTimersByTimeAsync(0);
+
+      // The commit has not necessarily landed yet (see comment above) - only
+      // vi.waitFor's real-timer polling can observe it reliably.
+      await vi.waitFor(
+        () => {
+          expect(screen.getByText('page loaded')).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
+      expect(screen.queryByText('loading...')).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }
@@ -384,7 +470,19 @@ describe('RouteChunk chunk-load retry and recovery (#220)', () => {
       await vi.advanceTimersByTimeAsync(600);
       await vi.advanceTimersByTimeAsync(0);
 
-      const retryButton = screen.getByRole('button', { name: 'retry' });
+      // No backoff timer may remain: vi.waitFor advances fake timers 50ms
+      // per poll, so this keeps the 300/600ms budget pinned.
+      expect(vi.getTimerCount()).toBe(0);
+
+      // See the matching comment in the "recovers automatically" test above
+      // for the root cause of the #335 CI flake this test was reported
+      // against (CI runs 31280020229, 31280581936): the "retry" button's
+      // commit can occasionally land a beat after the timer advances above,
+      // under CI's timing only. `vi.waitFor` tolerates that without
+      // weakening what is asserted.
+      const retryButton = await vi.waitFor(() => screen.getByRole('button', { name: 'retry' }), {
+        timeout: 3000,
+      });
       fireEvent.click(retryButton);
 
       expect(reloadSpy).toHaveBeenCalledTimes(1);
