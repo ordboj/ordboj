@@ -77,43 +77,64 @@ describe('issue #115 - dead standalone files removed', () => {
   it('src/App.css no longer exists', () => {
     expect(existsSync(resolve(repoRoot, 'src/App.css'))).toBe(false);
   });
+
+  it('src/hooks/use-toast.ts no longer exists', () => {
+    expect(existsSync(resolve(repoRoot, 'src/hooks/use-toast.ts'))).toBe(false);
+  });
+
+  it('src/hooks/use-mobile.tsx no longer exists', () => {
+    expect(existsSync(resolve(repoRoot, 'src/hooks/use-mobile.tsx'))).toBe(false);
+  });
 });
 
-// --- 4. package.json dependency list is exactly the trimmed set ----------
+// --- 4. The 29 dead dependencies are gone from package.json --------------
 
-// Asserting exact key equality (not just "these specific packages are
-// absent") means this test also catches an *unrelated* dependency being
-// dropped by accident, and it fails hard against the pre-#115 package.json,
-// which carries ~29 extra keys under "dependencies".
-const expectedDependencies = [
-  '@radix-ui/react-checkbox',
-  '@radix-ui/react-dialog',
-  '@radix-ui/react-label',
-  '@radix-ui/react-progress',
-  '@radix-ui/react-scroll-area',
-  '@radix-ui/react-select',
-  '@radix-ui/react-slot',
-  '@radix-ui/react-switch',
-  '@radix-ui/react-tooltip',
-  'canvas-confetti',
-  'class-variance-authority',
-  'clsx',
-  'lucide-react',
-  'next-themes',
-  'react',
-  'react-dom',
-  'react-router-dom',
-  'sonner',
-  'tailwind-merge',
-  'tailwindcss-animate',
-  'zod',
-].sort();
+// Asserting absence of exactly the removed set (rather than exact key
+// equality against a full census) means this test doesn't need editing
+// every time an unrelated dependency is legitimately added later - it only
+// fails if one of #115's specific removals is ever reintroduced, and it
+// still fails hard against the pre-#115 package.json.
+const removedDependencies = [
+  '@hookform/resolvers',
+  '@radix-ui/react-accordion',
+  '@radix-ui/react-alert-dialog',
+  '@radix-ui/react-aspect-ratio',
+  '@radix-ui/react-avatar',
+  '@radix-ui/react-collapsible',
+  '@radix-ui/react-context-menu',
+  '@radix-ui/react-dropdown-menu',
+  '@radix-ui/react-hover-card',
+  '@radix-ui/react-menubar',
+  '@radix-ui/react-navigation-menu',
+  '@radix-ui/react-popover',
+  '@radix-ui/react-radio-group',
+  '@radix-ui/react-separator',
+  '@radix-ui/react-slider',
+  '@radix-ui/react-tabs',
+  '@radix-ui/react-toast',
+  '@radix-ui/react-toggle',
+  '@radix-ui/react-toggle-group',
+  '@tanstack/react-query',
+  'cmdk',
+  'date-fns',
+  'embla-carousel-react',
+  'input-otp',
+  'react-day-picker',
+  'react-hook-form',
+  'react-resizable-panels',
+  'recharts',
+  'vaul',
+];
 
-describe('issue #115 - package.json "dependencies" trimmed to exactly the kept set', () => {
-  it('matches the expected dependency list exactly, including zod being kept', () => {
-    const pkg = readJson('package.json') as { dependencies: Record<string, string> };
-    const actual = Object.keys(pkg.dependencies).sort();
-    expect(actual).toEqual(expectedDependencies);
+describe('issue #115 - dead package.json "dependencies" removed', () => {
+  const pkg = readJson('package.json') as { dependencies: Record<string, string> };
+
+  it.each(removedDependencies)('"%s" is not a dependency', (name) => {
+    expect(pkg.dependencies).not.toHaveProperty(name);
+  });
+
+  it('zod is kept (explicitly required by the issue)', () => {
+    expect(pkg.dependencies).toHaveProperty('zod');
   });
 });
 
