@@ -2,6 +2,8 @@
 
 A colorful, mobile-friendly web app for practicing Swedish verb conjugations with spaced repetition (SRS). Fun and simple, like Memrise — but focused entirely on Swedish verbs.
 
+> **Note:** This is a hobby project. I built it to learn and test AI coding tools (Claude Code, multi-agent workflows, and similar). Expect experiments in the commit history and the workflow files — that is part of the point.
+
 ## Features
 
 - **Verb data** — a built-in set of common Swedish verbs (A1–C2), each tagged with a CEFR level, stored in `src/data/verbData.ts`.
@@ -77,3 +79,7 @@ npm test          # vitest (unit + component tests)
 ## Project management
 
 Tasks and status are tracked in the [Ordböj GitHub Project](https://github.com/orgs/ordboj/projects/1).
+
+## License
+
+[MIT](LICENSE)
