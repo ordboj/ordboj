@@ -1,10 +1,10 @@
-import type { ReactElement, ReactNode } from "react";
-import { render, type RenderOptions } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import type { ReactElement, ReactNode } from 'react';
+import { render, type RenderOptions } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
-interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper"> {
+interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
   /** Initial route(s) for the in-memory router. Defaults to "/". */
   route?: string;
 }
@@ -17,7 +17,7 @@ interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper"> {
  * from).
  */
 export function renderWithProviders(ui: ReactElement, options: RenderWithProvidersOptions = {}) {
-  const { route = "/", ...renderOptions } = options;
+  const { route = '/', ...renderOptions } = options;
 
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -30,11 +30,7 @@ export function renderWithProviders(ui: ReactElement, options: RenderWithProvide
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <MemoryRouter
-          initialEntries={[route]}
-        >
-          {children}
-        </MemoryRouter>
+          <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
         </TooltipProvider>
       </QueryClientProvider>
     );
