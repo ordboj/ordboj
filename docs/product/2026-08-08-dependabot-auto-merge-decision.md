@@ -13,13 +13,13 @@ organization, which is on the **Team plan** (`gh api orgs/ordboj` reports
 `"plan": {"name": "team", "seats": 1}`). Branch protection is active on
 `main` today with required status checks and strict up-to-date enforcement.
 
-Consequently the existing workflow
-`.github/workflows/dependabot-auto-merge.yml` (merged in PR #72, bumped in
-#73, formatted in #208) **is ratified as the implementation**. It is exactly
-the workflow path 1 described — approve plus `gh pr merge --auto --squash`,
-gated by required checks — and it was only ever unsafe without branch
-protection. With protection in place it is safe, and its merge history
-proves the loop closes (section 4).
+The existing workflow `.github/workflows/dependabot-auto-merge.yml` (merged
+in PR #72, bumped in #73, formatted in #208) is exactly the shape path 1
+described — approve plus `gh pr merge --auto --squash`, gated by required
+checks — and **that shape is ratified as the design**. But the workflow is
+currently **NON-FUNCTIONAL**: it has never enabled auto-merge on a single
+PR (section 4). The gate it needs, branch protection, now exists. The
+workflow itself must be repaired before this decision is realised.
 
 Rejected:
 
@@ -81,19 +81,42 @@ therefore sets the required contexts to all seven:
 
 ```sh
 gh api -X PATCH repos/ordboj/ordboj/branches/main/protection/required_status_checks \
-  -f strict=true \
+  -F strict=true \
   -f "contexts[]=Format check" -f "contexts[]=Lint" -f "contexts[]=Typecheck" \
   -f "contexts[]=Validate verb data" -f "contexts[]=Unit tests" \
   -f "contexts[]=Build" -f "contexts[]=E2E (Playwright)"
 ```
 
-This is a repo-settings change, not a file change; it is the only action
-item this note creates.
+Note: `strict` is a boolean field, so it needs `-F` (typed field), not
+`-f` (which sends the literal string `"true"` and gets rejected with 422).
+The `-f "contexts[]=..."` array entries are strings and are correct as
+written.
 
-**P5 — Keep the approve step.** `required_approving_review_count` is 0, so
-the workflow's `gh pr review --approve` is currently redundant. Keep it
-anyway: it costs one API call and keeps the pipeline working unchanged if
-the review requirement is ever raised to 1.
+This is a repo-settings change, not a file change. It is one of two action
+items this note creates — the other is P5, repairing the approve step.
+
+**P5 — Repair the approve step (action item, `devops`-owned).** The
+workflow's `gh pr review --approve "$PR_URL"` call fails on every run,
+because `can_approve_pull_request_reviews` is `false` for this repo (section
+4). The failure aborts the step under `bash -e`, so
+`gh pr merge --auto --squash` never runs. `devops` must apply one of these
+fixes:
+
+- **Preferred:** delete the `gh pr review --approve "$PR_URL"` line from
+  the `Approve and enable auto-merge for patch/minor` step in
+  `.github/workflows/dependabot-auto-merge.yml`.
+  `required_approving_review_count` is 0, so no approval is needed before
+  `gh pr merge --auto --squash` can proceed.
+- **Alternative, only if a review requirement is ever raised above 0:**
+  enable the repo/org setting "Allow GitHub Actions to create and approve
+  pull requests" —
+  `gh api -X PUT repos/ordboj/ordboj/actions/permissions/workflow -F can_approve_pull_request_reviews=true`.
+  Some org configurations still refuse this; in that case a PAT is
+  required instead.
+
+This workflow edit is `devops`-owned and must be filed as its own ticket
+under epic #259. This note rules on which fix to take; it does not itself
+change the workflow file.
 
 **P6 — Stalled PRs.** Strict up-to-date checks mean a Dependabot PR that
 falls behind `main` must be rebased before it can merge. Dependabot rebases
@@ -104,19 +127,41 @@ merge it by hand with checks pending.
 
 Issue #49 ended with "no auto-merge workflow has been added", but PR #72
 later added one without a recorded product decision. This note is that
-decision, made retroactively and in the workflow's favor: the artifact that
-shipped is the artifact path 1 specified, and the gate it depends on now
-exists. Nothing needs to be reverted; what was missing was the ruling, not
-the code.
+decision, made retroactively and in the workflow's favor on shape: the
+artifact that shipped is the artifact path 1 specified, and the gate it
+depends on now exists. But the artifact does not work (section 4): both the
+ruling and a working implementation were missing, and this note only
+supplies the first one. The workflow still needs the repair in P5 before
+issue #49's goal — Dependabot PRs merging with no human step — is actually
+met.
 
-## 4. Evidence the pipeline works
+## 4. Current state of the pipeline (broken)
 
-- Auto-merged by the gate (patch/minor, green checks): PRs #75, #77, #80,
-  #81, #82, #210 — including the grouped `production-dependencies` and
-  `dev-dependencies` PRs.
-- Correctly left for humans (majors): PRs #211–#218 (zod 4, react-router 7,
-  tailwind-merge 3, lucide 1.x, and others) — open or closed manually,
-  none auto-merged.
+Verified on 2026-08-08 against the live repo:
+
+- Every workflow run that reached the merge step **failed**. It failed at
+  the `gh pr review --approve` call with `GraphQL: GitHub Actions is not permitted to approve pull requests. (addPullRequestReview)`.
+  Cite runs 31224959360 and 31224781882 (PR #75, `production-dependencies`
+  group) and runs 31249179286 and 31249379708 (PR #77, `dev-dependencies`
+  group).
+- The step runs under `shell: /usr/bin/bash -e`. That means the approve
+  failure aborts the step immediately, and `gh pr merge --auto --squash`
+  never runs.
+- `gh api repos/ordboj/ordboj/actions/permissions/workflow` returns
+  `{"default_workflow_permissions":"read","can_approve_pull_request_reviews":false}`.
+  That setting is the root cause, and this note is the first place it is
+  recorded.
+- No PR in the repo has an `auto_merge_enabled` timeline event. Checked:
+  #75, #77, #80, #81, #82, #210, #213, #214, #215, #218 — all return 0
+  such events. PRs #75, #77, #80, #81, #82 and #210 were merged manually by
+  the human `tugrulcan`, not by the workflow.
+- Correctly left for humans (majors, filter working as designed): PRs
+  #211–#218 (zod 4, react-router 7, tailwind-merge 3, lucide 1.x, and
+  others) — their auto-merge runs are `skipped` by the major-bump filter.
+  Note that #80 (jsdom 26.1.0 → 30.0.1), #81 (@testing-library/jest-dom
+  6.9.1 → 7.0.0), #82 (globals 15.15.0 → 17.9.0) and #210
+  (actions/checkout 4 → 7) are also major bumps; they are not evidence of
+  a working patch/minor gate, they were merged by hand.
 
 ## 5. Out of scope
 
