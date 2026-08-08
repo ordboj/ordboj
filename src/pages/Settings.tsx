@@ -135,20 +135,36 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <Label htmlFor="show-examples">Show example sentences</Label>
-              <Switch
-                id="show-examples"
-                checked={settings.showExamples}
-                onCheckedChange={(checked) => updateSettings({ showExamples: checked })}
-              />
+              {/* Switch itself is h-6 (24px) from generated ui/switch.tsx. The
+                  native label wrapper below grows the clickable box to the
+                  44px minimum touch target without touching that file — a
+                  click anywhere in the label's box forwards to the switch
+                  button (a labelable element), and the browser suppresses
+                  the double-fire when the click lands on the button itself. */}
+              <label
+                htmlFor="show-examples"
+                className="flex min-h-11 min-w-11 items-center justify-center cursor-pointer"
+              >
+                <Switch
+                  id="show-examples"
+                  checked={settings.showExamples}
+                  onCheckedChange={(checked) => updateSettings({ showExamples: checked })}
+                />
+              </label>
             </div>
 
             <div className="flex items-center justify-between">
               <Label htmlFor="autoplay-audio">Autoplay pronunciation</Label>
-              <Switch
-                id="autoplay-audio"
-                checked={settings.autoplayAudio}
-                onCheckedChange={(checked) => updateSettings({ autoplayAudio: checked })}
-              />
+              <label
+                htmlFor="autoplay-audio"
+                className="flex min-h-11 min-w-11 items-center justify-center cursor-pointer"
+              >
+                <Switch
+                  id="autoplay-audio"
+                  checked={settings.autoplayAudio}
+                  onCheckedChange={(checked) => updateSettings({ autoplayAudio: checked })}
+                />
+              </label>
             </div>
 
             <div className="space-y-3">
