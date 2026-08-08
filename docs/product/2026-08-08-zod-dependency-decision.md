@@ -63,22 +63,27 @@ work and needs its own ticket.
 ## 3. The test change (qa owns the file)
 
 Replace the test at `src/test/dead-deps.test.ts:153-155` with the
-following. qa applies it verbatim; only the comment and the test title
+following. qa applies it inside the existing `describe` block, at the
+surrounding two-space indent; only the comment and the test title
 change, the assertion stays identical.
 
-```ts
-// zod has no src/** import yet, but it is not dead weight: issue #115
-// kept it deliberately ("KEEP zod (needed by store-validation tickets)")
-// and the plan is live on the board — #104 (versioned settings provider
-// with zod validation, epic #256) and #251 (whole-app backup envelope
-// with validated import/load). Ruling:
-// docs/product/2026-08-08-zod-dependency-decision.md.
-// Tripwire: if both #104 and #251 close without importing zod, this
-// rationale is dead — delete this test and file a devops ticket to
-// remove the dependency.
-it('zod is kept (planned: #104 settings validation, #251 backup envelope)', () => {
-  expect(pkg.dependencies).toHaveProperty('zod');
-});
+Fenced as plain text, not `ts`, so this repo's `prettier --write` pre-commit
+hook does not reformat the embedded snippet back to zero indent — copy it
+at the indent shown.
+
+```
+  // zod has no src/** import yet, but it is not dead weight: issue #115
+  // kept it deliberately ("KEEP zod (needed by store-validation tickets)")
+  // and the plan is live on the board — #104 (versioned settings provider
+  // with zod validation, epic #256) and #251 (whole-app backup envelope
+  // with validated import/load). Ruling:
+  // docs/product/2026-08-08-zod-dependency-decision.md.
+  // Tripwire: if both #104 and #251 close without importing zod, this
+  // rationale is dead — delete this test and file a devops ticket to
+  // remove the dependency.
+  it('zod is kept (planned: #104 settings validation, #251 backup envelope)', () => {
+    expect(pkg.dependencies).toHaveProperty('zod');
+  });
 ```
 
 ## 4. Tripwire — when this ruling expires
@@ -95,6 +100,9 @@ premise dies:
   becomes redundant (the import itself keeps the dependency honest) and
   qa may delete it in that ticket's PR.
 
+Enforcement: a comment on #104 and on #251 links this note, so the
+ticket that closes last surfaces the tripwire.
+
 ## 5. Acceptance criteria
 
 QA can take these verbatim.
@@ -106,11 +114,12 @@ QA can take these verbatim.
    #104, #251 and this note's path; the assertion
    `expect(pkg.dependencies).toHaveProperty('zod')` is unchanged.
 3. `npm run lint`, `npm run typecheck`, `npm test` and `npm run build`
-   all pass on the test-comment PR.
+   all pass on this PR.
 4. #22 is closed with a comment linking this note and stating the
    outcome: zod kept by decision, all other #22 removals already
    verified by `dead-deps.test.ts`.
-5. #266 is closed by the PR that merges this note.
+5. #266 is closed by this PR, which carries both the note and the
+   section-3 test comment.
 
 ## 6. Out of scope, and why
 
