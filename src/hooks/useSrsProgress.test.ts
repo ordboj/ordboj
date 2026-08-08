@@ -814,7 +814,7 @@ describe('#241: forward-compat guard against a newer store', () => {
     act(() => {
       result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(8));
+    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(8));
 
     // In-memory the session advances, so the learner can still practise.
     // On disk nothing moved — including the field this build cannot read.
@@ -845,7 +845,7 @@ describe('#241: forward-compat guard against a newer store', () => {
     act(() => {
       result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(2));
+    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(2));
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
     expect(stored.version).toBe(2);
@@ -870,6 +870,6 @@ describe('#241: forward-compat guard against a newer store', () => {
 
     expect(result.current.isReadOnly).toBe(false);
     // And the legacy ease rebase still ran on the way in.
-    expect(result.current.srsStates['1-presens'].easeFactor).toBe(1.8);
+    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
   });
 });

@@ -46,8 +46,8 @@ describe('particle provider', () => {
     const states = { ...readyBase('tycka'), [clozeId]: state(clozeId) };
     const items = await createParticleProvider(states).listAvailableItems();
     expect(items.map((item) => item.itemId)).toEqual([clozeId]);
-    expect(items[0].kind).toBe('cloze');
-    expect(items[0].particleVerbId).toBe('pv:tycka-om');
+    expect(items[0]!.kind).toBe('cloze');
+    expect(items[0]!.particleVerbId).toBe('pv:tycka-om');
   });
 
   it('withholds an item whose base verb is not yet known', async () => {

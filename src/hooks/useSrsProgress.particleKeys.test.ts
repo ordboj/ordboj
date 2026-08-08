@@ -114,8 +114,8 @@ describe('#246: mixed legacy + pv: key round trip', () => {
     expect(imported).toBe(true);
 
     await waitFor(() => expect(result.current.srsStates[CLOZE_KEY]).toBeDefined());
-    expect(result.current.srsStates[CLOZE_KEY].repetitions).toBe(3);
-    expect(result.current.srsStates[REFLEXIVE_KEY].intervalDays).toBe(45);
+    expect(result.current.srsStates[CLOZE_KEY]!.repetitions).toBe(3);
+    expect(result.current.srsStates[REFLEXIVE_KEY]!.intervalDays).toBe(45);
   });
 
   it('does not create particle state eagerly for a learner who has never opened the mode', async () => {
@@ -143,7 +143,7 @@ describe('#246: mixed legacy + pv: key round trip', () => {
     act(() => {
       result.current.recordAnswer(CLOZE_KEY, 5, 'typed');
     });
-    await waitFor(() => expect(result.current.srsStates[CLOZE_KEY].repetitions).toBe(4));
+    await waitFor(() => expect(result.current.srsStates[CLOZE_KEY]!.repetitions).toBe(4));
 
     expect(result.current.srsStates[LEGACY_KEY]).toEqual(legacyBefore);
   });
@@ -160,8 +160,8 @@ describe('#246: mixed legacy + pv: key round trip', () => {
     });
 
     await waitFor(() => expect(result.current.srsStates[freshKey]).toBeDefined());
-    expect(result.current.srsStates[freshKey].repetitions).toBe(1);
-    expect(result.current.srsStates[freshKey].itemId).toBe(freshKey);
+    expect(result.current.srsStates[freshKey]!.repetitions).toBe(1);
+    expect(result.current.srsStates[freshKey]!.itemId).toBe(freshKey);
   });
 
   it('records the same schedule whichever modality is reported, in v1', async () => {
@@ -180,8 +180,8 @@ describe('#246: mixed legacy + pv: key round trip', () => {
     });
 
     await waitFor(() => expect(result.current.srsStates[choiceKey]).toBeDefined());
-    const typed = result.current.srsStates[typedKey];
-    const choice = result.current.srsStates[choiceKey];
+    const typed = result.current.srsStates[typedKey]!;
+    const choice = result.current.srsStates[choiceKey]!;
     expect(choice.repetitions).toBe(typed.repetitions);
     expect(choice.intervalDays).toBe(typed.intervalDays);
     expect(choice.easeFactor).toBe(typed.easeFactor);

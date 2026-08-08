@@ -101,8 +101,8 @@ describe('particle practice flow', () => {
 
     await user.click(screen.getByRole('button', { name: 'Next Card' }));
 
-    await waitFor(() => expect(storedItems()[clozeId].repetitions).toBe(4));
-    expect(storedItems()[clozeId].dueAt).toBeGreaterThan(NOW);
+    await waitFor(() => expect(storedItems()[clozeId]!.repetitions).toBe(4));
+    expect(storedItems()[clozeId]!.dueAt).toBeGreaterThan(NOW);
   });
 
   it('marks a wrong particle wrong and shows the accepted answer', async () => {
@@ -120,7 +120,7 @@ describe('particle practice flow', () => {
     expect(screen.getByText('upp')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Next Card' }));
-    await waitFor(() => expect(storedItems()[clozeId].repetitions).toBe(0));
+    await waitFor(() => expect(storedItems()[clozeId]!.repetitions).toBe(0));
   });
 
   it('accepts every documented alternative on an ambiguous frame, and says so', async () => {
