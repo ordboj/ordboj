@@ -63,10 +63,11 @@ export interface ParticleVerbData {
   cefr: ParticleVerbCefr;
   cefrEvidence: CefrEvidence;
   // Required, and format-constrained, not membership-constrained (#317).
-  // Must equal the first token of lemma, and must be NFC-normalized; three
-  // format assertions in particleVerbData.test.ts enforce this. VERB_DATA
-  // membership is not required. The feedback reference line renders from
-  // this entry's own embedded forms, never a VERB_DATA join (#318).
+  // Must be non-empty and untrimmed-free, must equal the first token of
+  // lemma, must be NFC-normalized, and must use one identical string per
+  // base. particleVerbData.test.ts asserts all four. VERB_DATA membership
+  // is not required. The feedback reference line renders from this entry's
+  // own embedded forms, never a VERB_DATA join (#318).
   baseInfinitive: string;
   // The cloze answer.
   particle: string;
@@ -95,14 +96,13 @@ export interface ParticleVerbData {
   unverifiedReason?: string;
   // The phrase's presens/preteritum/supinum, embedded rather than joined
   // from VERB_DATA at render time (#318). Each value is the base verb's
-  // human-verified form (VERB_DATA) with the invariant particle appended —
-  // particle verbs conjugate the verb only, per the project's particle-verb
-  // rule — checked against SO/SAOL like every other shipped form. Required
-  // for a verified:true entry to render its reference line at all. Every
-  // verified entry's base still resolves in VERB_DATA — the dataset test
-  // enforces that — so these values duplicate VERB_DATA on purpose; the
-  // lookup moved from render time to authoring time, and a dataset test
-  // pins the copies against VERB_DATA.
+  // human-verified form with the invariant particle appended — particle
+  // verbs conjugate the verb only, per the project's particle-verb rule —
+  // checked against SO/SAOL like every other shipped form. Required for a
+  // verified:true entry to render its reference line at all. The lookup
+  // moved from render time to authoring time. A dataset test cross-checks
+  // these copies against VERB_DATA only when the base has a VERB_DATA row;
+  // an absent base is skipped, never reported as drift (#317).
   forms?: {
     presens: string;
     preteritum: string;
