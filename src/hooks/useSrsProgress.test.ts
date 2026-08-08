@@ -183,6 +183,33 @@ describe('getDueItems filtering', () => {
     const second = await result.current.getDueItems();
     expect(first.map((i) => i.itemId)).toEqual(second.map((i) => i.itemId));
   });
+
+  // Regression test for issue #137: an explicit empty cefrLevels selection
+  // must never be silently widened back to "no filter = every verb". The
+  // two calls below are the entire contract: `undefined` (caller did not
+  // opt in to filtering) means "all verbs in scope", while `[]` (caller
+  // explicitly selected nothing) means zero verbs in scope. These are
+  // deliberately different outcomes for what a naive `cefrLevels?.length`
+  // check would treat identically.
+  it('issue #137: treats an explicit empty cefrLevels array as "match nothing", not as "no filter"', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    const noFilter = renderHook(() => useSrsProgress(undefined));
+    await waitFor(() => expect(noFilter.result.current.isLoading).toBe(false));
+    const dueWithNoFilter = await noFilter.result.current.getDueItems();
+    // Sanity check: with no filter argument at all, verbs from both CEFR
+    // levels in the fixture are in scope.
+    expect(dueWithNoFilter.some((item) => item.verbId === '1')).toBe(true);
+    expect(dueWithNoFilter.some((item) => item.verbId === '2')).toBe(true);
+
+    const emptyFilter = renderHook(() => useSrsProgress([]));
+    await waitFor(() => expect(emptyFilter.result.current.isLoading).toBe(false));
+    const dueWithEmptyFilter = await emptyFilter.result.current.getDueItems();
+
+    // The bug this guards against: an empty array silently falling back to
+    // "all verbs" (i.e. behaving like the `undefined` case above).
+    expect(dueWithEmptyFilter).toEqual([]);
+  });
 });
 
 describe('corrupt localStorage', () => {
