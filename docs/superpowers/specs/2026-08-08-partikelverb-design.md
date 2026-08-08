@@ -20,9 +20,9 @@ Companion docs: `docs/product/2026-08-08-particle-verbs-research.md`,
 5. Corpus size v1: **~40 verbs** (linguist's 33-item starter list plus additions).
 6. Reflexive particle verbs (höra av sig, ge sig av) **are in v1**, cloze-only.
 7. Particle mode gets its **own independent daily goal** (additional study time),
-   not a slice of the existing `dailyGoal`. Learning-designer is revising the
-   goal arithmetic and streak condition for this case; their revised note is
-   normative when it lands.
+   not a slice of the existing `dailyGoal`. Learning-designer's revised
+   arithmetic (below, and in `docs/learning/particle-verb-practice.md`) is
+   normative.
 
 ## Why this feature (one paragraph)
 
@@ -130,8 +130,17 @@ Key constraints:
   note: introductions first, reviews most-overdue-first shuffled, first cloze
   of new verbs at sitting end; recall unlocks take priority over new-verb
   introductions inside the daily new-card allowance; capacity gate at four
-  reviews per new card. Formula rebased on the independent `particleDailyGoal`
-  (learning-designer revision pending).
+  reviews per new card. Rebased formulas (learning-designer, final):
+  `particleNewCardsPerDay = clamp(1, 10, round(particleDailyGoal / 4))` — 3/day
+  at the default 12; `particleNewAllowedToday = clamp(0, particleNewCardsPerDay,
+floor((particleDailyGoal - min(particleReviewsDue, particleDailyGoal)) / 4))`.
+- **Streak is unchanged**: a day counts when `answeredToday >= dailyGoal`, with
+  particle cards counting toward `answeredToday`. `particleDailyGoal` never
+  appears in the streak calculation — it paces the particle queue only. Adding
+  the mode can never make the streak harder to keep.
+- Empty particle queue routes to non-recording free practice, not a dead end
+  (~70 cards are all live after ~24 days at defaults; 40 verbs is a starter
+  set, not the end state).
 - Grading: binary typed correctness maps to the existing Grade 0|5. The
   `recordAnswer` signature gains `modality: 'typed' | 'choice'` (bundled with
   the hint change from `docs/learning/lapse-handling.md`) so any future
@@ -157,8 +166,9 @@ Key constraints:
   output; sentences (not bare phrases) are what get spoken if enabled.
 - Progress page gains a per-mode view (it currently hard-codes the four
   conjugation forms and the verb table).
-- Settings: independent `particleDailyGoal` (default and bounds per
-  learning-designer revision); settings store gains a version field.
+- Settings: independent `particleDailyGoal`, default 12 cards, range 4–60,
+  stored independently of `dailyGoal` and never derived from it; settings store
+  gains a version field. (Planning constant: ~3 particle cards/minute.)
 - Particle cards always show their sentence — the sentence is the card; the
   `showExamples` setting does not apply to them (deliberate, documented here).
 
@@ -174,7 +184,8 @@ Prerequisites (can overlap, all before feature merge):
 
 Feature:
 
-- F1. Learning-designer revised goal/streak note (in flight).
+- F1. Learning-designer revised goal/streak note — DONE
+  (`docs/learning/particle-verb-practice.md`).
 - F2. Linguist data module: ~40 entries, verified against SO/SAOL, cloze
   sentences authored for uniqueness, accepted-answer sets where irreducible.
   Ship in `verified: true` batches; unverified entries never render.
@@ -227,8 +238,13 @@ Refuse-to-merge list (staff-engineer, adopted):
 
 ## Open items
 
-- Learning-designer revision: `particleDailyGoal` default/bounds, rebased
-  new-card formula, streak condition with two independent goals (pending).
+- Web research (in flight): whether any authoritative CEFR-graded partikelverb
+  list exists (Kelly-listan, Skolverket/sfi, coursebook corpora). If one does,
+  the linguist's grading method is cross-checked against it; if not, the
+  judgment-based method stands.
+- Adoption signal to watch post-launch: if `particleDailyGoal` is met on fewer
+  than half the days `dailyGoal` is, drop the default from 12 to 8 before
+  concluding the mode failed.
 - Linguist verification pass over the starter list (every CEFR digit is
   currently judgment, several classifications flagged UNCERTAIN).
 - Whether the particle-vs-compound contrast (bryta av / avbryta) is disclosed
