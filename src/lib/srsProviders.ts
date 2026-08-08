@@ -1,5 +1,9 @@
-import { conjugationItemId } from '@/lib/itemIds';
+import { conjugationItemId, particleItemId } from '@/lib/itemIds';
 import { getVerbs, getAllConjugatedVerbs, type Form } from '@/lib/verbs';
+import { getVerifiedParticleVerbs, hasRecallItem } from '@/lib/particleVerbs';
+import { isBaseVerbReady } from '@/lib/particleQueue';
+import type { SrsState } from '@/lib/srs';
+import type { ParticleVerbData } from '@/data/particleVerbData';
 
 // The four conjugated forms the app schedules. 'infinitive' is deliberately
 // absent: it is the prompt, never the answer.
@@ -85,6 +89,52 @@ export function createConjugationProvider(cefrLevels?: string[]): SrsItemProvide
             form,
             itemId: conjugationItemId(verb.id, form),
           });
+        }
+      }
+      return items;
+    },
+  };
+}
+
+export interface ParticleItem extends ScheduledItem {
+  particleVerbId: string;
+  kind: 'cloze' | 'recall';
+  entry: ParticleVerbData;
+}
+
+// The particle provider.
+//
+// listEagerInitIds returns [] deliberately, and that emptiness is the whole
+// point: eagerly creating ~80 items would make every one of them due the day
+// the mode ships, which is the abandonment screen the queue work exists to
+// avoid. Particle state is created when a card is first presented instead.
+//
+// listAvailableItems reports only items that already have state — i.e. that
+// the learner has actually met. Which unmet items get introduced today is a
+// pacing decision with caps and gates behind it, and it lives in
+// buildParticleSitting rather than here, because "what exists" and "what to
+// serve next" are different questions.
+export function createParticleProvider(
+  srsStates: Record<string, SrsState>,
+): SrsItemProvider<ParticleItem> {
+  return {
+    name: 'particle',
+
+    async listEagerInitIds() {
+      return [];
+    },
+
+    async listAvailableItems() {
+      const items: ParticleItem[] = [];
+      for (const entry of getVerifiedParticleVerbs()) {
+        if (!isBaseVerbReady(entry, srsStates)) continue;
+        const kinds: Array<'cloze' | 'recall'> = hasRecallItem(entry)
+          ? ['cloze', 'recall']
+          : ['cloze'];
+        for (const kind of kinds) {
+          const itemId = particleItemId(entry.id, kind);
+          if (!srsStates[itemId]) continue;
+          items.push({ itemId, particleVerbId: entry.id, kind, entry });
         }
       }
       return items;

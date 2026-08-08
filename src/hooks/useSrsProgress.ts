@@ -8,6 +8,12 @@ import {
   Grade,
 } from '@/lib/srs';
 import { createConjugationProvider, type ConjugationItem } from '@/lib/srsProviders';
+import { buildParticleSitting, countParticleReviewsDue } from '@/lib/particleQueue';
+
+// How the learner produced the answer. Bundled here (rather than added as a
+// second boolean later) because the hint-reporting change from
+// docs/learning/lapse-handling.md needs the same payload.
+export type AnswerModality = 'typed' | 'choice';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -256,8 +262,20 @@ export function useSrsProgress(cefrLevels?: string[]) {
     return dueItems;
   }, [srsStates, conjugationProvider]);
 
-  // Record answer
-  const recordAnswer = (itemId: string, grade: Grade) => {
+  // Record answer.
+  //
+  // `modality` is recorded and never branched on in v1 — deliberately. The
+  // policy it will eventually drive is written down (a correct multiple-choice
+  // answer earns no ease and a capped interval multiplier, because scheduling
+  // recognition success at production intervals is how the scheduler comes to
+  // believe a learner knows something they cannot produce; see
+  // docs/learning/particle-verb-practice.md). Taking the parameter now means
+  // the credit will attach to how an item *was* answered rather than to
+  // whatever the settings say later, so switching modes can never
+  // retroactively reinterpret history. Shipping no branch on it keeps
+  // "the scheduler needs zero changes" literally true.
+  const recordAnswer = (itemId: string, grade: Grade, modality: AnswerModality = 'typed') => {
+    void modality;
     const currentState = srsStates[itemId] || initializeSrsState(itemId);
     const newState = calculateNextReview(currentState, grade);
     setSrsStates((prev) => ({
@@ -265,6 +283,17 @@ export function useSrsProgress(cefrLevels?: string[]) {
       [itemId]: newState,
     }));
   };
+
+  // The particle mode's sitting. Kept as a callback rather than derived
+  // state so a caller decides when the queue is snapshotted — a sitting
+  // recomputed mid-session would reshuffle under the learner's feet, which
+  // is the bug PR #122 fixed for the conjugation deck.
+  const getParticleSitting = useCallback(
+    (particleDailyGoal: number) => buildParticleSitting({ srsStates, particleDailyGoal }),
+    [srsStates],
+  );
+
+  const particleReviewsDue = useMemo(() => countParticleReviewsDue(srsStates), [srsStates]);
 
   // Export/Import for backup
   const exportData = () => {
@@ -300,6 +329,8 @@ export function useSrsProgress(cefrLevels?: string[]) {
     isReadOnly,
     initializeAllItems,
     getDueItems,
+    getParticleSitting,
+    particleReviewsDue,
     recordAnswer,
     exportData,
     importData,
