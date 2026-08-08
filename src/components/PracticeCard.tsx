@@ -10,6 +10,7 @@ import {
   generateVerbPattern,
   getFormLabel,
   getFormHint,
+  isAcceptedAnswer,
   type ConjugatedVerb,
   type VerbPattern,
 } from '@/lib/verbs';
@@ -84,7 +85,7 @@ export function PracticeCard({
   }, [correctAnswer, form]);
 
   const handleSubmit = (answer: string) => {
-    const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+    const correct = isAcceptedAnswer(infinitive, form, answer, correctAnswer);
     setIsCorrect(correct);
     setShowFeedback(true);
 
@@ -99,8 +100,7 @@ export function PracticeCard({
   // Auto-submit when answer is correct
   useEffect(() => {
     if (userAnswer && !showFeedback) {
-      const isAnswerCorrect =
-        userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+      const isAnswerCorrect = isAcceptedAnswer(infinitive, form, userAnswer, correctAnswer);
       if (isAnswerCorrect) {
         handleSubmit(userAnswer);
       }
