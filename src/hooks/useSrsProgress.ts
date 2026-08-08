@@ -169,10 +169,14 @@ export function useSrsProgress(cefrLevels?: string[]) {
     return dueItems;
   }, [srsStates, cefrLevels]);
 
-  // Record answer
-  const recordAnswer = (itemId: string, grade: Grade) => {
+  // Record answer. `hintsUsed` defaults to 0 so existing callers passing
+  // only (itemId, grade) are unaffected; a caller reporting hint usage on a
+  // correct answer (grade 5, hintsUsed > 0) routes into
+  // calculateNextReview's hinted-but-correct branch instead of the full
+  // credit branch. See docs/learning/lapse-handling.md (issue #30).
+  const recordAnswer = (itemId: string, grade: Grade, hintsUsed: number = 0) => {
     const currentState = srsStates[itemId] || initializeSrsState(itemId);
-    const newState = calculateNextReview(currentState, grade);
+    const newState = calculateNextReview(currentState, grade, hintsUsed);
     setSrsStates((prev) => ({
       ...prev,
       [itemId]: newState,
