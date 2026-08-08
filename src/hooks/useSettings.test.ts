@@ -1,6 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSettings } from '@/hooks/useSettings';
+
+// Issue #138: a throwing localStorage.setItem must surface a visible toast
+// instead of silently diverging in-memory state from storage. Mock the
+// frontend-expert-owned toast boundary so we can assert it fires without
+// rendering the real <Toaster/> tree.
+const toastMock = vi.fn();
+vi.mock('@/hooks/use-toast', () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
 
 const STORAGE_KEY = 'swedish-verbs-settings';
 
@@ -15,6 +24,7 @@ const DEFAULTS = {
 
 beforeEach(() => {
   localStorage.clear();
+  toastMock.mockClear();
 });
 
 describe('defaults', () => {
@@ -98,10 +108,7 @@ describe('issue #92: interfaceLanguage removal', () => {
   });
 
   it('does not reintroduce interfaceLanguage into a fresh write after loading a legacy object that had it', async () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ ...DEFAULTS, interfaceLanguage: 'sv' }),
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, interfaceLanguage: 'sv' }));
 
     const { result } = renderHook(() => useSettings());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -117,6 +124,44 @@ describe('issue #92: interfaceLanguage removal', () => {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
     expect(stored.dailyGoal).toBe(42);
     expect(Object.keys(DEFAULTS)).not.toContain('interfaceLanguage');
+  });
+});
+
+describe('quota exceeded on write (issue #138)', () => {
+  // Regression test for issue #138: before the fix, updateSettings called
+  // localStorage.setItem with no try/catch at all, so a QuotaExceededError
+  // thrown during the setSettings updater propagated straight out of
+  // updateSettings - an uncaught error, not just a silent one. The fix must
+  // both stop that crash and surface a visible toast so the user knows the
+  // change may not survive closing the tab.
+  it('does not throw and surfaces a destructive "progress not saved" toast when localStorage.setItem throws', async () => {
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    });
+
+    expect(toastMock).not.toHaveBeenCalled();
+
+    expect(() => {
+      act(() => {
+        result.current.updateSettings({ dailyGoal: 99 });
+      });
+    }).not.toThrow();
+
+    expect(toastMock).toHaveBeenCalledTimes(1);
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.stringMatching(/not saved/i),
+        variant: 'destructive',
+      }),
+    );
+
+    // The in-memory session stays alive and reflects the attempted change
+    // even though the write failed - the toast is what tells the user it
+    // may not survive closing the tab, not a UI rollback.
+    expect(result.current.settings.dailyGoal).toBe(99);
   });
 });
 

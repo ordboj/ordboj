@@ -58,6 +58,15 @@ vi.mock('@/lib/verbs', async (importOriginal) => {
   };
 });
 
+// Issue #138: a throwing localStorage.setItem must surface a visible toast
+// instead of silently diverging in-memory state from storage. Mock the
+// frontend-expert-owned toast boundary so we can assert it fires without
+// rendering the real <Toaster/> tree.
+const toastMock = vi.fn();
+vi.mock('@/hooks/use-toast', () => ({
+  toast: (...args: unknown[]) => toastMock(...args),
+}));
+
 const FIXED_NOW = new Date('2026-01-01T00:00:00.000Z').getTime();
 const ALL_ITEM_IDS = [
   '1-presens',
@@ -72,6 +81,7 @@ const ALL_ITEM_IDS = [
 
 beforeEach(() => {
   localStorage.clear();
+  toastMock.mockClear();
   // Only fake Date: RTL's waitFor polls with real setTimeout/MutationObserver
   // internally, so faking timers wholesale would freeze that polling too.
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -238,6 +248,34 @@ describe('quota exceeded on write', () => {
         result.current.recordAnswer('1-presens', 5);
       });
     }).not.toThrow();
+  });
+
+  // Regression test for issue #138: a write failure must be visible to the
+  // user, not just non-fatal. Before the fix, the catch block only logged
+  // to console.error - the UI looked identical whether the save succeeded
+  // or silently failed, so the learner had no way to know their answer
+  // wasn't persisted.
+  it('issue #138: surfaces a destructive "progress not saved" toast when localStorage.setItem throws', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    });
+
+    expect(toastMock).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+
+    await waitFor(() => expect(toastMock).toHaveBeenCalledTimes(1));
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.stringMatching(/not saved/i),
+        variant: 'destructive',
+      }),
+    );
   });
 });
 
