@@ -263,8 +263,9 @@ describe('PracticeCard - typing mode', () => {
     // No pronounce button attached to the wrong-answer line itself.
     expect(typedLine.querySelector('button')).toBeNull();
 
-    // The wrong text the learner typed is never handed to the speech layer.
-    expect(speakSpy).not.toHaveBeenCalledWith('fel', expect.anything());
+    // The wrong text the learner typed is never handed to the speech layer,
+    // regardless of how many arguments a given call passed.
+    expect(speakSpy.mock.calls.some((call) => call[0] === 'fel')).toBe(false);
     speakSpy.mockRestore();
   });
 

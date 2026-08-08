@@ -212,11 +212,6 @@ export function PracticeCard({
                       ⌫
                     </Button>
                   </div>
-                  {revealedHints.length > 0 && (
-                    <p className="text-xs text-muted-foreground text-center">
-                      Hint letters: {revealedHints.map((index) => correctAnswer[index]).join(', ')}
-                    </p>
-                  )}
                   <div className="flex gap-3">
                     <Button
                       onClick={handleHint}
