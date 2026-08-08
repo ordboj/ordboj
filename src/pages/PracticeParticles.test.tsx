@@ -38,8 +38,8 @@ function readyBase(infinitive: string): Record<string, SrsState> {
   return out;
 }
 
-function seed(items: Record<string, SrsState>) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, items }));
+function seed(items: Record<string, SrsState>, version = 2) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version, items }));
 }
 
 function storedItems(): Record<string, SrsState> {
@@ -269,5 +269,44 @@ describe('particle practice flow', () => {
     expect(await screen.findByText('Fill in the missing particle')).toBeInTheDocument();
     expect(screen.getByText('1 / 1')).toBeInTheDocument();
     expect(screen.queryByText('Produce the whole phrase')).not.toBeInTheDocument();
+  });
+
+  // Issue #263: a store written by a build newer than this one (version >
+  // the current STORAGE_VERSION) puts useSrsProgress into isReadOnly mode --
+  // real localStorage, real hook, so this exercises the actual version
+  // guard in useSrsProgress.ts, not a mock's opinion of it.
+  describe('read-only progress banner', () => {
+    const BANNER_TEXT = /your progress from this session won.t be saved/i;
+
+    it('shows the read-only banner above an active card when the stored version is newer than this build', async () => {
+      const clozeId = particleItemId('pv:tycka-om', 'cloze');
+      seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) }, 3);
+
+      renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+
+      expect(await screen.findByText('Fill in the missing particle')).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(BANNER_TEXT);
+    });
+
+    it('shows the read-only banner on the session-complete screen when the stored version is newer than this build', async () => {
+      seed({}, 3);
+
+      renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+
+      expect(
+        await screen.findByText(/No particle verbs are ready for you yet/),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(BANNER_TEXT);
+    });
+
+    it('renders no read-only banner for a normal (non-newer) stored version', async () => {
+      const clozeId = particleItemId('pv:tycka-om', 'cloze');
+      seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) });
+
+      renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+
+      expect(await screen.findByText('Fill in the missing particle')).toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
   });
 });
