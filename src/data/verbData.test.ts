@@ -607,3 +607,117 @@ describe('swedish_verbs.csv - issue #125 naive-template conjugation audit (PR #1
     expect(row.supinum).toBe(`${prefix}hållit`);
   });
 });
+
+describe('issue #42 - CEFR re-tag (shipped-50 audit, PR #298)', () => {
+  // Local, minimal CSV reader (deliberately not shared with the "issue
+  // #125" describe above -- its parseCsv/rowFor are function-scoped to that
+  // block) covering only what these tests need: the cefr column keyed by
+  // infinitive.
+  type CsvCefrRow = { cefr: string; infinitive: string };
+
+  function parseCsvCefr(): CsvCefrRow[] {
+    const csvPath = join(here, '..', '..', 'public', 'data', 'swedish_verbs.csv');
+    const csv = readFileSync(csvPath, 'utf-8');
+    const lines = csv.split(/\r?\n/).filter(Boolean);
+    return lines.slice(1).map((line) => {
+      const [cefr = '', , infinitive = ''] = line.split(',');
+      return { cefr, infinitive };
+    });
+  }
+
+  function csvRowFor(infinitive: string): CsvCefrRow {
+    const row = parseCsvCefr().find((r) => r.infinitive === infinitive);
+    if (!row) throw new Error(`No CSV row found for infinitive "${infinitive}"`);
+    return row;
+  }
+
+  // Issue #42: "unna", "kapa" and "te sig" were tagged A1 (a frequency
+  // bucket, not a real beginner level) despite being formal/specialized/
+  // literary register. #298 re-tags these three specific rows -- explicitly
+  // named in the issue body -- in both the shipped table (VERB_DATA, what
+  // actually ships to learners) and its CSV promotion queue. Only the cefr
+  // field should move; forms, imperativ and grupp must be untouched so the
+  // conjugation data itself stays correct.
+  it.each([
+    [
+      'unna',
+      'B2',
+      { imperativ: 'unna', presens: 'unnar', preteritum: 'unnade', supinum: 'unnat', grupp: '1' },
+    ],
+    [
+      'kapa',
+      'B2',
+      { imperativ: 'kapa', presens: 'kapar', preteritum: 'kapade', supinum: 'kapat', grupp: '1' },
+    ],
+    [
+      'te sig',
+      'C1',
+      {
+        imperativ: '',
+        presens: 'ter sig',
+        preteritum: 'tedde sig',
+        supinum: 'tett sig',
+        grupp: '3',
+      },
+    ],
+  ] as const)(
+    'VERB_DATA tags "%s" as %s, forms and grupp unchanged',
+    (infinitive, expectedCefr, expected) => {
+      const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+      expect(row, `expected a VERB_DATA row for "${infinitive}"`).toBeDefined();
+      expect(row!.cefr).toBe(expectedCefr);
+      expect(row!.imperativ).toBe(expected.imperativ);
+      expect(row!.presens).toBe(expected.presens);
+      expect(row!.preteritum).toBe(expected.preteritum);
+      expect(row!.supinum).toBe(expected.supinum);
+      expect(row!.grupp).toBe(expected.grupp);
+    },
+  );
+
+  it.each([
+    ['unna', 'B2'],
+    ['kapa', 'B2'],
+    ['te sig', 'C1'],
+  ] as const)(
+    'swedish_verbs.csv queue tags "%s" as %s to match the shipped table',
+    (infinitive, expectedCefr) => {
+      const row = csvRowFor(infinitive);
+      expect(row.cefr).toBe(expectedCefr);
+    },
+  );
+
+  // Regression for the exact defect issue #42 reported: before the retag,
+  // "unna" (a formal-register verb) sat in the same CEFR bucket as genuine
+  // beginner verbs like "vara"/"ha", so any A1-scoped consumer (e.g. the A1
+  // free-practice pool) served it as if it were everyday vocabulary. This
+  // pins the fixed bucket membership directly, independent of any UI.
+  it('"unna" is no longer bucketed with genuine A1 verbs like "vara" and "ha"', () => {
+    const vara = VERB_DATA.find((v) => v.infinitive === 'vara');
+    const unna = VERB_DATA.find((v) => v.infinitive === 'unna');
+    expect(vara?.cefr).toBe('A1');
+    expect(unna?.cefr).not.toBe('A1');
+  });
+
+  // Acceptance criterion "shipped-50 re-tags applied (5 flagged rows in
+  // audit)" names 5 flagged rows; PR #298's own description states only 3
+  // are applied here and explicitly does not close #42. This test pins the
+  // current, honest state of the shipped table rather than asserting a
+  // count the PR does not claim to deliver -- so it stays green under this
+  // PR's real scope and turns red the moment someone tags a table as "the
+  // #42 fix" while silently dropping one of these three, without requiring
+  // us to guess at the 2 unnamed rows from the audit.
+  it('exactly the 3 rows named in issue #42 are non-A1 among unna/kapa/te sig/anse/finna', () => {
+    const namesToCheck = ['unna', 'kapa', 'te sig', 'anse', 'finna'];
+    const nonA1 = namesToCheck.filter((name) => {
+      const row = VERB_DATA.find((v) => v.infinitive === name);
+      return row !== undefined && row.cefr !== 'A1';
+    });
+    // "anse" and "finna" are flagged as strong candidates in the PR
+    // description but explicitly deferred to a learning-designer policy
+    // doc that does not exist yet -- they must still read A1 here. If this
+    // assertion ever fails because they were quietly re-tagged without
+    // that doc landing, that is exactly the kind of guessed-pedagogy
+    // change CLAUDE.md reserves for learning-designer.
+    expect(nonA1.sort()).toEqual(['kapa', 'te sig', 'unna']);
+  });
+});

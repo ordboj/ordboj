@@ -150,7 +150,16 @@ describe('issue #115 - dead package.json "dependencies" removed', () => {
     expect(pkg.dependencies).not.toHaveProperty(name);
   });
 
-  it('zod is kept (explicitly required by the issue)', () => {
+  // zod has no src/** import yet, but it is not dead weight: issue #115
+  // kept it deliberately ("KEEP zod (needed by store-validation tickets)")
+  // and the plan is live on the board — #104 (versioned settings provider
+  // with zod validation, epic #256) and #251 (whole-app backup envelope
+  // with validated import/load). Ruling:
+  // docs/product/2026-08-08-zod-dependency-decision.md.
+  // Tripwire: if both #104 and #251 close without importing zod, this
+  // rationale is dead — delete this test and file a devops ticket to
+  // remove the dependency.
+  it('zod is kept (planned: #104 settings validation, #251 backup envelope)', () => {
     expect(pkg.dependencies).toHaveProperty('zod');
   });
 });

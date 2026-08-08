@@ -13,6 +13,8 @@
     "lint": "eslint . --max-warnings 20",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "validate:verbs": "node scripts/validate-verb-forms.mjs",
+    "build:verb-data": "node scripts/build-verb-data.mjs",
+    "build:verb-data:check": "node scripts/build-verb-data.mjs --check",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
