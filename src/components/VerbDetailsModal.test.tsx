@@ -67,8 +67,8 @@ describe('VerbDetailsModal - imperativNotApplicable flag hides the imperativ row
 });
 
 // Issue #110 AC: touch targets must be at least 44px. Both pronounce
-// buttons here were 24px (h-6 w-6, the infinitive one had no explicit size
-// class at all) and 32px (h-8 w-8, the per-form one) before this fix.
+// buttons here were 40px (the infinitive one: size="icon" default h-10 w-10,
+// no explicit size class) and 32px (h-8 w-8, the per-form one) before this fix.
 describe('VerbDetailsModal - pronounce button touch targets (issue #110 AC)', () => {
   it('renders the infinitive pronounce button at 44px (h-11 w-11) with an aria-label', () => {
     renderWithProviders(

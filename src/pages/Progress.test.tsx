@@ -277,6 +277,13 @@ describe('Progress page - verb row opens the details modal by keyboard (issue #1
     expect(button.tagName).toBe('BUTTON');
     expect(button).toHaveAttribute('type', 'button');
   });
+
+  it('renders the row button at a 44x44 minimum touch target, not height-only', async () => {
+    renderWithProviders(<Progress />, { route: '/progress' });
+    const button = await screen.findByRole('button', { name: 'kunna' });
+    expect(button).toHaveClass('min-h-11');
+    expect(button).toHaveClass('min-w-11');
+  });
 });
 
 // Regression test for PR #308 round-1 BLOCKER: the verb TableRow previously
