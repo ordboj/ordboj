@@ -30,12 +30,7 @@ export function renderWithProviders(ui: ReactElement, options: RenderWithProvide
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <MemoryRouter
-            initialEntries={[route]}
-            future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-          >
-            {children}
-          </MemoryRouter>
+          <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
         </TooltipProvider>
       </QueryClientProvider>
     );
