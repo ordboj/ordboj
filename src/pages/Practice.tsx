@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -6,22 +6,54 @@ import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { PracticeCard } from '@/components/PracticeCard';
 import { useSrsProgress, type PracticeItem } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
-import { Grade } from '@/lib/srs';
+import { Grade, MAX_REQUEUES_PER_DAY, isEligibleForRequeue } from '@/lib/srs';
+
+// Per-item in-session bookkeeping for the same-sitting relearning queue
+// (docs/learning/lapse-handling.md, "Decision" and "Interaction with the
+// sitting cap"). This is sitting/day bookkeeping only, never persisted to
+// localStorage: it is rebuilt from scratch whenever the page loads.
+interface RequeueEntry {
+  // Items answered since this item's most recent lapse, this sitting.
+  itemsSinceLapse: number;
+  // Times this item has been re-queued today, across sittings (capped at
+  // MAX_REQUEUES_PER_DAY by srs.ts's isEligibleForRequeue).
+  requeuesToday: number;
+  // True while the item has an unresolved lapse waiting for a same-sitting
+  // retry (either not yet eligible to reappear, or currently back in the
+  // queue awaiting its retry answer).
+  pending: boolean;
+}
+
+function getLocalDayKey(): string {
+  return new Date().toDateString();
+}
 
 export default function Practice() {
   const navigate = useNavigate();
   const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
   const { getDueItems, recordAnswer, isLoading } = useSrsProgress(settings.cefrLevels);
 
-  const [dueItems, setDueItems] = useState<PracticeItem[]>([]);
+  // `sessionItems` is the fixed set loaded at sitting start: it is the
+  // denominator for the progress display and never grows. `queue` is the
+  // live, mutable working list that a lapse can splice items back into.
+  const [sessionItems, setSessionItems] = useState<PracticeItem[]>([]);
+  const [queue, setQueue] = useState<PracticeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [practiceComplete, setPracticeComplete] = useState(false);
+  const [completedItemIds, setCompletedItemIds] = useState<Set<string>>(new Set());
+  const [requeueMap, setRequeueMap] = useState<Record<string, RequeueEntry>>({});
+  const [requeueDay, setRequeueDay] = useState(getLocalDayKey);
 
   useEffect(() => {
     const loadDueItems = async () => {
       if (!isLoading && !settingsLoading) {
         const items = await getDueItems();
-        setDueItems(items);
+        setSessionItems(items);
+        setQueue(items);
+        setCurrentIndex(0);
+        setCompletedItemIds(new Set());
+        setRequeueMap({});
+        setRequeueDay(getLocalDayKey());
         if (items.length === 0) {
           setPracticeComplete(true);
         }
@@ -30,18 +62,101 @@ export default function Practice() {
     loadDueItems();
   }, [isLoading, settingsLoading, getDueItems]);
 
-  const handleAnswer = (grade: Grade) => {
-    const currentItem = dueItems[currentIndex];
-    recordAnswer(currentItem.itemId, grade);
+  const sessionItemIds = useMemo(
+    () => new Set(sessionItems.map((item) => item.itemId)),
+    [sessionItems],
+  );
 
-    if (currentIndex < dueItems.length - 1) {
+  const handleAnswer = (grade: Grade) => {
+    const answeredItem = queue[currentIndex];
+    if (!answeredItem) return;
+
+    recordAnswer(answeredItem.itemId, grade);
+
+    const isCorrect = grade === 5;
+    const today = getLocalDayKey();
+    // Local-day boundary: bookkeeping from a previous day never carries in.
+    const baseMap = today === requeueDay ? requeueMap : {};
+
+    // Every other item still waiting on its re-queue gets one item closer to
+    // eligibility now that another card has been answered.
+    const advancedMap: Record<string, RequeueEntry> = {};
+    for (const [id, entry] of Object.entries(baseMap)) {
+      advancedMap[id] =
+        entry.pending && id !== answeredItem.itemId
+          ? { ...entry, itemsSinceLapse: entry.itemsSinceLapse + 1 }
+          : entry;
+    }
+
+    const priorEntry = advancedMap[answeredItem.itemId] ?? {
+      itemsSinceLapse: 0,
+      requeuesToday: 0,
+      pending: false,
+    };
+
+    const nextEntryForAnswered: RequeueEntry = isCorrect
+      ? // Correct answer resolves any pending lapse (first try or the
+        // required retry after a re-queue).
+        { ...priorEntry, pending: false }
+      : priorEntry.requeuesToday < MAX_REQUEUES_PER_DAY
+        ? // Lapsed, and still under the daily re-queue cap: wait for the gap.
+          { ...priorEntry, itemsSinceLapse: 0, pending: true }
+        : // Cap already spent today: leave it for its normal `dueAt` (already
+          // set to tomorrow by recordAnswer -> calculateNextReview).
+          { ...priorEntry, pending: false };
+
+    const nextMap: Record<string, RequeueEntry> = {
+      ...advancedMap,
+      [answeredItem.itemId]: nextEntryForAnswered,
+    };
+
+    // Splice back in every pending item that has now cleared the gap.
+    let nextQueue = queue;
+    for (const [id, entry] of Object.entries(nextMap)) {
+      if (entry.pending && isEligibleForRequeue(entry.itemsSinceLapse, entry.requeuesToday)) {
+        const item = queue.find((q) => q.itemId === id);
+        if (item) {
+          nextQueue = [...nextQueue, item];
+          nextMap[id] = { ...entry, requeuesToday: entry.requeuesToday + 1, itemsSinceLapse: 0 };
+        }
+      }
+    }
+
+    // A session item ticks the progress display once it stops being pending
+    // a re-queue (correct, or the daily cap is spent) -- never on the
+    // re-queued attempt itself, so a lapse cannot inflate the numerator by
+    // being shown twice.
+    const stillPending = nextMap[answeredItem.itemId]?.pending ?? false;
+    const nextCompletedItemIds =
+      !stillPending && sessionItemIds.has(answeredItem.itemId)
+        ? new Set(completedItemIds).add(answeredItem.itemId)
+        : completedItemIds;
+
+    setRequeueMap(nextMap);
+    setRequeueDay(today);
+    setQueue(nextQueue);
+    setCompletedItemIds(nextCompletedItemIds);
+
+    if (currentIndex < nextQueue.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       setPracticeComplete(true);
     }
   };
 
-  const progressPercent = dueItems.length > 0 ? ((currentIndex + 1) / dueItems.length) * 100 : 100;
+  const totalSessionItems = sessionItems.length;
+  const currentItem = queue[currentIndex];
+  const requeuesSoFar = currentItem ? (requeueMap[currentItem.itemId]?.requeuesToday ?? 0) : 0;
+  const willRequeueIfWrong = requeuesSoFar < MAX_REQUEUES_PER_DAY;
+  const isRequeueAttempt = requeuesSoFar > 0;
+  // Session position never counts a re-queued attempt as a new card, so a
+  // lapse cannot make the "N / total" readout look further along than it is.
+  const displayedPosition = Math.min(
+    completedItemIds.size + (isRequeueAttempt ? 0 : 1),
+    totalSessionItems,
+  );
+  const progressPercent =
+    totalSessionItems > 0 ? (completedItemIds.size / totalSessionItems) * 100 : 100;
 
   if (isLoading || settingsLoading) {
     return (
@@ -67,11 +182,9 @@ export default function Practice() {
     );
   }
 
-  if (dueItems.length === 0 || !dueItems[currentIndex]) {
+  if (queue.length === 0 || !currentItem) {
     return null;
   }
-
-  const currentItem = dueItems[currentIndex];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
@@ -84,7 +197,7 @@ export default function Practice() {
           </Button>
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-muted-foreground">
-              {currentIndex + 1} / {dueItems.length}
+              {displayedPosition} / {totalSessionItems}
             </span>
             <Button
               variant="outline"
@@ -113,6 +226,7 @@ export default function Practice() {
           showExamples={settings.showExamples}
           autoplayAudio={settings.autoplayAudio}
           muteAudio={settings.muteAudio}
+          willRequeueIfWrong={willRequeueIfWrong}
           onAnswer={handleAnswer}
         />
       </div>

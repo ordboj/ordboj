@@ -24,6 +24,11 @@ interface PracticeCardProps {
   showExamples: boolean;
   autoplayAudio: boolean;
   muteAudio: boolean;
+  // Whether, if this card is answered wrong, the item is still eligible to
+  // re-queue into the same sitting (docs/learning/lapse-handling.md). Drives
+  // the "you'll see this again" feedback copy; the re-queue decision itself
+  // is made by the caller (Practice.tsx).
+  willRequeueIfWrong?: boolean;
   onAnswer: (grade: Grade) => void;
 }
 
@@ -34,6 +39,7 @@ export function PracticeCard({
   showExamples,
   autoplayAudio,
   muteAudio,
+  willRequeueIfWrong = false,
   onAnswer,
 }: PracticeCardProps) {
   const [userAnswer, setUserAnswer] = useState('');
@@ -296,6 +302,13 @@ export function PracticeCard({
                   </>
                 )}
               </div>
+
+              {!isCorrect && willRequeueIfWrong && (
+                <p className="text-sm text-muted-foreground text-center">
+                  You'll see this one again later in today's session — one more correct answer and
+                  it's done.
+                </p>
+              )}
 
               <div className="space-y-4">
                 {/* Show full pattern with pronunciation buttons */}
