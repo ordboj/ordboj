@@ -60,8 +60,8 @@ human decision, out of scope for every agent.
 
 **P2 — The plan is the load-bearing wall.** Auto-merge is safe only while
 branch protection is enforced. If the `ordboj` org ever downgrades to Free,
-`gh pr merge --auto` on an unprotected branch degrades to "merge
-immediately, checks pending" — the exact hazard #49 refused to ship. On any
+`gh pr merge --auto` loses its gate: on an unprotected branch it is no
+longer a wait-for-green promise — the exact hazard #49 refused to ship. On any
 downgrade, `devops` disables the workflow (delete the file or guard the job
 with `if: false`) in the same change. This is the one condition under which
 the workflow comes out.
@@ -73,9 +73,10 @@ for any PR where application code had to change. This note does not move
 that line; widening auto-merge to majors would need a new decision here.
 
 **P4 — Close the required-checks gap.** Two CI jobs run on every PR but are
-not required: `Format check` and `Validate verb data`. That is a real hole:
-a Prettier minor bump that changes formatting rules currently auto-merges
-with a red `Format check`. All seven jobs in `ci.yml` are unconditional (no
+not required: `Format check` and `Validate verb data`. That is a real hole, latent today and live the moment P5 lands: a Prettier
+minor bump that changes formatting rules would auto-merge with a red
+`Format check`. Nothing auto-merges at present — the workflow is broken
+(section 4) — so this must be fixed before P5, not after. All seven jobs in `ci.yml` are unconditional (no
 path filters, no `if`), so none can hang a PR in "Expected". `devops`
 therefore sets the required contexts to all seven:
 
@@ -93,7 +94,8 @@ The `-f "contexts[]=..."` array entries are strings and are correct as
 written.
 
 This is a repo-settings change, not a file change. It is one of two action
-items this note creates — the other is P5, repairing the approve step.
+items this note creates, tracked as #296 under epic #259 — the other is
+P5, repairing the approve step.
 
 **P5 — Repair the approve step (action item, `devops`-owned).** The
 workflow's `gh pr review --approve "$PR_URL"` call fails on every run,
@@ -114,9 +116,9 @@ fixes:
   Some org configurations still refuse this; in that case a PAT is
   required instead.
 
-This workflow edit is `devops`-owned and must be filed as its own ticket
-under epic #259. This note rules on which fix to take; it does not itself
-change the workflow file.
+This workflow edit is `devops`-owned and is tracked as #297 under epic
+#259. This note rules on which fix to take; it does not itself change the
+workflow file.
 
 **P6 — Stalled PRs.** Strict up-to-date checks mean a Dependabot PR that
 falls behind `main` must be rebased before it can merge. Dependabot rebases
@@ -157,7 +159,10 @@ Verified on 2026-08-08 against the live repo:
   the human `tugrulcan`, not by the workflow.
 - Correctly left for humans (majors, filter working as designed): PRs
   #211–#218 (zod 4, react-router 7, tailwind-merge 3, lucide 1.x, and
-  others) — their auto-merge runs are `skipped` by the major-bump filter.
+  others) — the major-bump filter skips the `Approve and enable
+auto-merge for patch/minor` **step**; the `auto-merge` job itself still
+  reports `success`. Verified on run 31259595634 (PR #218, zod 4): job
+  `success`, step `skipped`.
   Note that #80 (jsdom 26.1.0 → 30.0.1), #81 (@testing-library/jest-dom
   6.9.1 → 7.0.0), #82 (globals 15.15.0 → 17.9.0) and #210
   (actions/checkout 4 → 7) are also major bumps; they are not evidence of
