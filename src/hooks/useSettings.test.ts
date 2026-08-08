@@ -389,3 +389,50 @@ describe('issue #137: coercing a stored empty cefrLevels', () => {
     expect(result.current.settings.cefrLevels).toEqual(['B1']);
   });
 });
+
+describe('#300: zod/v4-mini schema checks', () => {
+  it('repairs a non-integer stored dailyGoal (1.5) back to the default', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, dailyGoal: 1.5 }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.dailyGoal).toBe(20);
+  });
+
+  it('repairs a non-positive stored dailyGoal (0) back to the default', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, dailyGoal: 0 }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.dailyGoal).toBe(20);
+  });
+
+  it('repairs a negative stored dailyGoal (-5) back to the default', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, dailyGoal: -5 }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.dailyGoal).toBe(20);
+  });
+
+  it('repairs a non-positive stored particleDailyGoal (0) back to the default', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, particleDailyGoal: 0 }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.particleDailyGoal).toBe(12);
+  });
+
+  it('repairs a stored cefrLevels array holding an empty string back to the default', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, cefrLevels: [''] }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.cefrLevels).toEqual(DEFAULTS.cefrLevels);
+  });
+});
