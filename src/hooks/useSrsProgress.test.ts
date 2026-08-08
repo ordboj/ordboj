@@ -496,6 +496,8 @@ describe('getDueItems scaling (regression guard for #56: O(V^2) per-verb lookup)
       }
     },
   );
+});
+
 // Issue #135: "Import Progress accepts any JSON and overwrites the store
 // unvalidated". These pin the three acceptance-criteria cases directly:
 // a structurally valid backup is applied, and anything that isn't —
