@@ -103,4 +103,14 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "tala", imperativ: "tala", presens: "talar", preteritum: "talade", supinum: "talat", grupp: "1" },
   { cefr: "A1", infinitive: "bära", imperativ: "bär", presens: "bär", preteritum: "bar", supinum: "burit", grupp: "4" },
   { cefr: "A1", infinitive: "höra", imperativ: "hör", presens: "hör", preteritum: "hörde", supinum: "hört", grupp: "2a" },
+  // Appended for #262: unlocks verified:false particle verbs (stänga av,
+  // sätta på, stiga upp, hälsa på, bygga ut, ställa in) whose base verb was
+  // missing from VERB_DATA. Append-only — existing row order above is
+  // frozen by verbData.orderPin.test.ts.
+  { cefr: "A1", infinitive: "stänga", imperativ: "stäng", presens: "stänger", preteritum: "stängde", supinum: "stängt", grupp: "2a" },
+  { cefr: "A1", infinitive: "sätta", imperativ: "sätt", presens: "sätter", preteritum: "satte", supinum: "satt", grupp: "4" },
+  { cefr: "A1", infinitive: "stiga", imperativ: "stig", presens: "stiger", preteritum: "steg", supinum: "stigit", grupp: "4" },
+  { cefr: "A2", infinitive: "hälsa", imperativ: "hälsa", presens: "hälsar", preteritum: "hälsade", supinum: "hälsat", grupp: "1" },
+  { cefr: "A1", infinitive: "bygga", imperativ: "bygg", presens: "bygger", preteritum: "byggde", supinum: "byggt", grupp: "2a" },
+  { cefr: "A1", infinitive: "ställa", imperativ: "ställ", presens: "ställer", preteritum: "ställde", supinum: "ställt", grupp: "2a" },
 ];

@@ -204,32 +204,40 @@ export async function generateVerbPattern(
   };
 }
 
-// Get form label for display
+// Swedish name of each form, for display. These are the terms a learner meets
+// in a Swedish classroom or grammar book, and they match the column headings
+// the Progress table already uses. "Preteritum" is the current school term for
+// the simple past; "imperfekt" is the older name and is not used here.
 export function getFormLabel(form: Form): string {
   const labels: Record<Form, string> = {
-    infinitive: 'Infinitive',
-    presens: 'Present',
-    preteritum: 'Past',
-    supinum: 'Supine (perfect)',
-    imperativ: 'Imperative (command)',
+    infinitive: 'Infinitiv',
+    presens: 'Presens',
+    preteritum: 'Preteritum',
+    supinum: 'Supinum',
+    imperativ: 'Imperativ',
   };
   return labels[form];
 }
 
-// Get form hint/description
+// One-line description of what each form does. The Swedish term leads, then a
+// plain-Swedish gloss, then a short English gloss in parentheses for learners
+// who don't know the term yet.
 export function getFormHint(form: Form): string {
   const hints: Record<Form, string> = {
-    infinitive: 'The basic form (to...)',
-    presens: 'Present tense (now)',
-    preteritum: 'Past tense (then)',
-    supinum: 'Perfect form (has/have...)',
-    imperativ: 'Command form (do it!)',
+    infinitive: 'Infinitiv: grundformen, ofta efter "att" (to ...)',
+    presens: 'Presens: det som händer nu (present tense)',
+    preteritum: 'Preteritum: det som hände då (past tense)',
+    supinum: 'Supinum: formen efter har eller hade (has/had ...)',
+    imperativ: 'Imperativ: en uppmaning (do it!)',
   };
   return hints[form];
 }
 
-// Example sentences
-export function getExampleSentence(infinitive: string, form: Form): string {
+// Example sentences. Only a handful of verbs have hand-written examples, so
+// this returns null for every other verb + form rather than a placeholder:
+// showing "[Example with presens]" in an example slot teaches nothing and
+// reads as a bug. Callers must treat null as "render no example".
+export function getExampleSentence(infinitive: string, form: Form): string | null {
   const examples: Record<string, Record<Form, string>> = {
     vara: {
       infinitive: 'Att vara eller inte vara',
@@ -254,7 +262,7 @@ export function getExampleSentence(infinitive: string, form: Form): string {
     },
   };
 
-  return examples[infinitive]?.[form] || `[Example with ${form}]`;
+  return examples[infinitive]?.[form] ?? null;
 }
 
 // Legacy export for backward compatibility

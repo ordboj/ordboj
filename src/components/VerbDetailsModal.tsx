@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Volume2 } from 'lucide-react';
-import { ConjugatedVerb, Form, getExampleSentence, getFormLabel } from '@/lib/verbs';
+import { ConjugatedVerb, Form, getExampleSentence, getFormLabel, getVerbGrupp } from '@/lib/verbs';
 import { conjugationItemId } from '@/lib/itemIds';
 import { isDue, SrsState } from '@/lib/srs';
 import { speakSwedish } from '@/lib/speech';
@@ -28,6 +28,11 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
   };
 
   const badge = getStageBadge(srsStage);
+  // Konjugationsgrupp predicts the answer's ending pattern, so it's only
+  // ever surfaced here (a reference view, opened after the fact) — never
+  // pre-answer on the practice card. undefined means "not known" and is
+  // rendered as absent, never guessed (src/lib/verbs.ts:29-32).
+  const grupp = getVerbGrupp(verb.infinitive);
 
   const getFormSrsInfo = (form: Form) => {
     const itemId = conjugationItemId(verb.id, form);
@@ -68,9 +73,9 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
-          {/* Infinitive */}
+          {/* Infinitiv */}
           <div>
-            <p className="text-sm text-muted-foreground">Infinitive</p>
+            <p className="text-sm text-muted-foreground">{getFormLabel('infinitive')}</p>
             <p className="text-lg font-medium" lang="sv">
               {verb.infinitive}
             </p>
@@ -79,7 +84,10 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
           {/* CEFR Level */}
           <div>
             <p className="text-sm text-muted-foreground">Difficulty Level</p>
-            <Badge variant="outline">{verb.cefr}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{verb.cefr}</Badge>
+              {grupp && <Badge variant="outline">grupp {grupp}</Badge>}
+            </div>
           </div>
 
           {/* Overall Progress */}
@@ -144,20 +152,18 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
                     )}
 
                     {/* Example sentence */}
-                    <div className="mt-2 pt-2 border-t">
-                      {(() => {
-                        const example = getExampleSentence(verb.infinitive, form);
-                        const isPlaceholder = example.startsWith('[');
-                        return (
-                          <p
-                            className="text-sm italic text-muted-foreground"
-                            lang={isPlaceholder ? undefined : 'sv'}
-                          >
+                    {(() => {
+                      const example = getExampleSentence(verb.infinitive, form);
+                      if (!example) return null;
+
+                      return (
+                        <div className="mt-2 pt-2 border-t">
+                          <p className="text-sm italic text-muted-foreground" lang="sv">
                             {example}
                           </p>
-                        );
-                      })()}
-                    </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}

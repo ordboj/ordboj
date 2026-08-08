@@ -32,7 +32,7 @@ describe('PracticeCard - typing mode', () => {
     expect(heading.textContent).toBe('vara');
     expect(heading.textContent).not.toContain('_');
     expect(heading.textContent).not.toContain('–');
-    expect(screen.getByText(/Missing:/)).toHaveTextContent('Present');
+    expect(screen.getByText(/Missing:/)).toHaveTextContent('Presens');
 
     // The full pattern (with sibling forms) is a feedback-only reveal, never
     // shown while the learner is still trying to recall the answer.
@@ -922,6 +922,35 @@ describe("PracticeCard - lang='sv' on inline Swedish word display (issue #112 AC
   // conditional needs its own regression test later.
 });
 
+// Tickets #229/#44: getExampleSentence now returns null instead of a
+// "[Example with ...]" placeholder for verbs with no hand-written example.
+// Regression: the feedback screen must render nothing in that case, never
+// the literal placeholder text.
+describe('PracticeCard - no "[Example with ...]" placeholder (tickets #229/#44)', () => {
+  it('renders no example section at all for a verb with no hand-written example, even with showExamples on', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="tala"
+        form="presens"
+        mode="typing"
+        showExamples={true}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'talar');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    expect(screen.queryByText(/\[Example with/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Example:')).not.toBeInTheDocument();
+  });
+});
+
 describe('PracticeCard - empty imperativ', () => {
   // "kunna" has no imperativ form in VERB_DATA (imperativ: ""), so
   // conjugateVerb() falls back to the literal string "(not available)".
@@ -1343,5 +1372,112 @@ describe('PracticeCard - repetitions does not affect the recall heading (superse
     const completePattern = screen.getByText('Complete pattern:').closest('div');
     expect(completePattern).toHaveTextContent('är');
     expect(completePattern).toHaveTextContent('varit');
+  });
+});
+
+// Issue #228 (AC): a "grupp X" text badge in the post-answer feedback area.
+// Grupp predicts the answer's ending pattern, so the RED LINE is that it
+// must never render before the learner submits an answer (src/lib/verbs.ts:
+// 29-32 is the "never guessed" contract for undefined grupp).
+describe('PracticeCard - grupp badge (issue #228)', () => {
+  it('shows "grupp 4" in feedback only after answering, never on the pre-answer recall screen — typing mode', async () => {
+    // "vara" is grupp '4' in VERB_DATA (swedish-linguist owned fixture).
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    // RED LINE: nothing about the grupp is on the page before submission.
+    expect(screen.queryByText(/grupp/i)).not.toBeInTheDocument();
+
+    await user.type(input, VARA_PRESENS_ANSWER);
+    expect(screen.queryByText(/grupp/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    expect(screen.getByText('grupp 4')).toBeInTheDocument();
+  });
+
+  it('shows "grupp 4" in feedback only after choosing an option, never while the options are on screen — multiple-choice mode', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText(/grupp/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: VARA_PRESENS_ANSWER }));
+    await screen.findByText('Correct!');
+
+    expect(screen.getByText('grupp 4')).toBeInTheDocument();
+  });
+
+  it('never renders a grupp badge — before or after answering — for a verb whose grupp is unknown (never guessed, src/lib/verbs.ts:29-32)', async () => {
+    const user = userEvent.setup();
+
+    // Comparison case first: a known-grupp verb really does show the badge
+    // once answered, so this whole scenario is not vacuous against a build
+    // that never wires the badge up at all.
+    const { unmount } = renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+    let input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, VARA_PRESENS_ANSWER);
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    expect(await screen.findByText('grupp 4')).toBeInTheDocument();
+    unmount();
+
+    // Now the real assertion: an infinitive absent from VERB_DATA has an
+    // undefined grupp per getVerbGrupp's documented contract, and that must
+    // render as absent, not as a guessed/placeholder badge.
+    renderWithProviders(
+      <PracticeCard
+        infinitive="zzz-not-a-real-verb-fixture"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+    input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'whatever');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await waitFor(() => {
+      expect(screen.queryByText('Correct!') || screen.queryByText('Not quite')).toBeTruthy();
+    });
+
+    expect(screen.queryByText(/grupp/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument();
   });
 });

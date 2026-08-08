@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Search, ArrowUpDown, Trophy } from 'lucide-react';
-import { getAllConjugatedVerbs, ConjugatedVerb, type Form } from '@/lib/verbs';
+import { getAllConjugatedVerbs, getVerbGrupp, ConjugatedVerb, type Form } from '@/lib/verbs';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
 import { getVerifiedParticleVerbs, hasRecallItem, renderLemma } from '@/lib/particleVerbs';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
@@ -357,6 +357,7 @@ export default function Progress() {
                   <TableHead>Preteritum</TableHead>
                   <TableHead>Supinum</TableHead>
                   <TableHead>Imperativ</TableHead>
+                  <TableHead>Grupp</TableHead>
                   <TableHead
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => toggleSort('difficulty')}
@@ -373,6 +374,10 @@ export default function Progress() {
                 {filteredAndSortedVerbs.map((verb, index) => {
                   const stage = getSrsStage(verb.id);
                   const badge = getStageBadge(stage);
+                  // Reference-only surface (never rendered pre-answer on
+                  // the practice card); undefined stays absent, never
+                  // guessed (src/lib/verbs.ts:29-32).
+                  const grupp = getVerbGrupp(verb.infinitive);
                   return (
                     <TableRow
                       key={verb.id}
@@ -413,6 +418,16 @@ export default function Progress() {
                           </span>
                         ) : (
                           <span lang="sv">{verb.imperativ}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {grupp ? (
+                          <Badge variant="outline">grupp {grupp}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            <span aria-hidden="true">—</span>
+                            <span className="sr-only">not available</span>
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>

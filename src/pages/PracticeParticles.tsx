@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft } from 'lucide-react';
 import { ParticleVerbCard } from '@/components/ParticleVerbCard';
+import { ReadOnlyBanner } from '@/components/ReadOnlyBanner';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { buildFreeParticlePractice, type ParticleSittingCard } from '@/lib/particleQueue';
@@ -16,7 +17,7 @@ type ParticleSessionKind = 'scheduled' | 'free';
 export default function PracticeParticles() {
   const navigate = useNavigate();
   const { settings, isLoading: settingsLoading } = useSettings();
-  const { getParticleSitting, recordAnswer, srsStates, isLoading } = useSrsProgress();
+  const { getParticleSitting, recordAnswer, srsStates, isLoading, isReadOnly } = useSrsProgress();
 
   const [cards, setCards] = useState<ParticleSittingCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -101,6 +102,7 @@ export default function PracticeParticles() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <div className="w-full max-w-2xl text-center space-y-6">
+          {isReadOnly && <ReadOnlyBanner />}
           <h1 className="text-5xl font-bold text-primary">Great work! 🎉</h1>
           <p className="text-xl text-muted-foreground">
             {cards.length === 0
@@ -146,6 +148,7 @@ export default function PracticeParticles() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
       <div className="max-w-2xl mx-auto mb-6 space-y-4">
+        {isReadOnly && <ReadOnlyBanner />}
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
             <ArrowLeft className="w-4 h-4" />

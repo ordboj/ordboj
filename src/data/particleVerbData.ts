@@ -907,12 +907,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
   },
 
-  // ---- Drafted but not shipped ----
-  // Each of these is a particle verb worth teaching whose base verb is not
-  // in VERB_DATA. The introduction gate joins on the base, so shipping one
-  // would be content no learner could ever reach. VERB_DATA order is frozen
-  // by the pin test until the stable-id migration lands, so they wait here
-  // rather than being smuggled in as new rows.
+  // ---- Base verbs added to VERB_DATA in #262 ----
+  // These six were drafted with verified:false while their base verb (stänga,
+  // sätta, stiga, hälsa, bygga, ställa) was missing from VERB_DATA. The base
+  // verbs are now appended (append-only, order pin preserved) and each entry
+  // below has a second frame and verified:true accordingly.
   {
     id: 'pv:stanga-av',
     cefr: 'A2',
@@ -924,9 +923,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to power down a device' },
     transparency: 'literal',
     acceptedParticles: ['av'],
-    examples: [{ sv: 'Han stänger av datorn innan han går hem.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason: 'baseInfinitive "stänga" is not in VERB_DATA',
+    examples: [
+      { sv: 'Han stänger av datorn innan han går hem.', blankIndex: 2 },
+      { sv: 'Jag stänger av mobilen efter klockan tio.', blankIndex: 2 },
+    ],
+    verified: true,
   },
   {
     id: 'pv:satta-pa',
@@ -939,9 +940,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to start a device running' },
     transparency: 'literal',
     acceptedParticles: ['på'],
-    examples: [{ sv: 'Hon sätter på radion när hon lagar mat.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason: 'baseInfinitive "sätta" is not in VERB_DATA',
+    examples: [
+      { sv: 'Hon sätter på radion när hon lagar mat.', blankIndex: 2 },
+      { sv: 'Han sätter på kaffebryggaren varje morgon.', blankIndex: 2 },
+    ],
+    verified: true,
   },
   {
     id: 'pv:stiga-upp',
@@ -954,9 +957,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to get out of bed' },
     transparency: 'idiomatic',
     acceptedParticles: ['upp'],
-    examples: [{ sv: 'Jag stiger upp klockan sex varje vardag.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason: 'baseInfinitive "stiga" is not in VERB_DATA',
+    examples: [
+      { sv: 'Jag stiger upp klockan sex varje vardag.', blankIndex: 2 },
+      { sv: 'Vi stiger upp tidigt på lördagar.', blankIndex: 2 },
+    ],
+    verified: true,
   },
   {
     id: 'pv:halsa-pa',
@@ -973,9 +978,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     // the whole distinction.
     contrast: 'hälsa på någon (stress on hälsa) — to greet someone',
     acceptedParticles: ['på'],
-    examples: [{ sv: 'Vi hälsar på mormor varje söndag eftermiddag.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason: 'baseInfinitive "hälsa" is not in VERB_DATA',
+    examples: [
+      { sv: 'Vi hälsar på mormor varje söndag eftermiddag.', blankIndex: 2 },
+      { sv: 'Jag hälsar på farmor efter skolan idag.', blankIndex: 2 },
+    ],
+    verified: true,
   },
   {
     id: 'pv:bygga-ut',
@@ -988,9 +995,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to extend or enlarge a structure' },
     transparency: 'literal',
     acceptedParticles: ['ut'],
-    examples: [{ sv: 'Kommunen bygger ut skolan under nästa år.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason: 'baseInfinitive "bygga" is not in VERB_DATA',
+    examples: [
+      { sv: 'Kommunen bygger ut skolan under nästa år.', blankIndex: 2 },
+      { sv: 'De bygger ut huset i sommar.', blankIndex: 2 },
+    ],
+    verified: true,
   },
   {
     id: 'pv:stalla-in',
@@ -1003,8 +1012,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to cancel a planned event' },
     transparency: 'idiomatic',
     acceptedParticles: ['in'],
-    examples: [{ sv: 'De ställer in mötet på grund av vädret.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason: 'baseInfinitive "ställa" is not in VERB_DATA',
+    examples: [
+      { sv: 'De ställer in mötet på grund av vädret.', blankIndex: 2 },
+      { sv: 'Vi ställer in resan på grund av snön.', blankIndex: 2 },
+    ],
+    verified: true,
   },
 ];

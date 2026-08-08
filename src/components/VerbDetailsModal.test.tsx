@@ -81,3 +81,33 @@ describe("VerbDetailsModal - lang='sv' on Swedish word display", () => {
     }
   });
 });
+
+// Issue #228 (AC): a "grupp X" text badge beside the CEFR badge.
+describe('VerbDetailsModal - grupp badge (issue #228)', () => {
+  it('shows "grupp 4" beside the CEFR badge for a verb with a known konjugationsgrupp, and shows no grupp badge (never guessed) for a verb whose grupp is unknown', () => {
+    // "vara" is grupp '4' in VERB_DATA (swedish-linguist owned fixture). This
+    // positive case makes the negative case below non-vacuous: the feature
+    // demonstrably exists and only omits the badge for the unknown verb.
+    const { unmount } = renderWithProviders(
+      <VerbDetailsModal verb={VERB} srsStage={0} srsStates={{}} onClose={vi.fn()} />,
+    );
+    const cefrBadge = screen.getByText('A1');
+    const gruppBadge = screen.getByText('grupp 4');
+    expect(cefrBadge).toBeInTheDocument();
+    expect(gruppBadge).toBeInTheDocument();
+    // "beside" per the acceptance criteria: same immediate container.
+    expect(gruppBadge.parentElement).toBe(cefrBadge.parentElement);
+    unmount();
+
+    // Real assertion: an infinitive absent from VERB_DATA has an undefined
+    // grupp per getVerbGrupp's documented contract (src/lib/verbs.ts:29-32),
+    // which must render as absent, never guessed.
+    const unknownGruppVerb: ConjugatedVerb = { ...VERB, infinitive: 'zzz-not-a-real-verb-fixture' };
+    renderWithProviders(
+      <VerbDetailsModal verb={unknownGruppVerb} srsStage={0} srsStates={{}} onClose={vi.fn()} />,
+    );
+    expect(screen.getByText('A1')).toBeInTheDocument();
+    expect(screen.queryByText(/grupp/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument();
+  });
+});
