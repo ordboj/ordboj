@@ -111,6 +111,11 @@ describe('Practice page - one full session', () => {
     expect(await screen.findByText('1 / 2')).toBeInTheDocument();
     const firstInput = await screen.findByPlaceholderText('Type your answer...');
     await user.type(firstInput, 'är');
+    // Typing the correct answer alone must not grade the card (no
+    // auto-submit); the page-level wiring is only exercised end-to-end via
+    // the explicit Check Answer click below.
+    expect(screen.queryByText('Correct!')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
@@ -118,6 +123,7 @@ describe('Practice page - one full session', () => {
     expect(await screen.findByText('2 / 2')).toBeInTheDocument();
     const secondInput = await screen.findByPlaceholderText('Type your answer...');
     await user.type(secondInput, 'var');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
@@ -176,6 +182,8 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
   });
 
   it('re-queues a lapsed item after the 3-item gap, does not inflate the progress denominator, and requires a correct retry before the sitting ends', async () => {
+    // Six explicit Check-Answer round trips (ticket #91 dropped auto-submit)
+    // push this comfortably past Vitest's 5s default.
     const user = userEvent.setup();
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -196,6 +204,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     for (const id of ['v2-presens', 'v3-presens', 'v4-presens']) {
       input = await screen.findByPlaceholderText('Type your answer...');
       await user.type(input, ANSWERS[id]);
+      await user.click(screen.getByRole('button', { name: /check answer/i }));
       await screen.findByText('Correct!');
       await user.click(screen.getByRole('button', { name: /next card/i }));
     }
@@ -204,6 +213,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     for (const id of ['v5-presens', 'v6-presens']) {
       input = await screen.findByPlaceholderText('Type your answer...');
       await user.type(input, ANSWERS[id]);
+      await user.click(screen.getByRole('button', { name: /check answer/i }));
       await screen.findByText('Correct!');
       await user.click(screen.getByRole('button', { name: /next card/i }));
     }
@@ -213,6 +223,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     expect(screen.queryByText(/Great Work/i)).not.toBeInTheDocument();
     input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'är');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
@@ -229,7 +240,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(5, 'v5-presens', 5);
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(6, 'v6-presens', 5);
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(7, 'v1-presens', 5);
-  });
+  }, 20000);
 
   // History: this test originally caught a real stuck-session bug, fixed by
   // the duplicate-splice guard in Practice.tsx's handleAnswer (39a1a00). A
@@ -313,6 +324,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
         );
         expect(infinitive).toBeDefined();
         await user.type(input, answerByInfinitive[infinitive as string]);
+        await user.click(screen.getByRole('button', { name: /check answer/i }));
         await screen.findByText('Correct!');
       }
       await user.click(screen.getByRole('button', { name: /next card/i }));
@@ -331,7 +343,9 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     for (const [, grade] of lapsingCalls) {
       expect(grade).toBe(0);
     }
-  });
+    // Up to ~60 real Check-Answer round trips (ticket #91 dropped
+    // auto-submit): comfortably past Vitest's 5s default.
+  }, 30000);
 
   // The duplicate-splice guard at scale: with 8 always-correct fillers the
   // lapser's 3-item gap clears at filler 3 (splice) and clears AGAIN at
@@ -379,6 +393,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     for (const [, answer] of fillers) {
       input = await screen.findByPlaceholderText('Type your answer...');
       await user.type(input, answer);
+      await user.click(screen.getByRole('button', { name: /check answer/i }));
       await screen.findByText('Correct!');
       await user.click(screen.getByRole('button', { name: /next card/i }));
     }
@@ -388,6 +403,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     expect(await screen.findByText('8 / 9')).toBeInTheDocument();
     input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'är');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     await screen.findByText('Correct!');
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
@@ -398,7 +414,9 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(10);
     const lapsingCalls = mocks.recordAnswer.mock.calls.filter(([id]) => id === 'lapser-presens');
     expect(lapsingCalls.map(([, grade]) => grade)).toEqual([0, 5]);
-  });
+    // Ten explicit Check-Answer round trips (ticket #91 dropped
+    // auto-submit): comfortably past Vitest's 5s default.
+  }, 20000);
 
   // Wrong answer on the requeued copy itself: the lapse -> retry(wrong) ->
   // second retry(wrong) chain must consume the cap one shown retry at a
@@ -445,6 +463,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
         await screen.findByText('Not quite');
       } else {
         await user.type(input, step.answer);
+        await user.click(screen.getByRole('button', { name: /check answer/i }));
         await screen.findByText('Correct!');
       }
       await user.click(screen.getByRole('button', { name: /next card/i }));
@@ -465,7 +484,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
       const calls = mocks.recordAnswer.mock.calls.filter(([id]) => id === `filler${i}-presens`);
       expect(calls.map(([, grade]) => grade)).toEqual([0, 5]);
     }
-  });
+  }, 15000);
 
   // docs/learning/lapse-handling.md: "If the day ends with a re-queue still
   // pending, it is simply due tomorrow with the lapse already applied --
@@ -506,6 +525,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
       // Still Jan 15 for one filler...
       input = await screen.findByPlaceholderText('Type your answer...');
       await user.type(input, fillers[0][1]);
+      await user.click(screen.getByRole('button', { name: /check answer/i }));
       await screen.findByText('Correct!');
       await user.click(screen.getByRole('button', { name: /next card/i }));
 
@@ -515,6 +535,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
       for (const [, answer] of fillers.slice(1)) {
         input = await screen.findByPlaceholderText('Type your answer...');
         await user.type(input, answer);
+        await user.click(screen.getByRole('button', { name: /check answer/i }));
         await screen.findByText('Correct!');
         await user.click(screen.getByRole('button', { name: /next card/i }));
       }
@@ -587,6 +608,7 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     const user = userEvent.setup();
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'är');
+    await user.click(await screen.findByRole('button', { name: /check answer/i }));
     await user.click(await screen.findByRole('button', { name: /next card/i }));
 
     const keepPractising = await screen.findByRole('button', { name: /keep practising/i });
@@ -614,14 +636,15 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     expect(keepPractising).toBeEnabled();
     await user.click(keepPractising);
 
-    // First card must be the nearest-due one (vara, +1 day): typing its
-    // answer auto-submits and shows "Correct!". If the pool were sorted
-    // wrong (or unsorted), "är" would not match whatever verb actually
-    // landed first and this assertion would fail.
+    // First card must be the nearest-due one (vara, +1 day): submitting its
+    // answer shows "Correct!". If the pool were sorted wrong (or unsorted),
+    // "är" would not match whatever verb actually landed first and this
+    // assertion would fail.
     expect(await screen.findByText('1 / 3')).toBeInTheDocument();
     expect(screen.getByText(/isn't saved to your progress/i)).toBeInTheDocument();
     let input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'är');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
@@ -629,6 +652,7 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     expect(await screen.findByText('2 / 3')).toBeInTheDocument();
     input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'unnar');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
@@ -636,6 +660,7 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     expect(await screen.findByText('3 / 3')).toBeInTheDocument();
     input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'har');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
@@ -710,6 +735,7 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     expect(await screen.findByText('1 / 1')).toBeInTheDocument();
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'har');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
 
@@ -735,6 +761,7 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     // Finish the initial due session (records once).
     let input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'är');
+    await user.click(await screen.findByRole('button', { name: /check answer/i }));
     await user.click(await screen.findByRole('button', { name: /next card/i }));
     expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(1);
@@ -747,6 +774,7 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
 
     input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'har');
+    await user.click(await screen.findByRole('button', { name: /check answer/i }));
     await user.click(await screen.findByRole('button', { name: /next card/i }));
 
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(2);
@@ -798,6 +826,7 @@ describe('Practice page - regression #103 (mid-session deck reshuffle)', () => {
 
       const input = await screen.findByPlaceholderText('Type your answer...');
       await user.type(input, expectedAnswers[i].answer);
+      await user.click(screen.getByRole('button', { name: /check answer/i }));
       expect(await screen.findByText('Correct!')).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: /next card/i }));
     }

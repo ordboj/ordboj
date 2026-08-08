@@ -23,12 +23,6 @@ import { speakSwedish } from '@/lib/speech';
 import { ConfettiEffect } from './ConfettiEffect';
 import { Grade } from '@/lib/srs';
 
-// Once an item has been answered correctly this many times, the learner no
-// longer needs the full paradigm as a cue — showing every conjugated form
-// (e.g. "skriva - skriver - skrev - ___") lets the missing form be derived
-// from the pattern rather than recalled. See issue #32.
-const MATURE_REPETITIONS_THRESHOLD = 3;
-
 // Fixed Swedish special-character row: always these three keys, in this
 // order, on every card regardless of the answer. Never derived from the
 // correct answer — see docs/learning/2026-08-08-ux-pedagogy-red-lines.md (P4, P11).
@@ -46,6 +40,13 @@ interface PracticeCardProps {
   // the "you'll see this again" feedback copy; the re-queue decision itself
   // is made by the caller (Practice.tsx).
   willRequeueIfWrong?: boolean;
+  // Accepted but currently unused: #32's maturity-fade cue (showing less of
+  // the sibling-form pattern as an item matures) applied to the recall
+  // screen, which P2 (docs/learning/2026-08-08-ux-pedagogy-red-lines.md,
+  // RED LINE) forbids outright regardless of maturity -- the recall screen
+  // may show the infinitive and form label only, never other conjugated
+  // forms. Left in the prop contract rather than removed from Practice.tsx
+  // pending a decision on whether #32 gets a non-recall-screen home.
   repetitions?: number;
   onAnswer: (grade: Grade) => void;
 }
@@ -185,33 +186,12 @@ export function PracticeCard({
     [infinitive, form, correctAnswer, autoplayAudio, muteAudio],
   );
 
-  // Auto-submit when the typed value matches an accepted answer -- except
-  // product policy P4: suppress it while the normalized typed value is a
-  // strict prefix of another accepted answer for this card. The shipped data
-  // stores the short form as primary ("la", "sa"), so this can't be written
-  // as "primary waits, alternate fires" -- it has to check the whole accepted
-  // set both ways. A learner who means the shorter form submits deliberately
-  // with Check Answer or Enter.
-  useEffect(() => {
-    if (!userAnswer || showFeedback) return;
-
-    const normalized = userAnswer.trim().toLowerCase();
-    const normalizedAccepted = getAcceptedAnswers(infinitive, form).map((accepted) =>
-      accepted.trim().toLowerCase(),
-    );
-    const matchIndex = normalizedAccepted.indexOf(normalized);
-    if (matchIndex === -1) return;
-
-    const isPrefixOfAnotherAccepted = normalizedAccepted.some(
-      (candidate, index) =>
-        index !== matchIndex &&
-        candidate.length > normalized.length &&
-        candidate.startsWith(normalized),
-    );
-    if (isPrefixOfAnotherAccepted) return;
-
-    handleSubmit(userAnswer);
-  }, [userAnswer, showFeedback, infinitive, form, handleSubmit]);
+  // No auto-submit here: grading is a deliberate act (Check Answer, or
+  // Enter, gated on non-empty input below) per ticket #91 -- typing the
+  // exact correct answer must never grade the card by itself. This also
+  // makes #198's P4 prefix-vs-alternate concern moot: with nothing
+  // auto-submitting on a keystroke, there is no risk of grading "la" before
+  // the learner finishes typing "lade".
 
   const handleHint = () => {
     if (revealedHints.length < correctAnswer.length) {
@@ -225,33 +205,6 @@ export function PracticeCard({
       const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
       setRevealedHints((prev) => [...prev, randomIndex]);
     }
-  };
-
-  const getPatternWithHints = () => {
-    // Mature items drop the other paradigm forms from the cue, leaving just
-    // the infinitive and the blank, so the label below is the only cue.
-    const isMature = repetitions >= MATURE_REPETITIONS_THRESHOLD;
-    const visibleParts = isMature
-      ? pattern.patternParts.filter((part) => part.form === 'infinitive' || part.isMissing)
-      : pattern.patternParts;
-
-    return visibleParts
-      .map((part) => {
-        if (part.isMissing) {
-          // Show the blank with revealed hints
-          return correctAnswer
-            .split('')
-            .map((letter, index) => {
-              if (revealedHints.includes(index)) {
-                return letter;
-              }
-              return '_';
-            })
-            .join(' ');
-        }
-        return part.text;
-      })
-      .join(' – ');
   };
 
   const handleDelete = () => {
@@ -311,7 +264,7 @@ export function PracticeCard({
             <p className="text-muted-foreground text-sm font-medium">Fill in the missing form</p>
             <div className="bg-muted/30 rounded-lg p-6 space-y-2">
               <h2 className="text-3xl font-bold text-primary tracking-wide" lang="sv">
-                {getPatternWithHints()}
+                {infinitive}
               </h2>
               <p className="text-sm text-muted-foreground">
                 Missing: <span className="font-semibold">{getFormLabel(form)}</span>
@@ -332,13 +285,14 @@ export function PracticeCard({
                       e.key === 'Enter' && userAnswer.trim() && handleSubmit(userAnswer)
                     }
                     placeholder="Type your answer..."
-                    className="text-2xl text-center py-6 caret-transparent"
+                    className="text-2xl text-center py-6"
                     maxLength={60}
                     autoFocus
                     lang="sv"
                     autoCapitalize="off"
                     autoCorrect="off"
                     spellCheck={false}
+                    enterKeyHint="go"
                   />
                   <div className="flex flex-wrap justify-center gap-2">
                     {SWEDISH_SPECIAL_CHARS.map((char) => (
@@ -427,26 +381,6 @@ export function PracticeCard({
                 </p>
               )}
 
-              {!isCorrect && (
-                <div className="flex flex-wrap items-center justify-center gap-4 text-center">
-                  <div className="space-y-1 min-w-0 max-w-full">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                      {mode === 'typing' ? 'You wrote' : 'You chose'}
-                    </p>
-                    <p className="text-lg font-semibold text-destructive break-words">
-                      {submittedAnswer.trim() || '(nothing)'}
-                    </p>
-                  </div>
-                  <span className="text-muted-foreground text-xl shrink-0">→</span>
-                  <div className="space-y-1 min-w-0 max-w-full">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Correct</p>
-                    <p className="text-lg font-semibold text-success break-words">
-                      {correctAnswer}
-                    </p>
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-4">
                 {/* Show full pattern with pronunciation buttons */}
                 <div className="bg-muted/20 rounded-lg p-4 space-y-3">
@@ -499,6 +433,19 @@ export function PracticeCard({
                     Pronounce answer
                   </Button>
                 </div>
+
+                {/* Learner's own wrong answer: muted, struck through, subordinate to the
+                    correct form above (P21) -- never rendered at equal weight beside it,
+                    and never spoken. Hidden when the submission was empty or hints already
+                    gave away the answer -- there is no error to show there. */}
+                {!isCorrect &&
+                  submittedAnswer.trim() !== '' &&
+                  revealedHints.length < correctAnswer.length && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      {mode === 'typing' ? 'You typed' : 'You chose'}:{' '}
+                      <span className="line-through opacity-60">{submittedAnswer}</span>
+                    </p>
+                  )}
 
                 {showExamples && exampleSentence && (
                   <div className="bg-accent/10 rounded-lg p-4">

@@ -11,7 +11,7 @@ import { getAllConjugatedVerbs, getVerbGrupp } from '@/lib/verbs';
 const VARA_PRESENS_ANSWER = 'är';
 
 describe('PracticeCard - typing mode', () => {
-  it('renders the pattern with a blank the length of the missing answer', async () => {
+  it('shows only the infinitive and the form label on the recall screen (no sibling forms, no blank-length disclosure)', async () => {
     renderWithProviders(
       <PracticeCard
         infinitive="vara"
@@ -25,16 +25,21 @@ describe('PracticeCard - typing mode', () => {
     );
 
     const heading = await screen.findByRole('heading', { level: 2 });
-    // One underscore per letter of the hidden answer ("är" -> "_ _"), joined
-    // into the infinitive/preteritum/supinum pattern.
-    expect(heading.textContent).toContain(
-      '_'.repeat(VARA_PRESENS_ANSWER.length).split('').join(' '),
-    );
-    expect(heading.textContent).toContain('vara');
+    // Just the infinitive: no "vara – _ _ – var – varit" sibling-form pattern
+    // and no underscore stand-ins revealing the answer's length (P2, ticket
+    // #91) -- this holds regardless of item maturity (#32's maturity-fade
+    // cue does not apply here; see the PracticeCardProps.repetitions note).
+    expect(heading.textContent).toBe('vara');
+    expect(heading.textContent).not.toContain('_');
+    expect(heading.textContent).not.toContain('–');
     expect(screen.getByText(/Missing:/)).toHaveTextContent('Present');
+
+    // The full pattern (with sibling forms) is a feedback-only reveal, never
+    // shown while the learner is still trying to recall the answer.
+    expect(screen.queryByText('Complete pattern:')).not.toBeInTheDocument();
   });
 
-  it('marks the answer input as Swedish and disables phone autocorrect/autocapitalize (issue #134)', async () => {
+  it('marks the answer input as Swedish, disables phone autocorrect/autocapitalize, and hints "go" as the enter key (issue #134, ticket #91)', async () => {
     renderWithProviders(
       <PracticeCard
         infinitive="vara"
@@ -54,9 +59,41 @@ describe('PracticeCard - typing mode', () => {
     expect(input).toHaveAttribute('autocapitalize', 'off');
     expect(input).toHaveAttribute('autocorrect', 'off');
     expect(input).toHaveAttribute('spellcheck', 'false');
+    expect(input).toHaveAttribute('enterkeyhint', 'go');
+    // The text cursor must be visible: hiding it (caret-transparent) was
+    // cosmetic support for a letter-tile keyboard that no longer exists.
+    expect(input.className).not.toMatch(/caret-transparent/);
   });
 
-  it('accepts the correct answer (auto-submits), ignoring case and surrounding whitespace', async () => {
+  it('does not auto-submit when the typed answer becomes correct; grading requires clicking Check Answer', async () => {
+    const user = userEvent.setup();
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={onAnswer}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, VARA_PRESENS_ANSWER);
+
+    // Typing the exact correct answer must NOT grade the card by itself.
+    expect(screen.queryByText('Correct!')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /check answer/i })).toBeInTheDocument();
+    expect(onAnswer).not.toHaveBeenCalled();
+
+    // Only the explicit click grades it.
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+  });
+
+  it('accepts the correct answer via Check Answer, ignoring case and surrounding whitespace', async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <PracticeCard
@@ -72,6 +109,7 @@ describe('PracticeCard - typing mode', () => {
 
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, '  ÄR  ');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
 
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
@@ -93,6 +131,7 @@ describe('PracticeCard - typing mode', () => {
 
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'går');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
 
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
@@ -138,6 +177,7 @@ describe('PracticeCard - typing mode', () => {
 
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'är');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     await screen.findByText('Correct!');
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
@@ -149,7 +189,13 @@ describe('PracticeCard - typing mode', () => {
 describe("PracticeCard - wrong-answer feedback shows the learner's own input (#136)", () => {
   // Regression: the feedback screen used to reveal only the correct
   // conjugation on a wrong answer, never what the learner actually typed.
-  it("shows the learner's exact wrong input next to the correct form, not just the correct form alone", async () => {
+  // Per P21 (docs/learning/2026-08-08-ux-pedagogy-red-lines.md) the learner's
+  // answer is muted, struck through and subordinate to the correct form
+  // (shown at full prominence in the "Complete pattern" section below) --
+  // never a symmetric side-by-side pair, so both live in one stacked line
+  // rather than the two-column "You wrote / Correct" layout this ticket
+  // originally shipped.
+  it("shows the learner's exact wrong input, muted and struck through, alongside the correct form shown at full prominence", async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <PracticeCard
@@ -168,17 +214,19 @@ describe("PracticeCard - wrong-answer feedback shows the learner's own input (#1
     await user.click(screen.getByRole('button', { name: /check answer/i }));
 
     await screen.findByText('Not quite');
-    expect(screen.getByText('You wrote')).toBeInTheDocument();
-    // The learner's own submitted text is rendered, verbatim, alongside the
-    // correct answer — not merely a pattern with the correct form filled in.
-    expect(screen.getByText('totallywrong')).toBeInTheDocument();
-    expect(screen.getByText('Correct')).toBeInTheDocument();
-    expect(
-      screen.getByText(VARA_PRESENS_ANSWER, { selector: 'p.text-success' }),
-    ).toBeInTheDocument();
+    // The learner's own submitted text is rendered, verbatim, muted and
+    // struck through — not merely a pattern with the correct form filled in.
+    const typedLine = screen.getByText(/You typed:/);
+    expect(typedLine).toHaveTextContent('totallywrong');
+    const struckSpan = typedLine.querySelector('span');
+    expect(struckSpan).toHaveClass('line-through');
+    // The correct form keeps its existing prominence in the pattern reveal.
+    expect(screen.getByText('Complete pattern:').closest('div')).toHaveTextContent(
+      VARA_PRESENS_ANSWER,
+    );
   });
 
-  it('preserves the exact case the learner typed in the wrong-answer comparison (comparison is case-insensitive, display is not)', async () => {
+  it('preserves the exact case the learner typed in the wrong-answer line (comparison is case-insensitive, display is not)', async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <PracticeCard
@@ -199,7 +247,7 @@ describe("PracticeCard - wrong-answer feedback shows the learner's own input (#1
     await screen.findByText('Not quite');
     // If the display were silently lowercased/normalized it would teach the
     // learner an inaccurate picture of what they actually wrote.
-    expect(screen.getByText('TOTALLYWRONG')).toBeInTheDocument();
+    expect(screen.getByText(/You typed:/)).toHaveTextContent('TOTALLYWRONG');
     expect(screen.queryByText('totallywrong')).not.toBeInTheDocument();
   });
 
@@ -222,13 +270,13 @@ describe("PracticeCard - wrong-answer feedback shows the learner's own input (#1
     await user.click(screen.getByRole('button', { name: /check answer/i }));
 
     await screen.findByText('Not quite');
-    expect(screen.getByText('totallywrong')).toBeInTheDocument();
+    expect(screen.getByText(/You typed:/)).toHaveTextContent('totallywrong');
   });
 
-  // Regression: the "You wrote" label is only accurate in typing mode. In
-  // multiple-choice mode the learner tapped an option, they never wrote
+  // Regression: the "You typed" label is only accurate in typing mode. In
+  // multiple-choice mode the learner tapped an option, they never typed
   // anything, so the feedback copy must say "You chose" instead.
-  it('shows the exact wrong multiple-choice option the learner clicked next to the correct form, labeled "You chose"', async () => {
+  it('shows the exact wrong multiple-choice option the learner clicked, labeled "You chose", alongside the correct form', async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <PracticeCard
@@ -254,12 +302,12 @@ describe("PracticeCard - wrong-answer feedback shows the learner's own input (#1
     await user.click(wrongButton as HTMLElement);
 
     await screen.findByText('Not quite');
-    expect(screen.getByText('You chose')).toBeInTheDocument();
-    expect(screen.queryByText('You wrote')).not.toBeInTheDocument();
-    expect(screen.getByText(wrongText)).toBeInTheDocument();
-    expect(
-      screen.getByText(VARA_PRESENS_ANSWER, { selector: 'p.text-success' }),
-    ).toBeInTheDocument();
+    const chosenLine = screen.getByText(/You chose:/);
+    expect(chosenLine).toHaveTextContent(wrongText);
+    expect(screen.queryByText(/You typed:/)).not.toBeInTheDocument();
+    expect(screen.getByText('Complete pattern:').closest('div')).toHaveTextContent(
+      VARA_PRESENS_ANSWER,
+    );
   });
 });
 
@@ -322,7 +370,8 @@ describe('PracticeCard - multiple-choice mode', () => {
 // they were wrong — "wrong Swedish is worse than missing Swedish" cuts the
 // other way here: marking correct Swedish wrong.
 describe('PracticeCard - alternate accepted answers (issue #123)', () => {
-  it('accepts the documented alternate "lade" for lägga preteritum, not just the primary "la"', async () => {
+  it('accepts the documented alternate "lade" for lägga preteritum via Check Answer, not just the primary "la"', async () => {
+    const user = userEvent.setup();
     renderWithProviders(
       <PracticeCard
         infinitive="lägga"
@@ -336,14 +385,8 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
     );
 
     const input = await screen.findByPlaceholderText('Type your answer...');
-    // Deliberately NOT user.type(): "lade" begins with the primary form
-    // "la", so typing it keystroke-by-keystroke passes through the
-    // intermediate value "la" and would auto-submit as correct via the
-    // *primary*-form match alone (a false pass on pre-fix code too, which
-    // only compares against the primary form). Setting the full value in
-    // one change event is the only way this test actually proves the
-    // alternate form itself is accepted.
-    fireEvent.change(input, { target: { value: 'lade' } });
+    await user.type(input, 'lade');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
 
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
@@ -369,12 +412,14 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
 
-  // Product policy P4 (docs/product/2026-08-08-alternate-answers-decision.md):
-  // auto-submit is suppressed while the typed value is a strict prefix of
-  // another accepted answer for this card, so a learner who means the short
-  // form gets to submit it deliberately instead of being auto-graded on an
-  // intermediate keystroke of the long form.
-  it('suppresses auto-submit while "la" is a strict prefix of the accepted alternate "lade" (AC3)', async () => {
+  // Ticket #91 removed auto-submit entirely, so #123's original P4
+  // prefix-suppression concern (typing "la" ahead of "lade" grading early
+  // on an intermediate keystroke) no longer applies to anything -- nothing
+  // grades until Check Answer or Enter regardless of what's been typed so
+  // far. This test pins that a partial, in-progress value ("la", also a
+  // valid answer on its own) shows neither outcome and does not disable or
+  // otherwise short-circuit typing further.
+  it('does not grade a partially-typed answer that already matches a shorter accepted form, until Check Answer is clicked', async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <PracticeCard
@@ -394,29 +439,15 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
     expect(screen.queryByText('Correct!')).not.toBeInTheDocument();
     expect(screen.queryByText('Not quite')).not.toBeInTheDocument();
     expect(input).toHaveValue('la');
-  });
 
-  it('auto-submits once typing continues from "la" to the full alternate "lade" (AC4)', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(
-      <PracticeCard
-        infinitive="lägga"
-        form="preteritum"
-        mode="typing"
-        showExamples={false}
-        autoplayAudio={false}
-        muteAudio={true}
-        onAnswer={vi.fn()}
-      />,
-    );
-
-    const input = await screen.findByPlaceholderText('Type your answer...');
-    await user.type(input, 'lade');
-
+    // Typing on to the full alternate, then submitting deliberately, still
+    // grades correct.
+    await user.type(input, 'de');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
 
-  it('regression: a single-answer card (tala preteritum, "talade") still auto-submits the instant the exact answer is typed (AC5)', async () => {
+  it('regression: a single-answer card (tala preteritum, "talade") grades correct via Check Answer (AC5)', async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <PracticeCard
@@ -432,6 +463,7 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
 
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'talade');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
 
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
@@ -451,6 +483,7 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
 
     const input = await screen.findByPlaceholderText('Type your answer...');
     fireEvent.change(input, { target: { value: 'LADE ' } });
+    await userEvent.setup().click(screen.getByRole('button', { name: /check answer/i }));
 
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
@@ -517,6 +550,7 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
 
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'talade');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     await screen.findByText('Correct!');
 
     expect(screen.queryByText(/also correct/i)).not.toBeInTheDocument();
@@ -536,10 +570,8 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
     );
 
     const input = await screen.findByPlaceholderText('Type your answer...');
-    // Same reasoning as the "lade" test above: "sade" begins with the
-    // primary form "sa", so char-by-char typing would false-pass on
-    // pre-fix code by auto-submitting at the intermediate value "sa".
     fireEvent.change(input, { target: { value: '  SADE  ' } });
+    await userEvent.setup().click(screen.getByRole('button', { name: /check answer/i }));
 
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
@@ -558,9 +590,6 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
       />,
     );
 
-    // Deliberately avoids any prefix of "la"/"lade" (e.g. "lag...") so the
-    // auto-submit-on-match effect can't fire on an intermediate keystroke
-    // while user-event is still typing.
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'totallywrong');
     await user.click(screen.getByRole('button', { name: /check answer/i }));
@@ -730,6 +759,7 @@ describe('PracticeCard - willRequeueIfWrong feedback copy', () => {
     );
     input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'är');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     expect(screen.queryByText(/you'll see this one again/i)).not.toBeInTheDocument();
   });
@@ -868,6 +898,7 @@ describe("PracticeCard - lang='sv' on inline Swedish word display (issue #112 AC
 
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'är');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     await screen.findByText('Correct!');
 
     // "Complete pattern:" section reveals the real Swedish infinitive/preteritum/
@@ -913,10 +944,11 @@ describe('PracticeCard - empty imperativ', () => {
     );
 
     await screen.findByPlaceholderText('Type your answer...');
-    expect(screen.getByText(/Command form of "kunna"|kunna/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('kunna');
 
     const user = userEvent.setup();
     await user.type(screen.getByPlaceholderText('Type your answer...'), '(not available)');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
 });
@@ -1104,154 +1136,40 @@ describe('PracticeCard - multiple-choice distractor policy (#139)', () => {
 
 const VARA_PRETERITUM_ANSWER = 'var';
 
-describe('PracticeCard - pattern cue fades with maturity (issue #32)', () => {
-  it('shows the full paradigm pattern when repetitions is below the maturity threshold (0)', async () => {
-    renderWithProviders(
-      <PracticeCard
-        infinitive="vara"
-        form="preteritum"
-        mode="typing"
-        showExamples={false}
-        autoplayAudio={false}
-        muteAudio={true}
-        repetitions={0}
-        onAnswer={vi.fn()}
-      />,
-    );
+// #32 originally faded the sibling-form pattern cue in and out of the
+// pre-answer heading by item maturity. Ticket #91 replaced the heading
+// with the infinitive alone, unconditionally: P2 (RED LINE,
+// docs/learning/2026-08-08-ux-pedagogy-red-lines.md) forbids showing any
+// other conjugated form during recall regardless of maturity, so #32's
+// fade -- which still showed the full pattern for immature items -- no
+// longer has a home on this screen. These tests replace the old
+// maturity-parametrized suite: the heading must stay infinitive-only across
+// the whole repetitions range, including unset.
+describe('PracticeCard - repetitions does not affect the recall heading (superseding issue #32, per P2)', () => {
+  it.each([0, 2, 3, 10, undefined])(
+    'shows only the infinitive for repetitions=%s',
+    async (repetitions) => {
+      renderWithProviders(
+        <PracticeCard
+          infinitive="vara"
+          form="preteritum"
+          mode="typing"
+          showExamples={false}
+          autoplayAudio={false}
+          muteAudio={true}
+          repetitions={repetitions}
+          onAnswer={vi.fn()}
+        />,
+      );
 
-    const heading = await screen.findByRole('heading', { level: 2 });
-    expect(heading.textContent).toContain('vara');
-    expect(heading.textContent).toContain('är');
-    expect(heading.textContent).toContain('varit');
-  });
+      const heading = await screen.findByRole('heading', { level: 2 });
+      expect(heading.textContent).toBe('vara');
+      expect(heading.textContent).not.toContain('är');
+      expect(heading.textContent).not.toContain('varit');
+    },
+  );
 
-  it('still shows the full paradigm pattern one review below the threshold (repetitions=2)', async () => {
-    renderWithProviders(
-      <PracticeCard
-        infinitive="vara"
-        form="preteritum"
-        mode="typing"
-        showExamples={false}
-        autoplayAudio={false}
-        muteAudio={true}
-        repetitions={2}
-        onAnswer={vi.fn()}
-      />,
-    );
-
-    const heading = await screen.findByRole('heading', { level: 2 });
-    expect(heading.textContent).toContain('är');
-    expect(heading.textContent).toContain('varit');
-  });
-
-  it('drops the other paradigm forms once repetitions reaches the threshold (repetitions=3)', async () => {
-    renderWithProviders(
-      <PracticeCard
-        infinitive="vara"
-        form="preteritum"
-        mode="typing"
-        showExamples={false}
-        autoplayAudio={false}
-        muteAudio={true}
-        repetitions={3}
-        onAnswer={vi.fn()}
-      />,
-    );
-
-    const heading = await screen.findByRole('heading', { level: 2 });
-    // Infinitive and the blank survive as the only cue...
-    expect(heading.textContent).toContain('vara');
-    expect(heading.textContent).toContain(
-      '_'.repeat(VARA_PRETERITUM_ANSWER.length).split('').join(' '),
-    );
-    // ...but presens and supinum, which would give the answer away via the
-    // pattern, must not leak into the mature cue.
-    expect(heading.textContent).not.toContain('är');
-    expect(heading.textContent).not.toContain('varit');
-    // The form label below the pattern is still the only source of what's
-    // being asked for.
-    expect(screen.getByText(/Missing:/)).toHaveTextContent('Past');
-  });
-
-  it('keeps dropping paradigm forms well past the threshold (repetitions=10)', async () => {
-    renderWithProviders(
-      <PracticeCard
-        infinitive="vara"
-        form="preteritum"
-        mode="typing"
-        showExamples={false}
-        autoplayAudio={false}
-        muteAudio={true}
-        repetitions={10}
-        onAnswer={vi.fn()}
-      />,
-    );
-
-    const heading = await screen.findByRole('heading', { level: 2 });
-    expect(heading.textContent).not.toContain('är');
-    expect(heading.textContent).not.toContain('varit');
-  });
-
-  it('defaults to the immature (full pattern) cue when repetitions is not supplied', async () => {
-    renderWithProviders(
-      <PracticeCard
-        infinitive="vara"
-        form="preteritum"
-        mode="typing"
-        showExamples={false}
-        autoplayAudio={false}
-        muteAudio={true}
-        onAnswer={vi.fn()}
-      />,
-    );
-
-    const heading = await screen.findByRole('heading', { level: 2 });
-    expect(heading.textContent).toContain('är');
-    expect(heading.textContent).toContain('varit');
-  });
-
-  it('does not shrink the already-minimal imperativ pattern, mature or not', async () => {
-    // imperativ's pattern is always just infinitive + blank (see
-    // generateVerbPattern), so maturity filtering must be a no-op here in
-    // both directions -- this pins that the two code paths don't interact
-    // in a surprising way.
-    const { unmount } = renderWithProviders(
-      <PracticeCard
-        infinitive="vara"
-        form="imperativ"
-        mode="typing"
-        showExamples={false}
-        autoplayAudio={false}
-        muteAudio={true}
-        repetitions={0}
-        onAnswer={vi.fn()}
-      />,
-    );
-    const immatureHeading = await screen.findByRole('heading', { level: 2 });
-    const immatureText = immatureHeading.textContent;
-    unmount();
-
-    renderWithProviders(
-      <PracticeCard
-        infinitive="vara"
-        form="imperativ"
-        mode="typing"
-        showExamples={false}
-        autoplayAudio={false}
-        muteAudio={true}
-        repetitions={7}
-        onAnswer={vi.fn()}
-      />,
-    );
-    const matureHeading = await screen.findByRole('heading', { level: 2 });
-    expect(matureHeading.textContent).toBe(immatureText);
-    expect(matureHeading.textContent).toContain('vara');
-  });
-
-  it("still reveals the full paradigm in the post-answer 'Complete pattern' review even for a mature item", async () => {
-    // The fade applies only to the pre-answer cue; the review after
-    // answering is unaffected regardless of maturity, so a learner
-    // reviewing a mature item still gets the full paradigm for study.
+  it("still reveals the full paradigm in the post-answer 'Complete pattern' review, independent of repetitions", async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <PracticeCard
@@ -1268,40 +1186,11 @@ describe('PracticeCard - pattern cue fades with maturity (issue #32)', () => {
 
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, VARA_PRETERITUM_ANSWER);
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
     await screen.findByText('Correct!');
 
     const completePattern = screen.getByText('Complete pattern:').closest('div');
     expect(completePattern).toHaveTextContent('är');
     expect(completePattern).toHaveTextContent('varit');
-  });
-});
-
-describe('PracticeCard - empty imperativ', () => {
-  // "kunna" has no imperativ form in VERB_DATA (imperativ: ""), so
-  // conjugateVerb() falls back to the literal string "(not available)".
-  // This form is filtered out of the due set by useSrsProgress.getDueItems
-  // before it ever reaches PracticeCard in normal use, but PracticeCard
-  // itself does not guard against it: it renders it as if "(not available)"
-  // were a real answer to type. Documented here so nobody relies on
-  // PracticeCard alone to prevent this; see report for the flagged bug.
-  it('renders without crashing and treats the fallback string as the target answer', async () => {
-    renderWithProviders(
-      <PracticeCard
-        infinitive="kunna"
-        form="imperativ"
-        mode="typing"
-        showExamples={false}
-        autoplayAudio={false}
-        muteAudio={true}
-        onAnswer={vi.fn()}
-      />,
-    );
-
-    await screen.findByPlaceholderText('Type your answer...');
-    expect(screen.getByText(/Command form of "kunna"|kunna/)).toBeInTheDocument();
-
-    const user = userEvent.setup();
-    await user.type(screen.getByPlaceholderText('Type your answer...'), '(not available)');
-    expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
 });
