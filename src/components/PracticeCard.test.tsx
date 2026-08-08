@@ -202,7 +202,10 @@ describe("PracticeCard - wrong-answer feedback shows the learner's own input (#1
     expect(screen.getByText('totallywrong')).toBeInTheDocument();
   });
 
-  it('shows the exact wrong multiple-choice option the learner clicked next to the correct form', async () => {
+  // Regression: the "You wrote" label is only accurate in typing mode. In
+  // multiple-choice mode the learner tapped an option, they never wrote
+  // anything, so the feedback copy must say "You chose" instead.
+  it('shows the exact wrong multiple-choice option the learner clicked next to the correct form, labeled "You chose"', async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <PracticeCard
@@ -228,7 +231,8 @@ describe("PracticeCard - wrong-answer feedback shows the learner's own input (#1
     await user.click(wrongButton as HTMLElement);
 
     await screen.findByText('Not quite');
-    expect(screen.getByText('You wrote')).toBeInTheDocument();
+    expect(screen.getByText('You chose')).toBeInTheDocument();
+    expect(screen.queryByText('You wrote')).not.toBeInTheDocument();
     expect(screen.getByText(wrongText)).toBeInTheDocument();
     expect(
       screen.getByText(VARA_PRESENS_ANSWER, { selector: 'p.text-success' }),

@@ -222,6 +222,7 @@ export function PracticeCard({
                     }
                     placeholder="Type your answer..."
                     className="text-2xl text-center py-6 caret-transparent"
+                    maxLength={60}
                     autoFocus
                   />
                   <div className="flex flex-wrap justify-center gap-2">
@@ -301,17 +302,17 @@ export function PracticeCard({
               </div>
 
               {!isCorrect && (
-                <div className="flex items-center justify-center gap-4 text-center">
-                  <div className="space-y-1 min-w-0">
+                <div className="flex flex-wrap items-center justify-center gap-4 text-center">
+                  <div className="space-y-1 min-w-0 max-w-full">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                      You wrote
+                      {mode === 'typing' ? 'You wrote' : 'You chose'}
                     </p>
                     <p className="text-lg font-semibold text-destructive break-words">
                       {submittedAnswer.trim() || '(nothing)'}
                     </p>
                   </div>
                   <span className="text-muted-foreground text-xl shrink-0">→</span>
-                  <div className="space-y-1 min-w-0">
+                  <div className="space-y-1 min-w-0 max-w-full">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Correct</p>
                     <p className="text-lg font-semibold text-success break-words">
                       {correctAnswer}
