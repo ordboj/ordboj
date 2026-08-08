@@ -3,7 +3,6 @@ import {
   type ParticleVerbData,
   type ParticleVerbExample,
 } from '@/data/particleVerbData';
-import { VERB_DATA } from '@/data/verbData';
 
 // Grammatical person for rendering a reflexive particle verb. Swedish uses
 // `sig` only in the third person; a learner who meets `höra av sig` as a
@@ -153,13 +152,17 @@ export function selectExample(entry: ParticleVerbData, repetitions: number): Par
 }
 
 // The phrase's four conjugated forms, for the static reference line on the
-// feedback screen. Exposure only: never scheduled, never tested in v1, which
-// is what keeps "lexical-unit-first" intact while stopping `gick ut` from
-// being a surprise the first time the learner meets it in the wild.
+// feedback screen and the introduction-card fallback. Exposure only: never
+// scheduled, never tested in v1, which is what keeps "lexical-unit-first"
+// intact while stopping `gick ut` from being a surprise the first time the
+// learner meets it in the wild.
 //
-// The base verb's forms come from VERB_DATA, which is human-verified, so
-// nothing here is derived by rule. Returns null when the base does not
-// resolve — for a verified entry that cannot happen (dataset test), and for
+// Reads entry.forms directly — embedded on the data row, not joined against
+// VERB_DATA at render time (#318). A join would leave the reference line
+// unrenderable for any entry whose base is not (yet) a VERB_DATA row; the
+// embedded forms are still human-verified against SO/SAOL, only the lookup
+// moved from render time to data-authoring time. Returns null when forms is
+// absent — for a verified entry that cannot happen (dataset test), and for
 // an unverified one nothing renders anyway.
 export interface PhraseForms {
   infinitive: string;
@@ -169,18 +172,15 @@ export interface PhraseForms {
 }
 
 export function getPhraseForms(entry: ParticleVerbData): PhraseForms | null {
-  const base = VERB_DATA.find((verb) => verb.infinitive === entry.baseInfinitive);
-  if (!base) return null;
+  if (!entry.forms) return null;
   // Reflexives are shown in their third-person citation form, the same one a
   // dictionary prints. This line is read, never produced, so it does not
   // carry the risk that rules a recall card out.
-  const tail = renderLemma(entry).slice(entry.baseInfinitive.length);
-  const withTail = (form: string) => (form ? `${form}${tail}` : '');
   return {
     infinitive: renderLemma(entry),
-    presens: withTail(base.presens),
-    preteritum: withTail(base.preteritum),
-    supinum: withTail(base.supinum),
+    presens: entry.forms.presens,
+    preteritum: entry.forms.preteritum,
+    supinum: entry.forms.supinum,
   };
 }
 
