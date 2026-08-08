@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { PracticeCard } from '@/components/PracticeCard';
 import type { Grade } from '@/lib/srs';
-import { getAllConjugatedVerbs, getVerbGrupp } from '@/lib/verbs';
+import { getAllConjugatedVerbs, getFormLabel, getVerbGrupp } from '@/lib/verbs';
 
 // "vara" is a stable, real fixture from VERB_DATA (owned by swedish-linguist):
 // presens "är", preteritum "var", supinum "varit", imperativ "var".
@@ -255,6 +255,54 @@ describe("PracticeCard - wrong-answer feedback shows the learner's own input (#1
     expect(screen.getByText('Complete pattern:').closest('div')).toHaveTextContent(
       VARA_PRESENS_ANSWER,
     );
+  });
+
+  it('renders the wrong-answer line at reduced size with no pronounce button, and the missing form in the pattern reveal at full prominence (#254)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'totallywrong');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    await screen.findByText('Not quite');
+
+    // The wrong-answer line is visually subordinate: small text, struck
+    // through and muted, never at the same weight as the correct form.
+    const wrongAnswerLine = screen.getByText(/You typed:/);
+    expect(wrongAnswerLine).toHaveClass('text-xs');
+    const struckSpan = wrongAnswerLine.querySelector('span');
+    expect(struckSpan).toHaveClass('line-through');
+    expect(struckSpan).toHaveClass('opacity-60');
+
+    // The correct form, shown in the "Complete pattern" reveal, keeps full
+    // prominence: larger text inside a highlighted, bold wrapper.
+    const missingFormSpan = screen.getByText(VARA_PRESENS_ANSWER, { selector: 'span' });
+    expect(missingFormSpan).toHaveClass('text-lg');
+    const missingFormWrapper = missingFormSpan.parentElement;
+    expect(missingFormWrapper).toHaveClass('bg-primary');
+    expect(missingFormWrapper).toHaveClass('font-bold');
+
+    // The wrong answer is never spoken: no pronounce button targets it, and
+    // no button anywhere in the panel carries the learner's wrong text.
+    expect(
+      within(wrongAnswerLine).queryByRole('button', { name: /^Pronounce/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /totallywrong/i })).not.toBeInTheDocument();
+    // Every pronounce button belongs to a form the learner did not have to supply.
+    expect(
+      screen.queryByRole('button', { name: `Pronounce ${getFormLabel('presens')}` }),
+    ).not.toBeInTheDocument();
   });
 
   it('preserves the exact case the learner typed in the wrong-answer line (comparison is case-insensitive, display is not)', async () => {
