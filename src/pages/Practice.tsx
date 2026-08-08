@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -27,8 +27,23 @@ export default function Practice() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sessionKind, setSessionKind] = useState<SessionKind>('due');
   const [sessionComplete, setSessionComplete] = useState(false);
-  const [extraReviewCount, setExtraReviewCount] = useState(0);
-  const [freePracticeCount, setFreePracticeCount] = useState(0);
+  // The due/free pools available once a session ends, computed once
+  // srsStates has actually caught up with any answer just recorded (see the
+  // effect below). The completion screen's counts and its "Extra reviews" /
+  // "Keep practising" actions both read from these same arrays, so a button
+  // can never advertise a count it can't then deliver.
+  const [pendingExtraReview, setPendingExtraReview] = useState<PracticeItem[]>([]);
+  const [pendingFreePractice, setPendingFreePractice] = useState<PracticeItem[]>([]);
+
+  // getDueItems is recreated every time srsStates changes (i.e. after every
+  // answer). Keep the latest reference in a ref so effects can call it
+  // without depending on its identity, otherwise the deck would be
+  // recomputed and reshuffled mid-session while currentIndex still points
+  // into the old array, causing skipped/repeated cards (issue #103, PR #122).
+  const getDueItemsRef = useRef(getDueItems);
+  useEffect(() => {
+    getDueItemsRef.current = getDueItems;
+  }, [getDueItems]);
 
   // Up to FREE_PRACTICE_SIZE items that are NOT currently due, nearest
   // future dueAt first. Reads srsStates only -- never calls recordAnswer,
@@ -63,59 +78,72 @@ export default function Practice() {
     return candidates.slice(0, FREE_PRACTICE_SIZE).map(({ dueAt: _dueAt, ...item }) => item);
   }, [settings.cefrLevels, srsStates]);
 
-  // Marks the session done and refreshes the counts the completion screen
-  // needs for its two post-session actions.
-  const finishSession = useCallback(async () => {
-    const [due, free] = await Promise.all([getDueItems(), buildFreePracticePool()]);
-    setExtraReviewCount(due.length);
-    setFreePracticeCount(free.length);
-    setSessionComplete(true);
-  }, [getDueItems, buildFreePracticePool]);
-
+  // Load the deck exactly once per session (i.e. once per mount), when the
+  // underlying data first becomes available. Mirrors PR #122's stable-load
+  // pattern: depending on isLoading/settingsLoading only (not getDueItems)
+  // keeps this from re-firing on every post-answer render.
+  const deckLoadedRef = useRef(false);
   useEffect(() => {
+    if (deckLoadedRef.current || isLoading || settingsLoading) {
+      return;
+    }
+    deckLoadedRef.current = true;
+
     const loadDueItems = async () => {
-      if (!isLoading && !settingsLoading) {
-        const due = await getDueItems();
+      try {
+        const due = await getDueItemsRef.current();
         setItems(due);
         if (due.length === 0) {
-          await finishSession();
+          setSessionComplete(true);
         }
+      } catch (error) {
+        console.error('Failed to load due items for practice session', error);
+        setSessionComplete(true);
       }
     };
     loadDueItems();
-    // finishSession intentionally omitted: it is stable enough for this
-    // effect's purpose and adding it would re-run the load on every
-    // srsStates change (i.e. after every recorded answer). currentIndex and
-    // sessionKind are deliberately left alone here too -- they only belong
-    // to a session the user is actively in (started at index 0 by the
-    // handlers below) and this effect must not reset progress out from
-    // under an in-flight 'extra' review just because recordAnswer touched
-    // srsStates.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, settingsLoading, getDueItems]);
+  }, [isLoading, settingsLoading]);
 
-  const startFreePractice = async () => {
-    const pool = await buildFreePracticePool();
-    setItems(pool);
+  // Recomputes the completion screen's two post-session pools whenever a
+  // session ends, keyed on srsStates rather than read from a closure
+  // captured inside handleAnswer. recordAnswer's state update and this
+  // effect's re-run are two separate React commits, so by the time this
+  // runs, srsStates (and therefore getDueItems/buildFreePracticePool) is
+  // guaranteed to reflect the answer that was just recorded -- reading it
+  // inside handleAnswer itself would race the pending state update and
+  // could report the just-answered item as still due.
+  useEffect(() => {
+    if (!sessionComplete) return;
+    let cancelled = false;
+
+    const loadPending = async () => {
+      const [due, free] = await Promise.all([getDueItemsRef.current(), buildFreePracticePool()]);
+      if (!cancelled) {
+        setPendingExtraReview(due);
+        setPendingFreePractice(free);
+      }
+    };
+    loadPending();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionComplete, srsStates, buildFreePracticePool]);
+
+  const startFreePractice = () => {
+    if (pendingFreePractice.length === 0) return;
+    setItems(pendingFreePractice);
     setCurrentIndex(0);
     setSessionKind('free');
-    if (pool.length === 0) {
-      await finishSession();
-    } else {
-      setSessionComplete(false);
-    }
+    setSessionComplete(false);
   };
 
-  const startExtraReview = async () => {
-    const due = await getDueItems();
-    setItems(due);
+  const startExtraReview = () => {
+    if (pendingExtraReview.length === 0) return;
+    setItems(pendingExtraReview);
     setCurrentIndex(0);
     setSessionKind('extra');
-    if (due.length === 0) {
-      await finishSession();
-    } else {
-      setSessionComplete(false);
-    }
+    setSessionComplete(false);
   };
 
   const handleAnswer = (grade: Grade) => {
@@ -127,7 +155,7 @@ export default function Practice() {
     if (currentIndex < items.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      finishSession();
+      setSessionComplete(true);
     }
   };
 
@@ -144,32 +172,61 @@ export default function Practice() {
   }
 
   if (sessionComplete) {
+    // "All due cards" is only true for the session that was actually the
+    // due queue; a free round records nothing, and an extra-review round
+    // that still leaves more extra reviews behind is not "all" of anything.
+    // Also never claim the due queue is fully clear directly above a button
+    // offering more of it.
+    let subtitle: string;
+    if (sessionKind === 'free') {
+      subtitle =
+        "You've completed this free-practice round — nothing here was saved to your progress.";
+    } else if (sessionKind === 'extra') {
+      subtitle =
+        pendingExtraReview.length > 0
+          ? "You've completed this round of extra reviews — more are ready."
+          : "You've completed your extra reviews for today.";
+    } else {
+      subtitle =
+        pendingExtraReview.length > 0
+          ? "You've completed today's due cards — a few more came due while you were practising."
+          : "You've completed all due cards for today.";
+    }
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <div className="w-full max-w-2xl text-center space-y-6">
           <h1 className="text-5xl font-bold text-primary">Great Work! 🎉</h1>
-          <p className="text-xl text-muted-foreground">You've completed all due cards for today</p>
+          <p className="text-xl text-muted-foreground">{subtitle}</p>
           <div className="flex flex-col items-center gap-3">
             <Button
               onClick={startFreePractice}
               size="lg"
               variant="secondary"
               className="text-lg px-8 py-6 w-full max-w-xs"
-              disabled={freePracticeCount === 0}
+              disabled={pendingFreePractice.length === 0}
             >
               Keep practising
             </Button>
-            {extraReviewCount > 0 && (
+            {pendingExtraReview.length > 0 && (
               <Button
                 onClick={startExtraReview}
                 size="lg"
                 className="text-lg px-8 py-6 w-full max-w-xs"
               >
-                Extra reviews ({extraReviewCount})
+                Extra reviews ({pendingExtraReview.length})
               </Button>
             )}
             <Button
-              onClick={() => navigate('/')}
+              onClick={() => {
+                // Leaving a free round should never leave sessionKind stuck
+                // on 'free': if this component were ever kept mounted
+                // across navigation, a later 'due'/'extra' session would
+                // silently skip recordAnswer under handleAnswer's `sessionKind
+                // !== 'free'` guard.
+                setSessionKind('due');
+                navigate('/');
+              }}
               variant="ghost"
               size="lg"
               className="text-lg px-8 py-6 w-full max-w-xs"
