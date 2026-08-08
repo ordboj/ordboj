@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -44,9 +44,19 @@ export default function Practice() {
   const [requeueMap, setRequeueMap] = useState<Record<string, RequeueEntry>>({});
   const [requeueDay, setRequeueDay] = useState(getLocalDayKey);
 
+  // getDueItems is rebuilt (new function identity) whenever srsStates
+  // changes, i.e. after every recordAnswer -- so it is not a stable effect
+  // dependency, and this effect re-fires far more often than "a sitting
+  // starts". hasLoadedRef confines the actual sitting setup (and its resets
+  // of currentIndex/completedItemIds/requeueMap) to the first time due
+  // items are available after mount, so mid-sitting answers cannot re-run
+  // it and snap the learner back to card one.
+  const hasLoadedRef = useRef(false);
+
   useEffect(() => {
     const loadDueItems = async () => {
-      if (!isLoading && !settingsLoading) {
+      if (!isLoading && !settingsLoading && !hasLoadedRef.current) {
+        hasLoadedRef.current = true;
         const items = await getDueItems();
         setSessionItems(items);
         setQueue(items);
