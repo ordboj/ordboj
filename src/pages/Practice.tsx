@@ -17,10 +17,6 @@ export default function Practice() {
   const [dueItems, setDueItems] = useState<PracticeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [practiceComplete, setPracticeComplete] = useState(false);
-  // Items graded wrong earlier in this sitting. A later correct answer for
-  // one of these is a lapse recovery — the only per-card confetti moment
-  // (learning decision P8).
-  const [failedItemIds, setFailedItemIds] = useState<Set<string>>(new Set());
 
   // getDueItems is recreated every time srsStates changes (i.e. after every
   // answer). Keep the latest reference in a ref so the load effect below can
@@ -60,10 +56,6 @@ export default function Practice() {
     const currentItem = dueItems[currentIndex];
     recordAnswer(currentItem.itemId, grade);
 
-    if (grade === 0) {
-      setFailedItemIds((prev) => new Set(prev).add(currentItem.itemId));
-    }
-
     if (currentIndex < dueItems.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
@@ -86,8 +78,13 @@ export default function Practice() {
   if (practiceComplete) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
-        {/* Only celebrate a real finish, not an empty queue on arrival. */}
-        <ConfettiEffect trigger={dueItems.length > 0} />
+        {/* Only celebrate a real finish, not an empty queue on arrival. The
+            explicit !isLoading/!settingsLoading guard is redundant with the
+            early return above today (this branch is unreachable while
+            either is true) but makes the invariant explicit rather than
+            relying on branch order, since loadDueItems resolves dueItems
+            asynchronously after that early return has already passed. */}
+        <ConfettiEffect trigger={!isLoading && !settingsLoading && dueItems.length > 0} />
         <div className="w-full max-w-2xl text-center space-y-6">
           <h1 className="text-5xl font-bold text-primary">Great Work! 🎉</h1>
           <p className="text-xl text-muted-foreground">You've completed all due cards for today</p>
@@ -147,7 +144,6 @@ export default function Practice() {
           showExamples={settings.showExamples}
           autoplayAudio={settings.autoplayAudio}
           muteAudio={settings.muteAudio}
-          celebrateOnCorrect={failedItemIds.has(currentItem.itemId)}
           onAnswer={handleAnswer}
         />
       </div>

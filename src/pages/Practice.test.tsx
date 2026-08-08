@@ -133,7 +133,10 @@ describe('Practice page - icon-button accessibility and touch targets (issue #10
     renderWithProviders(<Practice />, { route: '/practice' });
 
     await screen.findByText('1 / 2');
-    const backButton = screen.getByRole('button', { name: /back/i });
+    // Exact match: PracticeCard's backspace key also has an accessible name
+    // containing "Back" ("Backspace"), so a loose /back/i regex here would
+    // match both buttons.
+    const backButton = screen.getByRole('button', { name: 'Back' });
     expect(backButton.className).toMatch(/\bh-11\b/);
   });
 });
