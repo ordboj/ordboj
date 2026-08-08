@@ -29,6 +29,12 @@ Nothing in this design starts before two open tickets close, in this order:
 `connect-src 'self'`. The Worker origin is added to that directive in the
 same PR that ships the upload code, not before (section 6).
 
+Ticket #46 asks for a `connect-src` placeholder comment on #24. That is
+deliberately NOT done: #24 is already closed, and widening or
+pre-annotating `connect-src` before any code calls the Worker adds risk
+with no benefit. The directive is edited in the upload PR instead (section
+6). This is a knowing deviation from #46's wording, not an oversight.
+
 ## 1. What the app does today
 
 - Export/import already exists: `Settings.tsx:61-92` downloads
@@ -41,8 +47,12 @@ same PR that ships the upload code, not before (section 6).
 - The settings store is versioned as of #240; the SRS store is versioned
   (`STORAGE_VERSION = 2`). Both migrate on read. A restored old backup goes
   through the same migration, which is why restore costs no new code.
-- The CSP meta tag is pinned by `src/test/csp-meta.test.ts` (`qa`-owned).
-  Any `connect-src` change must update that test in the same PR.
+- The CSP meta tag is partly pinned by `src/test/csp-meta.test.ts`
+  (`qa`-owned), which today asserts script-src, worker-src, form-action and
+  tag ordering. Neither it nor `e2e/csp-violations.spec.ts` asserts anything
+  about `connect-src`, so widening that directive would currently fail no
+  test. The upload PR must ADD a `connect-src` assertion to
+  `csp-meta.test.ts` (section 10, item 7).
 
 ## 2. The recovery phrase
 
@@ -80,14 +90,26 @@ same PR that ships the upload code, not before (section 6).
 
 Derivations from the normalized UTF-8 phrase:
 
-- **KV key** = lowercase hex SHA-256 of the phrase (64 chars). Deterministic
-  and unsalted, because the server must find the blob from the phrase alone.
-- **Encryption key** = PBKDF2-HMAC-SHA256, 600,000 iterations (OWASP 2023
-  figure), random 16-byte salt per upload, output 256 bits, used directly as
-  an AES-GCM key. HKDF on top is rejected: one key, one purpose, PBKDF2's
-  output is already uniform. The KV key and the encryption key are
-  computationally independent; the server learns nothing about the
-  encryption key from the KV key.
+- **Master secret** = PBKDF2-HMAC-SHA256 over the normalized phrase, 600,000
+  iterations (OWASP 2023 figure), with the FIXED salt
+  `SHA-256("ordboj-backup-kdf-v1")`, output 256 bits. Fixed rather than
+  random because both derived values below must be reproducible from the
+  phrase alone. Derive once per session and cache in memory; never
+  recompute per upload.
+  - **KV key** = lowercase hex of `HKDF-SHA256(master, info="ordboj-kv-key-v1")`,
+    32 bytes (64 hex chars). Domain-separated from the encryption key, and —
+    critically — an offline guess now costs a full 600,000-iteration PBKDF2,
+    not one SHA-256.
+- **Encryption key** = `HKDF-SHA256(master, info="ordboj-enc-v1" || salt)`,
+  256 bits, used directly as an AES-GCM key, where `salt` is the random
+  16-byte per-upload value in the header. The per-upload salt still gives a
+  fresh key per upload without re-running PBKDF2. The KV key name is visible
+  to the server, so it is an offline verifier for the phrase — that is
+  unavoidable when the server must find the blob from the phrase alone.
+  Domain separation plus the 600,000-iteration master derivation is what
+  makes each offline guess expensive; without it the published SHA-256 key
+  name would reduce the attacker's cost per guess to a single hash and make
+  the iteration count meaningless.
 - **Plaintext** = the #251 export JSON (compact, not pretty-printed),
   gzip-compressed with the native `CompressionStream('gzip')`. If
   `CompressionStream` or `DecompressionStream` is undefined (pre-16.4
@@ -129,7 +151,13 @@ namespace binding `ORDBOJ_BACKUPS`.
   more expensive than refreshing an existing one. Residual risk: a
   distributed attacker across many IPs can still exhaust the shared free
   write quota; the failure mode is a failed upload, and the local copy is
-  untouched.
+  untouched. The same per-IP budget also throttles benign users who share an
+  IP — a home router, an office NAT, or mobile carrier CGNAT. Two people on
+  one IP contend for 2 PUTs/hour, and because rotation (section 2) is itself
+  a new-key PUT, two rotations inside an hour are rejected. The failure
+  surfaces only as "Last attempt failed" in Settings. Accepted for hobby
+  scale; if real users hit it, move the PUT limiter key from raw IP to
+  `IP + KV-key-prefix` so distinct blobs on one IP do not contend.
 - **CORS:** allowlist from an `ALLOWED_ORIGINS` env var — the production
   site origin plus `http://localhost:8080` for dev. `devops` fills the
   production origin at deploy time. OPTIONS preflight allows
@@ -137,6 +165,20 @@ namespace binding `ORDBOJ_BACKUPS`.
 - No auth, no user table, no email, no cookies, no logging of keys or
   bodies. KV metadata `{updatedAt}` on each write; no TTL — backups do not
   expire.
+- **Toolchain integration (do this in the same PR as the Worker source).**
+  `npm run typecheck` is `tsc --noEmit -p tsconfig.app.json`, whose
+  `include` is `["src"]`, so Worker code is not typechecked by default. Add
+  `tsconfig.worker.json` covering `workers/**` with
+  `@cloudflare/workers-types`, register it under `references` in
+  `tsconfig.json`, and extend the `typecheck` script to run it.
+  `npm run lint` is `eslint .`, and the `ordboj/app` block matches
+  `**/*.{ts,tsx}` with `globals.browser` plus the React, react-hooks and
+  jsx-a11y presets, all wrong for Workers-runtime code; add a dedicated
+  `ordboj/worker` flat-config block for `workers/**/*.ts` using
+  `globals.serviceworker` and no React plugins. `npm run lint` runs
+  `--max-warnings 20` against exactly 20 pre-existing warnings, so the
+  Worker files must land at zero new warnings. `prettier --check .` already
+  covers `workers/**`; no change needed there.
 
 ## 5. Client behavior
 
@@ -163,6 +205,11 @@ New module `src/lib/backup/` (wordlist, crypto, upload/restore client).
   stored-data-shape change: it needs a settings-store version bump with a
   forward migration that defaults the new fields, and the human's approval
   before merge, per CLAUDE.md.
+- **Master key caching.** The master PBKDF2 derivation runs at most once per
+  browser session and its result is held in memory only. The auto-backup
+  timer must not trigger a fresh 600k derivation mid-session; if no cached
+  master exists when the timer fires, skip this session rather than burn
+  CPU during practice.
 - **Restore is explicit only.** User types the phrase → GET → decrypt →
   gunzip → the #251 import path (validation, migration-on-read). Before
   applying, show a confirmation with the backup's `exportedAt` and item
@@ -230,7 +277,11 @@ All strings are English UI copy; no Swedish is involved in this feature.
   irreplaceable data. **Firebase Spark** — SDK weight and it pushes auth.
   **Any account system** — the product premise is no accounts. **D1** —
   SQL for one opaque blob is overkill. (All per the ticket; confirmed.)
-- **HKDF after PBKDF2** — no second key to derive; rejected in section 3.
+- **A bare unsalted `SHA-256(phrase)` as the KV key** — rejected: the key
+  name is published to the server, so a one-round hash would be a cheap
+  offline verifier and would reduce the PBKDF2 work factor to nothing.
+  Section 3 derives both values from one slow master secret with HKDF
+  domain separation instead.
 - **Uncompressed fallback for old Safari** — a second format path forever,
   to serve browsers that lose nothing (local export still works).
 - **Upload on pagehide** — unreliable over 64 KB and unnecessary given the
