@@ -448,4 +448,58 @@ describe('RouteChunk chunk-load retry and recovery (#220)', () => {
       });
     }
   });
+
+  // Regression guard, the mirror image of the "plain render error" case
+  // above: a module that fetched fine but threw *while its body evaluated*
+  // (e.g. a ReferenceError from a genuine code bug) must not be retried or
+  // wrapped as a ChunkLoadError either. isChunkFetchFailure() (lib/utils.ts)
+  // only recognizes fetch/network-shaped failures; anything else propagates
+  // on the first attempt so RouteChunk gives it the ordinary soft reset, not
+  // a reload loop that would just reproduce the same code bug forever.
+  it('does not retry or reload for a module-evaluation error (the import rejected because the module body threw, not a network/chunk problem): it propagates unretried to the ordinary soft-reset fallback', async () => {
+    const reloadSpy = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...originalLocation, reload: reloadSpy },
+    });
+
+    try {
+      let importAttempts = 0;
+      const moduleEvaluationImport = () => {
+        importAttempts += 1;
+        // No "fetch"/"chunk"/"network" wording in this message - this is
+        // what a real bundler surfaces for a module whose top-level code
+        // threw while running, as opposed to a failed network request for
+        // the chunk itself.
+        return Promise.reject<{ default: ComponentType }>(new ReferenceError('x is not defined'));
+      };
+      const LazyPage = lazyRoute(moduleEvaluationImport);
+
+      render(
+        <RouteChunk
+          component={LazyPage}
+          loading={<p>loading...</p>}
+          fallback={(retry) => <button onClick={retry}>retry</button>}
+        />,
+      );
+
+      // No backoff to wait out: retryImport() only delays and retries a
+      // failure it classifies as a fetch/chunk problem. A module-evaluation
+      // error is rejected on the very first attempt, so the fallback must
+      // appear immediately, with the import having been attempted exactly
+      // once - if this ever retried, the assertion below would need a
+      // vi.advanceTimersByTimeAsync() to pass, and it does not have one.
+      const retryButton = await screen.findByRole('button', { name: 'retry' });
+      expect(importAttempts).toBe(1);
+
+      fireEvent.click(retryButton);
+      expect(reloadSpy).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+    }
+  });
 });
