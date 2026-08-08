@@ -404,8 +404,15 @@ describe('particle verb dataset - CEFR', () => {
     }
   });
 
-  it('leads with A1 and A2 core material', () => {
+  const MIN_VERIFIED_A1_A2 = 45;
+
+  it('keeps the beginner runway: at least 45 verified A1/A2 entries', () => {
+    // Not a majority (see docs/learning/2026-08-09-particle-cefr-majority-decision.md).
+    // A1+A2 is 22% of SVALex, so a proportional rule is an intake ratio the corpus
+    // cannot supply. What the learner meets first is decided by CEFR_BAND_ORDER in
+    // particleQueue.ts; this floor only guarantees there is enough A1/A2 material to
+    // fill the first ~30 days of default-paced introductions.
     const early = VERIFIED.filter((entry) => entry.cefr === 'A1' || entry.cefr === 'A2').length;
-    expect(early).toBeGreaterThan(VERIFIED.length / 2);
+    expect(early).toBeGreaterThanOrEqual(MIN_VERIFIED_A1_A2);
   });
 });

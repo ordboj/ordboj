@@ -82,10 +82,13 @@ export function getAcceptedAnswers(infinitive: string, form: Form): string[] {
 // True if `answer` matches the primary form or any documented alternate for
 // this verb + form, case-insensitive and trimmed (product policy P2) — the
 // same normalization the UI already applied to the primary form alone.
+// Also normalizes to NFC on both sides (#328) so an answer typed in
+// decomposed Unicode (NFD, e.g. "a" + combining ring above for "å") still
+// matches the NFC-stored correct form.
 export function isAcceptedAnswer(infinitive: string, form: Form, answer: string): boolean {
-  const normalized = answer.trim().toLowerCase();
+  const normalized = answer.trim().toLowerCase().normalize('NFC');
   return getAcceptedAnswers(infinitive, form).some(
-    (candidate) => candidate.trim().toLowerCase() === normalized,
+    (candidate) => candidate.trim().toLowerCase().normalize('NFC') === normalized,
   );
 }
 
