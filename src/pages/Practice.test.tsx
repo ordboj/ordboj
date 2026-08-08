@@ -581,8 +581,12 @@ describe('Practice page - issue #129: progress bar track contrast', () => {
 describe('Practice page - free practice vs extra reviews (issue #27)', () => {
   it("offers only 'Keep practising', enabled, when future items exist but nothing is due", async () => {
     mocks.dueItems = [];
+    // buildFreePracticePool (Practice.tsx) looks srsStates up by the real
+    // conjugationItemId, which resolves against the real '@/data/verbData'
+    // (not mocked in this suite) -- 'vara' is VERB_DATA[0], so that's the id
+    // a "vara" future item actually needs (see src/lib/itemIds.test.ts).
     mocks.srsStates = {
-      '1-presens': futureState('1-presens', Date.now() + DAY_MS),
+      'vara-presens': futureState('vara-presens', Date.now() + DAY_MS),
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -628,9 +632,9 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     // reads insertion order instead of sorting by dueAt would still pass by
     // accident if these were declared ascending.
     mocks.srsStates = {
-      '2-presens': futureState('2-presens', now + 3 * DAY_MS), // ha -> "har"
-      '1-presens': futureState('1-presens', now + 1 * DAY_MS), // vara -> "är"
-      '4-presens': futureState('4-presens', now + 2 * DAY_MS), // unna -> "unnar"
+      'ha-presens': futureState('ha-presens', now + 3 * DAY_MS), // ha -> "har"
+      'vara-presens': futureState('vara-presens', now + 1 * DAY_MS), // vara -> "är"
+      'unna-presens': futureState('unna-presens', now + 2 * DAY_MS), // unna -> "unnar"
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -685,7 +689,7 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
   it('never records a wrong answer during free practice either', async () => {
     mocks.dueItems = [];
     mocks.srsStates = {
-      '1-presens': futureState('1-presens', Date.now() + DAY_MS),
+      'vara-presens': futureState('vara-presens', Date.now() + DAY_MS),
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -706,12 +710,12 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     mocks.dueItems = [];
     const now = Date.now();
     mocks.srsStates = {
-      '1-presens': futureState('1-presens', now + 1 * DAY_MS), // vara
-      '2-presens': futureState('2-presens', now + 2 * DAY_MS), // ha
-      '3-presens': futureState('3-presens', now + 3 * DAY_MS), // kunna
-      '4-presens': futureState('4-presens', now + 4 * DAY_MS), // unna
-      '5-presens': futureState('5-presens', now + 5 * DAY_MS), // få
-      '6-presens': futureState('6-presens', now + 6 * DAY_MS), // bli
+      'vara-presens': futureState('vara-presens', now + 1 * DAY_MS), // vara
+      'ha-presens': futureState('ha-presens', now + 2 * DAY_MS), // ha
+      'kunna-presens': futureState('kunna-presens', now + 3 * DAY_MS), // kunna
+      'unna-presens': futureState('unna-presens', now + 4 * DAY_MS), // unna
+      'få-presens': futureState('få-presens', now + 5 * DAY_MS), // få
+      'bli-presens': futureState('bli-presens', now + 6 * DAY_MS), // bli
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -726,9 +730,9 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     const now = Date.now();
     mocks.srsStates = {
       // Already due -- must never appear in "Keep practising".
-      '1-presens': futureState('1-presens', now - DAY_MS),
+      'vara-presens': futureState('vara-presens', now - DAY_MS),
       // Genuinely future -- the only eligible candidate.
-      '2-presens': futureState('2-presens', now + DAY_MS),
+      'ha-presens': futureState('ha-presens', now + DAY_MS),
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 

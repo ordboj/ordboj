@@ -65,15 +65,22 @@ vi.mock('@/lib/verbs', async (importOriginal) => {
 });
 
 const FIXED_NOW = new Date('2026-01-01T00:00:00.000Z').getTime();
+// FIXTURE_VERBS above pretends the app's verb table is testa/prova, but
+// conjugationItemId (src/lib/itemIds.ts, not mocked here) resolves a legacy
+// positional id like FIXTURE_VERBS' '1'/'2' against the REAL '@/data/verbData'
+// table, not this fixture -- that's the whole point of the id scheme
+// surviving a table swap. Real VERB_DATA[0]/[1] are "vara"/"ha" (see
+// src/data/verbData.orderPin.test.ts), so every item id this suite produces
+// is vara-*/ha-*, not testa-*/prova-*.
 const ALL_ITEM_IDS = [
-  '1-presens',
-  '1-preteritum',
-  '1-supinum',
-  '1-imperativ',
-  '2-presens',
-  '2-preteritum',
-  '2-supinum',
-  '2-imperativ',
+  'vara-presens',
+  'vara-preteritum',
+  'vara-supinum',
+  'vara-imperativ',
+  'ha-presens',
+  'ha-preteritum',
+  'ha-supinum',
+  'ha-imperativ',
 ];
 
 beforeEach(() => {
@@ -113,15 +120,17 @@ describe('persistence - the irreplaceable-progress invariant', () => {
     await waitFor(() => expect(first.result.current.isLoading).toBe(false));
 
     act(() => {
-      first.result.current.recordAnswer('1-presens', 5);
+      first.result.current.recordAnswer('vara-presens', 5);
     });
-    await waitFor(() => expect(first.result.current.srsStates['1-presens']!.repetitions).toBe(1));
+    await waitFor(() =>
+      expect(first.result.current.srsStates['vara-presens']!.repetitions).toBe(1),
+    );
 
     const stored = localStorage.getItem(STORAGE_KEY);
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored as string);
-    expect(parsed.version).toBe(2);
-    expect(parsed.items['1-presens'].repetitions).toBe(1);
+    expect(parsed.version).toBe(3);
+    expect(parsed.items['vara-presens'].repetitions).toBe(1);
 
     first.unmount();
 
@@ -132,7 +141,7 @@ describe('persistence - the irreplaceable-progress invariant', () => {
     const second = renderHook(() => useSrsProgress());
     await waitFor(() => expect(second.result.current.isLoading).toBe(false));
 
-    expect(second.result.current.srsStates['1-presens']).toEqual(parsed.items['1-presens']);
+    expect(second.result.current.srsStates['vara-presens']).toEqual(parsed.items['vara-presens']);
   });
 });
 
@@ -143,17 +152,17 @@ describe('recordAnswer', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const before = await result.current.getDueItems();
-    expect(before.map((i) => i.itemId)).toContain('1-presens');
+    expect(before.map((i) => i.itemId)).toContain('vara-presens');
 
     act(() => {
-      result.current.recordAnswer('1-presens', 5);
+      result.current.recordAnswer('vara-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['vara-presens']!.repetitions).toBe(1));
 
     const after = await result.current.getDueItems();
-    expect(after.map((i) => i.itemId)).not.toContain('1-presens');
+    expect(after.map((i) => i.itemId)).not.toContain('vara-presens');
     // Its sibling items, untouched, are still due.
-    expect(after.map((i) => i.itemId)).toContain('1-preteritum');
+    expect(after.map((i) => i.itemId)).toContain('vara-preteritum');
   });
 });
 
@@ -174,9 +183,9 @@ describe('getDueItems filtering', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const due = await result.current.getDueItems();
-    expect(due.map((i) => i.itemId)).not.toContain('2-imperativ');
+    expect(due.map((i) => i.itemId)).not.toContain('ha-imperativ');
     expect(due.map((i) => i.itemId).sort()).toEqual(
-      ['2-presens', '2-preteritum', '2-supinum'].sort(),
+      ['ha-presens', 'ha-preteritum', 'ha-supinum'].sort(),
     );
   });
 
@@ -235,9 +244,9 @@ describe('importData', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => {
-      result.current.recordAnswer('1-presens', 5);
+      result.current.recordAnswer('vara-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['vara-presens']!.repetitions).toBe(1));
 
     const snapshot = JSON.parse(JSON.stringify(result.current.srsStates));
 
@@ -268,7 +277,7 @@ describe('quota exceeded on write', () => {
 
     expect(() => {
       act(() => {
-        result.current.recordAnswer('1-presens', 5);
+        result.current.recordAnswer('vara-presens', 5);
       });
     }).not.toThrow();
   });
@@ -277,15 +286,15 @@ describe('quota exceeded on write', () => {
 describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () => {
   it('rebases easeFactor to at least 1.8 for legacy items with repetitions >= 2, leaves lower-repetition items untouched', async () => {
     const legacyBlob = {
-      '1-presens': {
-        itemId: '1-presens',
+      'vara-presens': {
+        itemId: 'vara-presens',
         repetitions: 3,
         intervalDays: 16,
         easeFactor: 1.3,
         dueAt: FIXED_NOW,
       },
-      '1-preteritum': {
-        itemId: '1-preteritum',
+      'vara-preteritum': {
+        itemId: 'vara-preteritum',
         repetitions: 1,
         intervalDays: 1,
         easeFactor: 1.3,
@@ -297,15 +306,15 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
-    expect(result.current.srsStates['1-presens']!.repetitions).toBe(3); // other fields carried through unchanged
-    expect(result.current.srsStates['1-preteritum']!.easeFactor).toBe(1.3); // repetitions < 2: not rebased
+    expect(result.current.srsStates['vara-presens']!.easeFactor).toBe(1.8);
+    expect(result.current.srsStates['vara-presens']!.repetitions).toBe(3); // other fields carried through unchanged
+    expect(result.current.srsStates['vara-preteritum']!.easeFactor).toBe(1.3); // repetitions < 2: not rebased
   });
 
   it('does not lower an already-higher easeFactor when rebasing', async () => {
     const legacyBlob = {
-      '1-presens': {
-        itemId: '1-presens',
+      'vara-presens': {
+        itemId: 'vara-presens',
         repetitions: 5,
         intervalDays: 40,
         easeFactor: 2.4,
@@ -317,13 +326,13 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(2.4);
+    expect(result.current.srsStates['vara-presens']!.easeFactor).toBe(2.4);
   });
 
-  it('persists the migration as a version 2 envelope and does not re-rebase an already-versioned payload on remount (one-shot)', async () => {
+  it('persists the migration as a version 3 envelope and does not re-rebase an already-versioned payload on remount (one-shot)', async () => {
     const legacyBlob = {
-      '1-presens': {
-        itemId: '1-presens',
+      'vara-presens': {
+        itemId: 'vara-presens',
         repetitions: 2,
         intervalDays: 6,
         easeFactor: 1.3,
@@ -334,23 +343,23 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
 
     const first = renderHook(() => useSrsProgress());
     await waitFor(() => expect(first.result.current.isLoading).toBe(false));
-    expect(first.result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
+    expect(first.result.current.srsStates['vara-presens']!.easeFactor).toBe(1.8);
     first.unmount();
 
     const storedAfterFirst = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(storedAfterFirst.version).toBe(2);
+    expect(storedAfterFirst.version).toBe(3);
 
     // Prove the rebase does not run again on a versioned payload: knock the
     // persisted ease back under the rebase threshold from outside. If load
-    // re-applied rebaseLegacyEase to a version-2 envelope, this would bounce
+    // re-applied rebaseLegacyEase to a version-3 envelope, this would bounce
     // back up to 1.8; the one-shot contract says a versioned envelope is
     // taken as-is.
-    storedAfterFirst.items['1-presens'].easeFactor = 1.3;
+    storedAfterFirst.items['vara-presens'].easeFactor = 1.3;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(storedAfterFirst));
 
     const second = renderHook(() => useSrsProgress());
     await waitFor(() => expect(second.result.current.isLoading).toBe(false));
-    expect(second.result.current.srsStates['1-presens']!.easeFactor).toBe(1.3);
+    expect(second.result.current.srsStates['vara-presens']!.easeFactor).toBe(1.3);
   });
 });
 
@@ -385,17 +394,17 @@ describe('getDueItems - local day boundary (issue #11)', () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        version: 2,
+        version: 3,
         items: {
-          '1-presens': {
-            itemId: '1-presens',
+          'vara-presens': {
+            itemId: 'vara-presens',
             repetitions: 1,
             intervalDays: 1,
             easeFactor: 2.5,
             dueAt: dueLaterToday,
           },
-          '2-presens': {
-            itemId: '2-presens',
+          'ha-presens': {
+            itemId: 'ha-presens',
             repetitions: 1,
             intervalDays: 1,
             easeFactor: 2.5,
@@ -414,8 +423,8 @@ describe('getDueItems - local day boundary (issue #11)', () => {
     // Note the excluded item is *further* from `now` in raw ms (14h) than
     // the included one (12h) - only the calendar-day boundary, not ms
     // distance, explains why one is due and the other isn't.
-    expect(dueIds).toContain('1-presens');
-    expect(dueIds).not.toContain('2-presens');
+    expect(dueIds).toContain('vara-presens');
+    expect(dueIds).not.toContain('ha-presens');
   });
 });
 
@@ -425,15 +434,15 @@ describe('importData legacy rebase', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const legacyExport = JSON.stringify({
-      '1-presens': {
-        itemId: '1-presens',
+      'vara-presens': {
+        itemId: 'vara-presens',
         repetitions: 4,
         intervalDays: 20,
         easeFactor: 1.3,
         dueAt: FIXED_NOW,
       },
-      '1-preteritum': {
-        itemId: '1-preteritum',
+      'vara-preteritum': {
+        itemId: 'vara-preteritum',
         repetitions: 0,
         intervalDays: 0,
         easeFactor: 1.3,
@@ -447,19 +456,19 @@ describe('importData legacy rebase', () => {
     });
 
     expect(importResult).toBe(true);
-    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
-    expect(result.current.srsStates['1-preteritum']!.easeFactor).toBe(1.3);
+    expect(result.current.srsStates['vara-presens']!.easeFactor).toBe(1.8);
+    expect(result.current.srsStates['vara-preteritum']!.easeFactor).toBe(1.3);
   });
 
-  it('does not rebase a versioned (v2) import even when its easeFactor is below the legacy threshold', async () => {
+  it('does not rebase an already-current (v3) import even when its easeFactor is below the legacy threshold', async () => {
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const versionedExport = JSON.stringify({
-      version: 2,
+      version: 3,
       items: {
-        '1-presens': {
-          itemId: '1-presens',
+        'vara-presens': {
+          itemId: 'vara-presens',
           repetitions: 4,
           intervalDays: 20,
           easeFactor: 1.3,
@@ -472,7 +481,7 @@ describe('importData legacy rebase', () => {
       result.current.importData(versionedExport);
     });
 
-    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.3);
+    expect(result.current.srsStates['vara-presens']!.easeFactor).toBe(1.3);
   });
 });
 
@@ -601,10 +610,10 @@ describe('importData shape validation (issue #135)', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const validExport = JSON.stringify({
-      version: 2,
+      version: 3,
       items: {
-        '1-presens': {
-          itemId: '1-presens',
+        'vara-presens': {
+          itemId: 'vara-presens',
           repetitions: 7,
           intervalDays: 40,
           easeFactor: 2.1,
@@ -621,8 +630,8 @@ describe('importData shape validation (issue #135)', () => {
 
     expect(importResult).toBe(true);
     expect(result.current.srsStates).toEqual({
-      '1-presens': {
-        itemId: '1-presens',
+      'vara-presens': {
+        itemId: 'vara-presens',
         repetitions: 7,
         intervalDays: 40,
         easeFactor: 2.1,
@@ -637,9 +646,9 @@ describe('importData shape validation (issue #135)', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => {
-      result.current.recordAnswer('1-presens', 5);
+      result.current.recordAnswer('vara-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['vara-presens']?.repetitions).toBe(1));
 
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
@@ -667,26 +676,26 @@ describe('importData shape validation (issue #135)', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => {
-      result.current.recordAnswer('1-presens', 5);
+      result.current.recordAnswer('vara-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['vara-presens']?.repetitions).toBe(1));
 
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
     const partiallyBrokenExport = JSON.stringify({
-      version: 2,
+      version: 3,
       items: {
-        '1-presens': {
-          itemId: '1-presens',
+        'vara-presens': {
+          itemId: 'vara-presens',
           repetitions: 3,
           intervalDays: 16,
           easeFactor: 2.0,
           dueAt: FIXED_NOW,
         },
         // Missing dueAt entirely: not a valid SrsState.
-        '1-preteritum': {
-          itemId: '1-preteritum',
+        'vara-preteritum': {
+          itemId: 'vara-preteritum',
           repetitions: 1,
           intervalDays: 1,
           easeFactor: 2.0,
@@ -709,9 +718,9 @@ describe('importData shape validation (issue #135)', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => {
-      result.current.recordAnswer('1-presens', 5);
+      result.current.recordAnswer('vara-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['vara-presens']?.repetitions).toBe(1));
 
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
@@ -719,8 +728,8 @@ describe('importData shape validation (issue #135)', () => {
     const futureVersionExport = JSON.stringify({
       version: 99,
       items: {
-        '1-presens': {
-          itemId: '1-presens',
+        'vara-presens': {
+          itemId: 'vara-presens',
           repetitions: 3,
           intervalDays: 16,
           easeFactor: 2.0,
@@ -761,9 +770,9 @@ describe('importData shape validation (issue #135)', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => {
-      result.current.recordAnswer('1-presens', 5);
+      result.current.recordAnswer('vara-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['vara-presens']?.repetitions).toBe(1));
 
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
@@ -779,14 +788,14 @@ describe('importData shape validation (issue #135)', () => {
 
 describe('#241: forward-compat guard against a newer store', () => {
   // A build older than the store it finds must not write to it. The store
-  // holds the only copy of a learner's schedule, so rewriting a version-3
-  // envelope as version 2 would discard whatever the newer build recorded
+  // holds the only copy of a learner's schedule, so rewriting a version-4
+  // envelope as version 3 would discard whatever the newer build recorded
   // with no backup and no error. The session runs read-only instead.
   const futureStore = JSON.stringify({
-    version: 99,
+    version: 4,
     items: {
-      '1-presens': {
-        itemId: '1-presens',
+      'vara-presens': {
+        itemId: 'vara-presens',
         repetitions: 7,
         intervalDays: 30,
         easeFactor: 2.5,
@@ -812,9 +821,9 @@ describe('#241: forward-compat guard against a newer store', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBe(futureStore);
 
     act(() => {
-      result.current.recordAnswer('1-presens', 5);
+      result.current.recordAnswer('vara-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(8));
+    await waitFor(() => expect(result.current.srsStates['vara-presens']!.repetitions).toBe(8));
 
     // In-memory the session advances, so the learner can still practise.
     // On disk nothing moved — including the field this build cannot read.
@@ -825,10 +834,10 @@ describe('#241: forward-compat guard against a newer store', () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        version: 2,
+        version: 3,
         items: {
-          '1-presens': {
-            itemId: '1-presens',
+          'vara-presens': {
+            itemId: 'vara-presens',
             repetitions: 1,
             intervalDays: 1,
             easeFactor: 2.5,
@@ -843,21 +852,21 @@ describe('#241: forward-compat guard against a newer store', () => {
     expect(result.current.isReadOnly).toBe(false);
 
     act(() => {
-      result.current.recordAnswer('1-presens', 5);
+      result.current.recordAnswer('vara-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(2));
+    await waitFor(() => expect(result.current.srsStates['vara-presens']!.repetitions).toBe(2));
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.version).toBe(2);
-    expect(stored.items['1-presens'].repetitions).toBe(2);
+    expect(stored.version).toBe(3);
+    expect(stored.items['vara-presens'].repetitions).toBe(2);
   });
 
   it('treats a legacy unversioned store as writable, not as newer', async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        '1-presens': {
-          itemId: '1-presens',
+        'vara-presens': {
+          itemId: 'vara-presens',
           repetitions: 3,
           intervalDays: 6,
           easeFactor: 1.3,
@@ -870,6 +879,6 @@ describe('#241: forward-compat guard against a newer store', () => {
 
     expect(result.current.isReadOnly).toBe(false);
     // And the legacy ease rebase still ran on the way in.
-    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
+    expect(result.current.srsStates['vara-presens']!.easeFactor).toBe(1.8);
   });
 });

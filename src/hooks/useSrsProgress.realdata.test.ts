@@ -31,8 +31,12 @@ describe('useSrsProgress against real VERB_DATA', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(Object.keys(result.current.srsStates)).toHaveLength(verbs.length * 4);
-    expect(result.current.srsStates['1-presens']).toBeDefined();
-    expect(result.current.srsStates[`${verbs.length}-imperativ`]).toBeDefined();
+    // Item ids are infinitive-based (issue #8), not position-based, so this
+    // no longer needs (or can use) verbs.length to reach "the last verb" --
+    // any two real infinitives from VERB_DATA (src/data/verbData.orderPin.test.ts
+    // pins "ha" at index 1) prove the id scheme end-to-end against real data.
+    expect(result.current.srsStates['ha-presens']).toBeDefined();
+    expect(result.current.srsStates['ha-imperativ']).toBeDefined();
   });
 
   it('persists real-data initialization to the documented localStorage key', async () => {
@@ -41,7 +45,7 @@ describe('useSrsProgress against real VERB_DATA', () => {
     await waitFor(() => expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull());
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.version).toBe(2);
+    expect(stored.version).toBe(3);
     expect(Object.keys(stored.items)).toHaveLength(VERB_DATA.length * 4);
   }, 10000);
 });

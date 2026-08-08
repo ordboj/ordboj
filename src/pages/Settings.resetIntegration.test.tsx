@@ -48,7 +48,10 @@ describe('Settings page - issue #93: reset confirmation reaches the real reset p
     // settings, so the assertions below can tell "touched" from "untouched".
     localStorage.setItem(
       SRS_KEY,
-      JSON.stringify({ version: 2, items: { '1-presens': { repetitions: 3, easeFactor: 2.5 } } }),
+      JSON.stringify({
+        version: 3,
+        items: { 'vara-presens': { repetitions: 3, easeFactor: 2.5 } },
+      }),
     );
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({ practiceMode: 'typing' }));
 
@@ -71,7 +74,7 @@ describe('Settings page - issue #93: reset confirmation reaches the real reset p
     await waitFor(() => {
       const stored = localStorage.getItem(SRS_KEY);
       expect(stored).not.toBeNull();
-      expect(JSON.parse(stored as string)).toEqual({ version: 2, items: {} });
+      expect(JSON.parse(stored as string)).toEqual({ version: 3, items: {} });
     });
 
     // The exact set of localStorage keys present is unchanged by reset:

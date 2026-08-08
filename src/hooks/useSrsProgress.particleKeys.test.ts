@@ -24,17 +24,43 @@ function state(itemId: string, overrides: Partial<SrsState> = {}): SrsState {
   };
 }
 
+// A v2-era (position-based) conjugation key. The v2 -> v3 migration (issue
+// #8, src/hooks/useSrsProgress.ts) rewrites it on load to its
+// infinitive-based id, 'vara-presens' (VERB_DATA[0] -- see
+// src/data/verbData.orderPin.test.ts). This suite seeds a v2 envelope
+// specifically to prove that migration and the pv: namespace do not step on
+// each other.
 const LEGACY_KEY = '1-presens';
+const MIGRATED_LEGACY_KEY = 'vara-presens';
+// VERB_DATA[12] ('gå', index 13) -- see the same pin.
+const LEGACY_PRETERITUM_KEY = '13-preteritum';
+const MIGRATED_PRETERITUM_KEY = 'gå-preteritum';
 const CLOZE_KEY = particleItemId('pv:tycka-om', 'cloze');
 const RECALL_KEY = particleItemId('pv:tycka-om', 'recall');
 const REFLEXIVE_KEY = particleItemId('pv:hora-av-sig', 'cloze');
 
 const MIXED_ITEMS: Record<string, SrsState> = {
   [LEGACY_KEY]: state(LEGACY_KEY, { repetitions: 9, intervalDays: 120 }),
-  '13-preteritum': state('13-preteritum', { repetitions: 2, intervalDays: 6 }),
+  [LEGACY_PRETERITUM_KEY]: state(LEGACY_PRETERITUM_KEY, { repetitions: 2, intervalDays: 6 }),
   [CLOZE_KEY]: state(CLOZE_KEY, { repetitions: 3, intervalDays: 10 }),
   [RECALL_KEY]: state(RECALL_KEY, { repetitions: 1, intervalDays: 1 }),
   [REFLEXIVE_KEY]: state(REFLEXIVE_KEY, { repetitions: 6, intervalDays: 45 }),
+};
+
+// MIXED_ITEMS as it reads back out of the store once the v2 -> v3 id
+// migration has run once: the two legacy digit keys are gone, replaced by
+// their infinitive-based id with `itemId` rewritten to match; the two pv:
+// keys are byte-for-byte identical, since that namespace is disjoint from
+// `<digits>-<form>` and the migration's regex never matches it.
+const MIGRATED_ITEMS: Record<string, SrsState> = {
+  [MIGRATED_LEGACY_KEY]: { ...MIXED_ITEMS[LEGACY_KEY]!, itemId: MIGRATED_LEGACY_KEY },
+  [MIGRATED_PRETERITUM_KEY]: {
+    ...MIXED_ITEMS[LEGACY_PRETERITUM_KEY]!,
+    itemId: MIGRATED_PRETERITUM_KEY,
+  },
+  [CLOZE_KEY]: MIXED_ITEMS[CLOZE_KEY]!,
+  [RECALL_KEY]: MIXED_ITEMS[RECALL_KEY]!,
+  [REFLEXIVE_KEY]: MIXED_ITEMS[REFLEXIVE_KEY]!,
 };
 
 beforeEach(() => {
@@ -42,22 +68,32 @@ beforeEach(() => {
 });
 
 describe('#246: mixed legacy + pv: key round trip', () => {
-  it('exports both kinds of key in one version-2 envelope', async () => {
+  it('exports the v2 -> v3 migrated legacy keys and the untouched pv: keys in one version-3 envelope', async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, items: MIXED_ITEMS }));
 
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const exported = JSON.parse(result.current.exportData());
-    // No version bump: the pv: namespace is disjoint from <digits>-<form>,
-    // which is the entire reason this feature needed no migration.
-    expect(exported.version).toBe(2);
-    for (const [key, value] of Object.entries(MIXED_ITEMS)) {
+    // A fresh export is stamped with the version this build writes, not the
+    // one the store was read at: the v2 -> v3 id migration ran on load.
+    expect(exported.version).toBe(3);
+    // pv: keys are disjoint from <digits>-<form> and untouched by the id
+    // migration -- byte-for-byte identical to what was seeded.
+    for (const key of [CLOZE_KEY, RECALL_KEY, REFLEXIVE_KEY]) {
+      expect(exported.items[key]).toEqual(MIXED_ITEMS[key]);
+    }
+    // The two legacy digit keys are gone, replaced by their infinitive-based
+    // id with every scheduling number unchanged and itemId rewritten to match.
+    for (const [key, value] of Object.entries(MIGRATED_ITEMS)) {
+      if (key === CLOZE_KEY || key === RECALL_KEY || key === REFLEXIVE_KEY) continue;
       expect(exported.items[key]).toEqual(value);
     }
+    expect(exported.items[LEGACY_KEY]).toBeUndefined();
+    expect(exported.items[LEGACY_PRETERITUM_KEY]).toBeUndefined();
   });
 
-  it('restores every particle key from its own export, byte for byte', async () => {
+  it('restores every particle key -- and the migrated legacy keys -- from its own export, byte for byte', async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, items: MIXED_ITEMS }));
 
     const first = renderHook(() => useSrsProgress());
@@ -77,7 +113,7 @@ describe('#246: mixed legacy + pv: key round trip', () => {
     expect(imported).toBe(true);
 
     await waitFor(() => expect(second.result.current.srsStates[CLOZE_KEY]).toBeDefined());
-    for (const [key, value] of Object.entries(MIXED_ITEMS)) {
+    for (const [key, value] of Object.entries(MIGRATED_ITEMS)) {
       expect(second.result.current.srsStates[key]).toEqual(value);
     }
   });
@@ -95,7 +131,10 @@ describe('#246: mixed legacy + pv: key round trip', () => {
 
     const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
     expect(persisted.items[REFLEXIVE_KEY]).toEqual(MIXED_ITEMS[REFLEXIVE_KEY]);
-    expect(persisted.items[LEGACY_KEY]).toEqual(MIXED_ITEMS[LEGACY_KEY]);
+    // The imported v2 legacy key is migrated on the way in, so what lands on
+    // disk is the infinitive-based id, not the digit key from the backup.
+    expect(persisted.items[MIGRATED_LEGACY_KEY]).toEqual(MIGRATED_ITEMS[MIGRATED_LEGACY_KEY]);
+    expect(persisted.items[LEGACY_KEY]).toBeUndefined();
   });
 
   it('accepts a legacy unversioned backup that already carries pv: keys', async () => {
@@ -138,14 +177,17 @@ describe('#246: mixed legacy + pv: key round trip', () => {
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    const legacyBefore = result.current.srsStates[LEGACY_KEY];
+    // Already migrated to its infinitive-based id on load (see the #8 tests
+    // above); that is the key a particle answer must leave untouched.
+    const legacyBefore = result.current.srsStates[MIGRATED_LEGACY_KEY];
+    expect(legacyBefore).toBeDefined();
 
     act(() => {
       result.current.recordAnswer(CLOZE_KEY, 5, 'typed');
     });
     await waitFor(() => expect(result.current.srsStates[CLOZE_KEY]!.repetitions).toBe(4));
 
-    expect(result.current.srsStates[LEGACY_KEY]).toEqual(legacyBefore);
+    expect(result.current.srsStates[MIGRATED_LEGACY_KEY]).toEqual(legacyBefore);
   });
 
   it('creates particle state on first answer for an item that had none', async () => {

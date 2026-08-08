@@ -1,24 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import { VERB_DATA } from '@/data/verbData';
-import { getVerbs } from '@/lib/verbs';
 
-// SRS item ids are `${String(index + 1)}-${form}` (src/lib/verbs.ts:22), so
-// a verb's identity in every learner's localStorage is its *position* in
-// VERB_DATA and nothing else. Reordering the array, inserting a row in the
-// middle, or deleting one silently repoints every stored key from that
-// position onward: a learner's `bygga` history becomes their `börja`
-// history, with no error and no way to notice. Progress is irreplaceable
-// (CLAUDE.md), so the mapping is pinned here as a literal table and any
-// change to it has to be a deliberate edit of this file rather than an
-// accident in that one.
+// SRS item ids are infinitive-based as of issue #8
+// (src/lib/itemIds.ts, `conjugationItemId`): a verb's identity in every
+// learner's localStorage is its infinitive, not its position in VERB_DATA.
+// PINNED_INFINITIVES below is no longer live protection for that identity --
+// it is the historical index -> infinitive snapshot that the v2 -> v3
+// migration (src/hooks/useSrsProgress.ts, `LEGACY_VERB_INFINITIVES`) reads
+// to translate a pre-#8 store's position-derived keys. That migration's
+// correctness depends on this exact list matching what every released build
+// before #8 could have written, so PINNED_INFINITIVES must never be edited
+// or reordered -- not even to fix a typo -- regardless of how VERB_DATA
+// itself changes from here on.
 //
-// This is prework for the stable-id migration (v2 -> v3) tracked separately:
-// the same snapshot is the lookup table that migration needs to rewrite
-// index-derived keys into slug-derived ones. Until that ships, VERB_DATA
-// order is frozen and this test is the freeze.
-//
-// Appending a new verb at the END is the only safe growth, and it requires
-// adding its row to the bottom of this table in the same commit.
+// What the tests below protect now: nothing pinned here was ever removed
+// from VERB_DATA (a migration source row disappearing would silently orphan
+// that verb's legacy progress), and every live infinitive is unique (two
+// verbs sharing an infinitive would make conjugationItemId ambiguous).
+// Reordering or inserting into VERB_DATA is safe for the current (v3)
+// scheme; it only ever mattered for the position-derived v2 one.
 const PINNED_INFINITIVES: readonly string[] = [
   'vara', // 1
   'ha', // 2
@@ -98,14 +98,21 @@ describe('VERB_DATA order pin', () => {
     },
   );
 
-  it('derives the same verb ids the SRS store already holds', () => {
-    // The pin only protects learner progress if it protects the *id*, so
-    // assert against the id-producing path rather than the raw array.
-    return getVerbs().then((verbs) => {
-      expect(verbs.map((verb) => [verb.id, verb.infinitive])).toEqual(
-        PINNED_INFINITIVES.map((infinitive, index) => [String(index + 1), infinitive]),
-      );
-    });
+  it('never drops a verb the migration snapshot depends on (VERB_DATA is a superset of PINNED_INFINITIVES)', () => {
+    // A pre-#8 store's positional keys can only be migrated correctly if
+    // every infinitive the snapshot names still exists in VERB_DATA today.
+    // Growth (append, insert, reorder) is fine under the v3 scheme; deleting
+    // one of these rows is not -- it would orphan that verb's legacy
+    // progress at migration time with no error.
+    const liveInfinitives = new Set(VERB_DATA.map((verb) => verb.infinitive));
+    const missing = PINNED_INFINITIVES.filter((infinitive) => !liveInfinitives.has(infinitive));
+    expect(missing).toEqual([]);
+  });
+
+  it('never lets two live verbs share an infinitive, so conjugationItemId is never ambiguous', () => {
+    // itemIds.ts builds the storage key from the infinitive alone; a
+    // duplicate would make two different verbs' progress collide on one key.
+    expect(new Set(VERB_DATA.map((verb) => verb.infinitive)).size).toBe(VERB_DATA.length);
   });
 
   it('pins no infinitive twice, so an id is never ambiguous', () => {
