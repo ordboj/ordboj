@@ -290,6 +290,7 @@ export default function Practice() {
           showExamples={settings.showExamples}
           autoplayAudio={settings.autoplayAudio}
           muteAudio={settings.muteAudio}
+          repetitions={srsStates[currentItem.itemId]?.repetitions ?? 0}
           onAnswer={handleAnswer}
         />
       </div>

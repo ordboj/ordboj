@@ -20,6 +20,12 @@ import { speakSwedish } from '@/lib/speech';
 import { ConfettiEffect } from './ConfettiEffect';
 import { Grade } from '@/lib/srs';
 
+// Once an item has been answered correctly this many times, the learner no
+// longer needs the full paradigm as a cue — showing every conjugated form
+// (e.g. "skriva - skriver - skrev - ___") lets the missing form be derived
+// from the pattern rather than recalled. See issue #32.
+const MATURE_REPETITIONS_THRESHOLD = 3;
+
 // Fixed Swedish special-character row: always these three keys, in this
 // order, on every card regardless of the answer. Never derived from the
 // correct answer — see docs/learning/2026-08-08-ux-pedagogy-red-lines.md (P4, P11).
@@ -32,6 +38,7 @@ interface PracticeCardProps {
   showExamples: boolean;
   autoplayAudio: boolean;
   muteAudio: boolean;
+  repetitions?: number;
   onAnswer: (grade: Grade) => void;
 }
 
@@ -42,6 +49,7 @@ export function PracticeCard({
   showExamples,
   autoplayAudio,
   muteAudio,
+  repetitions = 0,
   onAnswer,
 }: PracticeCardProps) {
   const [userAnswer, setUserAnswer] = useState('');
@@ -187,7 +195,14 @@ export function PracticeCard({
   };
 
   const getPatternWithHints = () => {
-    return pattern.patternParts
+    // Mature items drop the other paradigm forms from the cue, leaving just
+    // the infinitive and the blank, so the label below is the only cue.
+    const isMature = repetitions >= MATURE_REPETITIONS_THRESHOLD;
+    const visibleParts = isMature
+      ? pattern.patternParts.filter((part) => part.form === 'infinitive' || part.isMissing)
+      : pattern.patternParts;
+
+    return visibleParts
       .map((part) => {
         if (part.isMissing) {
           // Show the blank with revealed hints
