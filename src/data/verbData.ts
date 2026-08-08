@@ -51,7 +51,7 @@ export interface VerbData {
   // untouched by this field. Optional; omitted for almost every row.
   note?: string;
   // Per-form disclosure override for a sense-conditioned alternate pair
-  // (e.g. lyda preteritum: "lydde" for the "obey" sense vs "löd" for the
+  // (e.g. lyda preteritum -- "lydde" for the "obey" sense vs "löd" for the
   // "read as/state" sense). #43/C6a: when a note exists for the graded
   // form, getAlternatesDisclosure (src/lib/verbs.ts) returns it instead of
   // the generic "Both X and Y are correct" line, which would misstate a
