@@ -181,7 +181,7 @@ describe('Practice page - 15-item sitting cap door (issue #111 criterion 2)', ()
     expect(screen.queryByText(/correct/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/great work/i)).not.toBeInTheDocument();
 
-    expect(screen.getByRole('button', { name: 'Keep going (5 more due)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Keep going' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Done for now' })).toBeInTheDocument();
 
     // The card itself is not rendered underneath the door: no dead-end
@@ -223,8 +223,8 @@ describe('Practice page - 15-item sitting cap door (issue #111 criterion 2)', ()
     // remain. If the completion check (`nextIndex >= dueItems.length`) were
     // ever ordered after the boundary check (`nextIndex % SITTING_SIZE ===
     // 0`), a queue that is an exact multiple of 15 would land its second
-    // sitting on a door reading "Keep going (0 more due)" with nowhere to
-    // go — a dead end. A 30-item queue (exactly two sittings, no
+    // sitting on a door with nowhere to actually go — a dead end. A
+    // 30-item queue (exactly two sittings, no
     // remainder) exercises both boundaries: a real door after the first 15,
     // then completion (not a trailing empty door) after the second 15.
     mocks.dueItems = buildDueItems(30);
@@ -234,9 +234,7 @@ describe('Practice page - 15-item sitting cap door (issue #111 criterion 2)', ()
     for (let i = 0; i < 15; i++) {
       await answerOneCard(user);
     }
-    expect(
-      await screen.findByRole('button', { name: 'Keep going (15 more due)' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Keep going' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /keep going/i }));
 
     for (let i = 0; i < 15; i++) {

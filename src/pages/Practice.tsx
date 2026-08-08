@@ -83,7 +83,6 @@ export default function Practice() {
   }
 
   if (atSittingDoor && dueItems[currentIndex]) {
-    const remaining = dueItems.length - currentIndex;
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -98,10 +97,11 @@ export default function Practice() {
           <CardContent className="flex flex-col gap-3">
             <Button
               onClick={() => setAtSittingDoor(false)}
+              variant="outline"
               size="lg"
               className="w-full text-lg py-6"
             >
-              Keep going ({remaining} more due)
+              Keep going
             </Button>
             <Button
               onClick={() => navigate('/')}
