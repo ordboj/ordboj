@@ -353,7 +353,7 @@ export default function Practice() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <div className="w-full max-w-2xl text-center space-y-6">
-          <h1 className="text-5xl font-bold text-primary">Great Work! 🎉</h1>
+          <h1 className="text-5xl font-bold text-primary">Great work! 🎉</h1>
           <p className="text-xl text-muted-foreground">{subtitle}</p>
           <div className="flex flex-col items-center gap-3">
             <Button

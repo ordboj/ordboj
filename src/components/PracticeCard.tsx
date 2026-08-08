@@ -310,7 +310,7 @@ export function PracticeCard({
           <div className="text-center space-y-3">
             <p className="text-muted-foreground text-sm font-medium">Fill in the missing form</p>
             <div className="bg-muted/30 rounded-lg p-6 space-y-2">
-              <h2 className="text-3xl font-bold text-primary tracking-wide">
+              <h2 className="text-3xl font-bold text-primary tracking-wide" lang="sv">
                 {getPatternWithHints()}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -348,7 +348,7 @@ export function PracticeCard({
                         variant="outline"
                         className="w-12 h-12 text-xl font-semibold"
                       >
-                        {char}
+                        <span lang="sv">{char}</span>
                       </Button>
                     ))}
                     <Button
@@ -387,7 +387,7 @@ export function PracticeCard({
                       variant="outline"
                       className="py-6 text-xl"
                     >
-                      {option}
+                      <span lang="sv">{option}</span>
                     </Button>
                   ))}
                 </div>
@@ -454,34 +454,40 @@ export function PracticeCard({
                     Complete pattern:
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2">
-                    {pattern.patternParts.map((part, index) => (
-                      <div key={index} className="flex items-center gap-1">
-                        <div
-                          className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
-                            part.isMissing
-                              ? 'bg-primary text-primary-foreground font-bold'
-                              : 'bg-background'
-                          }`}
-                        >
-                          <span className="text-lg">
-                            {part.isMissing ? correctAnswer : part.text}
-                          </span>
-                          {!part.isMissing && conjugated[part.form] !== '(not available)' && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 hover:bg-primary/10"
-                              onClick={() => handlePronounceForm(part.form)}
+                    {pattern.patternParts.map((part, index) => {
+                      const displayText = part.isMissing ? correctAnswer : part.text;
+                      return (
+                        <div key={index} className="flex items-center gap-1">
+                          <div
+                            className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
+                              part.isMissing
+                                ? 'bg-primary text-primary-foreground font-bold'
+                                : 'bg-background'
+                            }`}
+                          >
+                            <span
+                              className="text-lg"
+                              lang={displayText !== '(not available)' ? 'sv' : undefined}
                             >
-                              <Volume2 className="w-3 h-3" />
-                            </Button>
+                              {displayText}
+                            </span>
+                            {!part.isMissing && conjugated[part.form] !== '(not available)' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 hover:bg-primary/10"
+                                onClick={() => handlePronounceForm(part.form)}
+                              >
+                                <Volume2 className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                          {index < pattern.patternParts.length - 1 && (
+                            <span className="text-muted-foreground">–</span>
                           )}
                         </div>
-                        {index < pattern.patternParts.length - 1 && (
-                          <span className="text-muted-foreground">–</span>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <Button
                     variant="outline"
@@ -497,7 +503,12 @@ export function PracticeCard({
                 {showExamples && exampleSentence && (
                   <div className="bg-accent/10 rounded-lg p-4">
                     <p className="text-sm text-muted-foreground mb-1">Example:</p>
-                    <p className="text-base italic">{exampleSentence}</p>
+                    <p
+                      className="text-base italic"
+                      lang={exampleSentence.startsWith('[') ? undefined : 'sv'}
+                    >
+                      {exampleSentence}
+                    </p>
                   </div>
                 )}
               </div>

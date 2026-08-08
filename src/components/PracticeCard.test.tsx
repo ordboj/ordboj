@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { PracticeCard } from '@/components/PracticeCard';
@@ -805,6 +805,90 @@ describe('PracticeCard - on-screen special-character keys (issue #134: no answer
     await screen.findByPlaceholderText('Type your answer...');
     expect(getSpecialCharButtons().map((b) => b.textContent)).toEqual(['å', 'ä', 'ö']);
   });
+});
+
+describe("PracticeCard - lang='sv' on inline Swedish word display (issue #112 AC #5)", () => {
+  it("marks the pattern heading and the fixed å/ä/ö key row with lang='sv' (typing mode)", async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const heading = await screen.findByRole('heading', { level: 2 });
+    expect(heading).toHaveAttribute('lang', 'sv');
+
+    await screen.findByPlaceholderText('Type your answer...');
+    const keyButton = screen.getByRole('button', { name: 'å' });
+    const keySpan = keyButton.querySelector('span');
+    expect(keySpan).toHaveAttribute('lang', 'sv');
+  });
+
+  it("marks multiple-choice option text with lang='sv'", async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button')).toHaveLength(4);
+    });
+
+    const optionButton = screen.getByRole('button', { name: VARA_PRESENS_ANSWER });
+    const optionSpan = optionButton.querySelector('span');
+    expect(optionSpan).toHaveAttribute('lang', 'sv');
+  });
+
+  it("marks the revealed complete-pattern words and a real example sentence with lang='sv'", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={true}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'är');
+    await screen.findByText('Correct!');
+
+    // "Complete pattern:" section reveals the real Swedish infinitive/preteritum/
+    // supinum words: they must be tagged lang="sv".
+    const patternSection = screen.getByText('Complete pattern:').closest('div') as HTMLElement;
+    const infinitiveSpan = within(patternSection).getByText('vara');
+    expect(infinitiveSpan).toHaveAttribute('lang', 'sv');
+
+    // "vara" has a real example sentence fixture ("Jag är glad"), not the
+    // "[Example with ...]" placeholder, so it must also be tagged lang="sv".
+    const example = screen.getByText('Jag är glad');
+    expect(example).toHaveAttribute('lang', 'sv');
+  });
+
+  // A companion test asserting the placeholder example sentence ("[Example
+  // with ...]", not real Swedish) does NOT get lang="sv" was dropped: it
+  // passed even against pre-fix code (which never sets lang on anything, so
+  // "not.toHaveAttribute('lang')" is trivially true there too) and could not
+  // be made fail-first without editing production code, which qa does not
+  // own. See PR #199 review notes for the owner (frontend-expert) if that
+  // conditional needs its own regression test later.
 });
 
 describe('PracticeCard - empty imperativ', () => {
