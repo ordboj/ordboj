@@ -2,10 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   conjugateVerb,
   generateVerbPattern,
+  getAllConjugatedVerbs,
   getFormLabel,
   getFormHint,
   getVerbs,
   getVerbGrupp,
+  verbHasImperativ,
   type Form,
 } from '@/lib/verbs';
 import { VERB_DATA } from '@/data/verbData';
@@ -28,26 +30,82 @@ describe('conjugateVerb - known verb', () => {
 });
 
 describe('conjugateVerb - unknown verb fallback', () => {
-  it('falls back to id "unknown" and "(not available)" for every conjugated form', async () => {
+  // Issue #124: the literal English placeholder string "(not available)" was
+  // removed from conjugateVerb()'s output entirely. An unknown infinitive
+  // now falls back to empty strings, which callers already treat as absent
+  // (see useSrsProgress.getDueItems's falsy-form skip), instead of a string
+  // that could be surfaced to the learner as if it were Swedish.
+  it('falls back to id "unknown" and an empty string for every conjugated form', async () => {
     const result = await conjugateVerb('this-infinitive-does-not-exist');
     expect(result).toEqual({
       id: 'unknown',
       infinitive: 'this-infinitive-does-not-exist',
-      presens: '(not available)',
-      preteritum: '(not available)',
-      supinum: '(not available)',
-      imperativ: '(not available)',
+      presens: '',
+      preteritum: '',
+      supinum: '',
+      imperativ: '',
     });
   });
 });
 
-describe('conjugateVerb - "(not available)" fallback for a known verb missing one form', () => {
-  it('reports "(not available)" for a verb whose imperativ is an empty string in VERB_DATA', async () => {
+describe('conjugateVerb - explicit noImperativ verb (modal/auxiliary)', () => {
+  // "kunna" is a modal verb: Swedish has no natural imperativ for it. Issue
+  // #124 added VerbData.noImperativ so an empty imperativ can mean "this
+  // form does not exist" rather than "not filled in yet". Pin both halves
+  // of that contract: the data flag and conjugateVerb()'s pass-through.
+  it('reports an empty string (never the removed "(not available)" placeholder) for a verb flagged noImperativ', async () => {
     const source = VERB_DATA.find((v) => v.infinitive === 'kunna');
     expect(source?.imperativ).toBe(''); // pins the fixture assumption this test relies on
+    expect(source?.noImperativ).toBe(true);
 
     const result = await conjugateVerb('kunna');
-    expect(result.imperativ).toBe('(not available)');
+    expect(result.imperativ).toBe('');
+    expect(result.imperativ).not.toBe('(not available)');
+  });
+});
+
+describe('verbHasImperativ', () => {
+  // Pins issue #124's public gate: callers must be able to tell "this verb
+  // has no imperativ" (modal/auxiliary) apart from "this verb was not
+  // found" or "this verb just has a normal imperativ".
+  it.each(['kunna', 'få', 'vilja'])(
+    'returns false for the modal verb "%s", which is flagged noImperativ',
+    (infinitive) => {
+      const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+      expect(row?.noImperativ).toBe(true); // fixture assumption this test relies on
+      expect(verbHasImperativ(infinitive)).toBe(false);
+    },
+  );
+
+  it('returns true for an ordinary verb that has a real imperativ', () => {
+    expect(verbHasImperativ('vara')).toBe(true);
+  });
+
+  it('returns true (no basis to say otherwise) for an infinitive not present in VERB_DATA at all', () => {
+    expect(verbHasImperativ('this-infinitive-does-not-exist')).toBe(true);
+  });
+});
+
+describe('"(not available)" placeholder removal - issue #124', () => {
+  // The literal string must never appear anywhere in conjugateVerb() or
+  // getAllConjugatedVerbs() output: not for a real verb, not for a verb
+  // missing a form, not for an unknown verb.
+  it('never appears in conjugateVerb() output for any verb in VERB_DATA', async () => {
+    for (const verb of VERB_DATA) {
+      const result = await conjugateVerb(verb.infinitive);
+      for (const form of ['presens', 'preteritum', 'supinum', 'imperativ'] as const) {
+        expect(result[form]).not.toBe('(not available)');
+      }
+    }
+  });
+
+  it('never appears in getAllConjugatedVerbs() output', async () => {
+    const all = await getAllConjugatedVerbs();
+    for (const verb of all) {
+      for (const form of ['presens', 'preteritum', 'supinum', 'imperativ'] as const) {
+        expect(verb[form]).not.toBe('(not available)');
+      }
+    }
   });
 });
 

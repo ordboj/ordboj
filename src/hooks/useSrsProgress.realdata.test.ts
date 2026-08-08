@@ -44,4 +44,34 @@ describe('useSrsProgress against real VERB_DATA', () => {
     expect(stored.version).toBe(2);
     expect(Object.keys(stored.items)).toHaveLength(VERB_DATA.length * 4);
   }, 10000);
+
+  // End-to-end regression for issue #124's UI acceptance criterion: "the
+  // learner must never be asked to produce a form marked as nonexistent for
+  // that verb". Modal verbs (kunna, få, vilja, ...) are flagged
+  // `noImperativ: true` in real VERB_DATA; confirm the full due-item
+  // pipeline (getVerbs -> conjugateVerb -> getDueItems' falsy-form skip)
+  // never surfaces an imperativ practice item for one of them.
+  it('never returns a due "imperativ" item for a verb flagged noImperativ in real VERB_DATA', async () => {
+    const modalVerbs = VERB_DATA.filter((v) => v.noImperativ);
+    // Fixture assumption this regression relies on: real data actually has
+    // at least one modal verb flagged, otherwise the assertion below would
+    // pass vacuously.
+    expect(modalVerbs.length).toBeGreaterThan(0);
+
+    const verbs = await getVerbs();
+    const modalVerbIds = new Set(
+      verbs.filter((v) => modalVerbs.some((m) => m.infinitive === v.infinitive)).map((v) => v.id),
+    );
+    expect(modalVerbIds.size).toBe(modalVerbs.length);
+
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const due = await result.current.getDueItems();
+    const violations = due.filter(
+      (item) => modalVerbIds.has(item.verbId) && item.form === 'imperativ',
+    );
+    expect(violations).toEqual([]);
+  });
 });
