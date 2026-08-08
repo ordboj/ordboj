@@ -1,10 +1,16 @@
 export interface SrsState {
-  itemId: string;
   repetitions: number;
   intervalDays: number;
   easeFactor: number;
   dueAt: number;
   lastGrade?: number;
+  // Legacy field. Storage versions 1 and 2 duplicated the store key inside
+  // the value (`"12-presens": { "itemId": "12-presens", ... }`), ~25 of the
+  // ~130 bytes per item. Version 3 never writes it — the key *is* the id —
+  // but v1/v2 payloads read from localStorage or an old export file still
+  // carry it, so the field stays typed (and optional) rather than being
+  // silently untyped extra data. See useSrsProgress.ts (STORAGE_VERSION).
+  itemId?: string;
 }
 
 // The UI (PracticeCard.tsx) only ever emits a binary correct/incorrect
@@ -21,6 +27,20 @@ const EASE_CEILING = 2.8;
 const EASE_FLOOR = 1.3;
 const EASE_DELTA_CORRECT = 0.05;
 const EASE_DELTA_WRONG = -0.2;
+
+// Ease factor of a never-reviewed item.
+export const INITIAL_EASE_FACTOR = 2.5;
+
+// Two decimals is the full precision the flat +0.05 / -0.20 deltas can ever
+// produce; everything past that is IEEE-754 drift that only costs bytes in
+// localStorage (2.5 - 0.2 - 0.1 stores as "2.1999999999999997": 18 chars
+// instead of 4) and makes stored progress unreadable when inspected by hand.
+// Rounding here, not at the storage boundary, keeps the in-memory state and
+// the persisted state byte-identical, which is what makes "re-read what was
+// written, verbatim" a checkable invariant.
+export function roundEase(easeFactor: number): number {
+  return Math.round(easeFactor * 100) / 100;
+}
 
 // Hard ceiling on any single interval. Even at the 2.8 ease ceiling an
 // item's schedule cannot leave the app's one-year horizon.
@@ -46,13 +66,13 @@ export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
   if (!isCorrect) {
     // Lapse: flat penalty, reset progress. No longer runs the SM-2 formula
     // before resetting, so the penalty is bounded and predictable.
-    easeFactor = Math.max(EASE_FLOOR, easeFactor + EASE_DELTA_WRONG);
+    easeFactor = roundEase(Math.max(EASE_FLOOR, easeFactor + EASE_DELTA_WRONG));
     repetitions = 0;
     intervalDays = 1;
   } else {
     // Success: small capped reward. The ceiling is what stops runaway ease
     // growth on a long correct streak (previously uncapped).
-    easeFactor = Math.min(EASE_CEILING, easeFactor + EASE_DELTA_CORRECT);
+    easeFactor = roundEase(Math.min(EASE_CEILING, easeFactor + EASE_DELTA_CORRECT));
     repetitions += 1;
     if (repetitions === 1) {
       intervalDays = 1;
@@ -73,13 +93,22 @@ export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
   };
 }
 
-// Initialize new SRS item
-export function initializeSrsState(itemId: string): SrsState {
+// Initialize new SRS item.
+//
+// `legacyItemId` is accepted and ignored: since storage version 3 the item id
+// is the map key in the store, never a field of the value (see SrsState.itemId
+// and useSrsProgress.ts). The parameter is kept so callers written against the
+// version-2 signature keep compiling; new callers should pass nothing.
+//
+// A state produced here is fully derivable from the id alone, which is why the
+// store no longer persists untouched items at all: an absent key means
+// "new, due now", exactly what this returns.
+export function initializeSrsState(legacyItemId?: string): SrsState {
+  void legacyItemId;
   return {
-    itemId,
     repetitions: 0,
     intervalDays: 0,
-    easeFactor: 2.5,
+    easeFactor: INITIAL_EASE_FACTOR,
     dueAt: Date.now(),
   };
 }
