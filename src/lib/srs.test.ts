@@ -3,7 +3,9 @@ import {
   calculateNextReview,
   initializeSrsState,
   isDue,
+  roundEase,
   MAX_INTERVAL_DAYS,
+  INITIAL_EASE_FACTOR,
   type SrsState,
   type Grade,
 } from '@/lib/srs';
@@ -21,14 +23,28 @@ afterEach(() => {
 });
 
 describe('initializeSrsState', () => {
-  it('echoes the itemId and sets the documented defaults', () => {
+  // v3 (issue #53): the store key IS the item id now, so the value no
+  // longer carries a duplicated `itemId` field. `legacyItemId` is accepted
+  // (v2-era call sites still pass one) and silently ignored.
+  it('sets the documented defaults and does not echo a legacy itemId into the returned state', () => {
     const state = initializeSrsState('1-presens');
 
     expect(state).toEqual<SrsState>({
-      itemId: '1-presens',
       repetitions: 0,
       intervalDays: 0,
-      easeFactor: 2.5,
+      easeFactor: INITIAL_EASE_FACTOR,
+      dueAt: FIXED_NOW,
+    });
+    expect(state).not.toHaveProperty('itemId');
+  });
+
+  it('produces the same shape when called with no argument at all (the v3 call site)', () => {
+    const state = initializeSrsState();
+
+    expect(state).toEqual<SrsState>({
+      repetitions: 0,
+      intervalDays: 0,
+      easeFactor: INITIAL_EASE_FACTOR,
       dueAt: FIXED_NOW,
     });
   });
@@ -40,6 +56,33 @@ describe('initializeSrsState', () => {
 
     expect(first.dueAt).toBe(FIXED_NOW);
     expect(second.dueAt).toBe(FIXED_NOW + DAY_MS);
+  });
+});
+
+describe('roundEase', () => {
+  // Two decimals is the full precision the flat +0.05 / -0.20 deltas can
+  // ever produce; anything past that is IEEE-754 drift.
+  it('rounds to 2 decimal places', () => {
+    expect(roundEase(2.1999999999999997)).toBe(2.2);
+    expect(roundEase(1.8000000000000003)).toBe(1.8);
+    expect(roundEase(2.5)).toBe(2.5);
+    expect(roundEase(1.3)).toBe(1.3);
+  });
+});
+
+describe('calculateNextReview - ease factor has no floating-point drift (regression)', () => {
+  // Before roundEase was applied inside calculateNextReview, repeated
+  // +0.05/-0.20 deltas accumulated IEEE-754 drift (e.g. 2.1999999999999997),
+  // which cost extra bytes in localStorage and broke the "re-read what was
+  // written, verbatim" invariant. This must hold after every single review,
+  // not just at the end of a run.
+  it('every easeFactor produced by a long mixed run already has <=2 decimal digits', () => {
+    let state = initializeSrsState('x');
+    const grades: Grade[] = [5, 5, 0, 5, 5, 5, 0, 0, 5, 5, 5, 5, 0, 5];
+    for (const grade of grades) {
+      state = calculateNextReview(state, grade);
+      expect(state.easeFactor).toBe(roundEase(state.easeFactor));
+    }
   });
 });
 

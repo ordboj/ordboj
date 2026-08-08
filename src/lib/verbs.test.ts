@@ -13,10 +13,12 @@ import { VERB_DATA } from '@/data/verbData';
 const ALL_FORMS: Form[] = ['infinitive', 'presens', 'preteritum', 'supinum', 'imperativ'];
 
 describe('conjugateVerb - known verb', () => {
-  it('returns the conjugated forms and a 1-based, index-derived id for a verb that exists', async () => {
+  // issue #53: ids are now the verb's infinitive, not its 1-based position
+  // in VERB_DATA, so SRS progress keyed on id survives reordering the table.
+  it('returns the conjugated forms and an infinitive-derived id for a verb that exists', async () => {
     const result = await conjugateVerb('vara');
     expect(result).toEqual({
-      id: '1',
+      id: 'vara',
       infinitive: 'vara',
       presens: 'är',
       preteritum: 'var',
@@ -52,28 +54,45 @@ describe('conjugateVerb - "(not available)" fallback for a known verb missing on
 });
 
 describe('getVerbs - id scheme', () => {
-  it('assigns ids as String(index + 1), matching VERB_DATA order', async () => {
+  // issue #53: ids are the verb's infinitive (content-derived), not
+  // String(index + 1) (position-derived).
+  it("assigns ids as the verb's infinitive, matching VERB_DATA content rather than position", async () => {
     const verbs = await getVerbs();
     expect(verbs[0]).toEqual({
-      id: '1',
+      id: VERB_DATA[0].infinitive,
       infinitive: VERB_DATA[0].infinitive,
       cefr: VERB_DATA[0].cefr,
     });
     expect(verbs[1]).toEqual({
-      id: '2',
+      id: VERB_DATA[1].infinitive,
       infinitive: VERB_DATA[1].infinitive,
       cefr: VERB_DATA[1].cefr,
     });
-    expect(verbs[verbs.length - 1].id).toBe(String(VERB_DATA.length));
+    expect(verbs[verbs.length - 1].id).toBe(VERB_DATA[VERB_DATA.length - 1].infinitive);
+    for (const verb of verbs) {
+      expect(verb.id).toBe(verb.infinitive);
+    }
   });
 
-  // KNOWN ISSUE (see CLAUDE.md "Known issues"): ids are positional, not
-  // content-derived. Any reorder or insertion in VERB_DATA silently
-  // reassigns every id after the change point, and therefore reassigns
-  // every SRS item keyed on `${verbId}-${form}` in a user's stored progress
-  // to a *different verb* without any migration or warning.
-  // Owner: swedish-linguist (src/data/verbData.ts, src/lib/verbs.ts).
-  it('documents that ids are unstable under reordering of VERB_DATA (fragility, not a passing contract)', async () => {
+  // Pin the current contract (see CLAUDE.md "Known issues" / id stability):
+  // ids are index-derived positional strings would have broken this;
+  // infinitive-derived ids require every infinitive in the table to be
+  // unique, or two verbs would silently share an id (and therefore share
+  // one SRS progress record). This is also the invariant the SRS
+  // positional-id migration (useSrsProgress.ts, issue #53) depends on when
+  // it re-verifies uniqueness at runtime before mapping legacy ids.
+  it('has a unique infinitive for every row in VERB_DATA (required for id uniqueness and the SRS migration)', () => {
+    const infinitives = VERB_DATA.map((v) => v.infinitive);
+    expect(new Set(infinitives).size).toBe(infinitives.length);
+  });
+
+  // REGRESSION (issue #53, fixed bug): ids used to be
+  // `String(VERB_DATA.indexOf(verb) + 1)`, so the same verb got a different
+  // id whenever the table was reordered or a row was inserted before it —
+  // silently reattaching that verb's stored SRS progress to a different verb
+  // (see CLAUDE.md "Known issues"). ids are now the verb's infinitive, which
+  // does not depend on table order.
+  it("keeps a verb's id stable across a VERB_DATA reorder, unlike the old positional scheme", async () => {
     vi.resetModules();
     vi.doMock('@/data/verbData', () => ({
       VERB_DATA: [
@@ -97,7 +116,8 @@ describe('getVerbs - id scheme', () => {
     }));
     const { getVerbs: getVerbsWithOriginalOrder } = await import('@/lib/verbs');
     const originalOrder = await getVerbsWithOriginalOrder();
-    expect(originalOrder.find((v) => v.infinitive === 'beta')?.id).toBe('2');
+    const originalId = originalOrder.find((v) => v.infinitive === 'beta')?.id;
+    expect(originalId).toBe('beta');
 
     vi.resetModules();
     vi.doMock('@/data/verbData', () => ({
@@ -122,10 +142,12 @@ describe('getVerbs - id scheme', () => {
     }));
     const { getVerbs: getVerbsReordered } = await import('@/lib/verbs');
     const reordered = await getVerbsReordered();
+    const reorderedId = reordered.find((v) => v.infinitive === 'beta')?.id;
 
-    // Same verb, same SRS itemId prefix would now point at a different id
-    // once its position in VERB_DATA changes.
-    expect(reordered.find((v) => v.infinitive === 'beta')?.id).toBe('1');
+    // Same verb, same id, regardless of position: an SRS store keyed on
+    // verb.id survives a VERB_DATA reorder/insert without corruption.
+    expect(reorderedId).toBe('beta');
+    expect(reorderedId).toBe(originalId);
 
     vi.resetModules();
     vi.doUnmock('@/data/verbData');
