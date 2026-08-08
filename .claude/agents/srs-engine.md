@@ -49,10 +49,13 @@ Check each of these before touching anything else:
   review sets it to 1** — verify no code path multiplies from 0 and pins an
   item at zero interval forever.
 - **Item identity is verb+form.** Confirm the id scheme is stable when
-  `VERB_DATA` changes. Ids derived from array index (`String(index + 1)` in
-  `verbs.ts`) break every stored item the moment a verb is inserted or
-  reordered. If ids are index-based, that is a data-loss bug — report it
-  with a migration plan before the verb table grows.
+  `VERB_DATA` changes. Issue #53 fixed the original bug (ids derived from
+  array index, `String(index + 1)` in `verbs.ts`, which broke every stored
+  item the moment a verb was inserted or reordered): `verbs.ts` now keys ids
+  on the verb's infinitive, with a `useSrsProgress.ts` migration that re-keys
+  any pre-#53 positional id on read. Keep confirming this holds — infinitive
+  uniqueness is pinned by `src/data/verbData.orderPin.test.ts` — before the
+  verb table grows.
 - **Grades.** `Grade` is 0-5 but the UI may only ever emit two or three
   values. Trace what actually reaches `calculateNextReview` and make the
   type honest.

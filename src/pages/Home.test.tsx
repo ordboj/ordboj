@@ -1,8 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import Home from '@/pages/Home';
+
+// react-router-dom's useNavigate is a boundary this suite does not own: the
+// keyboard-access tests below (issue #110 AC) assert that the Progress/
+// Settings stat cards call navigate() with the right route on Enter/Space,
+// without depending on an actual route change (renderWithProviders only
+// mounts Home, not the full route tree). Everything else (MemoryRouter,
+// etc.) stays real via importActual.
+const navigateMock = vi.hoisted(() => vi.fn());
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return { ...actual, useNavigate: () => navigateMock };
+});
 
 // Home.tsx composes useSrsProgress and useSettings (both srs-engine owned)
 // to show a due-card count. They are mocked here as boundaries this suite
@@ -86,6 +98,7 @@ vi.mock('@/hooks/useSettings', () => ({
 }));
 
 beforeEach(() => {
+  navigateMock.mockClear();
   mocks.srsLoading = false;
   mocks.settingsLoading = false;
   mocks.cefrLevels = ['A1', 'A2'];
@@ -155,5 +168,67 @@ describe('Home page - regression #103 (due count recompute on unrelated render)'
       expect(screen.getByText(/conjugations due for review/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/5 conjugations due for review/i)).toBeInTheDocument();
+  });
+});
+
+// Issue #110 AC: clickable Cards need a full keyboard path (role, tabIndex,
+// onKeyDown), not just an onClick that only a mouse/touch user can reach.
+describe('Home - keyboard access for the Progress/Settings stat cards (issue #110 AC)', () => {
+  it('is reachable by keyboard: the Progress card is a focusable button-role element', async () => {
+    renderWithProviders(<Home />, { route: '/' });
+
+    const progressCard = await screen.findByRole('button', { name: /progress/i });
+    expect(progressCard).toHaveAttribute('tabIndex', '0');
+  });
+
+  it('navigates to /progress when the Progress card is activated with Enter', async () => {
+    renderWithProviders(<Home />, { route: '/' });
+
+    const progressCard = await screen.findByRole('button', { name: /progress/i });
+    fireEvent.keyDown(progressCard, { key: 'Enter' });
+
+    expect(navigateMock).toHaveBeenCalledWith('/progress');
+  });
+
+  it('navigates to /progress when the Progress card is activated with Space', async () => {
+    renderWithProviders(<Home />, { route: '/' });
+
+    const progressCard = await screen.findByRole('button', { name: /progress/i });
+    fireEvent.keyDown(progressCard, { key: ' ' });
+
+    expect(navigateMock).toHaveBeenCalledWith('/progress');
+  });
+
+  it('navigates to /settings when the Settings card is activated with Enter', async () => {
+    renderWithProviders(<Home />, { route: '/' });
+
+    const settingsCard = await screen.findByRole('button', { name: /settings/i });
+    fireEvent.keyDown(settingsCard, { key: 'Enter' });
+
+    expect(navigateMock).toHaveBeenCalledWith('/settings');
+  });
+
+  it('does not navigate on an unrelated key (e.g. Tab)', async () => {
+    renderWithProviders(<Home />, { route: '/' });
+
+    const progressCard = await screen.findByRole('button', { name: /progress/i });
+    fireEvent.keyDown(progressCard, { key: 'Tab' });
+
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+});
+
+// Issue #110 AC: touch targets must be at least 44px. The mute/unmute
+// button was 40px (the icon-button default) with no explicit size class
+// before this fix.
+describe('Home - mute button touch target (issue #110 AC)', () => {
+  it('renders the mute/unmute button at 44px (h-11 w-11) with an aria-label', async () => {
+    renderWithProviders(<Home />, { route: '/' });
+
+    // Mocked settings start with muteAudio: true, so the accessible name is
+    // "Unmute audio" (see the ternary in Home.tsx).
+    const button = await screen.findByRole('button', { name: /^unmute audio$/i });
+    expect(button).toHaveClass('h-11');
+    expect(button).toHaveClass('w-11');
   });
 });

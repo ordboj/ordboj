@@ -7,7 +7,7 @@ import { buildSingleDueSeed, SRS_STORAGE_KEY } from './support/seed';
 // card the shuffle serves first, and sidesteps the known queue-desync bug
 // (#15, see queue-desync-bug-15.spec.ts) which only triggers with 2+ due
 // items in the same session.
-const ITEM_ID = '1-presens'; // VERB_DATA[0] = vara, presens = "är"
+const ITEM_ID = 'vara-presens'; // VERB_DATA[0] = vara, presens = "är"
 const VERB = 'vara';
 const ANSWER = 'är';
 
