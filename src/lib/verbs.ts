@@ -72,16 +72,33 @@ export function isAcceptedAnswer(infinitive: string, form: Form, answer: string)
 }
 
 // Human-facing disclosure line for the feedback panel, per product policy P6:
-// when a card has more than one accepted answer, name the others so the
-// learner learns they're a pair rather than believing one is wrong. Returns
-// null when there's nothing to disclose (the common case). The wording here
-// is a placeholder pending swedish-linguist sign-off on P6's phrasing —
-// PracticeCard renders whatever string this returns and composes no Swedish
-// of its own.
+// when a card has more than one accepted answer, name them so the learner
+// learns they're a pair rather than believing one is wrong. Returns null when
+// there's nothing to disclose (the common case). PracticeCard renders whatever
+// string this returns and composes no Swedish of its own.
+//
+// Wording signed off by swedish-linguist. It names the *whole* accepted set,
+// primary included, rather than only the alternates. The earlier placeholder
+// ("Also correct: lade") misfires in the case that matters most: a learner who
+// actually typed "lade" got "Correct!" followed by "Also correct: lade", which
+// reads as though the app is offering them the word they just used. Naming
+// both forms is true regardless of which one was typed, and it states the
+// pairing outright — which is the stated pedagogical payoff of #123, that the
+// learner leaves knowing "la" and "lade" are the same form and not that one of
+// them is an error.
+//
+// English frame with the Swedish forms inline, matching the rest of the card's
+// copy (sentence case, no shouting). Only 2-form sets exist in the data today;
+// the 3+ branch is here so adding a third form can't silently produce "a, b
+// and are correct".
 export function getAlternatesDisclosure(infinitive: string, form: Form): string | null {
-  const alternates = getAlternateForms(infinitive, form);
-  if (alternates.length === 0) return null;
-  return `Also correct: ${alternates.join(', ')}`;
+  const accepted = getAcceptedAnswers(infinitive, form);
+  if (accepted.length < 2) return null;
+  if (accepted.length === 2) {
+    return `Both ${accepted[0]} and ${accepted[1]} are correct.`;
+  }
+  const allButLast = accepted.slice(0, -1).join(', ');
+  return `${allButLast} and ${accepted[accepted.length - 1]} are all correct.`;
 }
 
 // Get all conjugated verbs efficiently (no file reads needed!)
