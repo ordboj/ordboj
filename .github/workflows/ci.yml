@@ -111,6 +111,27 @@ jobs:
       - name: Validate verb forms
         run: npm run validate:verbs
 
+  # Runs the VERB_DATA promotion pipeline (issue #41) in --check mode: it
+  # classifies and validates every shipped src/data/verbData.ts row without
+  # writing scripts/verb-data-review.csv or re-emitting verbData.ts, and
+  # exits non-zero on any shipped-row validator failure. Same dependency-free
+  # plain-Node shape as validate-verbs above, so it also skips `npm ci`.
+  build-verb-data-check:
+    name: Verb data pipeline (check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build verb data (check)
+        run: npm run build:verb-data:check
+
   test:
     name: Unit tests
     runs-on: ubuntu-latest
