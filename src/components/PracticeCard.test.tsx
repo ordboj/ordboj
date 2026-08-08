@@ -597,3 +597,207 @@ describe('PracticeCard - multiple-choice distractor policy (#139)', () => {
     }
   });
 });
+
+const VARA_PRETERITUM_ANSWER = 'var';
+
+describe('PracticeCard - pattern cue fades with maturity (issue #32)', () => {
+  it('shows the full paradigm pattern when repetitions is below the maturity threshold (0)', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        repetitions={0}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const heading = await screen.findByRole('heading', { level: 2 });
+    expect(heading.textContent).toContain('vara');
+    expect(heading.textContent).toContain('är');
+    expect(heading.textContent).toContain('varit');
+  });
+
+  it('still shows the full paradigm pattern one review below the threshold (repetitions=2)', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        repetitions={2}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const heading = await screen.findByRole('heading', { level: 2 });
+    expect(heading.textContent).toContain('är');
+    expect(heading.textContent).toContain('varit');
+  });
+
+  it('drops the other paradigm forms once repetitions reaches the threshold (repetitions=3)', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        repetitions={3}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const heading = await screen.findByRole('heading', { level: 2 });
+    // Infinitive and the blank survive as the only cue...
+    expect(heading.textContent).toContain('vara');
+    expect(heading.textContent).toContain(
+      '_'.repeat(VARA_PRETERITUM_ANSWER.length).split('').join(' '),
+    );
+    // ...but presens and supinum, which would give the answer away via the
+    // pattern, must not leak into the mature cue.
+    expect(heading.textContent).not.toContain('är');
+    expect(heading.textContent).not.toContain('varit');
+    // The form label below the pattern is still the only source of what's
+    // being asked for.
+    expect(screen.getByText(/Missing:/)).toHaveTextContent('Past');
+  });
+
+  it('keeps dropping paradigm forms well past the threshold (repetitions=10)', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        repetitions={10}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const heading = await screen.findByRole('heading', { level: 2 });
+    expect(heading.textContent).not.toContain('är');
+    expect(heading.textContent).not.toContain('varit');
+  });
+
+  it('defaults to the immature (full pattern) cue when repetitions is not supplied', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const heading = await screen.findByRole('heading', { level: 2 });
+    expect(heading.textContent).toContain('är');
+    expect(heading.textContent).toContain('varit');
+  });
+
+  it('does not shrink the already-minimal imperativ pattern, mature or not', async () => {
+    // imperativ's pattern is always just infinitive + blank (see
+    // generateVerbPattern), so maturity filtering must be a no-op here in
+    // both directions -- this pins that the two code paths don't interact
+    // in a surprising way.
+    const { unmount } = renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="imperativ"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        repetitions={0}
+        onAnswer={vi.fn()}
+      />,
+    );
+    const immatureHeading = await screen.findByRole('heading', { level: 2 });
+    const immatureText = immatureHeading.textContent;
+    unmount();
+
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="imperativ"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        repetitions={7}
+        onAnswer={vi.fn()}
+      />,
+    );
+    const matureHeading = await screen.findByRole('heading', { level: 2 });
+    expect(matureHeading.textContent).toBe(immatureText);
+    expect(matureHeading.textContent).toContain('vara');
+  });
+
+  it("still reveals the full paradigm in the post-answer 'Complete pattern' review even for a mature item", async () => {
+    // The fade applies only to the pre-answer cue; the review after
+    // answering is unaffected regardless of maturity, so a learner
+    // reviewing a mature item still gets the full paradigm for study.
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        repetitions={5}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, VARA_PRETERITUM_ANSWER);
+    await screen.findByText('Correct!');
+
+    const completePattern = screen.getByText('Complete pattern:').closest('div');
+    expect(completePattern).toHaveTextContent('är');
+    expect(completePattern).toHaveTextContent('varit');
+  });
+});
+
+describe('PracticeCard - empty imperativ', () => {
+  // "kunna" has no imperativ form in VERB_DATA (imperativ: ""), so
+  // conjugateVerb() falls back to the literal string "(not available)".
+  // This form is filtered out of the due set by useSrsProgress.getDueItems
+  // before it ever reaches PracticeCard in normal use, but PracticeCard
+  // itself does not guard against it: it renders it as if "(not available)"
+  // were a real answer to type. Documented here so nobody relies on
+  // PracticeCard alone to prevent this; see report for the flagged bug.
+  it('renders without crashing and treats the fallback string as the target answer', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="kunna"
+        form="imperativ"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await screen.findByPlaceholderText('Type your answer...');
+    expect(screen.getByText(/Command form of "kunna"|kunna/)).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.type(screen.getByPlaceholderText('Type your answer...'), '(not available)');
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+  });
+});
