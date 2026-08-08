@@ -22,7 +22,9 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Search, ArrowUpDown, Trophy } from 'lucide-react';
-import { getAllConjugatedVerbs, ConjugatedVerb } from '@/lib/verbs';
+import { getAllConjugatedVerbs, ConjugatedVerb, type Form } from '@/lib/verbs';
+import { conjugationItemId, particleItemId } from '@/lib/itemIds';
+import { getVerifiedParticleVerbs, hasRecallItem, renderLemma } from '@/lib/particleVerbs';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { VerbDetailsModal } from '@/components/VerbDetailsModal';
@@ -56,12 +58,12 @@ export default function Progress() {
 
   const getSrsStage = useCallback(
     (verbId: string): number => {
-      const forms = ['presens', 'preteritum', 'supinum', 'imperativ'];
+      const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
       let totalReps = 0;
       let count = 0;
 
       forms.forEach((form) => {
-        const itemId = `${verbId}-${form}`;
+        const itemId = conjugationItemId(verbId, form);
         const state = srsStates[itemId];
         if (state) {
           totalReps += state.repetitions;
@@ -129,6 +131,61 @@ export default function Progress() {
     return { total, mastered, percentage };
   }, [verbs, getSrsStage]);
 
+  // Particle mode's own numbers. The page below is built entirely around the
+  // four conjugation forms and the verb table, so the particle view is a
+  // separate summary rather than extra columns that would be blank for every
+  // conjugation row.
+  //
+  // "Started" counts verbs whose cloze item exists at all, which is what
+  // lazy initialization makes meaningful: an untouched verb has no state, so
+  // the denominator is the corpus and the numerator is genuine contact.
+  const particleStats = useMemo(() => {
+    const entries = getVerifiedParticleVerbs();
+    let started = 0;
+    let clozeMastered = 0;
+    let recallUnlocked = 0;
+    const recallEligible = entries.filter(hasRecallItem).length;
+
+    for (const entry of entries) {
+      const cloze = srsStates[particleItemId(entry.id, 'cloze')];
+      if (!cloze) continue;
+      started += 1;
+      if (cloze.repetitions >= 5) clozeMastered += 1;
+      if (hasRecallItem(entry) && srsStates[particleItemId(entry.id, 'recall')]) {
+        recallUnlocked += 1;
+      }
+    }
+
+    return {
+      total: entries.length,
+      started,
+      clozeMastered,
+      recallUnlocked,
+      recallEligible,
+      startedPercent: entries.length > 0 ? (started / entries.length) * 100 : 0,
+    };
+  }, [srsStates]);
+
+  const particleVerbList = useMemo(() => {
+    return getVerifiedParticleVerbs().map((entry) => {
+      const cloze = srsStates[particleItemId(entry.id, 'cloze')];
+      const recall = hasRecallItem(entry)
+        ? srsStates[particleItemId(entry.id, 'recall')]
+        : undefined;
+      return {
+        id: entry.id,
+        lemma: renderLemma(entry),
+        particle: entry.particle,
+        gloss: entry.gloss.en,
+        cefr: entry.cefr,
+        clozeRepetitions: cloze?.repetitions ?? 0,
+        started: cloze !== undefined,
+        recallStarted: recall !== undefined,
+        recallEligible: hasRecallItem(entry),
+      };
+    });
+  }, [srsStates]);
+
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -173,6 +230,66 @@ export default function Progress() {
           </CardHeader>
           <CardContent>
             <ProgressBar value={progressStats.percentage} className="h-4 bg-muted-foreground" />
+          </CardContent>
+        </Card>
+
+        {/* Particle verbs — its own mode, so its own summary rather than
+            columns that would be blank on every conjugation row. */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Particle verbs</CardTitle>
+            <CardDescription>
+              You've started {particleStats.started} / {particleStats.total} particle verbs
+              {particleStats.clozeMastered > 0 &&
+                `, ${particleStats.clozeMastered} well established`}
+              {particleStats.recallEligible > 0 &&
+                ` — ${particleStats.recallUnlocked} / ${particleStats.recallEligible} meaning prompts unlocked`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ProgressBar value={particleStats.startedPercent} className="h-4 bg-muted-foreground" />
+            {particleStats.started === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Particle verbs unlock once you know their base verb in both the present and the
+                past.
+              </p>
+            ) : (
+              <ScrollArea className="h-64">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background z-10">
+                    <TableRow>
+                      <TableHead>Phrase</TableHead>
+                      <TableHead>Meaning</TableHead>
+                      <TableHead>Level</TableHead>
+                      <TableHead>Stage</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {particleVerbList
+                      .filter((verb) => verb.started)
+                      .map((verb) => {
+                        const badge = getStageBadge(verb.clozeRepetitions);
+                        return (
+                          <TableRow key={verb.id}>
+                            <TableCell className="font-medium">
+                              <span lang="sv">{verb.lemma}</span>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{verb.gloss}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{verb.cefr}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={badge.variant} className={badge.color}>
+                                {badge.label}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            )}
           </CardContent>
         </Card>
 

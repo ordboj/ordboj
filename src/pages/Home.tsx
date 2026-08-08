@@ -1,19 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { BookOpen, Settings, Trophy, Volume2, VolumeX } from 'lucide-react';
+import { BookOpen, Puzzle, Settings, Trophy, Volume2, VolumeX } from 'lucide-react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { loadVoices } from '@/lib/speech';
 import { getVerbs } from '@/lib/verbs';
+import { PARTICLE_DAILY_GOAL_DEFAULT } from '@/lib/particleQueue';
 
 export default function Home() {
   const navigate = useNavigate();
   const { settings, isLoading: settingsLoading, updateSettings } = useSettings();
-  const { getDueItems, isLoading } = useSrsProgress(settings.cefrLevels);
+  const { getDueItems, getParticleSitting, particleReviewsDue, isLoading } = useSrsProgress(
+    settings.cefrLevels,
+  );
   const [dueCount, setDueCount] = useState(0);
   const selectedLevels = settings.cefrLevels;
   const [totalVerbs, setTotalVerbs] = useState(0);
@@ -52,6 +55,18 @@ export default function Home() {
     };
     loadVerbCount();
   }, [selectedLevels]);
+
+  // Particle mode's own count, separate from the conjugation due count by
+  // design: it is a separate queue with a separate goal, and folding the two
+  // numbers together would hide which one the learner still owes.
+  //
+  // "Ready" counts more than reviews: a learner with nothing due may still
+  // have new verbs unlocked today, and a badge reading 0 next to an entry
+  // point that has work behind it is a lie.
+  const particleCardsReady = useMemo(
+    () => getParticleSitting(PARTICLE_DAILY_GOAL_DEFAULT).cards.length,
+    [getParticleSitting],
+  );
 
   const handleLevelToggle = (level: string, checked: boolean) => {
     const newLevels = checked
@@ -155,6 +170,35 @@ export default function Home() {
                 Come back later for more practice
               </p>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Particle verbs — a separate mode with its own queue and its own
+            goal, so it gets its own entry point and its own count rather
+            than a slice of the conjugation numbers above. */}
+        <Card className="shadow-lg border-2 border-accent/20">
+          <CardHeader className="text-center pb-3">
+            <CardTitle className="text-2xl flex items-center justify-center gap-2">
+              <Puzzle className="w-6 h-6 text-accent" />
+              Particle verbs
+            </CardTitle>
+            <CardDescription className="text-base">
+              {particleReviewsDue > 0
+                ? `${particleReviewsDue} due for review`
+                : particleCardsReady > 0
+                  ? 'New verbs ready to learn'
+                  : 'Unlocks as you learn the base verbs'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => navigate('/practice-particles')}
+              variant="secondary"
+              className="w-full py-6 text-lg font-semibold"
+              disabled={isLoading || settingsLoading || particleCardsReady === 0}
+            >
+              {particleCardsReady > 0 ? 'Practise particle verbs' : 'Nothing ready yet'}
+            </Button>
           </CardContent>
         </Card>
 

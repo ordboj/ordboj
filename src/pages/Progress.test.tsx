@@ -64,10 +64,17 @@ describe('Progress page - issue #129: mastery bar track contrast', () => {
   it("renders the mastery summary bar's track with a token that has real contrast against the card surface", async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
 
-    const track = await screen.findByRole('progressbar');
-    expect(track).toHaveClass('bg-muted-foreground');
-    expect(track).not.toHaveClass('bg-muted');
-    expect(track).not.toHaveClass('bg-secondary');
+    // The page carries more than one summary bar since particle mode got its
+    // own section (#245). Assert the contrast token on every track rather
+    // than narrowing the query to one of them: the #129 defect is a bar the
+    // learner cannot see, and that is just as bad on the second bar.
+    const tracks = await screen.findAllByRole('progressbar');
+    expect(tracks.length).toBeGreaterThan(0);
+    for (const track of tracks) {
+      expect(track).toHaveClass('bg-muted-foreground');
+      expect(track).not.toHaveClass('bg-muted');
+      expect(track).not.toHaveClass('bg-secondary');
+    }
   });
 });
 

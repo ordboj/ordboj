@@ -6,6 +6,7 @@ import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { PracticeCard } from '@/components/PracticeCard';
 import { useSrsProgress, type PracticeItem } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
+import { conjugationItemId } from '@/lib/itemIds';
 import { Grade, MAX_REQUEUES_PER_DAY, isEligibleForRequeue } from '@/lib/srs';
 import { getVerbs, conjugateVerb, type Form } from '@/lib/verbs';
 
@@ -90,7 +91,7 @@ export default function Practice() {
       const conjugated = await conjugateVerb(verb.infinitive);
       for (const form of PRACTICE_FORMS) {
         if (conjugated[form] === '(not available)' || !conjugated[form]) continue;
-        const itemId = `${verb.id}-${form}`;
+        const itemId = conjugationItemId(verb.id, form);
         const state = srsStates[itemId];
         if (!state || state.dueAt <= now) continue;
         candidates.push({
