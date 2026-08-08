@@ -12,15 +12,22 @@ export interface SrsState {
 // six-point grader that never existed in this app; narrowed here to the
 // two literal values actually produced. See
 // docs/learning/lapse-handling.md for the decision and rationale
-// (learning-designer). A third value for hinted answers is proposed there
-// but requires a frontend-owned change to the onAnswer payload and is
-// tracked as a separate piece of work.
+// (learning-designer). Hint usage is a separate, orthogonal signal (see
+// `AnswerResult` in PracticeCard.tsx) carried as its own `hintsUsed`
+// parameter on `calculateNextReview` rather than a third Grade value, so
+// Grade keeps meaning exactly "was the final answer correct."
 export type Grade = 0 | 5; // 0 = wrong, 5 = correct
 
 const EASE_CEILING = 2.8;
 const EASE_FLOOR = 1.3;
 const EASE_DELTA_CORRECT = 0.05;
 const EASE_DELTA_WRONG = -0.2;
+// Hinted-but-correct: docs/learning/lapse-handling.md's grading table. A
+// hint reveal means the answer wasn't a clean, unaided retrieval, but it
+// also wasn't a failure — halve the interval and take a small ease ding
+// instead of the full lapse reset.
+const EASE_DELTA_HINTED = -0.05;
+const HINTED_INTERVAL_MULTIPLIER = 0.5;
 
 // Hard ceiling on any single interval. Even at the 2.8 ease ceiling an
 // item's schedule cannot leave the app's one-year horizon.
@@ -35,13 +42,21 @@ export const MAX_INTERVAL_DAYS = 365;
 // without bound. Flat -0.20/+0.05 deltas, floored at 1.3 and now also
 // ceilinged at 2.8, keep ease as a meaningful per-item difficulty signal
 // without either failure mode.
-export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
+// `hintsUsed` defaults to 0 so every existing call site (grade-only) keeps
+// its original behavior unchanged. A caller reporting `grade === 5` with
+// `hintsUsed > 0` gets the hinted-but-correct branch below instead of the
+// full-credit branch; see docs/learning/lapse-handling.md for the constants
+// and rationale (learning-designer, issue #30).
+export function calculateNextReview(
+  state: SrsState,
+  grade: Grade,
+  hintsUsed: number = 0,
+): SrsState {
   let { repetitions, intervalDays, easeFactor } = state;
 
-  // Exact match, not >= 3: Grade is 0 | 5 today, and a future hinted
-  // grade must force an explicit branch here rather than silently
-  // counting as correct.
+  // Exact match, not >= 3: Grade is 0 | 5 today.
   const isCorrect = grade === 5;
+  const isHinted = isCorrect && hintsUsed > 0;
 
   if (!isCorrect) {
     // Lapse: flat penalty, reset progress. No longer runs the SM-2 formula
@@ -49,6 +64,13 @@ export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
     easeFactor = Math.max(EASE_FLOOR, easeFactor + EASE_DELTA_WRONG);
     repetitions = 0;
     intervalDays = 1;
+  } else if (isHinted) {
+    // Hinted-but-correct: neither a lapse nor a clean recall. Ease takes a
+    // small ding, the interval is halved (floored at 1 day so a fresh item
+    // at intervalDays 0 still comes back tomorrow), and repetitions is left
+    // untouched per the lapse-handling doc's table.
+    easeFactor = Math.max(EASE_FLOOR, easeFactor + EASE_DELTA_HINTED);
+    intervalDays = Math.max(1, Math.round(intervalDays * HINTED_INTERVAL_MULTIPLIER));
   } else {
     // Success: small capped reward. The ceiling is what stops runaway ease
     // growth on a long correct streak (previously uncapped).
