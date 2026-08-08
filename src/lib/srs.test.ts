@@ -3,6 +3,7 @@ import {
   calculateNextReview,
   initializeSrsState,
   isDue,
+  isSrsState,
   MAX_INTERVAL_DAYS,
   type SrsState,
   type Grade,
@@ -321,5 +322,78 @@ describe('isDue - month and DST boundaries (Europe/Stockholm)', () => {
 
     const startOfNextDay = new Date(2026, 9, 26, 0, 0, 0, 0).getTime();
     expect(isDue(next, startOfNextDay)).toBe(true);
+  });
+});
+
+// isSrsState is the structural gate for issue #135 ("Import Progress accepts
+// any JSON and overwrites the store unvalidated"): it is the only thing
+// standing between an arbitrary imported file and the live progress store.
+// These pin its shape contract directly so a future edit to the validator
+// is caught here, not discovered as a silently-accepted bad import.
+describe('isSrsState', () => {
+  it('accepts a well-formed state produced by initializeSrsState', () => {
+    expect(isSrsState(initializeSrsState('1-presens'))).toBe(true);
+  });
+
+  it('accepts a well-formed state with the optional lastGrade present', () => {
+    const state: SrsState = { ...initializeSrsState('1-presens'), lastGrade: 5 };
+    expect(isSrsState(state)).toBe(true);
+  });
+
+  it('rejects null and non-object primitives', () => {
+    expect(isSrsState(null)).toBe(false);
+    expect(isSrsState(undefined)).toBe(false);
+    expect(isSrsState('a string')).toBe(false);
+    expect(isSrsState(42)).toBe(false);
+  });
+
+  it('rejects an array even though typeof [] === "object"', () => {
+    expect(isSrsState([])).toBe(false);
+  });
+
+  it('rejects an object shaped like a settings export, not an SrsState', () => {
+    // The concrete false-positive this validator exists to prevent: issue
+    // #135 names a settings export as the kind of file that must not be
+    // accepted as a progress backup.
+    expect(isSrsState({ theme: 'dark', dailyGoal: 20, soundEnabled: true })).toBe(false);
+  });
+
+  it('rejects a state missing itemId', () => {
+    const { itemId: _itemId, ...rest } = initializeSrsState('1-presens');
+    expect(isSrsState(rest)).toBe(false);
+  });
+
+  it('rejects an empty-string itemId', () => {
+    expect(isSrsState({ ...initializeSrsState('1-presens'), itemId: '' })).toBe(false);
+  });
+
+  it('rejects a non-integer repetitions value', () => {
+    expect(isSrsState({ ...initializeSrsState('1-presens'), repetitions: 1.5 })).toBe(false);
+  });
+
+  it('rejects a negative repetitions value', () => {
+    expect(isSrsState({ ...initializeSrsState('1-presens'), repetitions: -1 })).toBe(false);
+  });
+
+  it('rejects a negative intervalDays value', () => {
+    expect(isSrsState({ ...initializeSrsState('1-presens'), intervalDays: -1 })).toBe(false);
+  });
+
+  it('rejects a non-positive easeFactor (zero and negative)', () => {
+    expect(isSrsState({ ...initializeSrsState('1-presens'), easeFactor: 0 })).toBe(false);
+    expect(isSrsState({ ...initializeSrsState('1-presens'), easeFactor: -2.5 })).toBe(false);
+  });
+
+  it('rejects a non-finite dueAt (NaN, Infinity)', () => {
+    expect(isSrsState({ ...initializeSrsState('1-presens'), dueAt: NaN })).toBe(false);
+    expect(isSrsState({ ...initializeSrsState('1-presens'), dueAt: Infinity })).toBe(false);
+  });
+
+  it('rejects a state whose itemId is the wrong type (number instead of string)', () => {
+    expect(isSrsState({ ...initializeSrsState('1-presens'), itemId: 1 })).toBe(false);
+  });
+
+  it('rejects a non-finite lastGrade when the field is present', () => {
+    expect(isSrsState({ ...initializeSrsState('1-presens'), lastGrade: NaN })).toBe(false);
   });
 });
