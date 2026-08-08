@@ -20,8 +20,10 @@ Nothing in this design starts before two open tickets close, in this order:
    an id remap is corrupted by that remap. No Worker deploys and no upload
    code merges while #8 is open.
 2. **#251 whole-app envelope with validated import.** The cloud blob's
-   plaintext is exactly the byte output of the #251 export path. #251
-   consolidated #10 and #20; #7 (SRS envelope v2) already landed.
+   plaintext is exactly the byte output of the #251 export path. #10
+   (import validation) landed on its own; #20 was closed as not planned and
+   #251 supersedes it; #7 (SRS envelope v2) already landed. Note that the
+   snapshot half of #20 is not carried by #251.
 
 #24 (CSP) is closed. The CSP lives in `index.html:22` as a meta tag with
 `connect-src 'self'`. The Worker origin is added to that directive in the
@@ -34,7 +36,7 @@ same PR that ships the upload code, not before (section 6).
   (`useSrsProgress.ts:305-307`) returns the SRS store only, as a
   `{version: 2, items}` envelope. #251 widens this to the whole app.
 - Import validates structurally and rejects garbage without touching state
-  (`parseImportedProgress`, `useSrsProgress.ts:86-153`). Restore from cloud
+  (`parseImportedProgress`, `useSrsProgress.ts:97-151`). Restore from cloud
   reuses this path unchanged.
 - The settings store is versioned as of #240; the SRS store is versioned
   (`STORAGE_VERSION = 2`). Both migrate on read. A restored old backup goes
@@ -65,6 +67,12 @@ same PR that ships the upload code, not before (section 6).
   enumerates its keys explicitly and must NOT include
   `ordboj-recovery-phrase`. The phrase is a device-local credential;
   restoring an old backup must never overwrite the current phrase.
+- **Restore onto a device with no phrase:** the envelope carries the
+  settings store but not the phrase. After a restore on a fresh browser
+  `cloudBackupEnabled` can be true with no `ordboj-recovery-phrase` present.
+  In that state the auto-backup timer must not run and must not generate a
+  phrase; Settings shows "Cloud backup is off on this device — enter or
+  create a recovery phrase to turn it back on."
 - **Rotation:** generate a new phrase, upload under the new key, then
   `DELETE` the old key. No re-keying of an existing blob.
 
@@ -82,9 +90,9 @@ Derivations from the normalized UTF-8 phrase:
   encryption key from the KV key.
 - **Plaintext** = the #251 export JSON (compact, not pretty-printed),
   gzip-compressed with the native `CompressionStream('gzip')`. If
-  `CompressionStream` is undefined (pre-16.4 Safari), the cloud backup
-  section renders as "not supported in this browser" and local export
-  remains. No uncompressed fallback path ships.
+  `CompressionStream` or `DecompressionStream` is undefined (pre-16.4
+  Safari), the cloud backup section renders as "not supported in this
+  browser" and local export remains. No uncompressed fallback path ships.
 - **Blob layout** (binary, total overhead 33 bytes):
   bytes 0–3 magic `OBK1` · byte 4 flags (bit 0 = gzip, always 1 today) ·
   bytes 5–20 salt (16) · bytes 21–32 IV (12, fresh random per upload) ·
@@ -112,9 +120,16 @@ namespace binding `ORDBOJ_BACKUPS`.
   full future table (~1,537 verbs plus particle items, call it 2,000 SRS
   entries) is under 400 KB as compact JSON and under 50 KB after gzip —
   more than 20× margin.
-- **Rate limit:** Workers Rate Limiting binding, `{limit: 3, period: 60}`
-  per client IP per method. Legitimate use is at most a handful of requests
-  per day; 3/minute blocks bulk abuse without a user table.
+- **Rate limit:** Workers Rate Limiting binding, split by method to fit the
+  KV free tier's 1,000 writes/day. `GET`/`DELETE` `{limit: 10, period: 60}`
+  per client IP. `PUT` `{limit: 2, period: 3600}` per client IP — at most 48
+  writes/day from one IP, so roughly 20 hostile IPs are needed to reach the
+  free write quota instead of one. `PUT` to a key with no existing blob is
+  additionally limited to 1 per hour per IP, so creating new blobs is far
+  more expensive than refreshing an existing one. Residual risk: a
+  distributed attacker across many IPs can still exhaust the shared free
+  write quota; the failure mode is a failed upload, and the local copy is
+  untouched.
 - **CORS:** allowlist from an `ALLOWED_ORIGINS` env var — the production
   site origin plus `http://localhost:8080` for dev. `devops` fills the
   production origin at deploy time. OPTIONS preflight allows
@@ -143,12 +158,16 @@ New module `src/lib/backup/` (wordlist, crypto, upload/restore client).
   No retry loop; the outcome (`lastCloudBackupAt`, last result) is recorded
   in the settings store and shown only in Settings as "Last cloud backup:
   …" / "Last attempt failed". No toast, no banner, no blocking UI anywhere
-  in the practice flow.
+  in the practice flow. The settings store is versioned (#240). Adding
+  `cloudBackupEnabled`, `lastCloudBackupAt` and `lastCloudBackupResult` is a
+  stored-data-shape change: it needs a settings-store version bump with a
+  forward migration that defaults the new fields, and the human's approval
+  before merge, per CLAUDE.md.
 - **Restore is explicit only.** User types the phrase → GET → decrypt →
-  gunzip → the #251 import path (validation, migration-on-read, one-slot
-  pre-import snapshot). Before applying, show a confirmation with the
-  backup's `exportedAt` and item count. A restore never runs automatically,
-  not even on first launch.
+  gunzip → the #251 import path (validation, migration-on-read). Before
+  applying, show a confirmation with the backup's `exportedAt` and item
+  count. A restore never runs automatically, not even on first launch. No
+  pre-import snapshot ships with this feature — see section 6.
 - **Last write wins.** No ETag, no `If-Match`, no conflict detection. Two
   devices sharing one phrase overwrite each other; the UI copy says so
   (section 8). Sync is a separate design review if it is ever wanted.
@@ -161,6 +180,7 @@ New module `src/lib/backup/` (wordlist, crypto, upload/restore client).
 | 2    | #251 merged (whole-app envelope + validated import, phrase key excluded)         |
 | 3    | Worker PR: `workers/backup/**` + deploy (`devops`), reviewed by `staff-engineer` |
 | 4    | Client PR: `src/lib/backup/**`, Settings UI, CSP `connect-src` + csp-meta test   |
+| 5    | Settings-store version bump: forward migration defaulting the three new fields   |
 
 The CSP edit in step 4 appends the deployed Worker origin (the
 `https://ordboj-backup.<subdomain>.workers.dev` URL, or a custom domain if
@@ -168,14 +188,22 @@ The CSP edit in step 4 appends the deployed Worker origin (the
 `staff-engineer`-owned; the csp-meta test update is `qa`-owned; both land in
 the same PR as the upload code so the placeholder never ships unused.
 
+A pre-import snapshot ("undo my restore") is out of scope for this feature.
+#20 proposed one and was closed NOT_PLANNED, and no ticket currently owns
+it. If a snapshot is wanted later, it needs its own decision note and
+ticket; this design does not gate on it and section 8's restore copy does
+not promise it.
+
 ## 7. Cost
 
-$0 at hobby scale, with margin measured, not hoped: Workers free tier
-100,000 requests/day and KV free tier 1,000 writes/day, 100,000 reads/day,
-1 GB storage against a workload of a few writes per day and one ~50 KB blob
-per user. If the Cloudflare free plan ever ends, the feature is removed and
-local export/import remains the backup story — that fallback is the deepest
-reason localStorage stays primary.
+$0 at hobby scale: Workers free tier 100,000 requests/day and KV free tier
+1,000 writes/day, 100,000 reads/day, 1 GB storage against a workload of a
+few writes per day and one ~50 KB blob per user. The per-IP `PUT` ceiling in
+section 4 is 48 writes/day, which is below the shared 1,000/day quota with
+room for roughly 20 IPs at that ceiling simultaneously; a single hostile IP
+can no longer exhaust the quota alone. If the Cloudflare free plan ever
+ends, the feature is removed and local export/import remains the backup
+story — that fallback is the deepest reason localStorage stays primary.
 
 ## 8. UI copy (exact strings, Settings only)
 
@@ -186,8 +214,7 @@ reason localStorage stays primary.
 - Auto-backup toggle description: "Backs up at most once per session. Your
   progress always stays on this device; the cloud copy is a spare."
 - Restore, blob found: "Backup from {date} with {n} items. Restoring
-  replaces the progress on this device. A snapshot of the current state is
-  kept for undo."
+  replaces the progress on this device. This cannot be undone."
 - Restore, 404: "No backup found for this phrase. Check the words and their
   order."
 - Restore, decrypt/format failure: "A backup was found but could not be
@@ -209,8 +236,11 @@ All strings are English UI copy; no Swedish is involved in this feature.
 - **Upload on pagehide** — unreliable over 64 KB and unnecessary given the
   once-per-session budget.
 - **ETag/conflict detection** — sync smuggled into a backup ticket.
-- **Turnstile/captcha on the Worker** — friction without accounts to
-  protect; the rate limit and the 2^256 keyspace carry the abuse load.
+- **Turnstile/captcha on the Worker** — rejected for now because the
+  tightened `PUT` budget in section 4 caps write abuse; the keyspace
+  protects reads only and gives no write-side protection. If the write
+  quota is ever exhausted in practice, Turnstile on `PUT` is the first
+  escalation.
 
 ## 10. Ownership and acceptance
 
@@ -237,3 +267,7 @@ Acceptance for `qa`, verbatim:
 6. `ordboj-recovery-phrase` never appears inside an exported envelope.
 7. The CSP `connect-src` lists exactly `'self'` plus the deployed Worker
    origin, and `csp-meta.test.ts` pins it.
+8. Restoring an envelope onto a fresh browser (no `ordboj-recovery-phrase`
+   present) leaves auto-backup off, generates no phrase, and shows the
+   "enter or create a recovery phrase" message, even if the restored
+   settings had `cloudBackupEnabled: true`.
