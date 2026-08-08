@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss from 'postcss';
-import tailwindcss from 'tailwindcss';
+// Tailwind 4 (epic #259/#69): the `tailwindcss` package is no longer a
+// PostCSS plugin; the real pipeline now runs through @tailwindcss/postcss.
+// Same compile-the-real-CSS approach, same assertions — only the plugin
+// invocation is migrated. tailwind.config.ts is still honored via the
+// `@config` directive inside src/index.css, so compiling src/index.css
+// still exercises the darkMode strategy from the JS config.
+import tailwindcss from '@tailwindcss/postcss';
 
 // Regression guard for issue #140 / PR #160.
 //
@@ -44,7 +50,7 @@ describe('dark mode: stripped palette, pinned class strategy (issue #140 / PR #1
     // utility (present in generated src/components/ui/** primitives such as
     // alert.tsx) into a media-query rule instead of a class selector.
     const css = readFileSync(indexCssPath, 'utf-8');
-    const result = await postcss([tailwindcss(tailwindConfigPath)]).process(css, {
+    const result = await postcss([tailwindcss()]).process(css, {
       from: indexCssPath,
     });
     expect(result.css).not.toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)/);

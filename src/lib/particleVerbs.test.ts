@@ -208,7 +208,7 @@ describe('cloze rendering', () => {
     // English, and where an implicit "find the particle" search would be
     // most tempting to get wrong.
     const seUt = findParticleVerb('pv:se-ut')!;
-    const rendered = renderCloze(seUt.examples[0]);
+    const rendered = renderCloze(seUt.examples[0]!);
     expect(rendered.answer).toBe('ut');
     expect(rendered.before).toEqual(['Du', 'ser', 'trött']);
   });
@@ -226,12 +226,12 @@ describe('cloze rendering', () => {
 describe('frame rotation', () => {
   it('rotates deterministically through the frames by repetition count', () => {
     const target = entry({ id: 'pv:ga-ut' });
-    expect(selectExample(target, 0).sv).toBe(target.examples[0].sv);
-    expect(selectExample(target, 1).sv).toBe(target.examples[1].sv);
-    expect(selectExample(target, 2).sv).toBe(target.examples[2].sv);
+    expect(selectExample(target, 0).sv).toBe(target.examples[0]!.sv);
+    expect(selectExample(target, 1).sv).toBe(target.examples[1]!.sv);
+    expect(selectExample(target, 2).sv).toBe(target.examples[2]!.sv);
     // Wraps rather than running off the end.
-    expect(selectExample(target, 3).sv).toBe(target.examples[0].sv);
-    expect(selectExample(target, 99).sv).toBe(target.examples[99 % 3].sv);
+    expect(selectExample(target, 3).sv).toBe(target.examples[0]!.sv);
+    expect(selectExample(target, 99).sv).toBe(target.examples[99 % 3]!.sv);
   });
 
   it('always returns a frame for every shipped entry at any repetition count', () => {

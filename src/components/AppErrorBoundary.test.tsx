@@ -146,7 +146,7 @@ describe('export progress action', () => {
 
       expect(ok).toBe(true);
       expect(createObjectURL).toHaveBeenCalledTimes(1);
-      const blob = createObjectURL.mock.calls[0][0] as Blob;
+      const blob = createObjectURL.mock.calls[0]![0] as Blob;
       expect(blob.type).toBe('application/json');
       expect(clickSpy).toHaveBeenCalledTimes(1);
 

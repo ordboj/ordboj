@@ -21,7 +21,7 @@ function extractCspContent(markup: string): string {
   if (!match) {
     throw new Error('No CSP <meta http-equiv="Content-Security-Policy"> tag found in index.html');
   }
-  return match[1];
+  return match[1]!;
 }
 
 describe('index.html Content-Security-Policy meta tag', () => {

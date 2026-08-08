@@ -128,15 +128,15 @@ describe('getVerbs - id scheme', () => {
     const verbs = await getVerbs();
     expect(verbs[0]).toEqual({
       id: '1',
-      infinitive: VERB_DATA[0].infinitive,
-      cefr: VERB_DATA[0].cefr,
+      infinitive: VERB_DATA[0]!.infinitive,
+      cefr: VERB_DATA[0]!.cefr,
     });
     expect(verbs[1]).toEqual({
       id: '2',
-      infinitive: VERB_DATA[1].infinitive,
-      cefr: VERB_DATA[1].cefr,
+      infinitive: VERB_DATA[1]!.infinitive,
+      cefr: VERB_DATA[1]!.cefr,
     });
-    expect(verbs[verbs.length - 1].id).toBe(String(VERB_DATA.length));
+    expect(verbs[verbs.length - 1]!.id).toBe(String(VERB_DATA.length));
   });
 
   // KNOWN ISSUE (see CLAUDE.md "Known issues"): ids are positional, not
@@ -229,8 +229,8 @@ describe('generateVerbPattern - 4-slot pattern', () => {
 
     const blanks = pattern.patternParts.filter((p) => p.isMissing);
     expect(blanks).toHaveLength(1);
-    expect(blanks[0].form).toBe('presens');
-    expect(blanks[0].text).toBe('_____');
+    expect(blanks[0]!.form).toBe('presens');
+    expect(blanks[0]!.text).toBe('_____');
 
     expect(pattern.patternParts.find((p) => p.form === 'infinitive')?.text).toBe('vara');
     expect(pattern.patternParts.find((p) => p.form === 'preteritum')?.text).toBe('var');
