@@ -15,7 +15,15 @@ import {
 } from '@/lib/verbs';
 import { speakSwedish } from '@/lib/speech';
 import { ConfettiEffect } from './ConfettiEffect';
-import { Grade } from '@/lib/srs';
+
+// A hinted answer is not a perfect recall: the scheduler (srs-engine) needs
+// to know how many letters were revealed so it can apply a lighter,
+// halved-interval update instead of the full correct-answer ease bump.
+// See issue #30 / docs/learning/lapse-handling.md.
+export interface AnswerResult {
+  correct: boolean;
+  hintsUsed: number;
+}
 
 interface PracticeCardProps {
   infinitive: string;
@@ -24,7 +32,7 @@ interface PracticeCardProps {
   showExamples: boolean;
   autoplayAudio: boolean;
   muteAudio: boolean;
-  onAnswer: (grade: Grade) => void;
+  onAnswer: (result: AnswerResult) => void;
 }
 
 export function PracticeCard({
@@ -58,6 +66,10 @@ export function PracticeCard({
 
   const correctAnswer = conjugated?.[form] || '';
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
+  // Hints are capped below full reveal: a fully-spelled-out answer isn't a
+  // hint, it's the answer given away. floor(length/2) leaves at least half
+  // the letters for the learner to actually retrieve.
+  const maxHints = Math.floor(correctAnswer.length / 2);
 
   // Generate multiple choice options
 
@@ -108,7 +120,7 @@ export function PracticeCard({
   }, [userAnswer, showFeedback, correctAnswer]);
 
   const handleHint = () => {
-    if (revealedHints.length < correctAnswer.length) {
+    if (revealedHints.length < maxHints) {
       // Find indices not yet revealed
       const availableIndices = correctAnswer
         .split('')
@@ -146,9 +158,7 @@ export function PracticeCard({
   };
 
   const handleNext = () => {
-    // Calculate grade based on correctness
-    const grade: Grade = isCorrect ? 5 : 0;
-    onAnswer(grade);
+    onAnswer({ correct: isCorrect, hintsUsed: revealedHints.length });
   };
 
   const handlePronounce = () => {
@@ -246,7 +256,7 @@ export function PracticeCard({
                       onClick={handleHint}
                       variant="outline"
                       className="flex-1 py-6 text-lg"
-                      disabled={revealedHints.length >= correctAnswer.length}
+                      disabled={revealedHints.length >= maxHints}
                     >
                       💡 Hint
                     </Button>

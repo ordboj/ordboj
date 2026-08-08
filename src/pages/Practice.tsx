@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
-import { PracticeCard } from '@/components/PracticeCard';
+import { PracticeCard, type AnswerResult } from '@/components/PracticeCard';
 import { useSrsProgress, type PracticeItem } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { Grade } from '@/lib/srs';
@@ -30,8 +30,13 @@ export default function Practice() {
     loadDueItems();
   }, [isLoading, settingsLoading, getDueItems]);
 
-  const handleAnswer = (grade: Grade) => {
+  const handleAnswer = ({ correct, hintsUsed }: AnswerResult) => {
     const currentItem = dueItems[currentIndex];
+    // recordAnswer only accepts a binary Grade today; it does not yet have
+    // a halved-interval branch for hinted answers, so hintsUsed can't be
+    // forwarded to the scheduler until useSrsProgress/srs.ts (srs-engine)
+    // grow one. See issue #30.
+    const grade: Grade = correct ? 5 : 0;
     recordAnswer(currentItem.itemId, grade);
 
     if (currentIndex < dueItems.length - 1) {
