@@ -2,7 +2,7 @@ cefr levels,grammar,infinitive,imperativ,presens,preteritum,supinum
 A1,att,vara,var,är,var,varit
 A1,att,ha,ha,har,hade,haft
 A1,att,kunna,,kan,kunde,kunnat
-A1,att,unna,unna,unnar,unnade,unnat
+B2,att,unna,unna,unnar,unnade,unnat
 A1,att,få,,får,fick,fått
 A1,att,bli,bli,blir,blev,blivit
 A1,att,komma,kom,kommer,kom,kommit
@@ -17,7 +17,7 @@ A1,att,äga,,äger,ägde,ägt
 A1,att,betyda,,betyder,betydde,betytt
 A1,att,ge (formellt giva),,ger,gav,gett
 A1,att,skriva,,skriver,skrev,skrivit
-A1,att,te sig,,ter sig,tedde sig,tett sig
+C1,att,te sig,,ter sig,tedde sig,tett sig
 A1,att,riva,,river,rev,rivit
 A1,att,börja,,börjar,började,börjat
 A1,att,tro,,tror,trodde,trott
@@ -43,7 +43,7 @@ A1,att,öva,,övar,övade,övat
 A1,att,handla,,handlar,handlade,handlat
 A1,att,öka,,ökar,ökade,ökat
 A1,att,skapa,,skapar,skapade,skapat
-A1,att,kapa,,kapar,kapade,kapat
+B2,att,kapa,,kapar,kapade,kapat
 A1,att,gälla,,gäller,gällde,gällt
 A1,att,verka,,verkar,verkade,verkat
 A1,att,tala,,talar,talade,talat
