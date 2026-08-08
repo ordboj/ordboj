@@ -72,18 +72,19 @@ describe('caniuse-lite / browserslist data refreshed (issue #119)', () => {
   });
 });
 
-describe('Tailwind 4 explicitly deferred, with a documented reason (issue #119)', () => {
-  // Deliberately not asserting "tailwindcss stays on 3.x" here: that line in
-  // package.json is untouched by this PR (it was already ^3.4.17 at the
-  // merge-base), so a revert-to-merge-base check of it would pass on both
-  // pre- and post-fix code - vacuous per the fail-first rule. The
-  // deferral itself is pinned by the documented-reason check below, which
-  // *is* new in this diff.
-  it('postcss.config.js documents why the Tailwind 4 upgrade was deferred', () => {
-    expect(postcssConfig).toMatch(/tailwind 4/i);
-    expect(postcssConfig).toMatch(/deferr?ed/i);
-    // The note has to reference issue #119 specifically, not just say
-    // "later" - otherwise a future reader can't find the reasoning.
-    expect(postcssConfig).toMatch(/#119/);
+describe('Tailwind 4 active via @tailwindcss/postcss (issue #267)', () => {
+  // The Tailwind 4 upgrade that issue #119 deferred landed via epic #259 /
+  // issue #69 (see postcss.config.js). This pins the current, post-migration
+  // truth instead of the old deferral: v4's PostCSS plugin is
+  // @tailwindcss/postcss, declared as a real dependency and wired into the
+  // PostCSS pipeline, not the legacy `tailwindcss` v3 plugin entry.
+  it('package.json declares @tailwindcss/postcss on a 4.x range', () => {
+    const declared = packageJson.devDependencies['@tailwindcss/postcss'];
+    expect(declared, '@tailwindcss/postcss must be a declared dependency').toBeDefined();
+    expect(declared).toMatch(/^\^4\./);
+  });
+
+  it('postcss.config.js wires up @tailwindcss/postcss as a plugin', () => {
+    expect(postcssConfig).toMatch(/@tailwindcss\/postcss/);
   });
 });
