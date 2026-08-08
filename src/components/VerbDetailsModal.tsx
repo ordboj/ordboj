@@ -61,7 +61,15 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
                 <Volume2 className="w-5 h-5" />
               </Button>
             </div>
-            <Badge className={badge.color}>{badge.label}</Badge>
+            {/* Issue #227: outline hardcoded, not badge.variant. Badge defaults to
+                the `default` variant when none is passed, whose hover:bg-primary
+                opacity class clashes with badge.color's stage token on hover for
+                every non-New stage (the #313 regression). `outline` carries no
+                background or hover utility, so badge.color's stage bg and
+                foreground text classes are the only source of color. */}
+            <Badge variant="outline" className={badge.color}>
+              {badge.label}
+            </Badge>
           </DialogTitle>
         </DialogHeader>
 
