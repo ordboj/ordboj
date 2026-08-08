@@ -17,6 +17,11 @@ import { speakSwedish } from '@/lib/speech';
 import { ConfettiEffect } from './ConfettiEffect';
 import { Grade } from '@/lib/srs';
 
+// Fixed Swedish special-character row: always these three keys, in this
+// order, on every card regardless of the answer. Never derived from the
+// correct answer — see docs/learning/2026-08-08-ux-pedagogy-red-lines.md (P4, P11).
+const SWEDISH_SPECIAL_CHARS = ['å', 'ä', 'ö'];
+
 interface PracticeCardProps {
   infinitive: string;
   form: Form;
@@ -43,16 +48,11 @@ export function PracticeCard({
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
   const [conjugated, setConjugated] = useState<ConjugatedVerb | null>(null);
   const [pattern, setPattern] = useState<VerbPattern | null>(null);
-  const [shuffledLetters, setShuffledLetters] = useState<string[]>([]);
   const [options, setOptions] = useState<string[]>([]);
 
   // Load verb data
   useEffect(() => {
-    conjugateVerb(infinitive).then((result) => {
-      setConjugated(result);
-      const uniqueLetters = [...new Set(result[form].split(''))];
-      setShuffledLetters(uniqueLetters.sort(() => Math.random() - 0.5));
-    });
+    conjugateVerb(infinitive).then(setConjugated);
     generateVerbPattern(infinitive, form).then(setPattern);
   }, [infinitive, form]);
 
@@ -171,9 +171,9 @@ export function PracticeCard({
     }
   };
 
-  const handleLetterClick = (letter: string) => {
+  const handleSpecialCharClick = (char: string) => {
     if (!showFeedback) {
-      setUserAnswer((prev) => prev + letter);
+      setUserAnswer((prev) => prev + char);
     }
   };
 
@@ -222,14 +222,14 @@ export function PracticeCard({
                     autoFocus
                   />
                   <div className="flex flex-wrap justify-center gap-2">
-                    {shuffledLetters.map((letter, index) => (
+                    {SWEDISH_SPECIAL_CHARS.map((char) => (
                       <Button
-                        key={index}
-                        onClick={() => handleLetterClick(letter)}
+                        key={char}
+                        onClick={() => handleSpecialCharClick(char)}
                         variant="outline"
                         className="w-12 h-12 text-xl font-semibold"
                       >
-                        {letter}
+                        {char}
                       </Button>
                     ))}
                     <Button
