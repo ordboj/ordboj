@@ -1,10 +1,36 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createParticleProvider } from '@/lib/srsProviders';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
 import { verbs } from '@/lib/verbs';
 import { PARTICLE_VERB_DATA } from '@/data/particleVerbData';
 import { getVerifiedParticleVerbs } from '@/lib/particleVerbs';
 import type { SrsState } from '@/lib/srs';
+
+// #262 flipped every previously-drafted verified:false entry to verified:true
+// (their base verbs were appended to VERB_DATA), so the shipped
+// PARTICLE_VERB_DATA no longer contains an unverified entry to exercise the
+// "never enumerates an unverified entry" gate against. That gate is still a
+// real contract (src/lib/srsProviders.ts enumerates via
+// getVerifiedParticleVerbs(), which filters on `verified`), so this mocks
+// the content module — a boundary this suite does not own the correctness
+// of, not the module under test — to inject one unverified fixture entry
+// back in for the duration of this file only.
+vi.mock('@/data/particleVerbData', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/data/particleVerbData')>();
+  return {
+    ...actual,
+    PARTICLE_VERB_DATA: [
+      ...actual.PARTICLE_VERB_DATA,
+      {
+        ...actual.PARTICLE_VERB_DATA[0],
+        id: 'pv:test-unverified-fixture',
+        baseInfinitive: 'tycka',
+        verified: false,
+        unverifiedReason: 'test fixture for the enumeration-gate regression test',
+      },
+    ],
+  };
+});
 
 const NOW = new Date('2026-04-01T09:00:00.000Z').getTime();
 

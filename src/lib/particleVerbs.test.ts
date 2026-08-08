@@ -15,7 +15,7 @@ import {
   selectExample,
   type ReflexivePerson,
 } from '@/lib/particleVerbs';
-import { PARTICLE_VERB_DATA, type ParticleVerbData } from '@/data/particleVerbData';
+import { type ParticleVerbData } from '@/data/particleVerbData';
 
 function entry(overrides: Partial<ParticleVerbData> & { id: string }): ParticleVerbData {
   return {
@@ -276,9 +276,15 @@ describe('the four-form reference line', () => {
   });
 
   it('returns null rather than a guess when the base verb is not in VERB_DATA', () => {
-    const orphan = PARTICLE_VERB_DATA.find((candidate) => !candidate.verified);
-    expect(orphan).toBeDefined();
-    expect(getPhraseForms(orphan!)).toBeNull();
+    // Regression fixture for #262: previously this asserted against a real
+    // verified:false PARTICLE_VERB_DATA entry (its base was missing from
+    // VERB_DATA). #262 appended all six such bases to VERB_DATA and flipped
+    // their entries to verified:true, so no orphan remains in the shipped
+    // data. The contract getPhraseForms must uphold — never guess a form for
+    // an unresolvable base — still needs a fixture, so this constructs one
+    // directly with a baseInfinitive guaranteed absent from VERB_DATA.
+    const orphan = entry({ id: 'pv:test-orphan', baseInfinitive: 'zzznotarealverb' });
+    expect(getPhraseForms(orphan)).toBeNull();
   });
 
   it('produces a form line for every shipped entry', () => {
