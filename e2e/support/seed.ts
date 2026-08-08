@@ -43,6 +43,12 @@ export async function buildFullSeed(
   }
 
   for (const [itemId, patch] of Object.entries(overrides)) {
+    if (!states[itemId]) {
+      throw new Error(
+        `seed override "${itemId}" is not an item this build generates. ` +
+          'Item ids are `${verb.id}-${form}` and verb.id is the infinitive (issue #53).',
+      );
+    }
     states[itemId] = { ...states[itemId], ...patch, itemId };
   }
 
