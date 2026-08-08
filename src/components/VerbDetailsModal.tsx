@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Volume2 } from 'lucide-react';
 import { ConjugatedVerb, Form, getExampleSentence, getFormLabel } from '@/lib/verbs';
-import { SrsState } from '@/lib/srs';
+import { isDue, SrsState } from '@/lib/srs';
 import { speakSwedish } from '@/lib/speech';
 import { useSettings } from '@/hooks/useSettings';
 
@@ -16,7 +16,7 @@ interface VerbDetailsModalProps {
 
 export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDetailsModalProps) {
   const { settings } = useSettings();
-  
+
   const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
 
   const getStageBadge = (stage: number) => {
@@ -34,8 +34,8 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
     if (!state) return null;
 
     const nextReview = new Date(state.dueAt);
-    const isOverdue = nextReview.getTime() <= Date.now();
-    
+    const isOverdue = isDue(state);
+
     return {
       repetitions: state.repetitions,
       intervalDays: state.intervalDays,
@@ -56,11 +56,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-2xl">{verb.infinitive}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleSpeak(verb.infinitive)}
-              >
+              <Button variant="ghost" size="icon" onClick={() => handleSpeak(verb.infinitive)}>
                 <Volume2 className="w-5 h-5" />
               </Button>
             </div>
@@ -84,9 +80,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
           {/* Overall Progress */}
           <div className="border-t pt-4">
             <h3 className="font-semibold mb-2">Overall Progress</h3>
-            <p className="text-sm text-muted-foreground">
-              Average Stage: {srsStage} repetitions
-            </p>
+            <p className="text-sm text-muted-foreground">Average Stage: {srsStage} repetitions</p>
           </div>
 
           {/* Conjugations with SRS Info */}
@@ -96,7 +90,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
               {forms.map((form) => {
                 const formValue = verb[form];
                 const srsInfo = getFormSrsInfo(form);
-                
+
                 if (formValue === '(not available)' || !formValue) return null;
 
                 return (
@@ -115,7 +109,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
                       </div>
                       <p className="text-lg font-semibold text-primary">{formValue}</p>
                     </div>
-                    
+
                     {srsInfo && (
                       <div className="text-sm text-muted-foreground space-y-1">
                         <p>Repetitions: {srsInfo.repetitions}</p>
@@ -126,7 +120,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
                         <p>Ease Factor: {srsInfo.easeFactor}</p>
                       </div>
                     )}
-                    
+
                     {/* Example sentence */}
                     <div className="mt-2 pt-2 border-t">
                       <p className="text-sm italic text-muted-foreground">
