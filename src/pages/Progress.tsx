@@ -56,18 +56,18 @@ export default function Progress() {
 
   const getSrsStage = useCallback(
     (verbId: string): number => {
-    const forms = ['presens', 'preteritum', 'supinum', 'imperativ'];
-    let totalReps = 0;
-    let count = 0;
+      const forms = ['presens', 'preteritum', 'supinum', 'imperativ'];
+      let totalReps = 0;
+      let count = 0;
 
-    forms.forEach((form) => {
-      const itemId = `${verbId}-${form}`;
-      const state = srsStates[itemId];
-      if (state) {
-        totalReps += state.repetitions;
-        count++;
-      }
-    });
+      forms.forEach((form) => {
+        const itemId = `${verbId}-${form}`;
+        const state = srsStates[itemId];
+        if (state) {
+          totalReps += state.repetitions;
+          count++;
+        }
+      });
 
       return count > 0 ? Math.floor(totalReps / count) : 0;
     },
@@ -169,7 +169,7 @@ export default function Progress() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ProgressBar value={progressStats.percentage} className="h-4" />
+            <ProgressBar value={progressStats.percentage} className="h-4 bg-muted-foreground" />
           </CardContent>
         </Card>
 

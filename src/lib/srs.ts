@@ -63,14 +63,31 @@ export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
     }
   }
 
+  // intervalDays is always >= 1 here, so the item must never come due on
+  // the calendar day it was just answered. Plain now + N*24h breaks that
+  // on the 25-hour fall-back day: answered at 00:30 local, now + 24h is
+  // 23:30 of the *same* local day, which the end-of-day isDue boundary
+  // would serve again immediately, ratcheting the interval without a real
+  // day passing. Clamp to at least the start of the next local day.
+  const now = Date.now();
+  const dueAt = Math.max(now + intervalDays * 24 * 60 * 60 * 1000, startOfNextLocalDay(now));
+
   return {
     ...state,
     repetitions,
     intervalDays,
     easeFactor,
-    dueAt: Date.now() + intervalDays * 24 * 60 * 60 * 1000,
+    dueAt,
     lastGrade: grade,
   };
+}
+
+function startOfNextLocalDay(timestamp: number): number {
+  const d = new Date(timestamp);
+  // setHours(24, ...) rolls over to 00:00.000 of the next local calendar
+  // day; Date handles DST, so this is correct on 23- and 25-hour days.
+  d.setHours(24, 0, 0, 0);
+  return d.getTime();
 }
 
 // Initialize new SRS item
@@ -84,9 +101,65 @@ export function initializeSrsState(itemId: string): SrsState {
   };
 }
 
-// Check if item is due
-export function isDue(state: SrsState): boolean {
-  return state.dueAt <= Date.now();
+// "Due today" is decided at a local calendar-day boundary, not by exact
+// millisecond comparison against dueAt. `dueAt` is still an absolute
+// timestamp (`Date.now() + intervalDays*86400000`, clamped to the next
+// local midnight - see calculateNextReview above), so a review done at
+// 23:50 stores a dueAt of 23:50 the following day. Comparing that raw
+// timestamp against "now" makes an item invisible until the exact minute
+// it was reviewed on the day it's due, which starves same-day practice
+// sessions of items that are, for a day-granularity spaced-repetition
+// app, genuinely due today.
+//
+// Decision (learning-designer, docs/learning/new-vs-review-mix.md
+// "Interaction with the day boundary"): local timezone (the browser's,
+// via Date), boundary at the end of the local calendar day - an item is
+// due if `dueAt <= endOfLocalDay(now)`. Existing stored dueAt values are
+// not rewritten (per the acceptance criteria), so existing data stays
+// valid without a migration; only newly written dueAt values get the
+// midnight clamp.
+function endOfLocalDay(timestamp: number): number {
+  const d = new Date(timestamp);
+  d.setHours(23, 59, 59, 999);
+  return d.getTime();
+}
+
+// Check if item is due. `now` defaults to Date.now() but is accepted
+// explicitly so callers (and tests) can evaluate due-ness against a fixed
+// instant without relying on global clock mutation.
+export function isDue(state: SrsState, now: number = Date.now()): boolean {
+  return state.dueAt <= endOfLocalDay(now);
+}
+
+// In-session relearning queue policy (decision: docs/learning/lapse-handling.md,
+// "Decision" and "Interaction with the sitting cap"). A lapsed item re-enters
+// the current sitting rather than waiting until its normal `dueAt` (tomorrow
+// at the earliest); these two constants are the whole of that policy's
+// numbers. Queue insertion and per-item-per-day counting live in the sitting
+// itself (Practice.tsx, frontend-expert) and in useSrsProgress.ts; this
+// module owns only the pure threshold check so the policy has one source of
+// truth instead of drifting between files.
+
+// Minimum number of other items answered before a lapsed item may reappear
+// in the same sitting. Enough to clear working memory; small enough that the
+// correction still lands inside a 15-item sitting.
+export const REQUEUE_GAP_ITEMS = 3;
+
+// Cap on how many times a single item may be re-queued in one day, across
+// sittings. On the (cap+1)th lapse the item is left at its normal `dueAt`
+// (set by calculateNextReview, already tomorrow) instead of re-entering the
+// sitting again, so one intractable verb cannot trap the learner.
+export const MAX_REQUEUES_PER_DAY = 2;
+
+// Pure eligibility check: does a lapsed item qualify to be re-inserted into
+// the current sitting right now? `itemsSinceLapse` is the number of other
+// items answered since this item's most recent lapse this sitting;
+// `requeuesToday` is how many times this item has already been re-queued
+// today, across sittings. Callers own tracking those two numbers (they are
+// session/day bookkeeping, not part of the persisted SrsState); this
+// function only encodes the threshold.
+export function isEligibleForRequeue(itemsSinceLapse: number, requeuesToday: number): boolean {
+  return itemsSinceLapse >= REQUEUE_GAP_ITEMS && requeuesToday < MAX_REQUEUES_PER_DAY;
 }
 
 function isFiniteNumber(value: unknown): value is number {
