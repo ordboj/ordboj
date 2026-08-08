@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import {
   AppErrorBoundary,
   AppCrashFallback,
@@ -14,6 +14,16 @@ import {
 // catch path deterministically instead of relying on a real page crashing.
 function Boom(): never {
   throw new Error('boom: simulated render crash');
+}
+
+// Exposes the router's in-memory location as text so a test can assert
+// whether a click did or did not change it - the only reliable way to tell
+// a plain <a> (jsdom no-op, MemoryRouter never sees it) apart from a
+// react-router <Link> (calls history.push, MemoryRouter location changes)
+// when both render an identical href="/" in the DOM.
+function LocationDisplay() {
+  const location = useLocation();
+  return <div data-testid="location-display">{location.pathname}</div>;
 }
 
 // React logs a scary "The above error occurred" console.error for every
@@ -242,5 +252,31 @@ describe('RouteCrashFallback keeps the rest of the app navigable', () => {
 
     const reloadLink = screen.getByRole('link', { name: /reload from the start/i });
     expect(reloadLink).toHaveAttribute('href', '/');
+  });
+
+  // href="/" alone does not prove this is an escape hatch: a react-router
+  // <Link to="/"> renders the exact same anchor markup and attribute, so an
+  // href assertion cannot catch someone swapping the plain <a> for a
+  // <Link> (see #89). Clicking is the only thing that tells them apart: a
+  // <Link> calls history.push and moves the MemoryRouter's in-memory
+  // location, while a plain <a> is a jsdom no-op that the router never
+  // observes, so the location must stay put.
+  it('clicking "Reload from the start" does not change the in-memory router location (a Link would navigate; a plain anchor is a jsdom no-op)', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/practice']}>
+        <LocationDisplay />
+        <RouteErrorBoundary>
+          <Boom />
+        </RouteErrorBoundary>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('location-display')).toHaveTextContent('/practice');
+
+    const reloadLink = screen.getByRole('link', { name: /reload from the start/i });
+    await user.click(reloadLink);
+
+    expect(screen.getByTestId('location-display')).toHaveTextContent('/practice');
   });
 });
