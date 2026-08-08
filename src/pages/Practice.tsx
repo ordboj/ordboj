@@ -44,20 +44,28 @@ export default function Practice() {
   const [requeueMap, setRequeueMap] = useState<Record<string, RequeueEntry>>({});
   const [requeueDay, setRequeueDay] = useState(getLocalDayKey);
 
-  // getDueItems is rebuilt (new function identity) whenever srsStates
-  // changes, i.e. after every recordAnswer -- so it is not a stable effect
-  // dependency, and this effect re-fires far more often than "a sitting
-  // starts". hasLoadedRef confines the actual sitting setup (and its resets
-  // of currentIndex/completedItemIds/requeueMap) to the first time due
-  // items are available after mount, so mid-sitting answers cannot re-run
-  // it and snap the learner back to card one.
-  const hasLoadedRef = useRef(false);
-
+  // getDueItems is recreated every time srsStates changes (i.e. after every
+  // answer). Keep the latest reference in a ref so the load effect below can
+  // call it without depending on its identity, otherwise the deck would be
+  // recomputed and reshuffled mid-session while currentIndex still points
+  // into the old array, causing skipped/repeated cards.
+  const getDueItemsRef = useRef(getDueItems);
   useEffect(() => {
+    getDueItemsRef.current = getDueItems;
+  }, [getDueItems]);
+
+  // Load the deck exactly once per session (i.e. once per mount), when the
+  // underlying data first becomes available.
+  const deckLoadedRef = useRef(false);
+  useEffect(() => {
+    if (deckLoadedRef.current || isLoading || settingsLoading) {
+      return;
+    }
+    deckLoadedRef.current = true;
+
     const loadDueItems = async () => {
-      if (!isLoading && !settingsLoading && !hasLoadedRef.current) {
-        hasLoadedRef.current = true;
-        const items = await getDueItems();
+      try {
+        const items = await getDueItemsRef.current();
         setSessionItems(items);
         setQueue(items);
         setCurrentIndex(0);
@@ -67,10 +75,13 @@ export default function Practice() {
         if (items.length === 0) {
           setPracticeComplete(true);
         }
+      } catch (error) {
+        console.error('Failed to load due items for practice session', error);
+        setPracticeComplete(true);
       }
     };
     loadDueItems();
-  }, [isLoading, settingsLoading, getDueItems]);
+  }, [isLoading, settingsLoading]);
 
   const sessionItemIds = useMemo(
     () => new Set(sessionItems.map((item) => item.itemId)),

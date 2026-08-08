@@ -294,3 +294,58 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     }
   });
 });
+
+// Regression for #103: the deck must be fixed once at session start. The
+// mocked useSrsProgress hook below returns a brand-new `getDueItems`
+// closure on every render (exactly like the real hook, whose getDueItems is
+// recreated whenever srsStates changes) and `recordAnswer` mutates the
+// underlying due list the way a real answer does: the answered item stops
+// being due, so a fresh call to getDueItems() would no longer include it.
+// Before the fix, Practice.tsx's load effect depended on `getDueItems`
+// itself, so every post-answer re-render (a fresh getDueItems identity)
+// re-ran the effect and overwrote `dueItems` with the shrunken list while
+// `currentIndex` kept advancing into it -- skipping a card. This test walks
+// a full 3-card session and asserts every item is shown exactly once, in a
+// stable order, with the denominator never changing size mid-session.
+describe('Practice page - regression #103 (mid-session deck reshuffle)', () => {
+  it('keeps the deck fixed for the whole session: every item seen exactly once, none skipped or repeated', async () => {
+    mocks.dueItems = [
+      { verbId: '1', infinitive: 'vara', form: 'presens', itemId: '1-presens' },
+      { verbId: '1', infinitive: 'vara', form: 'preteritum', itemId: '1-preteritum' },
+      { verbId: '1', infinitive: 'vara', form: 'supinum', itemId: '1-supinum' },
+    ];
+
+    const answeredOrder: string[] = [];
+    mocks.recordAnswer.mockImplementation((itemId: string) => {
+      answeredOrder.push(itemId);
+      // Simulate the real SRS hook: once an item is answered its next
+      // review moves into the future, so it drops out of getDueItems().
+      mocks.dueItems = mocks.dueItems.filter((item) => item.itemId !== itemId);
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    const expectedAnswers = [
+      { itemId: '1-presens', answer: 'är' },
+      { itemId: '1-preteritum', answer: 'var' },
+      { itemId: '1-supinum', answer: 'varit' },
+    ];
+
+    for (let i = 0; i < expectedAnswers.length; i++) {
+      // The denominator must stay 3 for the whole session, on every card --
+      // this is exactly what the reshuffle bug breaks.
+      expect(await screen.findByText(`${i + 1} / 3`)).toBeInTheDocument();
+
+      const input = await screen.findByPlaceholderText('Type your answer...');
+      await user.type(input, expectedAnswers[i].answer);
+      expect(await screen.findByText('Correct!')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /next card/i }));
+    }
+
+    expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
+    expect(answeredOrder).toEqual(expectedAnswers.map((e) => e.itemId));
+    // No repeats, none skipped, all three seen exactly once.
+    expect(new Set(answeredOrder).size).toBe(3);
+  });
+});

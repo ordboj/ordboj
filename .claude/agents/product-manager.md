@@ -34,15 +34,15 @@ work to the team through the lead.
 
 ## The team you write for
 
-| Role | Asks them |
-|---|---|
+| Role                | Asks them                                             |
+| ------------------- | ----------------------------------------------------- |
 | `learning-designer` | Is this pedagogically sound? What are the parameters? |
-| `srs-engine` | Scheduling, progress data, storage migrations |
-| `swedish-linguist` | Verb data, Swedish correctness, CEFR levels |
-| `frontend-expert` | Pages, components, interaction, visual design |
-| `staff-engineer` | Architecture, app shell, data durability, feasibility |
-| `devops` | Build, CI, release, bundle budget |
-| `qa` | Test plans, regression risk, release sign-off |
+| `srs-engine`        | Scheduling, progress data, storage migrations         |
+| `swedish-linguist`  | Verb data, Swedish correctness, CEFR levels           |
+| `frontend-expert`   | Pages, components, interaction, visual design         |
+| `staff-engineer`    | Architecture, app shell, data durability, feasibility |
+| `devops`            | Build, CI, release, bundle budget                     |
+| `qa`                | Test plans, regression risk, release sign-off         |
 
 Pedagogy questions are not yours to answer: route them to
 `learning-designer` and reference their decision note. Your job is scope,
