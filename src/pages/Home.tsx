@@ -206,7 +206,7 @@ export default function Home() {
         {/* Stats & Settings */}
         <div className="grid grid-cols-2 gap-4">
           <Card
-            role="button"
+            role="link"
             tabIndex={0}
             className="cursor-pointer hover:shadow-lg transition-shadow focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             onClick={() => navigate('/progress')}
@@ -225,7 +225,7 @@ export default function Home() {
           </Card>
 
           <Card
-            role="button"
+            role="link"
             tabIndex={0}
             className="cursor-pointer hover:shadow-lg transition-shadow focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             onClick={() => navigate('/settings')}
