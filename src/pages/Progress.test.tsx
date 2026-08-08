@@ -8,8 +8,9 @@ import Progress from '@/pages/Progress';
 // (frontend-expert) with the real getAllConjugatedVerbs() lookup
 // (swedish-linguist). Only the two hooks are mocked here as boundaries this
 // suite does not own; the real VERB_DATA / conjugateVerb wiring is left
-// untouched so this exercises PR #199 / issue #112's cosmetic fixes (and
-// issue #132's overlapping em-dash fix) end-to-end against real data.
+// untouched so this exercises PR #199 / issue #112's cosmetic fixes,
+// issue #132's overlapping em-dash fix, and issue #113's responsive
+// mobile card list end-to-end against real data.
 vi.mock('@/hooks/useSrsProgress', () => ({
   useSrsProgress: () => ({
     srsStates: {},
@@ -18,17 +19,109 @@ vi.mock('@/hooks/useSrsProgress', () => ({
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
+    isLoading: false,
     settings: {
       practiceMode: 'typing',
       showExamples: false,
       autoplayAudio: false,
       muteAudio: true,
       dailyGoal: 20,
-      cefrLevels: ['A1'],
+      cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
     },
     updateSettings: vi.fn(),
   }),
 }));
+
+describe('Progress page - responsive table at 360px (#113)', () => {
+  it('renders a desktop table (hidden below sm) and a separate mobile card list (hidden at sm+) with the same verb data', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProviders(<Progress />, { route: '/progress' });
+
+    // Narrow to the one verb we can assert on precisely ("vara" is the only
+    // infinitive containing that substring in VERB_DATA).
+    const search = await screen.findByPlaceholderText('Search by verb...');
+    await user.type(search, 'vara');
+
+    // Desktop table: a real <table> row for "vara" with each conjugated form
+    // as its own cell.
+    const table = container.querySelector('table');
+    expect(table).not.toBeNull();
+    expect(table).toHaveTextContent('vara');
+    expect(table).toHaveTextContent('är');
+    expect(table).toHaveTextContent('varit');
+
+    // The table's Card ancestor must carry both "hidden" (default: not shown
+    // below sm) and "sm:block" (shown at sm+) - a 7-column table cannot stay
+    // readable at 360px width, so it must not be the layout used there.
+    const tableCard = table!.closest('.hidden');
+    expect(tableCard).not.toBeNull();
+    expect(tableCard!.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['hidden', 'sm:block']),
+    );
+
+    // Mobile card list: same verb's data rendered as a card, in a container
+    // hidden at sm+ (shown only below sm).
+    const mobileHeading = screen.getByText('vara', { selector: 'span.font-semibold' });
+    expect(mobileHeading).toBeInTheDocument();
+    const mobileContainer = mobileHeading.closest('.sm\\:hidden');
+    expect(mobileContainer).not.toBeNull();
+    expect(mobileContainer!.className.split(/\s+/)).toContain('sm:hidden');
+    expect(mobileContainer).toHaveTextContent('är');
+    expect(mobileContainer).toHaveTextContent('varit');
+
+    // Regression: before #113 there was only the table, so a 360px-wide
+    // screen had no readable alternative at all. Both layouts must coexist
+    // in the DOM (CSS breakpoints decide which is visible).
+    expect(tableCard).not.toBe(mobileContainer);
+  });
+
+  it('gives the results table a bounded, viewport-relative scroll height instead of a fixed 600px', async () => {
+    const { container } = renderWithProviders(<Progress />, { route: '/progress' });
+    await screen.findByPlaceholderText('Search by verb...');
+
+    // Regression: a bare h-[600px] ScrollArea does not shrink on short
+    // viewports (e.g. keyboard open), pushing content off-screen. The fix
+    // caps it at the smaller of 600px and 70% of the dynamic viewport
+    // height.
+    const scrollArea = container.querySelector('[class*="70dvh"]');
+    expect(scrollArea).not.toBeNull();
+    expect(scrollArea!.className).toContain('h-[min(600px,70dvh)]');
+
+    // The old unbounded fixed-height class must be gone, not just
+    // supplemented.
+    const oldFixedHeight = container.querySelector('.h-\\[600px\\]');
+    expect(oldFixedHeight).toBeNull();
+  });
+
+  it('gives the mobile card list a keyboard-operable role, tabIndex and Enter/Space handler that opens the verb modal', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Progress />, { route: '/progress' });
+
+    const search = await screen.findByPlaceholderText('Search by verb...');
+    await user.type(search, 'vara');
+
+    const mobileHeading = screen.getByText('vara', { selector: 'span.font-semibold' });
+    const mobileCard = mobileHeading.closest('.sm\\:hidden [role="button"]') as HTMLElement | null;
+    expect(mobileCard).not.toBeNull();
+    expect(mobileCard).toHaveAttribute('tabIndex', '0');
+
+    mobileCard!.focus();
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('offers a sort affordance below sm that is wired to the same sortBy/sortOrder state as the desktop table headers', async () => {
+    renderWithProviders(<Progress />, { route: '/progress' });
+    await screen.findByPlaceholderText('Search by verb...');
+
+    // Below sm the table headers (with their onClick sort handlers) are
+    // hidden along with the rest of the table, so the card list needs its
+    // own control wired to the same sort state - otherwise phone users lose
+    // sorting entirely.
+    const mobileSort = screen.getByLabelText(/sort verbs/i);
+    expect(mobileSort).toBeInTheDocument();
+  });
+});
 
 describe('Progress page - header emoji fix (AC #2, issue #112)', () => {
   it("renders the page title without the literal flag emoji or 'SE' text, using an icon instead", async () => {
@@ -87,11 +180,20 @@ describe('Progress page - Imperativ placeholder (AC #3, issue #112)', () => {
     renderWithProviders(<Progress />, { route: '/progress' });
 
     // "kunna" is a modal verb: VERB_DATA pins its imperativ as "" on
-    // purpose (no Swedish imperativ exists for modal verbs).
-    const infinitiveCell = await screen.findByText('kunna');
-    const row = infinitiveCell.closest('tr') as HTMLElement;
-    expect(within(row).getByText('—')).toBeInTheDocument();
-    expect(within(row).queryByText('(not available)')).not.toBeInTheDocument();
+    // purpose (no Swedish imperativ exists for modal verbs). getByText's
+    // default node-text matching only considers an element's own direct
+    // text-node children, so it matches the innermost <span lang="sv">, not
+    // the <td> around it; scoped to the desktop table's plain span
+    // (:not(.font-semibold)), not the mobile card list's identically-texted
+    // span (which (#113) renders the same infinitive concurrently in the
+    // DOM, styled with font-semibold).
+    const infinitiveCell = await screen.findByText('kunna', {
+      selector: 'span:not(.font-semibold)',
+    });
+    const row = infinitiveCell.closest('tr');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(within(row as HTMLElement).queryByText('(not available)')).not.toBeInTheDocument();
   });
 });
 
@@ -101,8 +203,9 @@ describe("Progress page - issue #132: no raw '(not available)' placeholder", () 
 
     // Wait for the async verb list to finish loading before asserting a
     // global negative, otherwise the assertion would trivially pass while
-    // the table is still empty.
-    await screen.findByText('kunna');
+    // the table is still empty. Scoped to the desktop table's span (see the
+    // AC #3 test above for why plain findByText('kunna') is ambiguous now).
+    await screen.findByText('kunna', { selector: 'span:not(.font-semibold)' });
     expect(screen.queryByText('(not available)')).not.toBeInTheDocument();
     expect(screen.queryByText(/not available/i)).not.toBeInTheDocument();
   });
@@ -110,10 +213,28 @@ describe("Progress page - issue #132: no raw '(not available)' placeholder", () 
   it('still renders a real imperativ form as plain text for a verb that has one', async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
 
-    const infinitiveCell = await screen.findByText('använda');
+    const infinitiveCell = await screen.findByText('använda', {
+      selector: 'span:not(.font-semibold)',
+    });
     const row = infinitiveCell.closest('tr');
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).getByText('använd')).toBeInTheDocument();
+  });
+
+  it('renders an em dash, not the raw literal string, for a verb with no imperativ in the mobile card list too', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Progress />, { route: '/progress' });
+
+    const search = await screen.findByPlaceholderText('Search by verb...');
+    await user.type(search, 'kunna');
+
+    const mobileHeading = screen.getByText('kunna', { selector: 'span.font-semibold' });
+    const mobileContainer = mobileHeading.closest('.sm\\:hidden');
+    expect(mobileContainer).not.toBeNull();
+    expect(within(mobileContainer as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(
+      within(mobileContainer as HTMLElement).queryByText('(not available)'),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -152,7 +273,12 @@ describe('Progress page - imperativNotApplicable flag hides imperativ regardless
     const { default: MockedProgress } = await import('@/pages/Progress');
     renderWithProviders(<MockedProgress />, { route: '/progress' });
 
-    const infinitiveCell = await screen.findByText('flagga-fixture');
+    // #113: scoped to the desktop table's span, since the mobile card list
+    // renders the same infinitive concurrently in the DOM (see the AC #3
+    // test above for why plain findByText is ambiguous now).
+    const infinitiveCell = await screen.findByText('flagga-fixture', {
+      selector: 'span:not(.font-semibold)',
+    });
     const row = infinitiveCell.closest('tr') as HTMLElement;
     // The row now also has an unrelated empty-grupp em-dash cell (main's
     // Progress.tsx change), rendered with its own sr-only "not available"
@@ -176,7 +302,10 @@ describe('Progress page - imperativNotApplicable flag hides imperativ regardless
 describe('Progress page - sortable column headers: aria-sort + keyboard (issue #110 AC)', () => {
   it('marks the default-sorted "Verb" column ascending via aria-sort; other headers stay unsorted', async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
-    await screen.findByText('kunna');
+    // #113: scoped to the desktop table's span, since the mobile card list
+    // renders the same infinitive concurrently in the DOM (see the AC #3
+    // test above for why plain findByText('kunna') is ambiguous now).
+    await screen.findByText('kunna', { selector: 'span:not(.font-semibold)' });
 
     const verbHeader = screen.getByRole('columnheader', { name: /verb/i });
     const difficultyHeader = screen.getByRole('columnheader', { name: /difficulty/i });
@@ -191,7 +320,10 @@ describe('Progress page - sortable column headers: aria-sort + keyboard (issue #
   it('reverses the verb row order and flips aria-sort when the "Verb" header is activated by keyboard Enter', async () => {
     const user = userEvent.setup();
     const { container } = renderWithProviders(<Progress />, { route: '/progress' });
-    await screen.findByText('kunna');
+    // #113: scoped to the desktop table's span, since the mobile card list
+    // renders the same infinitive concurrently in the DOM (see the AC #3
+    // test above for why plain findByText('kunna') is ambiguous now).
+    await screen.findByText('kunna', { selector: 'span:not(.font-semibold)' });
 
     const infinitivesOf = () =>
       Array.from(container.querySelectorAll('tbody tr td:first-child span[lang="sv"]')).map(
@@ -217,7 +349,10 @@ describe('Progress page - sortable column headers: aria-sort + keyboard (issue #
   it('switches sorting to the "Difficulty" column when it is activated by keyboard Space, and the "Verb" header goes back to unsorted', async () => {
     const user = userEvent.setup();
     renderWithProviders(<Progress />, { route: '/progress' });
-    await screen.findByText('kunna');
+    // #113: scoped to the desktop table's span, since the mobile card list
+    // renders the same infinitive concurrently in the DOM (see the AC #3
+    // test above for why plain findByText('kunna') is ambiguous now).
+    await screen.findByText('kunna', { selector: 'span:not(.font-semibold)' });
 
     const verbHeader = screen.getByRole('columnheader', { name: /verb/i });
     const difficultyHeader = screen.getByRole('columnheader', { name: /difficulty/i });
@@ -298,7 +433,10 @@ describe('Progress page - verb row opens the details modal by keyboard (issue #1
 describe('Progress page - table semantics survive the row-button a11y fix (regression, PR #308)', () => {
   it('still exposes real table row/cell semantics, not a row hijacked into role="button"', async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
-    await screen.findByText('kunna');
+    // #113: scoped to the desktop table's span, since the mobile card list
+    // renders the same infinitive concurrently in the DOM (see the AC #3
+    // test above for why plain findByText('kunna') is ambiguous now).
+    await screen.findByText('kunna', { selector: 'span:not(.font-semibold)' });
 
     const rows = screen.getAllByRole('row');
     // Header row + at least one data row.
@@ -320,7 +458,12 @@ describe("Progress page - lang='sv' on inline Swedish word display (AC #5, issue
   it("wraps the verb infinitive cell in a lang='sv' span", async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
 
-    const infinitiveCell = await screen.findByText('kunna');
+    // #113: scoped to the desktop table's span, since the mobile card list
+    // also wraps its infinitive in its own lang="sv" span (fact pinned
+    // separately by the "responsive table at 360px" suite above).
+    const infinitiveCell = await screen.findByText('kunna', {
+      selector: 'span:not(.font-semibold)',
+    });
     expect(infinitiveCell).toHaveAttribute('lang', 'sv');
   });
 });

@@ -186,6 +186,37 @@ describe('PracticeCard - typing mode', () => {
   });
 });
 
+describe('PracticeCard - mobile input attributes (#113)', () => {
+  it('sets enterkeyhint, disables autocapitalize/autocorrect/spellcheck, and keeps the caret visible', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+
+    // Mobile keyboards: "go" lets the on-screen keyboard submit the answer,
+    // and turning off capitalize/correct/spellcheck stops the OS from
+    // "fixing" Swedish words into English ones mid-entry.
+    expect(input).toHaveAttribute('enterkeyhint', 'go');
+    expect(input).toHaveAttribute('autocapitalize', 'off');
+    expect(input).toHaveAttribute('autocorrect', 'off');
+    expect(input).toHaveAttribute('spellcheck', 'false');
+
+    // Regression: caret-transparent hid the text caret entirely, which is
+    // fine on the on-screen keyboard (letter buttons) but leaves
+    // hardware-keyboard users with no visible insertion point at all.
+    expect(input.className.split(/\s+/)).not.toContain('caret-transparent');
+  });
+});
+
 describe("PracticeCard - wrong-answer feedback shows the learner's own input (#136)", () => {
   // Regression: the feedback screen used to reveal only the correct
   // conjugation on a wrong answer, never what the learner actually typed.
