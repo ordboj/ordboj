@@ -126,8 +126,10 @@ describe("Progress page - issue #132: no raw '(not available)' placeholder", () 
     renderWithProviders(<Progress />, { route: '/progress' });
 
     // "kunna" is a modal verb: VERB_DATA pins its imperativ as "" on
-    // purpose (no Swedish imperativ exists for modal verbs).
-    const infinitiveCell = await screen.findByText('kunna');
+    // purpose (no Swedish imperativ exists for modal verbs). Scoped to the
+    // <table> cell (selector: 'td'), not the mobile card list's span, which
+    // (#113) renders the same infinitive concurrently in the DOM.
+    const infinitiveCell = await screen.findByText('kunna', { selector: 'td' });
     const row = infinitiveCell.closest('tr');
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).getByText('—')).toBeInTheDocument();
@@ -140,7 +142,7 @@ describe("Progress page - issue #132: no raw '(not available)' placeholder", () 
     // Wait for the async verb list to finish loading before asserting a
     // global negative, otherwise the assertion would trivially pass while
     // the table is still empty.
-    await screen.findByText('kunna');
+    await screen.findByText('kunna', { selector: 'td' });
     expect(screen.queryByText('(not available)')).not.toBeInTheDocument();
     expect(screen.queryByText(/not available/i)).not.toBeInTheDocument();
   });
@@ -148,7 +150,7 @@ describe("Progress page - issue #132: no raw '(not available)' placeholder", () 
   it('still renders a real imperativ form as plain text for a verb that has one', async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
 
-    const infinitiveCell = await screen.findByText('använda');
+    const infinitiveCell = await screen.findByText('använda', { selector: 'td' });
     const row = infinitiveCell.closest('tr');
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).getByText('använd')).toBeInTheDocument();

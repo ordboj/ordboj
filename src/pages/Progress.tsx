@@ -285,16 +285,46 @@ export default function Progress() {
           </ScrollArea>
         </Card>
 
-        {/* Card list - below sm, a 7-column table can't stay readable at 360px width */}
+        {/* Card list - below sm, a 7-column table can't stay readable at 360px width.
+            The sort headers live in the (hidden-below-sm) table, so this is the
+            only sort affordance phone users have. */}
         <div className="sm:hidden space-y-3">
+          <div className="flex justify-end">
+            <Select
+              value={`${sortField}-${sortDirection}`}
+              onValueChange={(value) => {
+                const [field, direction] = value.split('-') as [SortField, SortDirection];
+                setSortField(field);
+                setSortDirection(direction);
+              }}
+            >
+              <SelectTrigger aria-label="Sort verbs" className="w-48">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="infinitive-asc">Verb A-Z</SelectItem>
+                <SelectItem value="infinitive-desc">Verb Z-A</SelectItem>
+                <SelectItem value="difficulty-asc">Difficulty (easy first)</SelectItem>
+                <SelectItem value="difficulty-desc">Difficulty (hard first)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {filteredAndSortedVerbs.map((verb) => {
             const stage = getSrsStage(verb.id);
             const badge = getStageBadge(stage);
             return (
               <Card
                 key={verb.id}
-                className="cursor-pointer active:bg-muted/50 transition-colors"
+                role="button"
+                tabIndex={0}
+                className="cursor-pointer active:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 onClick={() => setSelectedVerb(verb)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setSelectedVerb(verb);
+                  }
+                }}
               >
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between gap-2">
@@ -321,7 +351,11 @@ export default function Progress() {
                     </div>
                     <div>
                       <span className="font-medium text-foreground">Imperativ: </span>
-                      {verb.imperativ}
+                      {verb.imperativ === '(not available)' ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        verb.imperativ
+                      )}
                     </div>
                   </div>
                 </CardContent>

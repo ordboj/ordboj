@@ -45,7 +45,13 @@ test.describe('full loop: practice -> progress', () => {
     await expect(page).toHaveURL(/\/progress$/);
 
     await page.getByPlaceholder('Search by verb...').fill(VERB);
-    await page.getByRole('row', { name: new RegExp(`^${VERB}\\b`) }).click();
+    // Both projects in playwright.config.ts run at the 360x640 mobile
+    // viewport, where the Progress page hides its <table> (`hidden
+    // sm:block`, #113) in favor of a card list below sm. The desktop table
+    // row stays in the DOM but not visible/clickable at this width, so this
+    // opens the modal via the mobile card (role="button", same click
+    // semantics) rather than the table row.
+    await page.getByRole('button', { name: new RegExp(`^${VERB}\\b`) }).click();
 
     // The modal shows per-form SRS detail, in the fixed order
     // [presens, preteritum, supinum, imperativ] (VerbDetailsModal.tsx), so

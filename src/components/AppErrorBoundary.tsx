@@ -116,7 +116,7 @@ function ExportProgressButton({ className }: { className?: string }) {
  */
 export function AppCrashFallback({ reset }: { reset: () => void }) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background text-foreground">
+    <div className="min-h-dvh flex items-center justify-center p-6 bg-background text-foreground">
       <div className="w-full max-w-md space-y-4 text-center">
         <h1 className="text-2xl font-bold">Something went wrong</h1>
         <p className="text-muted-foreground">
@@ -153,7 +153,7 @@ export function AppCrashFallback({ reset }: { reset: () => void }) {
  */
 export function RouteCrashFallback({ reset }: { reset: () => void }) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background text-foreground">
+    <div className="min-h-dvh flex items-center justify-center p-6 bg-background text-foreground">
       <div className="w-full max-w-md space-y-4 text-center">
         <h1 className="text-2xl font-bold">This page hit a snag</h1>
         <p className="text-muted-foreground">
