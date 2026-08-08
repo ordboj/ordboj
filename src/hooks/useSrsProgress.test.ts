@@ -151,6 +151,42 @@ describe('recordAnswer', () => {
   });
 });
 
+describe('getDueItems identity stability (#128 regression)', () => {
+  // FIXED: getDueItems used to depend on `srsStates` directly, so every
+  // recordAnswer() call (which updates srsStates) produced a brand-new
+  // getDueItems function. Practice.tsx's queue-loading effect depends on
+  // getDueItems, so a changed identity re-ran it mid-session: the due-item
+  // queue was silently recomputed (re-filtered and re-shuffled) after every
+  // answer instead of being snapshotted once at session start, desyncing
+  // dueItems[currentIndex] from the card actually on screen and changing
+  // both the queue's length and order out from under the session (#128).
+  // getDueItems now reads srsStates through a ref, so its identity stays
+  // stable across grading and the effect that builds the session queue only
+  // runs once. Owner: srs-engine (src/hooks/useSrsProgress.ts).
+  it('keeps the same getDueItems function identity across recordAnswer calls', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const firstGetDueItems = result.current.getDueItems;
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+
+    expect(result.current.getDueItems).toBe(firstGetDueItems);
+
+    // A second, distinct answer must not change it either - this is the
+    // "2+ sequential answers" shape the regression actually manifested at.
+    act(() => {
+      result.current.recordAnswer('1-preteritum', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-preteritum'].repetitions).toBe(1));
+
+    expect(result.current.getDueItems).toBe(firstGetDueItems);
+  });
+});
+
 describe('getDueItems filtering', () => {
   it('respects the cefrLevels filter', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
