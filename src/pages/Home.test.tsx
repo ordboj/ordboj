@@ -30,6 +30,8 @@ vi.mock('react-router-dom', async () => {
 // frontend-expert owned and side-effect free in jsdom.
 const mocks = vi.hoisted(() => {
   return {
+    muteAudio: false,
+    updateSettings: vi.fn(),
     srsLoading: false,
     settingsLoading: false,
     cefrLevels: ['A1', 'A2'] as string[],
@@ -89,15 +91,17 @@ vi.mock('@/hooks/useSettings', () => ({
       practiceMode: 'typing',
       showExamples: false,
       autoplayAudio: false,
-      muteAudio: true,
+      muteAudio: mocks.muteAudio,
       dailyGoal: 20,
       cefrLevels: mocks.cefrLevels,
     },
-    updateSettings: vi.fn(),
+    updateSettings: mocks.updateSettings,
   }),
 }));
 
 beforeEach(() => {
+  mocks.muteAudio = false;
+  mocks.updateSettings.mockClear();
   navigateMock.mockClear();
   mocks.srsLoading = false;
   mocks.settingsLoading = false;
@@ -143,6 +147,35 @@ describe('Home - due-count DOM nesting (regression, issue #112 AC #1)', () => {
     expect(dueMessage.closest('p')).toBeNull();
 
     errorSpy.mockRestore();
+  });
+});
+
+// Issue #100 / PR #202: the icon-only mute toggle needs an accessible name
+// so a screen reader announces something other than "button".
+describe('Home - mute toggle accessibility', () => {
+  it('labels the toggle "Mute audio" when audio is currently unmuted', async () => {
+    renderWithProviders(<Home />);
+
+    expect(await screen.findByRole('button', { name: 'Mute audio' })).toBeInTheDocument();
+  });
+
+  it('labels the toggle "Unmute audio" when audio is currently muted', async () => {
+    mocks.muteAudio = true;
+    renderWithProviders(<Home />);
+
+    expect(await screen.findByRole('button', { name: 'Unmute audio' })).toBeInTheDocument();
+  });
+
+  it('toggles muteAudio in settings when clicked, and meets the 44px touch target', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Home />);
+
+    const toggle = await screen.findByRole('button', { name: 'Mute audio' });
+    expect(toggle.className).toMatch(/\bh-11\b/);
+    expect(toggle.className).toMatch(/\bw-11\b/);
+
+    await user.click(toggle);
+    expect(mocks.updateSettings).toHaveBeenCalledWith({ muteAudio: true });
   });
 });
 
@@ -223,10 +256,11 @@ describe('Home - keyboard access for the Progress/Settings stat cards (issue #11
 // before this fix.
 describe('Home - mute button touch target (issue #110 AC)', () => {
   it('renders the mute/unmute button at 44px (h-11 w-11) with an aria-label', async () => {
+    // Force the muted state so the accessible name is "Unmute audio" (see
+    // the ternary in Home.tsx); the default mocked muteAudio is false.
+    mocks.muteAudio = true;
     renderWithProviders(<Home />, { route: '/' });
 
-    // Mocked settings start with muteAudio: true, so the accessible name is
-    // "Unmute audio" (see the ternary in Home.tsx).
     const button = await screen.findByRole('button', { name: /^unmute audio$/i });
     expect(button).toHaveClass('h-11');
     expect(button).toHaveClass('w-11');

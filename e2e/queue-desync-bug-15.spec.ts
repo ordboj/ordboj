@@ -51,7 +51,10 @@ test.describe('regression #103: queue no longer desyncs after answering', () => 
     // 2-item queue is too short for its 3-item requeue gap to ever clear
     // this sitting, so the lapse stays pending and the sitting simply ends
     // once both cards have been shown).
-    await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
+    // exact: true - PracticeCard's on-screen keyboard delete key also has
+    // an accessible name containing "Back" ("Backspace"), so a substring
+    // match here would hit both and fail Playwright's strict-mode check.
+    await expect(page.getByRole('button', { name: 'Back', exact: true })).toBeVisible();
     await expect(page.getByText('1 / 2')).toBeVisible();
     const answerInput = page.getByPlaceholder('Type your answer...');
     await expect(answerInput).toBeVisible();
