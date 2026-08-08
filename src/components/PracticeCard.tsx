@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,6 +10,8 @@ import {
   generateVerbPattern,
   getFormLabel,
   getFormHint,
+  getAcceptedAnswers,
+  getAlternatesDisclosure,
   isAcceptedAnswer,
   type ConjugatedVerb,
   type VerbPattern,
@@ -59,6 +61,7 @@ export function PracticeCard({
 
   const correctAnswer = conjugated?.[form] || '';
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
+  const alternatesDisclosure = getAlternatesDisclosure(infinitive, form);
 
   // Generate multiple choice options
 
@@ -66,12 +69,24 @@ export function PracticeCard({
     const generateOptions = async () => {
       const opts = [correctAnswer];
       const allVerbs = ['vara', 'ha', 'gå', 'komma', 'skriva', 'läsa', 'säga', 'få'];
+      // Product policy P7: reject a distractor whose normalized value is
+      // accepted for THIS card at all (primary or alternate), not just a
+      // distractor that repeats a value already drawn — otherwise a
+      // documented alternate (e.g. "lade") could render as a second correct
+      // button alongside the primary ("la").
+      const acceptedForCard = getAcceptedAnswers(infinitive, form).map((accepted) =>
+        accepted.trim().toLowerCase(),
+      );
 
       while (opts.length < 4) {
         const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
         const randomConjugation = await conjugateVerb(randomVerb);
         const conjugatedForm = randomConjugation[form];
-        if (!opts.includes(conjugatedForm)) {
+        const normalizedCandidate = conjugatedForm.trim().toLowerCase();
+        const alreadyDrawn = opts.some(
+          (option) => option.trim().toLowerCase() === normalizedCandidate,
+        );
+        if (!alreadyDrawn && !acceptedForCard.includes(normalizedCandidate)) {
           opts.push(conjugatedForm);
         }
       }
@@ -82,30 +97,53 @@ export function PracticeCard({
     if (correctAnswer) {
       generateOptions();
     }
-  }, [correctAnswer, form]);
+  }, [correctAnswer, form, infinitive]);
 
-  const handleSubmit = (answer: string) => {
-    const correct = isAcceptedAnswer(infinitive, form, answer, correctAnswer);
-    setIsCorrect(correct);
-    setShowFeedback(true);
+  // Stable reference: referenced by the auto-submit effect below, which
+  // needs it in its dependency array to satisfy exhaustive-deps.
+  const handleSubmit = useCallback(
+    (answer: string) => {
+      const correct = isAcceptedAnswer(infinitive, form, answer);
+      setIsCorrect(correct);
+      setShowFeedback(true);
 
-    if (correct) {
-      setShowConfetti(true);
-      if (autoplayAudio) {
-        speakSwedish(correctAnswer, muteAudio);
+      if (correct) {
+        setShowConfetti(true);
+        if (autoplayAudio) {
+          speakSwedish(correctAnswer, muteAudio);
+        }
       }
-    }
-  };
+    },
+    [infinitive, form, correctAnswer, autoplayAudio, muteAudio],
+  );
 
-  // Auto-submit when answer is correct
+  // Auto-submit when the typed value matches an accepted answer — except
+  // product policy P4: suppress it while the normalized typed value is a
+  // strict prefix of another accepted answer for this card. The shipped data
+  // stores the short form as primary ("la", "sa"), so this can't be written
+  // as "primary waits, alternate fires" — it has to check the whole accepted
+  // set both ways. A learner who means the shorter form submits deliberately
+  // with Check Answer or Enter.
   useEffect(() => {
-    if (userAnswer && !showFeedback) {
-      const isAnswerCorrect = isAcceptedAnswer(infinitive, form, userAnswer, correctAnswer);
-      if (isAnswerCorrect) {
-        handleSubmit(userAnswer);
-      }
-    }
-  }, [userAnswer, showFeedback, correctAnswer]);
+    if (!userAnswer || showFeedback) return;
+
+    const normalized = userAnswer.trim().toLowerCase();
+    const normalizedAccepted = getAcceptedAnswers(infinitive, form).map((accepted) =>
+      accepted.trim().toLowerCase(),
+    );
+    const matchIndex = normalizedAccepted.indexOf(normalized);
+    if (matchIndex === -1) return;
+
+    const isPrefixOfAnotherAccepted = normalizedAccepted.some(
+      (candidate, index) =>
+        index !== matchIndex &&
+        candidate.length > normalized.length &&
+        candidate.startsWith(normalized),
+    );
+    if (isPrefixOfAnotherAccepted) return;
+
+    handleSubmit(userAnswer);
+  }, [userAnswer, showFeedback, infinitive, form, handleSubmit]);
 
   const handleHint = () => {
     if (revealedHints.length < correctAnswer.length) {
@@ -296,6 +334,10 @@ export function PracticeCard({
                   </>
                 )}
               </div>
+
+              {alternatesDisclosure && (
+                <p className="text-sm text-muted-foreground text-center">{alternatesDisclosure}</p>
+              )}
 
               <div className="space-y-4">
                 {/* Show full pattern with pronunciation buttons */}

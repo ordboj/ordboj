@@ -208,7 +208,33 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
   });
 
-  it('still accepts the primary form "la" for lägga preteritum (alternate support does not replace the primary)', async () => {
+  it('still accepts the primary form "la" for lägga preteritum via Check Answer (alternate support does not replace the primary)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="lägga"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'la');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+  });
+
+  // Product policy P4 (docs/product/2026-08-08-alternate-answers-decision.md):
+  // auto-submit is suppressed while the typed value is a strict prefix of
+  // another accepted answer for this card, so a learner who means the short
+  // form gets to submit it deliberately instead of being auto-graded on an
+  // intermediate keystroke of the long form.
+  it('suppresses auto-submit while "la" is a strict prefix of the accepted alternate "lade" (AC3)', async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <PracticeCard
@@ -225,7 +251,135 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'la');
 
+    expect(screen.queryByText('Correct!')).not.toBeInTheDocument();
+    expect(screen.queryByText('Not quite')).not.toBeInTheDocument();
+    expect(input).toHaveValue('la');
+  });
+
+  it('auto-submits once typing continues from "la" to the full alternate "lade" (AC4)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="lägga"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'lade');
+
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
+  });
+
+  it('regression: a single-answer card (tala preteritum, "talade") still auto-submits the instant the exact answer is typed (AC5)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="tala"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'talade');
+
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+  });
+
+  it('grades "LADE " (uppercase, trailing space) correct (AC6)', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="lägga"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    fireEvent.change(input, { target: { value: 'LADE ' } });
+
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+  });
+
+  it('grades "läde" incorrect: diacritics are not folded (AC7)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="lägga"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'läde');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    expect(await screen.findByText('Not quite')).toBeInTheDocument();
+  });
+
+  // Product policy P6: the feedback panel names the other accepted forms
+  // when a card's accepted set has more than one entry, and stays silent
+  // when it doesn't.
+  it('the feedback panel names "lade" as also accepted for lägga preteritum (AC10)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="lägga"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'la');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    expect(screen.getByText(/lade/)).toBeInTheDocument();
+  });
+
+  it('shows no alternates line on a single-answer card (tala preteritum) (AC10)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="tala"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'talade');
+    await screen.findByText('Correct!');
+
+    expect(screen.queryByText(/also correct/i)).not.toBeInTheDocument();
   });
 
   it('accepts the documented alternate "sade" for säga preteritum, ignoring case and surrounding whitespace', async () => {
@@ -295,6 +449,74 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
     await userEvent.setup().click(correctButton);
 
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
+  });
+
+  // Product policy P7: a multiple-choice distractor is rejected against the
+  // WHOLE accepted set (primary + alternates) for the card, not just against
+  // values already drawn — otherwise a distractor verb whose own primary
+  // form happens to equal this card's alternate would render as a second
+  // correct button. None of the 8-verb hardcoded distractor pool collides
+  // with "sade"/"lade" today, so this forces the collision with a mocked
+  // VERB_DATA (same pattern as the "ids unstable" test in verbs.test.ts) —
+  // otherwise P7 has no way to fail red before the fix.
+  it('never renders two multiple-choice options that are both in the accepted set (P7)', async () => {
+    vi.resetModules();
+    vi.doMock('@/data/verbData', async () => {
+      const actual = await vi.importActual<typeof import('@/data/verbData')>('@/data/verbData');
+      // "säga" is one of PracticeCard's 8 hardcoded distractor-pool verbs.
+      // Give it "sade" as its own (unrelated) primary preteritum, so it
+      // collides with the "sade-collision" card's documented alternate.
+      const withCollidingDistractor = actual.VERB_DATA.map((v) =>
+        v.infinitive === 'säga' ? { ...v, preteritum: 'sade', alternates: undefined } : v,
+      );
+      return {
+        ...actual,
+        VERB_DATA: [
+          ...withCollidingDistractor,
+          {
+            cefr: 'A1',
+            infinitive: 'sade-collision-fixture',
+            presens: 'x',
+            preteritum: 'sa',
+            supinum: 'y',
+            imperativ: 'z',
+            alternates: { preteritum: ['sade'] },
+          },
+        ],
+      };
+    });
+
+    const { PracticeCard: MockedPracticeCard } = await import('@/components/PracticeCard');
+    const { getAcceptedAnswers } = await import('@/lib/verbs');
+
+    renderWithProviders(
+      <MockedPracticeCard
+        infinitive="sade-collision-fixture"
+        form="preteritum"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button')).toHaveLength(4);
+    });
+
+    const accepted = getAcceptedAnswers('sade-collision-fixture', 'preteritum').map((a) =>
+      a.trim().toLowerCase(),
+    );
+    const optionTexts = screen
+      .getAllByRole('button')
+      .map((b) => (b.textContent ?? '').trim().toLowerCase());
+    const acceptedOptionsShown = optionTexts.filter((text) => accepted.includes(text));
+
+    expect(acceptedOptionsShown).toHaveLength(1);
+
+    vi.resetModules();
+    vi.doUnmock('@/data/verbData');
   });
 });
 

@@ -44,20 +44,44 @@ export function getAlternateForms(infinitive: string, form: Form): string[] {
   return verb?.alternates?.[form] ?? [];
 }
 
-// True if `answer` matches `primaryForm` or any documented alternate for
-// this verb + form, using the same case-insensitive, trimmed comparison the
-// UI already applies to the primary form. `primaryForm` is passed in rather
-// than looked up again so callers that already have a ConjugatedVerb (e.g.
-// PracticeCard's `correctAnswer`) don't need a second async lookup.
-export function isAcceptedAnswer(
-  infinitive: string,
-  form: Form,
-  answer: string,
-  primaryForm: string,
-): boolean {
+// Ordered accepted-answer list per product policy P1
+// (docs/product/2026-08-08-alternate-answers-decision.md): index 0 is always
+// the primary — the form the app displays, hints and pronounces — with any
+// documented alternates after it, and the list always has at least one
+// entry. Looks the primary up from VERB_DATA itself rather than trusting a
+// caller-supplied value, so it can't drift from what the data actually says.
+// An unknown verb or a form with no primary value (e.g. imperativ stored as
+// "" for a modal verb) falls back to the same "(not available)" sentinel
+// conjugateVerb already uses, so the accepted set always matches what's
+// actually displayed on the card.
+export function getAcceptedAnswers(infinitive: string, form: Form): string[] {
+  if (form === 'infinitive') return [infinitive];
+  const verb = VERB_DATA.find((v) => v.infinitive === infinitive);
+  const primary = verb?.[form] || '(not available)';
+  return [primary, ...(verb?.alternates?.[form] ?? [])];
+}
+
+// True if `answer` matches the primary form or any documented alternate for
+// this verb + form, case-insensitive and trimmed (product policy P2) — the
+// same normalization the UI already applied to the primary form alone.
+export function isAcceptedAnswer(infinitive: string, form: Form, answer: string): boolean {
   const normalized = answer.trim().toLowerCase();
-  const candidates = [primaryForm, ...getAlternateForms(infinitive, form)];
-  return candidates.some((candidate) => candidate.trim().toLowerCase() === normalized);
+  return getAcceptedAnswers(infinitive, form).some(
+    (candidate) => candidate.trim().toLowerCase() === normalized,
+  );
+}
+
+// Human-facing disclosure line for the feedback panel, per product policy P6:
+// when a card has more than one accepted answer, name the others so the
+// learner learns they're a pair rather than believing one is wrong. Returns
+// null when there's nothing to disclose (the common case). The wording here
+// is a placeholder pending swedish-linguist sign-off on P6's phrasing —
+// PracticeCard renders whatever string this returns and composes no Swedish
+// of its own.
+export function getAlternatesDisclosure(infinitive: string, form: Form): string | null {
+  const alternates = getAlternateForms(infinitive, form);
+  if (alternates.length === 0) return null;
+  return `Also correct: ${alternates.join(', ')}`;
 }
 
 // Get all conjugated verbs efficiently (no file reads needed!)
