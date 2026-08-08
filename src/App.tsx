@@ -6,15 +6,16 @@ import {
   AppCrashFallback,
   RouteCrashFallback,
   RouteChunk,
-  lazyRoute,
 } from '@/components/AppErrorBoundary';
+import { lazyRoute } from '@/lib/utils';
 
 // Route-level code splitting: each page (and its dependencies, e.g.
 // canvas-confetti pulled in by Practice) loads as a separate chunk on
 // first navigation instead of bloating the initial bundle. lazyRoute()
 // retries a failed chunk load with backoff before React.lazy() ever caches
-// a rejection - see AppErrorBoundary.tsx (RouteChunk/lazyRoute) for why a
-// bare `lazy(() => import(...))` cannot recover from that on its own.
+// a rejection - see src/lib/utils.ts (lazyRoute) and RouteChunk in
+// AppErrorBoundary.tsx for why a bare `lazy(() => import(...))` cannot
+// recover from that on its own.
 const Home = lazyRoute(() => import('./pages/Home'));
 const Practice = lazyRoute(() => import('./pages/Practice'));
 const PracticeParticles = lazyRoute(() => import('./pages/PracticeParticles'));
