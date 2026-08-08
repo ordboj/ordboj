@@ -435,4 +435,16 @@ describe('#300: zod/v4-mini schema checks', () => {
 
     expect(result.current.settings.cefrLevels).toEqual(DEFAULTS.cefrLevels);
   });
+
+  it('repairs a stored dailyGoal above Number.MAX_SAFE_INTEGER back to the default', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...DEFAULTS, dailyGoal: Number.MAX_SAFE_INTEGER + 2 }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.dailyGoal).toBe(20);
+  });
 });
