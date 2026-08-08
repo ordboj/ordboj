@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useSettings } from '@/hooks/useSettings';
+import { useSettings, SETTINGS_STORAGE_VERSION } from '@/hooks/useSettings';
 
 const STORAGE_KEY = 'swedish-verbs-settings';
 
@@ -10,6 +10,8 @@ const DEFAULTS = {
   autoplayAudio: true,
   muteAudio: false,
   dailyGoal: 20,
+  // Particle mode's own budget, stored independently of dailyGoal (#245).
+  particleDailyGoal: 12,
   cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
 };
 
@@ -36,7 +38,12 @@ describe('persistence', () => {
 
     await waitFor(() => expect(result.current.settings.dailyGoal).toBe(5));
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored).toEqual({ ...DEFAULTS, dailyGoal: 5 });
+    // Writes go out in the versioned envelope as of #240. Still an exact
+    // whole-payload comparison, so an unexpected extra key still fails.
+    expect(stored).toEqual({
+      version: SETTINGS_STORAGE_VERSION,
+      settings: { ...DEFAULTS, dailyGoal: 5 },
+    });
   });
 
   it('merges a partial update onto the previous settings rather than replacing them', async () => {
@@ -112,8 +119,139 @@ describe('issue #92: interfaceLanguage removal', () => {
     // that was already loaded rides along - it is not the app writing a new
     // interfaceLanguage decision, just an untouched legacy value.
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.dailyGoal).toBe(42);
+    expect(stored.settings.dailyGoal).toBe(42);
+    expect(stored.settings.interfaceLanguage).toBe('sv');
     expect(Object.keys(DEFAULTS)).not.toContain('interfaceLanguage');
+  });
+});
+
+describe('#240: settings store versioning', () => {
+  it('upgrades a legacy bare object to the versioned envelope on first write, losing nothing', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        practiceMode: 'multiple-choice',
+        showExamples: true,
+        autoplayAudio: false,
+        muteAudio: true,
+        dailyGoal: 33,
+        cefrLevels: ['A2', 'B1'],
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // Read of the legacy shape is unchanged: nothing is migrated on load.
+    expect(localStorage.getItem(STORAGE_KEY) as string).not.toContain('"version"');
+    expect(result.current.settings).toEqual({
+      practiceMode: 'multiple-choice',
+      showExamples: true,
+      autoplayAudio: false,
+      muteAudio: true,
+      dailyGoal: 33,
+      // Not in the stored object: a key added after this store was written
+      // arrives from the defaults, which is exactly what the merge is for.
+      particleDailyGoal: DEFAULTS.particleDailyGoal,
+      cefrLevels: ['A2', 'B1'],
+    });
+
+    act(() => {
+      result.current.updateSettings({ muteAudio: false });
+    });
+    await waitFor(() => expect(result.current.settings.muteAudio).toBe(false));
+
+    // Every pre-existing choice survives the upgrade; only the edited field
+    // changed and the version marker appeared.
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) as string)).toEqual({
+      version: SETTINGS_STORAGE_VERSION,
+      settings: {
+        practiceMode: 'multiple-choice',
+        showExamples: true,
+        autoplayAudio: false,
+        muteAudio: false,
+        dailyGoal: 33,
+        particleDailyGoal: DEFAULTS.particleDailyGoal,
+        cefrLevels: ['A2', 'B1'],
+      },
+    });
+  });
+
+  it('reads settings back out of the versioned envelope', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: SETTINGS_STORAGE_VERSION,
+        settings: { ...DEFAULTS, dailyGoal: 11, cefrLevels: ['C1'] },
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings).toEqual({ ...DEFAULTS, dailyGoal: 11, cefrLevels: ['C1'] });
+  });
+
+  it('round-trips: what updateSettings writes is what a fresh mount reads', async () => {
+    const first = renderHook(() => useSettings());
+    await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+    act(() => {
+      first.result.current.updateSettings({ dailyGoal: 8, showExamples: true });
+    });
+    await waitFor(() => expect(first.result.current.settings.dailyGoal).toBe(8));
+
+    const second = renderHook(() => useSettings());
+    await waitFor(() => expect(second.result.current.isLoading).toBe(false));
+    expect(second.result.current.settings).toEqual({
+      ...DEFAULTS,
+      dailyGoal: 8,
+      showExamples: true,
+    });
+  });
+
+  it('still applies the #137 empty-cefrLevels guard inside the envelope', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: SETTINGS_STORAGE_VERSION,
+        settings: { ...DEFAULTS, cefrLevels: [] },
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.cefrLevels).toEqual(DEFAULTS.cefrLevels);
+  });
+
+  it('reads what it can from an envelope written by a newer build rather than resetting', async () => {
+    // Preferences are cheap to re-pick, so a store from the future is read
+    // best-effort. (Progress does the opposite and refuses one outright —
+    // see useSrsProgress: a lost schedule cannot be re-picked from a menu.)
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: SETTINGS_STORAGE_VERSION + 99,
+        settings: { ...DEFAULTS, dailyGoal: 44, aSettingFromTheFuture: true },
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.dailyGoal).toBe(44);
+  });
+
+  it('falls back to defaults when the envelope has no usable settings object', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: SETTINGS_STORAGE_VERSION, settings: null }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings).toEqual(DEFAULTS);
   });
 });
 
@@ -152,6 +290,83 @@ describe('forward-compat: merging stored settings over defaults', () => {
   });
 });
 
+describe('issue #104: one shared store instead of a copy per caller', () => {
+  it('never lets two live consumers diverge: same object identity, and a write through either one is visible to both without clobbering the other', async () => {
+    // Progress.tsx and VerbDetailsModal.tsx used to each mount their own copy
+    // of this hook. This pins the fix: both calls to useSettings() must read
+    // the same underlying object, and a write issued through one consumer
+    // must not overwrite a field just written through the other.
+    const a = renderHook(() => useSettings());
+    const b = renderHook(() => useSettings());
+    await waitFor(() => expect(a.result.current.isLoading).toBe(false));
+    await waitFor(() => expect(b.result.current.isLoading).toBe(false));
+
+    expect(a.result.current.settings).toBe(b.result.current.settings);
+
+    act(() => {
+      a.result.current.updateSettings({ dailyGoal: 33 });
+    });
+    await waitFor(() => expect(b.result.current.settings.dailyGoal).toBe(33));
+    expect(a.result.current.settings).toBe(b.result.current.settings);
+
+    act(() => {
+      b.result.current.updateSettings({ muteAudio: true });
+    });
+    await waitFor(() => expect(a.result.current.settings.muteAudio).toBe(true));
+    // The write issued through b must not clobber the write already made
+    // through a - the exact #104 bug.
+    expect(a.result.current.settings.dailyGoal).toBe(33);
+
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) as string)).toEqual({
+      version: SETTINGS_STORAGE_VERSION,
+      settings: { ...DEFAULTS, dailyGoal: 33, muteAudio: true },
+    });
+  });
+
+  it('repairs a corrupt field without resetting the rest of the object or dropping unknown keys', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: SETTINGS_STORAGE_VERSION,
+        settings: {
+          practiceMode: 'interpretive-dance',
+          dailyGoal: 'lots',
+          showExamples: true,
+          cefrLevels: ['A2'],
+          keptUnknown: 'yes',
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // The two corrupt fields fall back to their defaults individually...
+    expect(result.current.settings.practiceMode).toBe('typing');
+    expect(result.current.settings.dailyGoal).toBe(20);
+    // ...while every field that did validate, and the unknown key, survive.
+    expect(result.current.settings.showExamples).toBe(true);
+    expect(result.current.settings.cefrLevels).toEqual(['A2']);
+    expect((result.current.settings as unknown as Record<string, unknown>).keptUnknown).toBe('yes');
+  });
+
+  it('drops its hydration flag on full unmount, so a fresh mount re-reads storage instead of trusting stale memory', async () => {
+    const first = renderHook(() => useSettings());
+    await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+
+    act(() => {
+      first.result.current.updateSettings({ dailyGoal: 7 });
+    });
+    await waitFor(() => expect(first.result.current.settings.dailyGoal).toBe(7));
+
+    first.unmount();
+
+    const second = renderHook(() => useSettings());
+    await waitFor(() => expect(second.result.current.isLoading).toBe(false));
+    expect(second.result.current.settings.dailyGoal).toBe(7);
+  });
+});
+
 describe('issue #137: coercing a stored empty cefrLevels', () => {
   it('restores DEFAULT_SETTINGS.cefrLevels when the stored object has cefrLevels: []', async () => {
     // Before the checkbox guard shipped, a user could reach this state and
@@ -172,5 +387,64 @@ describe('issue #137: coercing a stored empty cefrLevels', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.settings.cefrLevels).toEqual(['B1']);
+  });
+});
+
+describe('#300: zod/v4-mini schema checks', () => {
+  it('repairs a non-integer stored dailyGoal (1.5) back to the default', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, dailyGoal: 1.5 }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.dailyGoal).toBe(20);
+  });
+
+  it('repairs a non-positive stored dailyGoal (0) back to the default', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, dailyGoal: 0 }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.dailyGoal).toBe(20);
+  });
+
+  it('repairs a negative stored dailyGoal (-5) back to the default', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, dailyGoal: -5 }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.dailyGoal).toBe(20);
+  });
+
+  it('repairs a non-positive stored particleDailyGoal (0) back to the default', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, particleDailyGoal: 0 }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.particleDailyGoal).toBe(12);
+  });
+
+  it('repairs a stored cefrLevels array holding an empty string back to the default', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, cefrLevels: [''] }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.cefrLevels).toEqual(DEFAULTS.cefrLevels);
+  });
+
+  it('repairs a stored dailyGoal above Number.MAX_SAFE_INTEGER back to the default', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...DEFAULTS, dailyGoal: Number.MAX_SAFE_INTEGER + 2 }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.dailyGoal).toBe(20);
   });
 });

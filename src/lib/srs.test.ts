@@ -1,10 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+  averageMasteryStage,
   calculateNextReview,
+  getMasteryStageBadge,
   initializeSrsState,
+  INITIAL_EASE_FACTOR,
   isDue,
+  isEligibleForRequeue,
+  isPristineSrsState,
   isSrsState,
+  isStoredSrsState,
+  MASTERED_STAGE_THRESHOLD,
   MAX_INTERVAL_DAYS,
+  MAX_REQUEUES_PER_DAY,
+  REQUEUE_GAP_ITEMS,
   type SrsState,
   type Grade,
 } from '@/lib/srs';
@@ -146,7 +155,7 @@ describe('calculateNextReview - review-table regression (10+ reviews)', () => {
       { repetitions: 3, intervalDays: 16, easeFactor: 2.65 },
       { repetitions: 4, intervalDays: 43, easeFactor: 2.7 },
       { repetitions: 5, intervalDays: 118, easeFactor: 2.75 },
-      { repetitions: 6, intervalDays: 330, easeFactor: 2.8 }, // just under 2.8 by fp, still shows as 2.8 at this precision
+      { repetitions: 6, intervalDays: 330, easeFactor: 2.8 },
       { repetitions: 7, intervalDays: 365, easeFactor: 2.8 }, // ceiling reached; round(330*2.8)=924 clamped to MAX_INTERVAL_DAYS
       { repetitions: 8, intervalDays: 365, easeFactor: 2.8 }, // pinned at the interval ceiling
       { repetitions: 9, intervalDays: 365, easeFactor: 2.8 },
@@ -160,7 +169,11 @@ describe('calculateNextReview - review-table regression (10+ reviews)', () => {
         repetitions: row.repetitions,
         intervalDays: row.intervalDays,
       });
-      expect(state.easeFactor).toBeCloseTo(row.easeFactor, 5);
+      // Exact, not toBeCloseTo: roundEase rounds every stored ease to two
+      // decimals, so the persisted value is either exactly 2.6 or exactly
+      // 2.5999999999999996 (unrounded fp residue) - toBeCloseTo(...,5) can't
+      // tell those apart, which would let a broken roundEase pass silently.
+      expect(state.easeFactor).toBe(row.easeFactor);
       if (i >= 6) {
         expect(state.easeFactor).toBe(2.8);
       }
@@ -185,7 +198,7 @@ describe('calculateNextReview - review-table regression (10+ reviews)', () => {
     let state = initializeSrsState('x');
     grades.forEach((grade, i) => {
       state = calculateNextReview(state, grade);
-      const row = expected[i];
+      const row = expected[i]!;
       expect({ repetitions: state.repetitions, intervalDays: state.intervalDays }).toEqual({
         repetitions: row.repetitions,
         intervalDays: row.intervalDays,
@@ -234,6 +247,52 @@ describe('isDue', () => {
     expect(isDue(state)).toBe(false);
     vi.setSystemTime(FIXED_NOW + DAY_MS);
     expect(isDue(state)).toBe(true);
+  });
+});
+
+// docs/learning/lapse-handling.md, "Decision": same-sitting re-queue gap of
+// >= 3 intervening items, capped at 2 re-queues per item per day. These
+// constants are the whole of that policy's numbers; pinning them here means
+// any change to the policy has to be deliberate, in this file, not a silent
+// edit of a magic number in Practice.tsx.
+describe('requeue policy constants (docs/learning/lapse-handling.md)', () => {
+  it('pins the documented gap and daily cap', () => {
+    expect(REQUEUE_GAP_ITEMS).toBe(3);
+    expect(MAX_REQUEUES_PER_DAY).toBe(2);
+  });
+});
+
+describe('isEligibleForRequeue', () => {
+  it('is not eligible before the gap is reached, even with no prior requeues', () => {
+    expect(isEligibleForRequeue(0, 0)).toBe(false);
+    expect(isEligibleForRequeue(1, 0)).toBe(false);
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS - 1, 0)).toBe(false);
+  });
+
+  it('becomes eligible exactly at the gap boundary, not one item early', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, 0)).toBe(true);
+  });
+
+  it('stays eligible for any gap at or beyond the threshold', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS + 5, 0)).toBe(true);
+    expect(isEligibleForRequeue(100, 1)).toBe(true);
+  });
+
+  it('is still eligible one requeue below the daily cap', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, MAX_REQUEUES_PER_DAY - 1)).toBe(true);
+  });
+
+  it('is not eligible once the daily requeue cap is reached, however large the gap', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, MAX_REQUEUES_PER_DAY)).toBe(false);
+    expect(isEligibleForRequeue(1000, MAX_REQUEUES_PER_DAY)).toBe(false);
+    expect(isEligibleForRequeue(1000, MAX_REQUEUES_PER_DAY + 3)).toBe(false);
+  });
+
+  it('requires both conditions: gap alone or cap-room alone is not enough', () => {
+    // Gap satisfied but cap already spent.
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, MAX_REQUEUES_PER_DAY)).toBe(false);
+    // Cap room available but gap not yet reached.
+    expect(isEligibleForRequeue(0, 0)).toBe(false);
   });
 });
 
@@ -395,5 +454,173 @@ describe('isSrsState', () => {
 
   it('rejects a non-finite lastGrade when the field is present', () => {
     expect(isSrsState({ ...initializeSrsState('1-presens'), lastGrade: NaN })).toBe(false);
+  });
+});
+
+// isPristineSrsState is the #189 data-loss guard: storage version 3 only
+// persists items that fail this check (see the doc comment above the
+// implementation in lib/srs.ts). A false positive here silently drops a
+// learner's real schedule on the next save; a false negative bloats the
+// store with items that carry no history at all. Both directions are
+// pinned below field by field.
+describe('isPristineSrsState', () => {
+  const baseline = {
+    repetitions: 0,
+    intervalDays: 0,
+    easeFactor: INITIAL_EASE_FACTOR,
+    lastGrade: undefined,
+  };
+
+  it('is false for an untouched item scheduled ten years out - a real, non-derivable schedule', () => {
+    // This is the concrete case #189 exists to prevent: a state with no
+    // learning history can still carry a schedule (e.g. a deliberately
+    // deferred item), and re-deriving it from scratch would silently reset
+    // that schedule to "due now".
+    const tenYearsOut = FIXED_NOW + 10 * 365 * DAY_MS;
+    expect(isPristineSrsState({ ...baseline, dueAt: tenYearsOut }, FIXED_NOW)).toBe(false);
+  });
+
+  it('is true for the same untouched state once dueAt is at or before now', () => {
+    expect(isPristineSrsState({ ...baseline, dueAt: FIXED_NOW }, FIXED_NOW)).toBe(true);
+    expect(isPristineSrsState({ ...baseline, dueAt: FIXED_NOW - 1 }, FIXED_NOW)).toBe(true);
+  });
+
+  it('is false when repetitions is non-zero, all else pristine', () => {
+    expect(isPristineSrsState({ ...baseline, repetitions: 1, dueAt: FIXED_NOW }, FIXED_NOW)).toBe(
+      false,
+    );
+  });
+
+  it('is false when intervalDays is non-zero, all else pristine', () => {
+    expect(isPristineSrsState({ ...baseline, intervalDays: 1, dueAt: FIXED_NOW }, FIXED_NOW)).toBe(
+      false,
+    );
+  });
+
+  it('is false when easeFactor has moved off the initial value, all else pristine', () => {
+    expect(isPristineSrsState({ ...baseline, easeFactor: 2.4, dueAt: FIXED_NOW }, FIXED_NOW)).toBe(
+      false,
+    );
+  });
+
+  it('is false when lastGrade is present, all else pristine', () => {
+    expect(isPristineSrsState({ ...baseline, lastGrade: 0, dueAt: FIXED_NOW }, FIXED_NOW)).toBe(
+      false,
+    );
+  });
+
+  it('is false when the state carries an unknown extra field - unjudged history must not be pruned', () => {
+    expect(
+      isPristineSrsState(
+        { ...baseline, dueAt: FIXED_NOW, somethingUnrecognized: true } as unknown as SrsState,
+        FIXED_NOW,
+      ),
+    ).toBe(false);
+  });
+});
+
+// isStoredSrsState is the v3 flavour of isSrsState (see the doc comment
+// above the implementation): itemId is optional since v3 stores it only as
+// the map key, and dueAt is range-checked against a plausible-schedule
+// ceiling instead of merely required to be finite.
+describe('isStoredSrsState', () => {
+  const wellFormed = { repetitions: 0, intervalDays: 0, easeFactor: 2.5, dueAt: FIXED_NOW };
+
+  it('accepts a well-formed v3 item with no itemId field at all', () => {
+    expect(isStoredSrsState(wellFormed)).toBe(true);
+  });
+
+  it('rejects an empty-string itemId when the field is present', () => {
+    expect(isStoredSrsState({ ...wellFormed, itemId: '' })).toBe(false);
+  });
+
+  it('rejects a dueAt one millisecond past the plausible-schedule ceiling (year 2200)', () => {
+    expect(isStoredSrsState({ ...wellFormed, dueAt: Date.UTC(2200, 0, 1) + 1 })).toBe(false);
+  });
+
+  it('rejects a negative dueAt', () => {
+    expect(isStoredSrsState({ ...wellFormed, dueAt: -1 })).toBe(false);
+  });
+
+  it('rejects a non-integer repetitions value', () => {
+    expect(isStoredSrsState({ ...wellFormed, repetitions: 1.5 })).toBe(false);
+  });
+
+  it('accepts a well-formed v3 item that does carry a non-empty itemId (a re-exported v1/v2 backup)', () => {
+    expect(isStoredSrsState({ ...wellFormed, itemId: '1-presens' })).toBe(true);
+  });
+});
+
+// getMasteryStageBadge buckets a repetitions count into the label shown on
+// the Progress page and in VerbDetailsModal (#108). The boundaries below are
+// the pedagogy decision documented in lib/srs.ts: 0 = New, 1-2 = Learning,
+// 3-4 = Reviewing, MASTERED_STAGE_THRESHOLD+ = Mastered.
+describe('getMasteryStageBadge', () => {
+  it('labels stage 0 as New', () => {
+    expect(getMasteryStageBadge(0).label).toBe('New');
+  });
+
+  it('labels stage 1 as Learning', () => {
+    expect(getMasteryStageBadge(1).label).toBe('Learning');
+  });
+
+  it('labels stage 2 as Learning, the top of the Learning range', () => {
+    expect(getMasteryStageBadge(2).label).toBe('Learning');
+  });
+
+  it('labels stage 3 as Reviewing, the start of the Reviewing range', () => {
+    expect(getMasteryStageBadge(3).label).toBe('Reviewing');
+  });
+
+  it('labels stage 4 as Reviewing, the top of the Reviewing range', () => {
+    expect(getMasteryStageBadge(4).label).toBe('Reviewing');
+  });
+
+  it('labels stage 5 as Mastered, exactly at MASTERED_STAGE_THRESHOLD', () => {
+    expect(MASTERED_STAGE_THRESHOLD).toBe(5);
+    expect(getMasteryStageBadge(5).label).toBe('Mastered');
+  });
+
+  it('labels stage 6 as Mastered, one above the threshold', () => {
+    expect(getMasteryStageBadge(6).label).toBe('Mastered');
+  });
+
+  it('treats a negative stage as 0 (New), not as a crash or a lower bucket leaking through', () => {
+    expect(getMasteryStageBadge(-1).label).toBe('New');
+  });
+
+  it('treats a non-finite stage (NaN) as 0 (New)', () => {
+    expect(getMasteryStageBadge(NaN).label).toBe('New');
+  });
+});
+
+// averageMasteryStage reduces the SRS states of a verb's several
+// conjugation forms to one stage number, floored, with never-studied forms
+// (undefined) excluded from both the sum and the count rather than treated
+// as 0 (#108 doc comment above the implementation).
+describe('averageMasteryStage', () => {
+  it('returns 0 for an empty array', () => {
+    expect(averageMasteryStage([])).toBe(0);
+  });
+
+  it('returns 0 when every entry is undefined (no form ever studied)', () => {
+    expect(averageMasteryStage([undefined, undefined, undefined])).toBe(0);
+  });
+
+  it('excludes undefined entries from both the sum and the count', () => {
+    // If undefined were counted as 0 the average would be (5 + 0 + 7) / 3 = 4.
+    // Excluding it, it is (5 + 7) / 2 = 6.
+    const result = averageMasteryStage([{ repetitions: 5 }, undefined, { repetitions: 7 }]);
+    expect(result).toBe(6);
+  });
+
+  it('floors a non-integer average rather than rounding', () => {
+    // (1 + 2 + 2) / 3 = 1.666..., which must floor to 1, not round to 2.
+    const result = averageMasteryStage([
+      { repetitions: 1 },
+      { repetitions: 2 },
+      { repetitions: 2 },
+    ]);
+    expect(result).toBe(1);
   });
 });

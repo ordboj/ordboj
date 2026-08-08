@@ -4,7 +4,7 @@ import { buildSingleDueSeed, SRS_STORAGE_KEY } from './support/seed';
 // Settings: switching to multiple-choice mode survives a reload, and
 // Practice actually renders that mode afterwards — proving the setting
 // round-trips through localStorage, not just React state in one tab.
-const ITEM_ID = '1-presens'; // vara, presens = "är"
+const ITEM_ID = 'vara-presens'; // vara, presens = "är"
 
 test.describe('settings persist across reload', () => {
   test('multiple-choice mode survives a reload and Practice uses it', async ({ page, context }) => {

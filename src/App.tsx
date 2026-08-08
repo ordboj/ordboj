@@ -1,21 +1,27 @@
-import { lazy, Suspense } from 'react';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import {
   AppErrorBoundary,
   AppCrashFallback,
-  RouteErrorBoundary,
+  RouteCrashFallback,
+  RouteChunk,
 } from '@/components/AppErrorBoundary';
+import { lazyRoute } from '@/lib/utils';
 
 // Route-level code splitting: each page (and its dependencies, e.g.
 // canvas-confetti pulled in by Practice) loads as a separate chunk on
-// first navigation instead of bloating the initial bundle.
-const Home = lazy(() => import('./pages/Home'));
-const Practice = lazy(() => import('./pages/Practice'));
-const Progress = lazy(() => import('./pages/Progress'));
-const Settings = lazy(() => import('./pages/Settings'));
-const NotFound = lazy(() => import('./pages/NotFound'));
+// first navigation instead of bloating the initial bundle. lazyRoute()
+// retries a failed chunk load with backoff before React.lazy() ever caches
+// a rejection - see src/lib/utils.ts (lazyRoute) and RouteChunk in
+// AppErrorBoundary.tsx for why a bare `lazy(() => import(...))` cannot
+// recover from that on its own.
+const Home = lazyRoute(() => import('./pages/Home'));
+const Practice = lazyRoute(() => import('./pages/Practice'));
+const PracticeParticles = lazyRoute(() => import('./pages/PracticeParticles'));
+const Progress = lazyRoute(() => import('./pages/Progress'));
+const Settings = lazyRoute(() => import('./pages/Settings'));
+const NotFound = lazyRoute(() => import('./pages/NotFound'));
 
 /** Minimal, dependency-free fallback shown while a route chunk loads. */
 function RouteLoadingFallback() {
@@ -39,52 +45,68 @@ const App = () => (
           <Route
             path="/"
             element={
-              <RouteErrorBoundary key="/">
-                <Suspense fallback={<RouteLoadingFallback />}>
-                  <Home />
-                </Suspense>
-              </RouteErrorBoundary>
+              <RouteChunk
+                key="/"
+                component={Home}
+                loading={<RouteLoadingFallback />}
+                fallback={(retry) => <RouteCrashFallback reset={retry} />}
+              />
             }
           />
           <Route
             path="/practice"
             element={
-              <RouteErrorBoundary key="/practice">
-                <Suspense fallback={<RouteLoadingFallback />}>
-                  <Practice />
-                </Suspense>
-              </RouteErrorBoundary>
+              <RouteChunk
+                key="/practice"
+                component={Practice}
+                loading={<RouteLoadingFallback />}
+                fallback={(retry) => <RouteCrashFallback reset={retry} />}
+              />
+            }
+          />
+          <Route
+            path="/practice-particles"
+            element={
+              <RouteChunk
+                key="/practice-particles"
+                component={PracticeParticles}
+                loading={<RouteLoadingFallback />}
+                fallback={(retry) => <RouteCrashFallback reset={retry} />}
+              />
             }
           />
           <Route
             path="/progress"
             element={
-              <RouteErrorBoundary key="/progress">
-                <Suspense fallback={<RouteLoadingFallback />}>
-                  <Progress />
-                </Suspense>
-              </RouteErrorBoundary>
+              <RouteChunk
+                key="/progress"
+                component={Progress}
+                loading={<RouteLoadingFallback />}
+                fallback={(retry) => <RouteCrashFallback reset={retry} />}
+              />
             }
           />
           <Route
             path="/settings"
             element={
-              <RouteErrorBoundary key="/settings">
-                <Suspense fallback={<RouteLoadingFallback />}>
-                  <Settings />
-                </Suspense>
-              </RouteErrorBoundary>
+              <RouteChunk
+                key="/settings"
+                component={Settings}
+                loading={<RouteLoadingFallback />}
+                fallback={(retry) => <RouteCrashFallback reset={retry} />}
+              />
             }
           />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route
             path="*"
             element={
-              <RouteErrorBoundary key="*">
-                <Suspense fallback={<RouteLoadingFallback />}>
-                  <NotFound />
-                </Suspense>
-              </RouteErrorBoundary>
+              <RouteChunk
+                key="*"
+                component={NotFound}
+                loading={<RouteLoadingFallback />}
+                fallback={(retry) => <RouteCrashFallback reset={retry} />}
+              />
             }
           />
         </Routes>
