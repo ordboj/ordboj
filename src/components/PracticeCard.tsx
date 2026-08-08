@@ -27,6 +27,10 @@ interface PracticeCardProps {
   onAnswer: (grade: Grade) => void;
 }
 
+// Fixed å/ä/ö entry row — always these three keys, always this order, never
+// derived from the answer (P4/P11).
+const SWEDISH_KEYS = ['å', 'ä', 'ö'] as const;
+
 export function PracticeCard({
   infinitive,
   form,
@@ -43,16 +47,11 @@ export function PracticeCard({
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
   const [conjugated, setConjugated] = useState<ConjugatedVerb | null>(null);
   const [pattern, setPattern] = useState<VerbPattern | null>(null);
-  const [shuffledLetters, setShuffledLetters] = useState<string[]>([]);
   const [options, setOptions] = useState<string[]>([]);
 
   // Load verb data
   useEffect(() => {
-    conjugateVerb(infinitive).then((result) => {
-      setConjugated(result);
-      const uniqueLetters = [...new Set(result[form].split(''))];
-      setShuffledLetters(uniqueLetters.sort(() => Math.random() - 0.5));
-    });
+    conjugateVerb(infinitive).then(setConjugated);
     generateVerbPattern(infinitive, form).then(setPattern);
   }, [infinitive, form]);
 
@@ -96,17 +95,6 @@ export function PracticeCard({
     }
   };
 
-  // Auto-submit when answer is correct
-  useEffect(() => {
-    if (userAnswer && !showFeedback) {
-      const isAnswerCorrect =
-        userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
-      if (isAnswerCorrect) {
-        handleSubmit(userAnswer);
-      }
-    }
-  }, [userAnswer, showFeedback, correctAnswer]);
-
   const handleHint = () => {
     if (revealedHints.length < correctAnswer.length) {
       // Find indices not yet revealed
@@ -119,26 +107,6 @@ export function PracticeCard({
       const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
       setRevealedHints((prev) => [...prev, randomIndex]);
     }
-  };
-
-  const getPatternWithHints = () => {
-    return pattern.patternParts
-      .map((part) => {
-        if (part.isMissing) {
-          // Show the blank with revealed hints
-          return correctAnswer
-            .split('')
-            .map((letter, index) => {
-              if (revealedHints.includes(index)) {
-                return letter;
-              }
-              return '_';
-            })
-            .join(' ');
-        }
-        return part.text;
-      })
-      .join(' – ');
   };
 
   const handleDelete = () => {
@@ -196,9 +164,7 @@ export function PracticeCard({
           <div className="text-center space-y-3">
             <p className="text-muted-foreground text-sm font-medium">Fill in the missing form</p>
             <div className="bg-muted/30 rounded-lg p-6 space-y-2">
-              <h2 className="text-3xl font-bold text-primary tracking-wide">
-                {getPatternWithHints()}
-              </h2>
+              <h2 className="text-3xl font-bold text-primary tracking-wide">{infinitive}</h2>
               <p className="text-sm text-muted-foreground">
                 Missing: <span className="font-semibold">{getFormLabel(form)}</span>
               </p>
@@ -218,13 +184,18 @@ export function PracticeCard({
                       e.key === 'Enter' && userAnswer.trim() && handleSubmit(userAnswer)
                     }
                     placeholder="Type your answer..."
-                    className="text-2xl text-center py-6 caret-transparent"
+                    className="text-2xl text-center py-6"
                     autoFocus
+                    lang="sv"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    enterKeyHint="go"
                   />
                   <div className="flex flex-wrap justify-center gap-2">
-                    {shuffledLetters.map((letter, index) => (
+                    {SWEDISH_KEYS.map((letter) => (
                       <Button
-                        key={index}
+                        key={letter}
                         onClick={() => handleLetterClick(letter)}
                         variant="outline"
                         className="w-12 h-12 text-xl font-semibold"
@@ -241,6 +212,11 @@ export function PracticeCard({
                       ⌫
                     </Button>
                   </div>
+                  {revealedHints.length > 0 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Hint letters: {revealedHints.map((index) => correctAnswer[index]).join(', ')}
+                    </p>
+                  )}
                   <div className="flex gap-3">
                     <Button
                       onClick={handleHint}
@@ -343,6 +319,18 @@ export function PracticeCard({
                     Pronounce answer
                   </Button>
                 </div>
+
+                {/* Learner's own wrong answer: muted, struck through, never spoken.
+                    Hidden when the submission was empty or hints already gave away the
+                    answer — there is no error to show there (P21). */}
+                {mode === 'typing' &&
+                  !isCorrect &&
+                  userAnswer.trim() !== '' &&
+                  revealedHints.length < correctAnswer.length && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      You typed: <span className="line-through opacity-60">{userAnswer}</span>
+                    </p>
+                  )}
 
                 {showExamples && exampleSentence && (
                   <div className="bg-accent/10 rounded-lg p-4">
