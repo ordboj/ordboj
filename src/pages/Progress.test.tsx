@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import Progress from '@/pages/Progress';
 
@@ -44,14 +45,17 @@ describe('Progress page - header emoji fix (AC #2, issue #112)', () => {
 });
 
 describe("Progress page - 'New' stage badge color token (AC #4, issue #112)", () => {
-  it('renders the New badge using the bg-primary token, not the off-palette bg-purple-500', async () => {
+  it('renders the New badge using the bg-stage-new token, not the off-palette bg-purple-500', async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
 
     // Every verb starts at stage 0 ("New") with empty srsStates.
     const newBadges = await screen.findAllByText('New');
     expect(newBadges.length).toBeGreaterThan(0);
     for (const badge of newBadges) {
-      expect(badge).toHaveClass('bg-primary');
+      // Issue #227 moved this color from the generic bg-primary token to
+      // the dedicated bg-stage-new token; the off-palette-purple guard
+      // from issue #112 still applies.
+      expect(badge).toHaveClass('bg-stage-new');
       expect(badge).not.toHaveClass('bg-purple-500');
     }
   });
@@ -164,6 +168,151 @@ describe('Progress page - imperativNotApplicable flag hides imperativ regardless
 
     vi.resetModules();
     vi.doUnmock('@/lib/verbs');
+  });
+});
+
+// Issue #110 AC: sortable TableHead columns need aria-sort plus a keyboard
+// path (Enter/Space), not just an onClick a mouse/touch user could reach.
+describe('Progress page - sortable column headers: aria-sort + keyboard (issue #110 AC)', () => {
+  it('marks the default-sorted "Verb" column ascending via aria-sort; other headers stay unsorted', async () => {
+    renderWithProviders(<Progress />, { route: '/progress' });
+    await screen.findByText('kunna');
+
+    const verbHeader = screen.getByRole('columnheader', { name: /verb/i });
+    const difficultyHeader = screen.getByRole('columnheader', { name: /difficulty/i });
+    expect(verbHeader).toHaveAttribute('aria-sort', 'ascending');
+    expect(difficultyHeader).toHaveAttribute('aria-sort', 'none');
+
+    // A non-sortable column never got a sort role at all.
+    const presensHeader = screen.getByRole('columnheader', { name: 'Presens' });
+    expect(presensHeader).not.toHaveAttribute('aria-sort');
+  });
+
+  it('reverses the verb row order and flips aria-sort when the "Verb" header is activated by keyboard Enter', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProviders(<Progress />, { route: '/progress' });
+    await screen.findByText('kunna');
+
+    const infinitivesOf = () =>
+      Array.from(container.querySelectorAll('tbody tr td:first-child span[lang="sv"]')).map(
+        (el) => el.textContent,
+      );
+
+    const before = infinitivesOf();
+    expect(before.length).toBeGreaterThan(1);
+
+    const verbHeader = screen.getByRole('columnheader', { name: /verb/i });
+    const verbSortButton = within(verbHeader).getByRole('button');
+    // Real keyboard activation, not a synthetic click: @testing-library/user-event
+    // implements the browser's native "Enter triggers click on a focused
+    // <button>" default action (event/behavior/keypress.js), unlike a bare
+    // fireEvent.keyDown which jsdom does not turn into a click on its own.
+    verbSortButton.focus();
+    await user.keyboard('{Enter}');
+
+    expect(verbHeader).toHaveAttribute('aria-sort', 'descending');
+    expect(infinitivesOf()).toEqual([...before].reverse());
+  });
+
+  it('switches sorting to the "Difficulty" column when it is activated by keyboard Space, and the "Verb" header goes back to unsorted', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Progress />, { route: '/progress' });
+    await screen.findByText('kunna');
+
+    const verbHeader = screen.getByRole('columnheader', { name: /verb/i });
+    const difficultyHeader = screen.getByRole('columnheader', { name: /difficulty/i });
+    const difficultySortButton = within(difficultyHeader).getByRole('button');
+    // Real keyboard activation: user-event's keyup behavior for ' ' dispatches
+    // a click on a focused <button> (event/behavior/keyup.js), mirroring the
+    // browser's native Space-activates-button default action.
+    difficultySortButton.focus();
+    await user.keyboard(' ');
+
+    expect(difficultyHeader).toHaveAttribute('aria-sort', 'ascending');
+    expect(verbHeader).toHaveAttribute('aria-sort', 'none');
+  });
+});
+
+// Issue #110 AC: the verb row opens the details modal via a real, focusable
+// <button> in its first cell (native keyboard semantics), not a custom
+// role="button" TableRow with a hand-rolled onKeyDown.
+describe('Progress page - verb row opens the details modal by keyboard (issue #110 AC)', () => {
+  it('opens the VerbDetailsModal for "kunna" when its row button is activated by keyboard Enter', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Progress />, { route: '/progress' });
+
+    const button = await screen.findByRole('button', { name: 'kunna' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    // Real keyboard activation (see keypress.js note above), not a click
+    // stand-in: this is what proves the button is keyboard-reachable, which
+    // is the actual issue #110 AC.
+    button.focus();
+    await user.keyboard('{Enter}');
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getAllByText('kunna').length).toBeGreaterThan(0);
+  });
+
+  it('opens the VerbDetailsModal when its row button is activated by keyboard Space', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Progress />, { route: '/progress' });
+
+    const button = await screen.findByRole('button', { name: 'kunna' });
+    button.focus();
+    await user.keyboard(' ');
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('does not open the modal on an unrelated key (e.g. Tab) and leaves the row button focusable', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Progress />, { route: '/progress' });
+
+    const button = await screen.findByRole('button', { name: 'kunna' });
+    button.focus();
+    await user.keyboard('{Tab}');
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // A native <button> needs no tabIndex/role/aria-label wiring to be
+    // reachable; pin that contract so a future regression back to a
+    // non-native, role="button" element is caught (see next describe block).
+    expect(button.tagName).toBe('BUTTON');
+    expect(button).toHaveAttribute('type', 'button');
+  });
+
+  it('renders the row button at a 44x44 minimum touch target, not height-only', async () => {
+    renderWithProviders(<Progress />, { route: '/progress' });
+    const button = await screen.findByRole('button', { name: 'kunna' });
+    expect(button).toHaveClass('min-h-11');
+    expect(button).toHaveClass('min-w-11');
+  });
+});
+
+// Regression test for PR #308 round-1 BLOCKER: the verb TableRow previously
+// carried role="button"/tabIndex/onKeyDown/aria-label, hijacking the row's
+// own semantics away from the table. The fix moved the keyboard-activatable
+// control into a nested <button> and left the <tr>/<td> as plain table
+// cells. Pin that: if the row semantics ever get clobbered again (e.g. by
+// re-adding role="button" to the <tr>), this fails loud.
+describe('Progress page - table semantics survive the row-button a11y fix (regression, PR #308)', () => {
+  it('still exposes real table row/cell semantics, not a row hijacked into role="button"', async () => {
+    renderWithProviders(<Progress />, { route: '/progress' });
+    await screen.findByText('kunna');
+
+    const rows = screen.getAllByRole('row');
+    // Header row + at least one data row.
+    expect(rows.length).toBeGreaterThan(1);
+
+    const firstDataRow = rows[1];
+    if (!firstDataRow) {
+      throw new Error('expected at least one data row after the header row');
+    }
+    expect(firstDataRow).not.toHaveAttribute('role', 'button');
+    expect(firstDataRow).not.toHaveAttribute('tabindex');
+
+    const cellsInRow = within(firstDataRow).getAllByRole('cell');
+    expect(cellsInRow.length).toBeGreaterThan(1);
   });
 });
 

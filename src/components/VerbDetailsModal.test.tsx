@@ -5,8 +5,10 @@ import { VerbDetailsModal } from '@/components/VerbDetailsModal';
 import { getFormLabel, type ConjugatedVerb } from '@/lib/verbs';
 
 // PR #199 (issue #112, AC #4): the "New" stage badge used an off-palette
-// bg-purple-500 utility that doesn't map to a design token. It must use an
-// existing token color (bg-primary) instead.
+// bg-purple-500 utility that doesn't map to a design token. It must use a
+// design-token color instead. Issue #227 moved that color from the
+// generic bg-primary token to the dedicated bg-stage-new token, so the
+// off-palette-purple guard now pins bg-stage-new.
 const VERB: ConjugatedVerb = {
   id: '1',
   infinitive: 'vara',
@@ -18,14 +20,42 @@ const VERB: ConjugatedVerb = {
 };
 
 describe('VerbDetailsModal - stage badge color token', () => {
-  it('renders the New badge (stage 0) with the bg-primary token, not the off-palette purple', () => {
+  it('renders the New badge (stage 0) with the bg-stage-new token, not the off-palette purple', () => {
     renderWithProviders(
       <VerbDetailsModal verb={VERB} srsStage={0} srsStates={{}} onClose={vi.fn()} />,
     );
 
     const badge = screen.getByText('New');
-    expect(badge).toHaveClass('bg-primary');
+    expect(badge).toHaveClass('bg-stage-new');
     expect(badge).not.toHaveClass('bg-purple-500');
+  });
+});
+
+// Regression guard for issue #313: the stage badge's own MasteryStageBadge
+// object still carries a `variant` field ('default' | 'secondary' |
+// 'outline'), but every render site now hardcodes <Badge variant="outline">
+// and ignores it. That matters because the shadcn Badge's "default" and
+// "secondary" variants each add a hover:bg-*/80 utility meant for a
+// clickable chip; this stage badge is static status text, not a control,
+// so any hover fade is a bug, not a feature. If a render site ever went
+// back to `variant={badge.variant}`, the New/Mastered badges ('default')
+// and Learning badge ('secondary') would regain that hover fade silently.
+describe('VerbDetailsModal - stage badge never carries a hover fade utility (issue #313)', () => {
+  it.each([
+    [0, 'New'],
+    [1, 'Learning'],
+    [3, 'Reviewing'],
+    [5, 'Mastered'],
+  ])('stage %i (%s) has no hover:bg-primary/80 or hover:bg-secondary/80 class', (stage, label) => {
+    const { unmount } = renderWithProviders(
+      <VerbDetailsModal verb={VERB} srsStage={stage} srsStates={{}} onClose={vi.fn()} />,
+    );
+
+    const badge = screen.getByText(label);
+    expect(badge).not.toHaveClass('hover:bg-primary/80');
+    expect(badge).not.toHaveClass('hover:bg-secondary/80');
+
+    unmount();
   });
 });
 
@@ -63,6 +93,35 @@ describe('VerbDetailsModal - imperativNotApplicable flag hides the imperativ row
     // getByText, which would find both.
     const row = label.closest('.border.rounded-lg') as HTMLElement;
     expect(within(row).getByText('var')).toBeInTheDocument();
+  });
+});
+
+// Issue #110 AC: touch targets must be at least 44px. Both pronounce
+// buttons here were 40px (the infinitive one: size="icon" default h-10 w-10,
+// no explicit size class) and 32px (h-8 w-8, the per-form one) before this fix.
+describe('VerbDetailsModal - pronounce button touch targets (issue #110 AC)', () => {
+  it('renders the infinitive pronounce button at 44px (h-11 w-11) with an aria-label', () => {
+    renderWithProviders(
+      <VerbDetailsModal verb={VERB} srsStage={0} srsStates={{}} onClose={vi.fn()} />,
+    );
+
+    const button = screen.getByRole('button', { name: `Pronounce ${VERB.infinitive}` });
+    expect(button).toHaveClass('h-11');
+    expect(button).toHaveClass('w-11');
+  });
+
+  it('renders each per-form pronounce button at 44px (h-11 w-11) with an aria-label, not the old 32px (h-8 w-8)', () => {
+    renderWithProviders(
+      <VerbDetailsModal verb={VERB} srsStage={0} srsStates={{}} onClose={vi.fn()} />,
+    );
+
+    const formButton = screen.getByRole('button', {
+      name: `Pronounce ${getFormLabel('presens')}`,
+    });
+    expect(formButton).toHaveClass('h-11');
+    expect(formButton).toHaveClass('w-11');
+    expect(formButton).not.toHaveClass('h-8');
+    expect(formButton).not.toHaveClass('w-8');
   });
 });
 

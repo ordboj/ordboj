@@ -5,7 +5,7 @@ import { buildFullSeed, SRS_STORAGE_KEY } from './support/seed';
 // items, both Home's due-count and Practice's "N / total" header must
 // reflect 2 — not "however many items happen to be due", which would let a
 // due-date/filtering regression pass unnoticed.
-const DUE_ITEMS = ['1-presens', '7-imperativ']; // vara/är, göra/gör
+const DUE_ITEMS = ['vara-presens', 'komma-imperativ']; // issue #53: item ids are infinitive-keyed
 
 test.describe('due-count reflects seeded state', () => {
   test('Home and Practice both show exactly the seeded due count', async ({ page, context }) => {

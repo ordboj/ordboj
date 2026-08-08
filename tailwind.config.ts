@@ -45,6 +45,28 @@ export default {
           DEFAULT: 'hsl(var(--success))',
           foreground: 'hsl(var(--success-foreground))',
         },
+        // SRS mastery stage badge tokens (issue #227) — bg-stage-new/
+        // learning/reviewing/mastered + text-stage-*-foreground. Values and
+        // contrast ratios are documented at the --stage-* declarations in
+        // src/index.css.
+        stage: {
+          new: {
+            DEFAULT: 'hsl(var(--stage-new))',
+            foreground: 'hsl(var(--stage-new-foreground))',
+          },
+          learning: {
+            DEFAULT: 'hsl(var(--stage-learning))',
+            foreground: 'hsl(var(--stage-learning-foreground))',
+          },
+          reviewing: {
+            DEFAULT: 'hsl(var(--stage-reviewing))',
+            foreground: 'hsl(var(--stage-reviewing-foreground))',
+          },
+          mastered: {
+            DEFAULT: 'hsl(var(--stage-mastered))',
+            foreground: 'hsl(var(--stage-mastered-foreground))',
+          },
+        },
         muted: {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',
