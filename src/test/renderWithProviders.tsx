@@ -32,7 +32,6 @@ export function renderWithProviders(ui: ReactElement, options: RenderWithProvide
         <TooltipProvider>
           <MemoryRouter
           initialEntries={[route]}
-          future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
         >
           {children}
         </MemoryRouter>
