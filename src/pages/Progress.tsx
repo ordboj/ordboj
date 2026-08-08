@@ -4,9 +4,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress as ProgressBar } from '@/components/ui/progress';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Search, ArrowUpDown } from 'lucide-react';
 import { getAllConjugatedVerbs, ConjugatedVerb } from '@/lib/verbs';
@@ -21,7 +34,7 @@ export default function Progress() {
   const navigate = useNavigate();
   const { settings } = useSettings();
   const { srsStates } = useSrsProgress(settings.cefrLevels);
-  
+
   const [verbs, setVerbs] = useState<ConjugatedVerb[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,8 +58,8 @@ export default function Progress() {
     const forms = ['presens', 'preteritum', 'supinum', 'imperativ'];
     let totalReps = 0;
     let count = 0;
-    
-    forms.forEach(form => {
+
+    forms.forEach((form) => {
       const itemId = `${verbId}-${form}`;
       const state = srsStates[itemId];
       if (state) {
@@ -54,14 +67,16 @@ export default function Progress() {
         count++;
       }
     });
-    
+
     return count > 0 ? Math.floor(totalReps / count) : 0;
   };
 
   const getStageBadge = (stage: number) => {
     if (stage === 0) return { label: 'New', variant: 'default' as const, color: 'bg-purple-500' };
-    if (stage <= 2) return { label: 'Learning', variant: 'secondary' as const, color: 'bg-orange-500' };
-    if (stage <= 4) return { label: 'Reviewing', variant: 'outline' as const, color: 'bg-yellow-500' };
+    if (stage <= 2)
+      return { label: 'Learning', variant: 'secondary' as const, color: 'bg-orange-500' };
+    if (stage <= 4)
+      return { label: 'Reviewing', variant: 'outline' as const, color: 'bg-yellow-500' };
     return { label: 'Mastered', variant: 'default' as const, color: 'bg-green-500' };
   };
 
@@ -70,19 +85,19 @@ export default function Progress() {
 
     // Search filter
     if (searchQuery) {
-      filtered = filtered.filter(verb =>
-        verb.infinitive.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter((verb) =>
+        verb.infinitive.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
     // Difficulty filter
     if (difficultyFilter !== 'all') {
-      filtered = filtered.filter(verb => verb.cefr === difficultyFilter);
+      filtered = filtered.filter((verb) => verb.cefr === difficultyFilter);
     }
 
     // SRS filter
     if (srsFilter !== 'all') {
-      filtered = filtered.filter(verb => {
+      filtered = filtered.filter((verb) => {
         const stage = getSrsStage(verb.id);
         const badge = getStageBadge(stage);
         return badge.label.toLowerCase() === srsFilter;
@@ -106,7 +121,7 @@ export default function Progress() {
 
   const progressStats = useMemo(() => {
     const total = verbs.length;
-    const mastered = verbs.filter(verb => getSrsStage(verb.id) >= 5).length;
+    const mastered = verbs.filter((verb) => getSrsStage(verb.id) >= 5).length;
     const percentage = total > 0 ? (mastered / total) * 100 : 0;
     return { total, mastered, percentage };
   }, [verbs, srsStates]);
@@ -122,22 +137,18 @@ export default function Progress() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
+      <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <p className="text-xl text-muted-foreground">Loading progress...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
+    <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="gap-2"
-          >
+          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
@@ -150,7 +161,8 @@ export default function Progress() {
           <CardHeader>
             <CardTitle>Your Progress</CardTitle>
             <CardDescription>
-              You've mastered {progressStats.mastered} / {progressStats.total} verbs ({progressStats.percentage.toFixed(1)}%)
+              You've mastered {progressStats.mastered} / {progressStats.total} verbs (
+              {progressStats.percentage.toFixed(1)}%)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -203,13 +215,53 @@ export default function Progress() {
           </CardContent>
         </Card>
 
-        {/* Table */}
-        <Card>
+        {/* Verb list: stacked cards on narrow screens, table from md up */}
+        <div className="md:hidden space-y-3">
+          {filteredAndSortedVerbs.map((verb) => {
+            const stage = getSrsStage(verb.id);
+            const badge = getStageBadge(stage);
+            return (
+              <button
+                key={verb.id}
+                type="button"
+                onClick={() => setSelectedVerb(verb)}
+                className="w-full text-left bg-card border rounded-lg p-4 space-y-2 active:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-lg">{verb.infinitive}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="outline">{verb.cefr}</Badge>
+                    <Badge variant={badge.variant} className={badge.color}>
+                      {badge.label}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  <div>
+                    <span className="font-medium text-foreground">Presens:</span> {verb.presens}
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Preteritum:</span>{' '}
+                    {verb.preteritum}
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Supinum:</span> {verb.supinum}
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Imperativ:</span> {verb.imperativ}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <Card className="hidden md:block">
           <ScrollArea className="h-[600px]">
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
-                  <TableHead 
+                  <TableHead
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => toggleSort('infinitive')}
                   >
@@ -239,7 +291,7 @@ export default function Progress() {
                   const stage = getSrsStage(verb.id);
                   const badge = getStageBadge(stage);
                   return (
-                    <TableRow 
+                    <TableRow
                       key={verb.id}
                       className={`cursor-pointer hover:bg-muted/50 transition-colors ${
                         index % 2 === 0 ? 'bg-muted/20' : ''

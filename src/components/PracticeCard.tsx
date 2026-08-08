@@ -83,8 +83,10 @@ export function PracticeCard({
     }
   }, [correctAnswer, form]);
 
+  const normalizeAnswer = (value: string) => value.normalize('NFC').toLowerCase().trim();
+
   const handleSubmit = (answer: string) => {
-    const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+    const correct = normalizeAnswer(answer) === normalizeAnswer(correctAnswer);
     setIsCorrect(correct);
     setShowFeedback(true);
 
@@ -99,8 +101,7 @@ export function PracticeCard({
   // Auto-submit when answer is correct
   useEffect(() => {
     if (userAnswer && !showFeedback) {
-      const isAnswerCorrect =
-        userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+      const isAnswerCorrect = normalizeAnswer(userAnswer) === normalizeAnswer(correctAnswer);
       if (isAnswerCorrect) {
         handleSubmit(userAnswer);
       }
@@ -218,8 +219,13 @@ export function PracticeCard({
                       e.key === 'Enter' && userAnswer.trim() && handleSubmit(userAnswer)
                     }
                     placeholder="Type your answer..."
-                    className="text-2xl text-center py-6 caret-transparent"
+                    className="text-2xl text-center py-6"
                     autoFocus
+                    lang="sv"
+                    enterKeyHint="go"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                   />
                   <div className="flex flex-wrap justify-center gap-2">
                     {shuffledLetters.map((letter, index) => (
