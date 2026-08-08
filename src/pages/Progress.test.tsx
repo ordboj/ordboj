@@ -113,6 +113,51 @@ describe("Progress page - issue #132: no raw '(not available)' placeholder", () 
   });
 });
 
+// Issue #124: verb.imperativNotApplicable flags a form as grammatically
+// confirmed absent (modal verbs), distinct from a merely empty/placeholder
+// value. This fixture gives the flagged verb a REAL, non-empty imperativ
+// value (not the "(not available)" sentinel), so rendering the em-dash can
+// only be explained by the new flag -- against pre-#124 code (no such
+// field, no such check), a real non-empty value always rendered as plain
+// text, so this fails there for the right reason. getAllConjugatedVerbs is
+// mocked directly (the one boundary this test needs) rather than the
+// underlying data table, so this is independent of what VERB_DATA/verbs.ts
+// actually contain.
+describe('Progress page - imperativNotApplicable flag hides imperativ regardless of stored value (issue #124)', () => {
+  it('renders the em-dash placeholder for a verb flagged imperativNotApplicable, even though its imperativ is a real, non-empty string', async () => {
+    vi.resetModules();
+    vi.doMock('@/lib/verbs', async () => {
+      const actual = await vi.importActual<typeof import('@/lib/verbs')>('@/lib/verbs');
+      return {
+        ...actual,
+        getAllConjugatedVerbs: async () => [
+          {
+            id: '1',
+            infinitive: 'flagga-fixture',
+            cefr: 'A1',
+            presens: 'flaggarx',
+            preteritum: 'flaggadex',
+            supinum: 'flaggatx',
+            imperativ: 'realimperativvalue',
+            imperativNotApplicable: true,
+          },
+        ],
+      };
+    });
+
+    const { default: MockedProgress } = await import('@/pages/Progress');
+    renderWithProviders(<MockedProgress />, { route: '/progress' });
+
+    const infinitiveCell = await screen.findByText('flagga-fixture');
+    const row = infinitiveCell.closest('tr') as HTMLElement;
+    expect(within(row).getByText('—')).toBeInTheDocument();
+    expect(within(row).queryByText('realimperativvalue')).not.toBeInTheDocument();
+
+    vi.resetModules();
+    vi.doUnmock('@/lib/verbs');
+  });
+});
+
 describe("Progress page - lang='sv' on inline Swedish word display (AC #5, issue #112)", () => {
   it("wraps the verb infinitive cell in a lang='sv' span", async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
