@@ -1,5 +1,8 @@
 import { useSyncExternalStore } from 'react';
-import { z } from 'zod';
+// zod/v4-mini instead of zod: the classic zod v3 build is not tree-shakeable
+// and put ~13kB gzip on this hook's first-load chunk (#300). Same validation
+// behavior, functional-check style API instead of chained methods.
+import * as z from 'zod/v4-mini';
 
 export interface Settings {
   practiceMode: 'typing' | 'multiple-choice';
@@ -51,7 +54,7 @@ const STORAGE_KEY = 'swedish-verbs-settings';
 // wrong reading silently. The version field is what lets that be noticed.
 export const SETTINGS_STORAGE_VERSION = 1;
 
-// Shape validation for the stored payload. `passthrough` is deliberate: a key
+// Shape validation for the stored payload. `looseObject` is deliberate: a key
 // this build does not know about belongs to a newer build and rides along
 // untouched, exactly as the plain merge used to carry it. What the schema is
 // here to stop is the other case — a key this build *does* know, holding a
@@ -62,20 +65,18 @@ export const SETTINGS_STORAGE_VERSION = 1;
 // UI's range policy (Settings.tsx clamps what a learner can pick); a stored
 // dailyGoal of 99 is an unusual choice, not corruption, and resetting it
 // would be the app overruling the learner.
-const settingsSchema = z
-  .object({
-    practiceMode: z.enum(['typing', 'multiple-choice']),
-    showExamples: z.boolean(),
-    autoplayAudio: z.boolean(),
-    muteAudio: z.boolean(),
-    dailyGoal: z.number().int().positive(),
-    particleDailyGoal: z.number().int().positive(),
-    // Non-empty carries the #137 guard: a stored empty selection must not
-    // read as "zero verbs" forever, so it fails validation and the field
-    // falls back to every level.
-    cefrLevels: z.array(z.string().min(1)).min(1),
-  })
-  .passthrough();
+const settingsSchema = z.looseObject({
+  practiceMode: z.enum(['typing', 'multiple-choice']),
+  showExamples: z.boolean(),
+  autoplayAudio: z.boolean(),
+  muteAudio: z.boolean(),
+  dailyGoal: z.int().check(z.positive()),
+  particleDailyGoal: z.int().check(z.positive()),
+  // Non-empty carries the #137 guard: a stored empty selection must not
+  // read as "zero verbs" forever, so it fails validation and the field
+  // falls back to every level.
+  cefrLevels: z.array(z.string().check(z.minLength(1))).check(z.minLength(1)),
+});
 
 // Repairs per field rather than per object. One corrupt key resetting every
 // other preference would be a bigger loss than the corrupt key itself, so
@@ -123,8 +124,8 @@ function parseStoredSettings(raw: string): Settings {
   }
 
   // The empty-cefrLevels coercion of #137 now lives in the schema's
-  // `.min(1)`: an empty selection fails validation and the field falls back
-  // to every level, which is what that guard did.
+  // `z.minLength(1)`: an empty selection fails validation and the
+  // field falls back to every level, which is what that guard did.
   return validateSettings({ ...DEFAULT_SETTINGS, ...(stored as Record<string, unknown>) });
 }
 
