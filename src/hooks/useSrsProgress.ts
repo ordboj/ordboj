@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { SrsState, initializeSrsState, calculateNextReview, isDue, Grade } from '@/lib/srs';
+import {
+  SrsState,
+  initializeSrsState,
+  calculateNextReview,
+  isDue,
+  needsRelearningRequeue,
+  Grade,
+} from '@/lib/srs';
 import { getVerbs, Form, Verb, conjugateVerb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
@@ -169,14 +176,20 @@ export function useSrsProgress(cefrLevels?: string[]) {
     return dueItems;
   }, [srsStates, cefrLevels]);
 
-  // Record answer
-  const recordAnswer = (itemId: string, grade: Grade) => {
+  // Record answer. Returns whether the caller should re-queue this item
+  // within the current session (docs/learning/lapse-handling.md): true
+  // only for a genuine lapse (grade 0), never for a hinted or unaided
+  // correct answer. This hook does not own the session queue itself
+  // (that lives in Practice.tsx, alongside currentIndex) — it only
+  // reports the scheduling decision the caller needs to act on it.
+  const recordAnswer = (itemId: string, grade: Grade): { needsRequeue: boolean } => {
     const currentState = srsStates[itemId] || initializeSrsState(itemId);
     const newState = calculateNextReview(currentState, grade);
     setSrsStates((prev) => ({
       ...prev,
       [itemId]: newState,
     }));
+    return { needsRequeue: needsRelearningRequeue(grade) };
   };
 
   // Export/Import for backup
