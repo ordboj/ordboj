@@ -1,8 +1,6 @@
 import { lazy, Suspense } from 'react';
-import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import {
   AppErrorBoundary,
@@ -19,8 +17,6 @@ const Progress = lazy(() => import('./pages/Progress'));
 const Settings = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
-const queryClient = new QueryClient();
-
 /** Minimal, dependency-free fallback shown while a route chunk loads. */
 function RouteLoadingFallback() {
   return (
@@ -36,67 +32,64 @@ function RouteLoadingFallback() {
 
 const App = () => (
   <AppErrorBoundary fallback={(reset) => <AppCrashFallback reset={reset} />}>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <RouteErrorBoundary key="/">
-                  <Suspense fallback={<RouteLoadingFallback />}>
-                    <Home />
-                  </Suspense>
-                </RouteErrorBoundary>
-              }
-            />
-            <Route
-              path="/practice"
-              element={
-                <RouteErrorBoundary key="/practice">
-                  <Suspense fallback={<RouteLoadingFallback />}>
-                    <Practice />
-                  </Suspense>
-                </RouteErrorBoundary>
-              }
-            />
-            <Route
-              path="/progress"
-              element={
-                <RouteErrorBoundary key="/progress">
-                  <Suspense fallback={<RouteLoadingFallback />}>
-                    <Progress />
-                  </Suspense>
-                </RouteErrorBoundary>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <RouteErrorBoundary key="/settings">
-                  <Suspense fallback={<RouteLoadingFallback />}>
-                    <Settings />
-                  </Suspense>
-                </RouteErrorBoundary>
-              }
-            />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route
-              path="*"
-              element={
-                <RouteErrorBoundary key="*">
-                  <Suspense fallback={<RouteLoadingFallback />}>
-                    <NotFound />
-                  </Suspense>
-                </RouteErrorBoundary>
-              }
-            />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <TooltipProvider>
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <RouteErrorBoundary key="/">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <Home />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path="/practice"
+            element={
+              <RouteErrorBoundary key="/practice">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <Practice />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path="/progress"
+            element={
+              <RouteErrorBoundary key="/progress">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <Progress />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <RouteErrorBoundary key="/settings">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <Settings />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route
+            path="*"
+            element={
+              <RouteErrorBoundary key="*">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <NotFound />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
   </AppErrorBoundary>
 );
 
