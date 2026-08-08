@@ -345,8 +345,22 @@ export default function Progress() {
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
                   <TableHead
-                    className="cursor-pointer hover:bg-muted/50"
+                    tabIndex={0}
+                    aria-sort={
+                      sortField === 'infinitive'
+                        ? sortDirection === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    className="cursor-pointer hover:bg-muted/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     onClick={() => toggleSort('infinitive')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleSort('infinitive');
+                      }
+                    }}
                   >
                     <div className="flex items-center gap-2">
                       Verb
@@ -359,8 +373,22 @@ export default function Progress() {
                   <TableHead>Imperativ</TableHead>
                   <TableHead>Grupp</TableHead>
                   <TableHead
-                    className="cursor-pointer hover:bg-muted/50"
+                    tabIndex={0}
+                    aria-sort={
+                      sortField === 'difficulty'
+                        ? sortDirection === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    className="cursor-pointer hover:bg-muted/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     onClick={() => toggleSort('difficulty')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleSort('difficulty');
+                      }
+                    }}
                   >
                     <div className="flex items-center gap-2">
                       Difficulty
@@ -381,10 +409,19 @@ export default function Progress() {
                   return (
                     <TableRow
                       key={verb.id}
-                      className={`cursor-pointer hover:bg-muted/50 transition-colors ${
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View details for ${verb.infinitive}`}
+                      className={`cursor-pointer hover:bg-muted/50 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
                         index % 2 === 0 ? 'bg-muted/20' : ''
                       }`}
                       onClick={() => setSelectedVerb(verb)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedVerb(verb);
+                        }
+                      }}
                     >
                       <TableCell className="font-medium">
                         <span lang="sv">{verb.infinitive}</span>

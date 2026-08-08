@@ -391,6 +391,8 @@ export function PracticeCard({
           {showFeedback && (
             <div className="space-y-4">
               <div
+                role="status"
+                aria-live="polite"
                 className={`flex items-center justify-center gap-3 p-4 rounded-lg ${
                   isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
                 }`}
@@ -455,7 +457,8 @@ export function PracticeCard({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6 hover:bg-primary/10"
+                                className="h-11 w-11 hover:bg-primary/10"
+                                aria-label={`Pronounce ${getFormLabel(part.form)}`}
                                 onClick={() => handlePronounceForm(part.form)}
                               >
                                 <Volume2 className="w-3 h-3" />

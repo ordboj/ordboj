@@ -64,7 +64,13 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
               <span className="text-2xl" lang="sv">
                 {verb.infinitive}
               </span>
-              <Button variant="ghost" size="icon" onClick={() => handleSpeak(verb.infinitive)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11"
+                aria-label={`Pronounce ${verb.infinitive}`}
+                onClick={() => handleSpeak(verb.infinitive)}
+              >
                 <Volume2 className="w-5 h-5" />
               </Button>
             </div>
@@ -129,7 +135,8 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-11 w-11"
+                          aria-label={`Pronounce ${getFormLabel(form)}`}
                           onClick={() => handleSpeak(formValue)}
                         >
                           <Volume2 className="w-4 h-4" />
