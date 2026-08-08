@@ -1,4 +1,13 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
+import {
+  Component,
+  Suspense,
+  lazy,
+  useRef,
+  type ComponentType,
+  type ErrorInfo,
+  type LazyExoticComponent,
+  type ReactNode,
+} from 'react';
 import { Link } from 'react-router-dom';
 
 /**
@@ -61,6 +70,13 @@ export function downloadProgressBackup(): boolean {
 interface BoundaryProps {
   children: ReactNode;
   fallback: (reset: () => void) => ReactNode;
+  /**
+   * Fires with the caught error alongside the existing console.error, so a
+   * caller can inspect the error's type without the boundary needing to
+   * plumb it through the fallback's own (already-public, test-covered)
+   * `(reset) => ReactNode` signature.
+   */
+  onError?: (error: Error) => void;
 }
 
 interface BoundaryState {
@@ -81,6 +97,7 @@ export class AppErrorBoundary extends Component<BoundaryProps, BoundaryState> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Ordböj: caught render error', error, info.componentStack);
+    this.props.onError?.(error);
   }
 
   reset = () => {
@@ -197,6 +214,109 @@ export function RouteErrorBoundary({ children }: { children: ReactNode }) {
   return (
     <AppErrorBoundary fallback={(reset) => <RouteCrashFallback reset={reset} />}>
       {children}
+    </AppErrorBoundary>
+  );
+}
+
+/**
+ * Marks a route chunk import that failed even after every automatic retry
+ * in retryImport() below. React.lazy() caches whatever its factory's
+ * promise resolves *or rejects* to, permanently: once that promise
+ * rejects, every later render of the SAME lazy() component replays the
+ * cached rejection, and there is no way to make it re-fetch by re-rendering
+ * it (e.g. via an error boundary's plain "Try again" reset). So RouteChunk
+ * distinguishes this failure from an ordinary render crash elsewhere on the
+ * page: a ChunkLoadError means the only real fix is a full document
+ * reload, not another soft reset against an already-poisoned lazy import.
+ */
+class ChunkLoadError extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = 'ChunkLoadError';
+  }
+}
+
+/** Automatic retries for a chunk import before it is treated as failed. */
+const CHUNK_LOAD_RETRIES = 2;
+const CHUNK_LOAD_RETRY_DELAY_MS = 300;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Retries a route chunk's dynamic import with backoff before ever handing
+ * a rejected promise to React.lazy(). This recovers a transient chunk-load
+ * failure (flaky network) automatically, without the user ever seeing a
+ * crash. If every retry still fails - most likely a stale client asking
+ * for a chunk hash a fresh deploy has already removed from the server -
+ * the final rejection is wrapped in ChunkLoadError so RouteChunk's
+ * fallback can offer a full reload instead of a useless soft retry.
+ */
+async function retryImport<T>(
+  importFn: () => Promise<T>,
+  retriesLeft: number = CHUNK_LOAD_RETRIES,
+  delayMs: number = CHUNK_LOAD_RETRY_DELAY_MS,
+): Promise<T> {
+  try {
+    return await importFn();
+  } catch (error) {
+    if (retriesLeft <= 0) throw new ChunkLoadError(error);
+    await delay(delayMs);
+    return retryImport(importFn, retriesLeft - 1, delayMs * 2);
+  }
+}
+
+/**
+ * Wraps a route's dynamic import with retryImport() before handing it to
+ * React.lazy(). Use this in place of a bare `lazy(() => import(...))` for
+ * every route module - it is still called exactly once, at module scope,
+ * so it does not itself work around the permanent-rejection-caching issue;
+ * pairing it with RouteChunk below is what does.
+ */
+export function lazyRoute<T extends ComponentType>(
+  importFn: () => Promise<{ default: T }>,
+): LazyExoticComponent<T> {
+  return lazy(() => retryImport(importFn));
+}
+
+interface RouteChunkProps {
+  /** A component created via lazyRoute() above. */
+  component: LazyExoticComponent<ComponentType>;
+  /** Suspense fallback shown while the chunk is loading. */
+  loading: ReactNode;
+  /** Crash fallback shown on failure; call the given function to retry. */
+  fallback: (retry: () => void) => ReactNode;
+}
+
+/**
+ * Renders a lazyRoute() component and turns a chunk-load failure (after
+ * retryImport() has already exhausted its own retries) into a full-reload
+ * recovery path instead of a soft reset that would just replay the same
+ * permanently-cached rejection. An ordinary render crash elsewhere on the
+ * page (not a ChunkLoadError) still gets the regular soft "Try again".
+ */
+export function RouteChunk({ component: Component, loading, fallback }: RouteChunkProps) {
+  const isChunkLoadError = useRef(false);
+
+  return (
+    <AppErrorBoundary
+      onError={(error) => {
+        isChunkLoadError.current = error instanceof ChunkLoadError;
+      }}
+      fallback={(reset) =>
+        fallback(() => {
+          if (isChunkLoadError.current) {
+            window.location.reload();
+            return;
+          }
+          reset();
+        })
+      }
+    >
+      <Suspense fallback={loading}>
+        <Component />
+      </Suspense>
     </AppErrorBoundary>
   );
 }
