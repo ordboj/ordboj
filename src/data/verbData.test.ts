@@ -16,16 +16,24 @@ const verbDataSource = readFileSync(join(here, 'verbData.ts'), 'utf-8');
 
 // Split the VERB_DATA array literal into one chunk per row, each chunk
 // carrying any comment lines that precede it.
-function rowsWithPrecedingComments(
-  source: string,
-): Array<{ infinitive: string; commentBlock: string; hasGrupp: boolean }> {
+function rowsWithPrecedingComments(source: string): Array<{
+  infinitive: string;
+  commentBlock: string;
+  hasGrupp: boolean;
+  imperativ: string;
+}> {
   const startMarker = 'export const VERB_DATA: VerbData[] = [';
   const start = source.indexOf(startMarker);
   expect(start).toBeGreaterThan(-1);
   const body = source.slice(start + startMarker.length);
   const lines = body.split('\n');
 
-  const rows: Array<{ infinitive: string; commentBlock: string; hasGrupp: boolean }> = [];
+  const rows: Array<{
+    infinitive: string;
+    commentBlock: string;
+    hasGrupp: boolean;
+    imperativ: string;
+  }> = [];
   let pendingComment: string[] = [];
 
   for (const line of lines) {
@@ -36,10 +44,18 @@ function rowsWithPrecedingComments(
     }
     const rowMatch = trimmed.match(/infinitive:\s*"([^"]+)"/);
     if (rowMatch) {
+      const imperativMatch = trimmed.match(/imperativ:\s*"([^"]*)"/);
+      // A row can also carry its explanation as a trailing "// ..." comment
+      // on the same line (e.g. "... }, // modal verb: ..."), not just as
+      // preceding comment lines. Fold both into one commentBlock.
+      const trailingCommentMatch = trimmed.match(/\/\/.*$/);
+      const commentParts = [...pendingComment];
+      if (trailingCommentMatch) commentParts.push(trailingCommentMatch[0]);
       rows.push({
         infinitive: rowMatch[1],
-        commentBlock: pendingComment.join('\n'),
+        commentBlock: commentParts.join('\n'),
         hasGrupp: /\bgrupp:\s*"/.test(trimmed),
+        imperativ: imperativMatch ? imperativMatch[1] : '',
       });
       pendingComment = [];
     }
@@ -148,6 +164,95 @@ describe('VERB_DATA - grupp field contract', () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+// Issue #132 / PR #179: swedish-linguist audited all 50 shipped verbs'
+// imperativ forms. Genuine modal verbs (kunna, få, vilja) have no Swedish
+// imperativ at all and stay empty *with* an explanation; genuinely
+// uncertain rows (te sig, anse) stay empty and flagged for a human rather
+// than guessed; every other row now carries a real, non-empty imperativ.
+describe('VERB_DATA - imperativ audit (issue #132)', () => {
+  // Regression: before the audit, every non-auxiliary A1 verb below had
+  // imperativ: "" even though a correct Swedish imperativ exists. Pin the
+  // corrected forms so a future edit can't silently wipe them again.
+  it.each([
+    ['använda', 'använd'],
+    ['börja', 'börja'],
+    ['behöva', 'behöv'],
+    ['ta', 'ta'],
+    ['se', 'se'],
+    ['gå', 'gå'],
+    ['säga', 'säg'],
+    ['skriva', 'skriv'],
+    ['läsa', 'läs'],
+    ['lägga', 'lägg'],
+    ['tala', 'tala'],
+    ['hålla', 'håll'],
+  ] as const)('fills in the real imperativ for "%s" -> "%s"', (infinitive, imperativ) => {
+    const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+    expect(row).toBeDefined();
+    expect(row?.imperativ).toBe(imperativ);
+  });
+
+  // Regression: modal verbs genuinely have no imperativ in Swedish. The
+  // audit must keep these empty (not guess a form) while explaining why,
+  // distinguishing "no imperativ exists" from "not yet reviewed".
+  it.each(['kunna', 'få', 'vilja'] as const)(
+    'leaves the genuinely absent imperativ for modal verb "%s" empty, with an explanation',
+    (infinitive) => {
+      const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+      expect(row).toBeDefined();
+      expect(row?.imperativ).toBe('');
+
+      const parsed = parsedRows.find((r) => r.infinitive === infinitive);
+      expect(parsed).toBeDefined();
+      expect(parsed?.commentBlock).toMatch(/modal verb/i);
+    },
+  );
+
+  // Every row whose imperativ is empty must carry an explanatory comment
+  // (either "modal verb" for a genuine grammatical absence, or "NEEDS
+  // HUMAN CHECK" for a genuinely uncertain form) — never a silent blank
+  // that could be mistaken for an unfinished audit.
+  it('flags every row with an empty imperativ with an explanatory comment, rather than leaving it silently blank', () => {
+    const unexplained = parsedRows.filter(
+      (r) =>
+        r.imperativ === '' &&
+        !/modal verb/i.test(r.commentBlock) &&
+        !/NEEDS HUMAN CHECK/i.test(r.commentBlock),
+    );
+    expect(unexplained.map((r) => r.infinitive)).toEqual([]);
+  });
+
+  // Regression: rows flagged as genuinely uncertain must actually be
+  // empty (not a guessed form hiding behind a stale review comment).
+  it.each(['te sig', 'anse'] as const)(
+    'leaves the genuinely uncertain imperativ for "%s" empty and flagged for human review, not guessed',
+    (infinitive) => {
+      const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+      expect(row).toBeDefined();
+      expect(row?.imperativ).toBe('');
+
+      const parsed = parsedRows.find((r) => r.infinitive === infinitive);
+      expect(parsed).toBeDefined();
+      expect(parsed?.commentBlock).toMatch(/NEEDS HUMAN CHECK/i);
+    },
+  );
+
+  // The audit is complete: every row's imperativ is either a real,
+  // non-empty Swedish form, or empty with one of the two allowed
+  // explanations pinned above.
+  it('has an imperativ audit comment (or a real value) for every row - no unexplained gaps remain', () => {
+    for (const row of parsedRows) {
+      if (row.imperativ === '') {
+        expect(
+          /modal verb/i.test(row.commentBlock) || /NEEDS HUMAN CHECK/i.test(row.commentBlock),
+        ).toBe(true);
+      } else {
+        expect(row.imperativ.length).toBeGreaterThan(0);
+      }
+    }
   });
 });
 
