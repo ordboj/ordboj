@@ -11,7 +11,9 @@ import { Grade } from '@/lib/srs';
 export default function Practice() {
   const navigate = useNavigate();
   const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
-  const { getDueItems, recordAnswer, isLoading } = useSrsProgress(settings.cefrLevels);
+  const { getDueItems, recordAnswer, answeredToday, isLoading } = useSrsProgress(
+    settings.cefrLevels,
+  );
 
   const [dueItems, setDueItems] = useState<PracticeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -20,6 +22,12 @@ export default function Practice() {
   useEffect(() => {
     const loadDueItems = async () => {
       if (!isLoading && !settingsLoading) {
+        // The goal may already be met from an earlier sitting today: don't
+        // even fetch a queue in that case.
+        if (answeredToday >= settings.dailyGoal) {
+          setPracticeComplete(true);
+          return;
+        }
         const items = await getDueItems();
         setDueItems(items);
         if (items.length === 0) {
@@ -28,20 +36,23 @@ export default function Practice() {
       }
     };
     loadDueItems();
-  }, [isLoading, settingsLoading, getDueItems]);
+  }, [isLoading, settingsLoading, getDueItems, answeredToday, settings.dailyGoal]);
 
   const handleAnswer = (grade: Grade) => {
     const currentItem = dueItems[currentIndex];
     recordAnswer(currentItem.itemId, grade);
 
-    if (currentIndex < dueItems.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
+    // answeredToday hasn't re-rendered with this answer yet, so account for
+    // it explicitly rather than reading a stale value.
+    const willHaveAnsweredToday = answeredToday + 1;
+    if (willHaveAnsweredToday >= settings.dailyGoal || currentIndex >= dueItems.length - 1) {
       setPracticeComplete(true);
+    } else {
+      setCurrentIndex(currentIndex + 1);
     }
   };
 
-  const progressPercent = dueItems.length > 0 ? ((currentIndex + 1) / dueItems.length) * 100 : 100;
+  const progressPercent = settings.dailyGoal > 0 ? (answeredToday / settings.dailyGoal) * 100 : 100;
 
   if (isLoading || settingsLoading) {
     return (
@@ -84,7 +95,7 @@ export default function Practice() {
           </Button>
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-muted-foreground">
-              {currentIndex + 1} / {dueItems.length}
+              {answeredToday} / {settings.dailyGoal}
             </span>
             <Button
               variant="outline"
