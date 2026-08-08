@@ -4,6 +4,9 @@ Ticket #21. Written by `staff-engineer`. Binding on `swedish-linguist`,
 `devops` and `qa` work under epic #257. Hard-blocked follow-ups are marked;
 nothing in this note may be implemented out of the order in section 5.
 
+Owner: `staff-engineer` per issue #21; countersigned by `product-manager`
+(file lives in `docs/product/**`).
+
 ## 0. Decision
 
 **`src/data/verbData.ts` is the single source of truth for verb data. The
@@ -28,8 +31,9 @@ Section 2 has the numbers.
 
 ## 1. What is true today (verified in this worktree)
 
-- `public/data/swedish_verbs.csv`: 1,538 lines — 1 header + 1,537 data
-  rows. Copied verbatim into `dist/` by Vite because it lives under
+- `public/data/swedish_verbs.csv`: 1,539 lines — 1 header + 1,538 data
+  rows (the file has no trailing newline, so `wc -l` under-reports it as
+  1,538). Copied verbatim into `dist/` by Vite because it lives under
   `public/`. Zero runtime references: no `import`, no `fetch`. It is dead
   payload in every user's download.
 - `src/data/verbData.ts`: 51 rows, all A1. This is what learners see.
@@ -42,8 +46,10 @@ Section 2 has the numbers.
   rows corrected in PR #158; 13 rows flagged "needs human check" and left
   untouched; ~940 naive-template-shaped rows presumed grupp 1 but **not
   individually verified against a reference**; `imperativ` empty in 1,531
-  of 1,537 data rows. The residual error rate is unknown and concentrated
-  in B2–C2 rows.
+  of 1,538 data rows. The residual error rate is unknown and concentrated
+  in B2–C2 rows. (The audit doc itself carries the same off-by-one and
+  reports 1,537; it is a `qa`/`swedish-linguist`-owned file and is left
+  as-is here.)
 - Non-test code references to the CSV: only
   `scripts/validate-verb-forms.mjs` (charset validator, runs in CI as the
   `validate-verbs` job). Tests in `src/data/verbData.test.ts` also read the
@@ -73,7 +79,7 @@ Section 2 has the numbers.
    CSV edit anywhere becomes a silent production data change. The gate we
    rely on ("human review before a learner sees a form") stops existing as
    a mechanism and becomes a convention.
-4. **`imperativ` is empty in 1,531/1,537 rows.** Generated rows would
+4. **`imperativ` is empty in 1,531/1,538 rows.** Generated rows would
    render "(not available)" almost everywhere, which issue #124 exists to
    eliminate, not multiply.
 
@@ -138,6 +144,15 @@ part of this ruling; deletion from the repo is not.
      queue row becomes a corrupt learner-facing row one promotion later).
   5. Keep the row-count pin from R4 until #8 closes.
 
+## 4a. Effect on open work
+
+Open PR #265 (ticket #262) appends six base verbs to `VERB_DATA`, taking
+it to 57 rows. Under R4 it does not merge before #8 closes. The order-pin
+test it adds (`src/data/verbData.orderPin.test.ts`) pins existing
+positions but does not give SRS items stable ids, so it is not a
+substitute for #8. The lead moves #262 behind #8 on the board and marks
+PR #265 blocked.
+
 ## 5. Sequencing and follow-up tickets
 
 Order is mandatory. The lead files these as sub-issues of epic #257 and
@@ -151,8 +166,11 @@ routes them; owners per the CLAUDE.md table.
    `swedish-linguist` extends `validate-verb-forms.mjs` per R4/R5 (the
    script is theirs); `qa` updates the CSV path in
    `src/data/verbData.test.ts`; `devops` touches `ci.yml` only if the job
-   needs a path argument. Result: dead payload gone from `dist/`, drift
-   check live, row count pinned.
+   needs a path argument. Same PR corrects the header comment in
+   `scripts/validate-verb-forms.mjs` (line 7 still labels the CSV "source
+   of record", which R1 reverses) and the `validate-verbs` comment block
+   in `.github/workflows/ci.yml` (line 93). Result: dead payload gone from
+   `dist/`, drift check live, row count pinned, stale comments corrected.
 3. **Resolve the 13 flagged rows** (`swedish-linguist` prepares, human
    confirms) — small, unblocks nothing but shrinks the uncertain set.
 4. **After #8 merges:** first promotion batch per R3 (remaining A1 rows
