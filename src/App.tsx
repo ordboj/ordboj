@@ -13,6 +13,7 @@ import {
 // first navigation instead of bloating the initial bundle.
 const Home = lazy(() => import('./pages/Home'));
 const Practice = lazy(() => import('./pages/Practice'));
+const PracticeParticles = lazy(() => import('./pages/PracticeParticles'));
 const Progress = lazy(() => import('./pages/Progress'));
 const Settings = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -52,6 +53,16 @@ const App = () => (
               <RouteErrorBoundary key="/practice">
                 <Suspense fallback={<RouteLoadingFallback />}>
                   <Practice />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path="/practice-particles"
+            element={
+              <RouteErrorBoundary key="/practice-particles">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <PracticeParticles />
                 </Suspense>
               </RouteErrorBoundary>
             }

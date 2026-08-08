@@ -45,6 +45,16 @@ vi.mock('@/hooks/useSrsProgress', () => ({
   useSrsProgress: () => ({
     isLoading: false,
     getDueItems: async () => [],
+    // Particle mode's half of the boundary. Empty here: this suite is about
+    // the CEFR level checkboxes, and an empty particle queue is the quietest
+    // state for the entry point Home now also renders.
+    getParticleSitting: () => ({
+      cards: [],
+      reviewsDue: 0,
+      newAllowedToday: 0,
+      deferredFirstClozes: [],
+    }),
+    particleReviewsDue: 0,
   }),
 }));
 
