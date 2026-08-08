@@ -289,7 +289,9 @@ describe('particle practice flow', () => {
 
     it('shows the read-only banner above an active card when the stored version is newer than this build', async () => {
       const clozeId = particleItemId('pv:tycka-om', 'cloze');
-      seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) }, 3);
+      // STORAGE_VERSION is 3 as of #222 (the persisted requeue ledger); a
+      // "newer than this build" store needs to be one past current, 4.
+      seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) }, 4);
 
       renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
@@ -298,7 +300,7 @@ describe('particle practice flow', () => {
     });
 
     it('shows the read-only banner on the session-complete screen when the stored version is newer than this build', async () => {
-      seed({}, 3);
+      seed({}, 4);
 
       renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 

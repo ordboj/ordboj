@@ -67,11 +67,13 @@ describe('Settings page - issue #93: reset confirmation reaches the real reset p
     });
 
     // Pin the exact post-reset shape of the SRS store: emptied items under
-    // the same version envelope - not a removed key, not a bare {}.
+    // the current version envelope (write always persists STORAGE_VERSION,
+    // 3 as of #222, regardless of the version the seeded store carried) -
+    // not a removed key, not a bare {}.
     await waitFor(() => {
       const stored = localStorage.getItem(SRS_KEY);
       expect(stored).not.toBeNull();
-      expect(JSON.parse(stored as string)).toEqual({ version: 2, items: {} });
+      expect(JSON.parse(stored as string)).toEqual({ version: 3, items: {} });
     });
 
     // The exact set of localStorage keys present is unchanged by reset:

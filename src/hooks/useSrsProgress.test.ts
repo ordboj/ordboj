@@ -120,7 +120,7 @@ describe('persistence - the irreplaceable-progress invariant', () => {
     const stored = localStorage.getItem(STORAGE_KEY);
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored as string);
-    expect(parsed.version).toBe(2);
+    expect(parsed.version).toBe(3);
     expect(parsed.items['1-presens'].repetitions).toBe(1);
 
     first.unmount();
@@ -320,7 +320,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     expect(result.current.srsStates['1-presens']!.easeFactor).toBe(2.4);
   });
 
-  it('persists the migration as a version 2 envelope and does not re-rebase an already-versioned payload on remount (one-shot)', async () => {
+  it('persists the migration as a version 3 envelope and does not re-rebase an already-versioned payload on remount (one-shot)', async () => {
     const legacyBlob = {
       '1-presens': {
         itemId: '1-presens',
@@ -338,7 +338,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     first.unmount();
 
     const storedAfterFirst = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(storedAfterFirst.version).toBe(2);
+    expect(storedAfterFirst.version).toBe(3);
 
     // Prove the rebase does not run again on a versioned payload: knock the
     // persisted ease back under the rebase threshold from outside. If load
@@ -848,7 +848,10 @@ describe('#241: forward-compat guard against a newer store', () => {
     await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(2));
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.version).toBe(2);
+    // The seeded store was version 2 (a store this build still understands
+    // and migrates in-place); the write path always persists the current
+    // STORAGE_VERSION, so what lands on disk after the answer is 3.
+    expect(stored.version).toBe(3);
     expect(stored.items['1-presens'].repetitions).toBe(2);
   });
 

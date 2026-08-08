@@ -5,6 +5,7 @@ import {
   isDue,
   isEligibleForRequeue,
   isSrsState,
+  localDayKey,
   MAX_INTERVAL_DAYS,
   MAX_REQUEUES_PER_DAY,
   REQUEUE_GAP_ITEMS,
@@ -371,6 +372,72 @@ describe('isDue - month and DST boundaries (Europe/Stockholm)', () => {
 
     const startOfNextDay = new Date(2026, 9, 26, 0, 0, 0, 0).getTime();
     expect(isDue(next, startOfNextDay)).toBe(true);
+  });
+});
+
+// localDayKey (issue #222) is the scope key for the persisted per-item
+// per-day requeue cap in useSrsProgress.ts. It has to agree with isDue's
+// local-day boundary and stay exact across DST and month/year rolls, since
+// a wrong key here would either let the cap reset early (extra retries the
+// learner should not get) or fail to reset at all (a spent cap staying
+// spent into a day the learner never studied).
+describe('localDayKey - month and DST boundaries (Europe/Stockholm)', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'Europe/Stockholm';
+  });
+
+  afterEach(() => {
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
+  });
+
+  it('defaults to the current instant when no argument is given', () => {
+    const now = new Date(2026, 0, 15, 12, 0, 0, 0).getTime();
+    vi.setSystemTime(now);
+    expect(localDayKey()).toBe('2026-01-15');
+  });
+
+  it('reports distinct keys either side of an ordinary midnight', () => {
+    const lateJan15 = new Date(2026, 0, 15, 23, 59, 59, 999).getTime();
+    const earlyJan16 = new Date(2026, 0, 16, 0, 0, 0, 0).getTime();
+    expect(localDayKey(lateJan15)).toBe('2026-01-15');
+    expect(localDayKey(earlyJan16)).toBe('2026-01-16');
+  });
+
+  it('rolls over a month boundary (Jan 31 -> Feb 1, 2026)', () => {
+    const endOfJan = new Date(2026, 0, 31, 23, 0, 0, 0).getTime();
+    const startOfFeb = new Date(2026, 1, 1, 0, 0, 0, 0).getTime();
+    expect(localDayKey(endOfJan)).toBe('2026-01-31');
+    expect(localDayKey(startOfFeb)).toBe('2026-02-01');
+  });
+
+  it('rolls over a year boundary (Dec 31, 2026 -> Jan 1, 2027)', () => {
+    const endOfYear = new Date(2026, 11, 31, 23, 0, 0, 0).getTime();
+    const startOfNextYear = new Date(2027, 0, 1, 0, 0, 0, 0).getTime();
+    expect(localDayKey(endOfYear)).toBe('2026-12-31');
+    expect(localDayKey(startOfNextYear)).toBe('2027-01-01');
+  });
+
+  it('still reports one key per calendar day on the 23-hour spring-forward day (2026-03-29)', () => {
+    const beforeJump = new Date(2026, 2, 29, 1, 0, 0, 0).getTime(); // 01:00 CET
+    const afterJump = new Date(2026, 2, 29, 23, 0, 0, 0).getTime(); // 23:00 CEST, same date
+    const nextDay = new Date(2026, 2, 30, 0, 30, 0, 0).getTime();
+    expect(localDayKey(beforeJump)).toBe('2026-03-29');
+    expect(localDayKey(afterJump)).toBe('2026-03-29');
+    expect(localDayKey(nextDay)).toBe('2026-03-30');
+  });
+
+  it('still reports one key per calendar day on the 25-hour fall-back day (2026-10-25)', () => {
+    const beforeFold = new Date(2026, 9, 25, 1, 0, 0, 0).getTime();
+    const duringRepeatedHour = new Date(2026, 9, 25, 2, 30, 0, 0).getTime();
+    const afterFold = new Date(2026, 9, 25, 23, 0, 0, 0).getTime();
+    const nextDay = new Date(2026, 9, 26, 0, 30, 0, 0).getTime();
+    expect(localDayKey(beforeFold)).toBe('2026-10-25');
+    expect(localDayKey(duringRepeatedHour)).toBe('2026-10-25');
+    expect(localDayKey(afterFold)).toBe('2026-10-25');
+    expect(localDayKey(nextDay)).toBe('2026-10-26');
   });
 });
 
