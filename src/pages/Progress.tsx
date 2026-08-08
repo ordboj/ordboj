@@ -250,7 +250,13 @@ export default function Progress() {
                       <TableCell>{verb.presens}</TableCell>
                       <TableCell>{verb.preteritum}</TableCell>
                       <TableCell>{verb.supinum}</TableCell>
-                      <TableCell>{verb.imperativ}</TableCell>
+                      <TableCell>
+                        {verb.imperativ === '(not available)' ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : (
+                          verb.imperativ
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">{verb.cefr}</Badge>
                       </TableCell>
