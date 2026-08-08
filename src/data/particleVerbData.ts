@@ -96,9 +96,11 @@ export interface ParticleVerbData {
   // human-verified form (VERB_DATA) with the invariant particle appended —
   // particle verbs conjugate the verb only, per the project's particle-verb
   // rule — checked against SO/SAOL like every other shipped form. Required
-  // for a verified:true entry to render its reference line at all; a
-  // missing base in VERB_DATA is why some entries above are still
-  // verified:false rather than a reason to derive this by rule.
+  // for a verified:true entry to render its reference line at all. Every
+  // verified entry's base still resolves in VERB_DATA — the dataset test
+  // enforces that — so these values duplicate VERB_DATA on purpose; the
+  // lookup moved from render time to authoring time, and a dataset test
+  // pins the copies against VERB_DATA.
   forms?: {
     presens: string;
     preteritum: string;
