@@ -51,7 +51,7 @@ has its own due count, its own session and its own daily goal.
 | sentences per verb             | min 2, target 3, **all presens in v1**                                    |
 | sentence rotation              | `sentences[repetitions % sentences.length]`, deterministic                |
 | sentence length                | 6–10 words, target in a main clause                                       |
-| introduction prerequisite      | base verb `repetitions >= 2` on **both** presens and preteritum           |
+| introduction prerequisite      | none — removed by issue #315; introduction order uses a soft base-verb tiebreak (see #316) |
 | same base verb, new            | never twice within 7 days (`bygga upp` / `bygga ut` are spaced)           |
 | same particle, new             | at most 2 per day                                                         |
 | reflexive verbs                | cloze item only, no recall item                                           |
