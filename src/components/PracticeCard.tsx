@@ -21,7 +21,6 @@ import {
   type Grupp,
 } from '@/lib/verbs';
 import { speakSwedish } from '@/lib/speech';
-import { ConfettiEffect } from './ConfettiEffect';
 import { Grade } from '@/lib/srs';
 
 // Fixed Swedish special-character row: always these three keys, in this
@@ -90,7 +89,6 @@ export function PracticeCard({
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [submittedAnswer, setSubmittedAnswer] = useState('');
-  const [showConfetti, setShowConfetti] = useState(false);
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
   const [conjugated, setConjugated] = useState<ConjugatedVerb | null>(null);
   const [pattern, setPattern] = useState<VerbPattern | null>(null);
@@ -212,11 +210,8 @@ export function PracticeCard({
       setSubmittedAnswer(answer);
       setShowFeedback(true);
 
-      if (correct) {
-        setShowConfetti(true);
-        if (autoplayAudio) {
-          speakSwedish(correctAnswer, muteAudio);
-        }
+      if (correct && autoplayAudio) {
+        speakSwedish(correctAnswer, muteAudio);
       }
     },
     [infinitive, form, correctAnswer, autoplayAudio, muteAudio],
@@ -263,7 +258,6 @@ export function PracticeCard({
     setShowFeedback(false);
     setIsCorrect(false);
     setSubmittedAnswer('');
-    setShowConfetti(false);
     setRevealedHints([]);
     setOptions([]);
   }, [infinitive, form]);
@@ -293,234 +287,238 @@ export function PracticeCard({
   }
 
   return (
-    <>
-      <ConfettiEffect trigger={showConfetti} />
-      <Card className="w-full max-w-2xl shadow-xl">
-        <CardContent className="p-8 space-y-6">
-          {/* Question */}
-          <div className="text-center space-y-3">
-            <p className="text-muted-foreground text-sm font-medium">Fill in the missing form</p>
-            <div className="bg-muted/30 rounded-lg p-6 space-y-2">
-              <h2 className="text-3xl font-bold text-primary tracking-wide" lang="sv">
-                {infinitive}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Missing: <span className="font-semibold">{getFormLabel(form)}</span>
-              </p>
-              <p className="text-xs text-muted-foreground italic">{getFormHint(form)}</p>
-            </div>
+    <Card className="w-full max-w-2xl shadow-xl">
+      <CardContent className="p-8 space-y-6">
+        {/* Question */}
+        <div className="text-center space-y-3">
+          <p className="text-muted-foreground text-sm font-medium">Fill in the missing form</p>
+          <div className="bg-muted/30 rounded-lg p-6 space-y-2">
+            <h2 className="text-3xl font-bold text-primary tracking-wide" lang="sv">
+              {infinitive}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Missing: <span className="font-semibold">{getFormLabel(form)}</span>
+            </p>
+            <p className="text-xs text-muted-foreground italic">{getFormHint(form)}</p>
           </div>
+        </div>
 
-          {/* Input Area */}
-          {!showFeedback && (
-            <div className="space-y-4">
-              {effectiveMode === 'typing' ? (
-                <div className="space-y-4">
-                  <Input
-                    value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
-                    onKeyDown={(e) =>
-                      e.key === 'Enter' && userAnswer.trim() && handleSubmit(userAnswer)
-                    }
-                    placeholder="Type your answer..."
-                    className="text-2xl text-center py-6"
-                    maxLength={60}
-                    autoFocus
-                    lang="sv"
-                    autoCapitalize="off"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    enterKeyHint="go"
-                  />
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {SWEDISH_SPECIAL_CHARS.map((char) => (
-                      <Button
-                        key={char}
-                        onClick={() => handleSpecialCharClick(char)}
-                        variant="outline"
-                        className="w-12 h-12 text-xl font-semibold"
-                      >
-                        <span lang="sv">{char}</span>
-                      </Button>
-                    ))}
+        {/* Input Area */}
+        {!showFeedback && (
+          <div className="space-y-4">
+            {effectiveMode === 'typing' ? (
+              <div className="space-y-4">
+                <Input
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === 'Enter' && userAnswer.trim() && handleSubmit(userAnswer)
+                  }
+                  placeholder="Type your answer..."
+                  className="text-2xl text-center py-6"
+                  maxLength={60}
+                  autoFocus
+                  lang="sv"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="go"
+                />
+                <div className="flex flex-wrap justify-center gap-2">
+                  {SWEDISH_SPECIAL_CHARS.map((char) => (
                     <Button
-                      onClick={handleDelete}
+                      key={char}
+                      onClick={() => handleSpecialCharClick(char)}
                       variant="outline"
-                      className="w-12 h-12 text-xl"
-                      disabled={!userAnswer}
+                      className="w-12 h-12 text-xl font-semibold"
                     >
-                      ⌫
-                    </Button>
-                  </div>
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={handleHint}
-                      variant="outline"
-                      className="flex-1 py-6 text-lg"
-                      disabled={revealedHints.length >= correctAnswer.length}
-                    >
-                      💡 Hint
-                    </Button>
-                    <Button
-                      onClick={() => handleSubmit(userAnswer)}
-                      className="flex-1 py-6 text-lg"
-                      disabled={!userAnswer.trim()}
-                    >
-                      Check Answer
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3">
-                  {options.map((option, index) => (
-                    <Button
-                      key={index}
-                      onClick={() => handleSubmit(option)}
-                      variant="outline"
-                      className="py-6 text-xl"
-                    >
-                      <span lang="sv">{option}</span>
+                      <span lang="sv">{char}</span>
                     </Button>
                   ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Feedback status: this node stays mounted at all times (visually
-              hidden via sr-only until an answer is submitted) rather than
-              being inserted together with its text, so the aria-live
-              announcement is a reliable in-place content mutation instead of
-              a mount-plus-content change several AT/browser pairs miss. */}
-          <div
-            role={showFeedback ? 'status' : undefined}
-            aria-live="polite"
-            className={
-              showFeedback
-                ? `flex items-center justify-center gap-3 p-4 rounded-lg ${
-                    isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
-                  }`
-                : 'sr-only'
-            }
-          >
-            {showFeedback &&
-              (isCorrect ? (
-                <>
-                  <CheckCircle2 className="w-8 h-8" />
-                  <span className="text-2xl font-bold">Correct!</span>
-                </>
-              ) : (
-                <>
-                  <XCircle className="w-8 h-8" />
-                  <span className="text-2xl font-bold">Not quite</span>
-                </>
-              ))}
-          </div>
-
-          {showFeedback && (
-            <div className="space-y-4">
-              {grupp && (
-                <div className="flex justify-center">
-                  <Badge variant="outline">grupp {grupp}</Badge>
-                </div>
-              )}
-
-              {alternatesDisclosure && (
-                <p className="text-sm text-muted-foreground text-center">{alternatesDisclosure}</p>
-              )}
-
-              {!isCorrect && willRequeueIfWrong && (
-                <p className="text-sm text-muted-foreground text-center">
-                  You'll see this one again later in today's session — one more correct answer and
-                  it's done.
-                </p>
-              )}
-
-              <div className="space-y-4">
-                {/* Show full pattern with pronunciation buttons */}
-                <div className="bg-muted/20 rounded-lg p-4 space-y-3">
-                  <p className="text-sm text-muted-foreground text-center font-medium">
-                    Complete pattern:
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    {pattern.patternParts.map((part, index) => {
-                      const displayText = part.isMissing ? correctAnswer : part.text;
-                      const isPartUnavailable = isFormUnavailable(
-                        part.form,
-                        conjugated[part.form],
-                        conjugated.imperativNotApplicable,
-                      );
-                      return (
-                        <div key={index} className="flex items-center gap-1">
-                          <div
-                            className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
-                              part.isMissing
-                                ? 'bg-primary text-primary-foreground font-bold'
-                                : 'bg-background'
-                            }`}
-                          >
-                            <span className="text-lg" lang={isPartUnavailable ? undefined : 'sv'}>
-                              {displayText}
-                            </span>
-                            {!part.isMissing && !isPartUnavailable && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-11 w-11 hover:bg-primary/10"
-                                aria-label={`Pronounce ${getFormLabel(part.form)}`}
-                                onClick={() => handlePronounceForm(part.form)}
-                              >
-                                <Volume2 className="w-3 h-3" />
-                              </Button>
-                            )}
-                          </div>
-                          {index < pattern.patternParts.length - 1 && (
-                            <span className="text-muted-foreground">–</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
                   <Button
+                    onClick={handleDelete}
                     variant="outline"
-                    onClick={handlePronounce}
-                    className="w-full gap-2 min-h-11"
+                    className="w-12 h-12 text-xl"
+                    disabled={!userAnswer}
+                    aria-label="Backspace"
                   >
-                    <Volume2 className="w-4 h-4" />
-                    Pronounce answer
+                    ⌫
                   </Button>
                 </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleHint}
+                    variant="outline"
+                    className="flex-1 py-6 text-lg"
+                    disabled={revealedHints.length >= correctAnswer.length}
+                  >
+                    💡 Hint
+                  </Button>
+                  <Button
+                    onClick={() => handleSubmit(userAnswer)}
+                    className="flex-1 py-6 text-lg"
+                    disabled={!userAnswer.trim()}
+                  >
+                    Check Answer
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3">
+                {options.map((option, index) => (
+                  <Button
+                    key={index}
+                    onClick={() => handleSubmit(option)}
+                    variant="outline"
+                    className="py-6 text-xl"
+                  >
+                    <span lang="sv">{option}</span>
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-                {/* Learner's own wrong answer: muted, struck through, subordinate to the
-                    correct form above (P21) -- never rendered at equal weight beside it,
-                    and never spoken. Hidden when the submission was empty or hints already
-                    gave away the answer -- there is no error to show there. */}
-                {!isCorrect &&
-                  submittedAnswer.trim() !== '' &&
-                  revealedHints.length < correctAnswer.length && (
-                    <p className="text-xs text-muted-foreground text-center">
-                      {mode === 'typing' ? 'You typed' : 'You chose'}:{' '}
-                      <span className="line-through opacity-60">{submittedAnswer}</span>
-                    </p>
-                  )}
+        {/* Feedback status: this node stays mounted at all times (visually
+            hidden via sr-only until an answer is submitted) rather than
+            being inserted together with its text, so the aria-live
+            announcement is a reliable in-place content mutation instead of
+            a mount-plus-content change several AT/browser pairs miss. */}
+        <div
+          role={showFeedback ? 'status' : undefined}
+          aria-live="polite"
+          className={
+            showFeedback
+              ? `flex items-center justify-center gap-3 p-4 rounded-lg ${
+                  isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
+                }`
+              : 'sr-only'
+          }
+        >
+          {showFeedback &&
+            (isCorrect ? (
+              <>
+                <CheckCircle2 className="w-8 h-8" />
+                <span className="text-2xl font-bold">Correct!</span>
+              </>
+            ) : (
+              <>
+                <XCircle className="w-8 h-8" />
+                <span className="text-2xl font-bold">Not quite</span>
+              </>
+            ))}
+        </div>
 
-                {showExamples && exampleSentence && (
-                  <div className="bg-accent/10 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground mb-1">Example:</p>
-                    <p className="text-base italic" lang="sv">
-                      {exampleSentence}
-                    </p>
-                  </div>
-                )}
+        {showFeedback && (
+          <div className="space-y-4">
+            {grupp && (
+              <div className="flex justify-center">
+                <Badge variant="outline">grupp {grupp}</Badge>
+              </div>
+            )}
+
+            {alternatesDisclosure && (
+              <p className="text-sm text-muted-foreground text-center">{alternatesDisclosure}</p>
+            )}
+
+            {!isCorrect && willRequeueIfWrong && (
+              <p className="text-sm text-muted-foreground text-center">
+                You'll see this one again later in today's session — one more correct answer and
+                it's done.
+              </p>
+            )}
+
+            <div className="space-y-4">
+              {/* Show full pattern with pronunciation buttons */}
+              <div className="bg-muted/20 rounded-lg p-4 space-y-3">
+                <p className="text-sm text-muted-foreground text-center font-medium">
+                  Complete pattern:
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {pattern.patternParts.map((part, index) => {
+                    const displayText = part.isMissing ? correctAnswer : part.text;
+                    const isPartUnavailable = isFormUnavailable(
+                      part.form,
+                      conjugated[part.form],
+                      conjugated.imperativNotApplicable,
+                    );
+                    return (
+                      <div key={index} className="flex items-center gap-1">
+                        <div
+                          // min-h-11 (44px) instead of py-2: the pronounce
+                          // button below is already h-11 (44px), so adding
+                          // vertical padding on top of it stacks to ~60px.
+                          // A min-height matching the button's own height
+                          // keeps the pill's touch target at exactly 44px
+                          // without growing past it (density preserved).
+                          className={`flex items-center gap-1 px-3 min-h-11 rounded-lg ${
+                            part.isMissing
+                              ? 'bg-primary text-primary-foreground font-bold'
+                              : 'bg-background'
+                          }`}
+                        >
+                          <span className="text-lg" lang={isPartUnavailable ? undefined : 'sv'}>
+                            {displayText}
+                          </span>
+                          {!part.isMissing && !isPartUnavailable && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-11 w-11 hover:bg-primary/10"
+                              aria-label={`Pronounce ${getFormLabel(part.form)}`}
+                              onClick={() => handlePronounceForm(part.form)}
+                            >
+                              <Volume2 className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
+                        {index < pattern.patternParts.length - 1 && (
+                          <span className="text-muted-foreground">–</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handlePronounce}
+                  className="w-full gap-2 min-h-11"
+                >
+                  <Volume2 className="w-4 h-4" />
+                  Pronounce answer
+                </Button>
               </div>
 
-              <Button onClick={handleNext} className="w-full py-6 text-lg">
-                Next Card
-              </Button>
+              {/* Learner's own wrong answer: muted, struck through, subordinate to the
+                  correct form above (P21) -- never rendered at equal weight beside it,
+                  and never spoken. Hidden when the submission was empty or hints already
+                  gave away the answer -- there is no error to show there. */}
+              {!isCorrect &&
+                submittedAnswer.trim() !== '' &&
+                revealedHints.length < correctAnswer.length && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    {mode === 'typing' ? 'You typed' : 'You chose'}:{' '}
+                    <span className="line-through opacity-60">{submittedAnswer}</span>
+                  </p>
+                )}
+
+              {showExamples && exampleSentence && (
+                <div className="bg-accent/10 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground mb-1">Example:</p>
+                  <p className="text-base italic" lang="sv">
+                    {exampleSentence}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </>
+
+            <Button onClick={handleNext} className="w-full py-6 text-lg">
+              Next Card
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

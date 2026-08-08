@@ -35,6 +35,26 @@ beforeEach(() => {
 });
 
 describe('ConfettiEffect - prefers-reduced-motion (issue #110 AC)', () => {
+  it('fires confetti when trigger is already true on initial mount and there is no reduced-motion preference', () => {
+    render(<ConfettiEffect trigger={true} />);
+
+    expect(confettiMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fire confetti when trigger is false on initial mount', () => {
+    render(<ConfettiEffect trigger={false} />);
+
+    expect(confettiMock).not.toHaveBeenCalled();
+  });
+
+  it('skips the burst on initial mount when prefers-reduced-motion is set, even though trigger is true', () => {
+    setPrefersReducedMotion(true);
+
+    render(<ConfettiEffect trigger={true} />);
+
+    expect(confettiMock).not.toHaveBeenCalled();
+  });
+
   it('fires the confetti burst when trigger becomes true and the OS has not asked for reduced motion', () => {
     setPrefersReducedMotion(false);
     const { rerender } = render(<ConfettiEffect trigger={false} />);
@@ -50,8 +70,9 @@ describe('ConfettiEffect - prefers-reduced-motion (issue #110 AC)', () => {
   it('does not fire the confetti burst when trigger becomes true and prefers-reduced-motion: reduce matches', () => {
     setPrefersReducedMotion(true);
     const { rerender } = render(<ConfettiEffect trigger={false} />);
-    rerender(<ConfettiEffect trigger={true} />);
+    expect(confettiMock).not.toHaveBeenCalled();
 
+    rerender(<ConfettiEffect trigger={true} />);
     expect(confettiMock).not.toHaveBeenCalled();
   });
 
