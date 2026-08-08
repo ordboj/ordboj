@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { PracticeCard } from '@/components/PracticeCard';
+import { ReadOnlyBanner } from '@/components/ReadOnlyBanner';
 import { useSrsProgress, type PracticeItem } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { conjugationItemId } from '@/lib/itemIds';
@@ -41,7 +42,9 @@ function getLocalDayKey(): string {
 export default function Practice() {
   const navigate = useNavigate();
   const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
-  const { getDueItems, recordAnswer, srsStates, isLoading } = useSrsProgress(settings.cefrLevels);
+  const { getDueItems, recordAnswer, srsStates, isLoading, isReadOnly } = useSrsProgress(
+    settings.cefrLevels,
+  );
 
   // `items` is the current round's live, mutable working list -- a lapse in
   // a 'due'/'extra' round can splice a same-sitting retry back into it.
@@ -354,6 +357,7 @@ export default function Practice() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <div className="w-full max-w-2xl text-center space-y-6">
+          {isReadOnly && <ReadOnlyBanner />}
           <h1 className="text-5xl font-bold text-primary">Great work! 🎉</h1>
           <p className="text-xl text-muted-foreground">{subtitle}</p>
           <div className="flex flex-col items-center gap-3">
@@ -405,6 +409,7 @@ export default function Practice() {
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
       {/* Header */}
       <div className="max-w-2xl mx-auto mb-6 space-y-4">
+        {isReadOnly && <ReadOnlyBanner />}
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
