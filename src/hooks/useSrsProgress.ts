@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { SrsState, initializeSrsState, calculateNextReview, isDue, Grade } from '@/lib/srs';
-import { getVerbs, Form, Verb, conjugateVerb } from '@/lib/verbs';
+import { getVerbs, Form, Verb, conjugateVerb, availableForms } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -79,13 +79,16 @@ export function useSrsProgress(cefrLevels?: string[]) {
         }
       }
 
-      // Initialize all verb+form combinations
-      const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
+      // Initialize all verb+form combinations that actually exist. A form
+      // that a verb doesn't have (e.g. imperativ for a modal like kunna)
+      // must never get an SRS item — there is nothing to quiz.
       const newStates: Record<string, SrsState> = { ...loadedStates };
 
       const verbs = await getVerbs();
 
       for (const verb of verbs) {
+        const conjugated = await conjugateVerb(verb.infinitive);
+        const forms = availableForms(conjugated).filter((form) => form !== 'infinitive');
         for (const form of forms) {
           const itemId = `${verb.id}-${form}`;
           if (!newStates[itemId]) {
