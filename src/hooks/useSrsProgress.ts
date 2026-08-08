@@ -8,6 +8,8 @@ import {
   Grade,
 } from '@/lib/srs';
 import { createConjugationProvider, type ConjugationItem } from '@/lib/srsProviders';
+import { conjugationItemIdForInfinitive } from '@/lib/itemIds';
+import type { Form } from '@/lib/verbs';
 import { buildParticleSitting, countParticleReviewsDue } from '@/lib/particleQueue';
 
 // How the learner produced the answer. Bundled here (rather than added as a
@@ -21,9 +23,11 @@ const STORAGE_KEY = 'swedish-verbs-srs-progress';
 // bare Record<string, SrsState> at STORAGE_KEY. Version 2 wraps it in
 // { version, items } and, on upgrade from the legacy blob, rebases ease
 // factors that the old SM-2 formula drove to the floor (see
-// docs/learning/lapse-handling.md, Migration). The rebase runs exactly
-// once because the migrated payload is persisted with the version marker.
-const STORAGE_VERSION = 2;
+// docs/learning/lapse-handling.md, Migration). Version 3 rewrites
+// conjugation item ids from `<index + 1>-<form>` to `<infinitive>-<form>`
+// (issue #8). Each step runs exactly once because the migrated payload is
+// persisted with the new version marker.
+const STORAGE_VERSION = 3;
 
 // Legacy -0.80-per-miss ease penalty pinned items at the 1.3 floor after a
 // single early miss. An item with repetitions >= 2 has since proven itself,
@@ -49,6 +53,129 @@ function rebaseLegacyEase(items: Record<string, SrsState>): Record<string, SrsSt
   return rebased;
 }
 
+// The VERB_DATA order as frozen by src/data/verbData.orderPin.test.ts at the
+// moment the v2 -> v3 id migration shipped. This is a *snapshot*, not a live
+// read of VERB_DATA, and that is the entire point: a v2 store keys progress
+// by position, so the only correct way to read it is against the table that
+// produced those positions. Reading today's VERB_DATA instead would make the
+// migration's meaning change every time a verb is added or moved — exactly
+// the defect being fixed. Never edit this list; it is a record of the past.
+//
+// Growth up to this point was append-only (the pin test enforced it), so
+// index N meant the same verb in every build that could have written a v2
+// store. Indexes beyond this list cannot have been written by any released
+// build; if one appears anyway its key is left untouched rather than guessed
+// at (see migrateLegacyItemIds).
+const LEGACY_VERB_INFINITIVES: readonly string[] = [
+  'vara', // 1
+  'ha', // 2
+  'kunna', // 3
+  'unna', // 4
+  'få', // 5
+  'bli', // 6
+  'komma', // 7
+  'vilja', // 8
+  'göra', // 9
+  'finna', // 10
+  'ta', // 11
+  'se', // 12
+  'gå', // 13
+  'säga', // 14
+  'äga', // 15
+  'betyda', // 16
+  'ge', // 17
+  'skriva', // 18
+  'te sig', // 19
+  'riva', // 20
+  'börja', // 21
+  'tro', // 22
+  'tycka', // 23
+  'veta', // 24
+  'försöka', // 25
+  'behöva', // 26
+  'känna', // 27
+  'läsa', // 28
+  'ro', // 29
+  'låta', // 30
+  'stå', // 31
+  'visa', // 32
+  'använda', // 33
+  'vända', // 34
+  'hålla', // 35
+  'tänka', // 36
+  'söka', // 37
+  'ligga', // 38
+  'lägga', // 39
+  'anse', // 40
+  'öva', // 41
+  'handla', // 42
+  'öka', // 43
+  'skapa', // 44
+  'kapa', // 45
+  'gälla', // 46
+  'verka', // 47
+  'tala', // 48
+  'bära', // 49
+  'höra', // 50
+  'stänga', // 51
+  'sätta', // 52
+  'stiga', // 53
+  'hälsa', // 54
+  'bygga', // 55
+  'ställa', // 56
+];
+
+// A v2 conjugation key: digits, a hyphen, one of the four scheduled forms.
+// Anchored and form-restricted so it cannot match a v3 key (no infinitive is
+// all digits) or a particle key (`pv:` namespace).
+const LEGACY_CONJUGATION_ITEM_ID = /^(\d+)-(presens|preteritum|supinum|imperativ)$/;
+
+// v2 -> v3: rewrite position-derived conjugation keys to infinitive-derived
+// ones. Deterministic and offline-readable: the only input beyond the store
+// itself is the frozen table above.
+//
+// Nothing is ever dropped. A key is left exactly as it was when it is not a
+// legacy conjugation key (particle items, keys already migrated), when its
+// index is outside the snapshot, or when the target key is already present —
+// overwriting a real v3 item with a v2 one would destroy the newer of the
+// two schedules, and no rule for merging them can be justified from the data.
+// `state.itemId` is rewritten alongside the map key so the two never disagree.
+function migrateLegacyItemIds(items: Record<string, SrsState>): Record<string, SrsState> {
+  const migrated: Record<string, SrsState> = {};
+  for (const [itemId, state] of Object.entries(items)) {
+    const match = LEGACY_CONJUGATION_ITEM_ID.exec(itemId);
+    const index = match?.[1];
+    const form = match?.[2];
+    const infinitive = index === undefined ? undefined : LEGACY_VERB_INFINITIVES[Number(index) - 1];
+    if (infinitive === undefined || form === undefined) {
+      migrated[itemId] = state;
+      continue;
+    }
+    const stableId = conjugationItemIdForInfinitive(infinitive, form as Form);
+    if (migrated[stableId] !== undefined || items[stableId] !== undefined) {
+      migrated[itemId] = state;
+      continue;
+    }
+    migrated[stableId] =
+      state && typeof state === 'object' ? { ...state, itemId: stableId } : state;
+  }
+  return migrated;
+}
+
+// The forward migration ladder, in one place. Steps are cumulative and each
+// is guarded by the version that introduced it, so a v1 payload gets both
+// steps and a v2 payload gets only the id rewrite. `fromVersion` 1 also
+// covers the legacy unversioned blob, which is what version 1 was.
+function migrateItems(
+  items: Record<string, SrsState>,
+  fromVersion: number,
+): Record<string, SrsState> {
+  let result = items;
+  if (fromVersion < 2) result = rebaseLegacyEase(result);
+  if (fromVersion < 3) result = migrateLegacyItemIds(result);
+  return result;
+}
+
 interface ParsedProgress {
   items: Record<string, SrsState>;
   // The version marker found in storage. `undefined` means the legacy bare
@@ -58,9 +185,9 @@ interface ParsedProgress {
   storedVersion?: number;
 }
 
-// Accepts either the version-2 envelope or the legacy bare map (from
-// storage or an old export file) and returns the item map, applying the
-// one-time ease rebase to legacy data. Unknown fields on individual items
+// Accepts a versioned envelope or the legacy bare map (from storage or an
+// old export file) and returns the item map, running every migration step
+// the stored version is behind on. Unknown fields on individual items
 // survive via spread; nothing is discarded.
 function parseStoredProgress(raw: string): ParsedProgress {
   const parsed = JSON.parse(raw);
@@ -68,15 +195,20 @@ function parseStoredProgress(raw: string): ParsedProgress {
     return { items: {} };
   }
   if (typeof parsed.version === 'number') {
-    // Versioned envelope (this version or newer): take the items as-is.
     const items = parsed.items;
+    const safeItems: Record<string, SrsState> =
+      items && typeof items === 'object' && !Array.isArray(items) ? items : {};
     return {
-      items: items && typeof items === 'object' && !Array.isArray(items) ? items : {},
+      // A store from a *newer* build is taken verbatim: its keys may mean
+      // something this build cannot see, and the session runs read-only
+      // anyway (see the guard in the hook), so migrating it would be both
+      // wrong and pointless.
+      items: parsed.version > STORAGE_VERSION ? safeItems : migrateItems(safeItems, parsed.version),
       storedVersion: parsed.version,
     };
   }
-  // Legacy unversioned blob: the bare state map itself.
-  return { items: rebaseLegacyEase(parsed as Record<string, SrsState>) };
+  // Legacy unversioned blob: the bare state map itself, i.e. version 1.
+  return { items: migrateItems(parsed as Record<string, SrsState>, 1) };
 }
 
 // Import is the only untrusted entry point into the store. Storage reads
@@ -88,10 +220,13 @@ function parseStoredProgress(raw: string): ParsedProgress {
 // payload is not a progress backup this version can read.
 //
 // Version ladder:
-//   no version field -> legacy v1 bare map, ease rebase applied
-//   version 1         -> envelope form of v1, ease rebase applied
-//   version 2         -> current shape, taken as-is
-//   version > 2       -> written by a newer build; rejected rather than
+//   no version field -> legacy v1 bare map, ease rebase + id migration
+//   version 1         -> envelope form of v1, ease rebase + id migration
+//   version 2         -> id migration only (its ease values are already
+//                        rebased; re-running the rebase would lift genuinely
+//                        difficult items off the floor)
+//   version 3         -> current shape, taken as-is
+//   version > 3       -> written by a newer build; rejected rather than
 //                        guessed at, since the migration cannot be reasoned
 //                        about here. The user's current store is left alone.
 function parseImportedProgress(raw: string): Record<string, SrsState> | null {
@@ -108,11 +243,11 @@ function parseImportedProgress(raw: string): Record<string, SrsState> | null {
   const envelope = parsed as { version?: unknown; items?: unknown };
   const unversioned = envelope.version === undefined;
   let items: unknown;
-  let needsEaseRebase: boolean;
+  let fromVersion: number;
 
   if (unversioned) {
     items = parsed;
-    needsEaseRebase = true;
+    fromVersion = 1;
   } else {
     const version = envelope.version;
     if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
@@ -122,7 +257,7 @@ function parseImportedProgress(raw: string): Record<string, SrsState> | null {
       return null;
     }
     items = envelope.items;
-    needsEaseRebase = version < STORAGE_VERSION;
+    fromVersion = version;
   }
 
   if (!items || typeof items !== 'object' || Array.isArray(items)) {
@@ -147,7 +282,7 @@ function parseImportedProgress(raw: string): Record<string, SrsState> | null {
     validated[itemId] = state;
   }
 
-  return needsEaseRebase ? rebaseLegacyEase(validated) : validated;
+  return migrateItems(validated, fromVersion);
 }
 
 // One conjugation item: a (verb, form) pair. Kept as the hook's public item

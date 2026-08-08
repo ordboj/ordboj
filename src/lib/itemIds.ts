@@ -1,3 +1,4 @@
+import { VERB_DATA } from '@/data/verbData';
 import type { Form } from '@/lib/verbs';
 
 // One place where an SRS item id is built.
@@ -9,12 +10,48 @@ import type { Form } from '@/lib/verbs';
 // template literal was written out in five files, so keeping them in step
 // depended on nobody ever editing one of them alone.
 //
-// The format is `<verbId>-<form>` and it is frozen: `verbId` is
-// `String(index + 1)` over VERB_DATA (see src/lib/verbs.ts and the order pin
-// test in src/data/verbData.orderPin.test.ts). Changing the shape here
-// orphans every stored key and needs a storage migration, not an edit.
-export function conjugationItemId(verbId: string, form: Form): string {
-  return `${verbId}-${form}`;
+// The format is `<infinitive>-<form>` (issue #8). It used to be
+// `<index + 1>-<form>`, which made a learner's identity for a verb its
+// *position* in VERB_DATA: inserting or reordering one row repointed every
+// stored key from that position onward, turning a `bygga` history into a
+// `börja` history with no error and no way to notice. The infinitive is the
+// natural key of a verb and does not move. Stores written under the old
+// scheme are rewritten once by the v2 -> v3 migration in
+// src/hooks/useSrsProgress.ts.
+
+// Legacy positional verb ids ("1".."56") are still what `Verb.id` carries
+// (src/lib/verbs.ts, owned by swedish-linguist) and therefore still what
+// every call site passes. Resolving them to the infinitive here is what let
+// the key scheme change without a single call site changing with it: the
+// positional id is resolved against the *current* VERB_DATA, which is
+// exactly the table the caller read it from, so the resolved key follows the
+// verb across a reorder instead of staying with the slot.
+//
+// The two namespaces cannot collide: a positional id is digits only, and no
+// Swedish infinitive is. Once `Verb.id` becomes the infinitive itself this
+// map and the branch below can be deleted with no change in output.
+const INFINITIVE_BY_LEGACY_VERB_ID: ReadonlyMap<string, string> = new Map(
+  VERB_DATA.map((verb, index) => [String(index + 1), verb.infinitive]),
+);
+
+const LEGACY_VERB_ID = /^\d+$/;
+
+// `verbRef` is either the infinitive (the stable key) or a legacy positional
+// `Verb.id`. Both produce the same item id.
+export function conjugationItemId(verbRef: string, form: Form): string {
+  const infinitive = LEGACY_VERB_ID.test(verbRef)
+    ? (INFINITIVE_BY_LEGACY_VERB_ID.get(verbRef) ?? verbRef)
+    : verbRef;
+  return `${infinitive}-${form}`;
+}
+
+// The same id, built from an infinitive that is *not* in the current
+// VERB_DATA lookup path — the storage migration rewrites keys for verbs it
+// reads out of a frozen snapshot, not out of today's table, and must not go
+// through the legacy resolution branch above. Kept here so no second copy of
+// the id format exists outside this file.
+export function conjugationItemIdForInfinitive(infinitive: string, form: Form): string {
+  return `${infinitive}-${form}`;
 }
 
 // Particle-verb items live in their own namespace, disjoint from the
