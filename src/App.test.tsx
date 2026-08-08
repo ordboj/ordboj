@@ -49,12 +49,12 @@ beforeEach(() => {
 });
 
 describe('route-level crash containment (issue #18)', () => {
-  it('a route that throws renders the RouteErrorBoundary fallback, not a blank page or an unhandled exception', () => {
+  it('a route that throws renders the RouteErrorBoundary fallback, not a blank page or an unhandled exception', async () => {
     window.history.pushState({}, '', '/practice');
 
     expect(() => render(<App />)).not.toThrow();
 
-    expect(screen.getByText(/this page hit a snag/i)).toBeInTheDocument();
+    expect(await screen.findByText(/this page hit a snag/i)).toBeInTheDocument();
     // The rest of the chrome (Toaster/Sonner/TooltipProvider) survives too -
     // this is a route boundary catching, not the outer AppErrorBoundary.
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('route-level crash containment (issue #18)', () => {
   it('other routes remain reachable by direct navigation after a route has crashed', async () => {
     window.history.pushState({}, '', '/practice');
     render(<App />);
-    expect(screen.getByText(/this page hit a snag/i)).toBeInTheDocument();
+    expect(await screen.findByText(/this page hit a snag/i)).toBeInTheDocument();
 
     // Simulate the user navigating away via the browser (back button / new
     // URL) rather than clicking a link inside the crashed component.
@@ -90,19 +90,44 @@ describe('route-level crash containment (issue #18)', () => {
     window.history.pushState({}, '', '/practice');
     render(<App />);
 
-    const homeLink = screen.getByRole('link', { name: 'Home' });
+    const homeLink = await screen.findByRole('link', { name: 'Home' });
     await user.click(homeLink);
 
     expect(await screen.findByText('Home Page')).toBeInTheDocument();
     expect(screen.queryByText(/this page hit a snag/i)).not.toBeInTheDocument();
   });
 
-  it('a route that never throws is unaffected: Settings renders normally without any fallback', () => {
+  it('a route that never throws is unaffected: Settings renders normally without any fallback', async () => {
     window.history.pushState({}, '', '/settings');
     render(<App />);
 
-    expect(screen.getByText('Settings Page')).toBeInTheDocument();
+    expect(await screen.findByText('Settings Page')).toBeInTheDocument();
     expect(screen.queryByText(/this page hit a snag/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('route chunk loading fallback (issue #117)', () => {
+  // React.lazy caches a resolved chunk at module level, so any earlier test
+  // in this file warms the cache and the fallback never appears again for
+  // the top-level App import. Re-importing a fresh App after
+  // vi.resetModules() guarantees a cold lazy cache regardless of test order
+  // (the vi.mock registry survives resetModules, so the page mocks still
+  // apply to the fresh instance).
+  it('announces an accessible loading status while the route chunk loads, then renders the page', async () => {
+    vi.resetModules();
+    const { default: FreshApp } = await import('@/App');
+
+    window.history.pushState({}, '', '/settings');
+    render(<FreshApp />);
+
+    // Before the dynamic import resolves, the Suspense fallback must be in
+    // the DOM and announced politely to assistive tech, not a silent div.
+    const fallback = screen.getByRole('status');
+    expect(fallback).toHaveAttribute('aria-live', 'polite');
+    expect(fallback).toHaveTextContent(/loading/i);
+
+    expect(await screen.findByText('Settings Page')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
