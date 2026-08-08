@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { SrsState, initializeSrsState, calculateNextReview, isDue, Grade } from '@/lib/srs';
 import { getVerbs, Form, Verb, conjugateVerb } from '@/lib/verbs';
+import { toast } from '@/hooks/use-toast';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -112,7 +113,16 @@ export function useSrsProgress(cefrLevels?: string[]) {
       } catch (e) {
         // Quota or storage failure: keep the in-memory session alive; the
         // next successful write persists the full current state anyway.
+        // Surface it, though - the in-memory state has now diverged from
+        // storage and a silent failure here is how progress quietly
+        // disappears (see issue #138).
         console.error('Failed to save SRS data', e);
+        toast({
+          title: 'Progress not saved',
+          description:
+            "Your latest answer could not be saved to this device's storage. Keep practicing, but free up storage soon or you may lose progress.",
+          variant: 'destructive',
+        });
       }
     }
   }, [srsStates, isLoading]);
