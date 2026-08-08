@@ -56,7 +56,11 @@ beforeEach(() => {
   // internal waitFor polling to the fake clock, which only ever moved
   // because shouldAdvanceTime chased the real host clock — exactly the
   // real-time dependency that starved under parallel-worker/CI contention.
-  // Leaving setTimeout real removes that dependency entirely.
+  // Leaving setTimeout real removes that dependency entirely. Symptom report:
+  // issue #271 (duplicate #273). Reproduction recipe and repeat-run counts:
+  // PR #292. Do not reintroduce shouldAdvanceTime or advanceTimers, and do not
+  // add a second bare fake-timer call site — src/test/practice-particles-timers.test.ts
+  // fails if you do.
   vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
   return () => vi.useRealTimers();
 });
