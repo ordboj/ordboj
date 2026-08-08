@@ -34,6 +34,28 @@ describe('PracticeCard - typing mode', () => {
     expect(screen.getByText(/Missing:/)).toHaveTextContent('Present');
   });
 
+  it('marks the answer input as Swedish and disables phone autocorrect/autocapitalize (issue #134)', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    // Without these, the phone's English autocorrect silently mangles å/ä/ö
+    // input before the learner even sees what they typed.
+    expect(input).toHaveAttribute('lang', 'sv');
+    expect(input).toHaveAttribute('autocapitalize', 'off');
+    expect(input).toHaveAttribute('autocorrect', 'off');
+    expect(input).toHaveAttribute('spellcheck', 'false');
+  });
+
   it('accepts the correct answer (auto-submits), ignoring case and surrounding whitespace', async () => {
     const user = userEvent.setup();
     renderWithProviders(
@@ -124,6 +146,123 @@ describe('PracticeCard - typing mode', () => {
   });
 });
 
+describe("PracticeCard - wrong-answer feedback shows the learner's own input (#136)", () => {
+  // Regression: the feedback screen used to reveal only the correct
+  // conjugation on a wrong answer, never what the learner actually typed.
+  it("shows the learner's exact wrong input next to the correct form, not just the correct form alone", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'totallywrong');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    await screen.findByText('Not quite');
+    expect(screen.getByText('You wrote')).toBeInTheDocument();
+    // The learner's own submitted text is rendered, verbatim, alongside the
+    // correct answer — not merely a pattern with the correct form filled in.
+    expect(screen.getByText('totallywrong')).toBeInTheDocument();
+    expect(screen.getByText('Correct')).toBeInTheDocument();
+    expect(
+      screen.getByText(VARA_PRESENS_ANSWER, { selector: 'p.text-success' }),
+    ).toBeInTheDocument();
+  });
+
+  it('preserves the exact case the learner typed in the wrong-answer comparison (comparison is case-insensitive, display is not)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'TOTALLYWRONG');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    await screen.findByText('Not quite');
+    // If the display were silently lowercased/normalized it would teach the
+    // learner an inaccurate picture of what they actually wrote.
+    expect(screen.getByText('TOTALLYWRONG')).toBeInTheDocument();
+    expect(screen.queryByText('totallywrong')).not.toBeInTheDocument();
+  });
+
+  it('trims surrounding whitespace from the displayed submitted answer', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, '  totallywrong  ');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    await screen.findByText('Not quite');
+    expect(screen.getByText('totallywrong')).toBeInTheDocument();
+  });
+
+  // Regression: the "You wrote" label is only accurate in typing mode. In
+  // multiple-choice mode the learner tapped an option, they never wrote
+  // anything, so the feedback copy must say "You chose" instead.
+  it('shows the exact wrong multiple-choice option the learner clicked next to the correct form, labeled "You chose"', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button')).toHaveLength(4);
+    });
+
+    const wrongButton = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent && b.textContent !== VARA_PRESENS_ANSWER);
+    expect(wrongButton).toBeDefined();
+    const wrongText = (wrongButton as HTMLElement).textContent as string;
+    await user.click(wrongButton as HTMLElement);
+
+    await screen.findByText('Not quite');
+    expect(screen.getByText('You chose')).toBeInTheDocument();
+    expect(screen.queryByText('You wrote')).not.toBeInTheDocument();
+    expect(screen.getByText(wrongText)).toBeInTheDocument();
+    expect(
+      screen.getByText(VARA_PRESENS_ANSWER, { selector: 'p.text-success' }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe('PracticeCard - multiple-choice mode', () => {
   it('renders four options and grades a click on the correct one as correct', async () => {
     renderWithProviders(
@@ -173,6 +312,78 @@ describe('PracticeCard - multiple-choice mode', () => {
     await userEvent.setup().click(wrongButton as HTMLElement);
 
     expect(await screen.findByText('Not quite')).toBeInTheDocument();
+  });
+});
+
+describe('PracticeCard - on-screen special-character keys (issue #134: no answer leak)', () => {
+  // Only single Swedish/Latin letter buttons qualify — excludes "Hint",
+  // "Check Answer", "⌫" and multi-char option buttons.
+  const getSpecialCharButtons = () =>
+    screen.getAllByRole('button').filter((b) => /^[a-zA-ZåäöÅÄÖ]$/.test(b.textContent ?? ''));
+
+  it("shows exactly å, ä, ö (in that order) even though the correct answer's own unique letters differ", async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await screen.findByPlaceholderText('Type your answer...');
+    // Correct answer is "är" (unique letters {ä, r}). Pre-fix, the on-screen
+    // row was exactly this answer's unique letters (shuffled) — "ä" and "r",
+    // never "å" or "ö", and never exactly 3 keys. The row must now be fixed
+    // to å/ä/ö regardless of the answer, so it can no longer be
+    // anagram-solved down to the answer's letter multiset.
+    expect(getSpecialCharButtons().map((b) => b.textContent)).toEqual(['å', 'ä', 'ö']);
+  });
+
+  it('shows the identical å, ä, ö row for a different verb/form/answer, proving the keys are not derived from the current answer', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="gå"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await screen.findByPlaceholderText('Type your answer...');
+    // Correct answer is "går" — unique letters {g, å, r}, coincidentally
+    // also 3 letters pre-fix, so a bare "3 buttons" assertion would not
+    // catch the leak. The *identity* of the keys, not just the count, must
+    // match the fixed å/ä/ö row.
+    expect(getSpecialCharButtons().map((b) => b.textContent)).toEqual(['å', 'ä', 'ö']);
+  });
+
+  it("shows the same fixed å, ä, ö row even when the answer is the long fallback string '(not available)'", async () => {
+    // "kunna" has no imperativ form in VERB_DATA, so conjugateVerb() falls
+    // back to "(not available)" as the target answer (see the "empty
+    // imperativ" describe block below). Pre-fix, this fallback string's own
+    // unique letters ((,n,o,t,a,v,i,l,b,e,),space) would flood the
+    // on-screen row instead of a fixed 3-key row.
+    renderWithProviders(
+      <PracticeCard
+        infinitive="kunna"
+        form="imperativ"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await screen.findByPlaceholderText('Type your answer...');
+    expect(getSpecialCharButtons().map((b) => b.textContent)).toEqual(['å', 'ä', 'ö']);
   });
 });
 
