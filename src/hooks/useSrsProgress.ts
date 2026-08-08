@@ -259,7 +259,13 @@ export function useSrsProgress(cefrLevels?: string[]) {
     // Shuffle the items using Fisher-Yates algorithm
     for (let i = dueItems.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [dueItems[i], dueItems[j]] = [dueItems[j], dueItems[i]];
+      const a = dueItems[i];
+      const b = dueItems[j];
+      // i and j are always in [0, length); the guard only satisfies
+      // noUncheckedIndexedAccess without a non-null assertion.
+      if (a === undefined || b === undefined) continue;
+      dueItems[i] = b;
+      dueItems[j] = a;
     }
 
     return dueItems;

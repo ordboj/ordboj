@@ -203,7 +203,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     // completedItemIds) does not advance past what has actually resolved.
     for (const id of ['v2-presens', 'v3-presens', 'v4-presens']) {
       input = await screen.findByPlaceholderText('Type your answer...');
-      await user.type(input, ANSWERS[id]);
+      await user.type(input, ANSWERS[id]!);
       await user.click(screen.getByRole('button', { name: /check answer/i }));
       await screen.findByText('Correct!');
       await user.click(screen.getByRole('button', { name: /next card/i }));
@@ -212,7 +212,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     // Cards 5-6: v5, v6, also correct.
     for (const id of ['v5-presens', 'v6-presens']) {
       input = await screen.findByPlaceholderText('Type your answer...');
-      await user.type(input, ANSWERS[id]);
+      await user.type(input, ANSWERS[id]!);
       await user.click(screen.getByRole('button', { name: /check answer/i }));
       await screen.findByText('Correct!');
       await user.click(screen.getByRole('button', { name: /next card/i }));
@@ -323,7 +323,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
           heading.textContent?.includes(inf),
         );
         expect(infinitive).toBeDefined();
-        await user.type(input, answerByInfinitive[infinitive as string]);
+        await user.type(input, answerByInfinitive[infinitive as string]!);
         await user.click(screen.getByRole('button', { name: /check answer/i }));
         await screen.findByText('Correct!');
       }
@@ -524,7 +524,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
 
       // Still Jan 15 for one filler...
       input = await screen.findByPlaceholderText('Type your answer...');
-      await user.type(input, fillers[0][1]);
+      await user.type(input, fillers[0]![1]);
       await user.click(screen.getByRole('button', { name: /check answer/i }));
       await screen.findByText('Correct!');
       await user.click(screen.getByRole('button', { name: /next card/i }));
@@ -825,7 +825,7 @@ describe('Practice page - regression #103 (mid-session deck reshuffle)', () => {
       expect(await screen.findByText(`${i + 1} / 3`)).toBeInTheDocument();
 
       const input = await screen.findByPlaceholderText('Type your answer...');
-      await user.type(input, expectedAnswers[i].answer);
+      await user.type(input, expectedAnswers[i]!.answer);
       await user.click(screen.getByRole('button', { name: /check answer/i }));
       expect(await screen.findByText('Correct!')).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: /next card/i }));

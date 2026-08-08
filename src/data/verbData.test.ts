@@ -52,10 +52,13 @@ function rowsWithPrecedingComments(source: string): Array<{
       const commentParts = [...pendingComment];
       if (trailingCommentMatch) commentParts.push(trailingCommentMatch[0]);
       rows.push({
-        infinitive: rowMatch[1],
+        // rowMatch[1] / imperativMatch[1] are the regexes' capture groups:
+        // present whenever the row matched, but string | undefined under
+        // noUncheckedIndexedAccess (#105).
+        infinitive: rowMatch[1]!,
         commentBlock: commentParts.join('\n'),
         hasGrupp: /\bgrupp:\s*"/.test(trimmed),
-        imperativ: imperativMatch ? imperativMatch[1] : '',
+        imperativ: imperativMatch ? (imperativMatch[1] ?? '') : '',
       });
       pendingComment = [];
     }
@@ -361,7 +364,18 @@ describe('swedish_verbs.csv - issue #125 naive-template conjugation audit (PR #1
     const csv = readFileSync(csvPath, 'utf-8');
     const lines = csv.split(/\r?\n/).filter(Boolean);
     return lines.slice(1).map((line) => {
-      const [cefr, grammar, infinitive, imperativ, presens, preteritum, supinum] = line.split(',');
+      // Destructured split() elements are string | undefined under
+      // noUncheckedIndexedAccess (#105); a short row yields '' fields rather
+      // than undefined so CsvRow stays all-string.
+      const [
+        cefr = '',
+        grammar = '',
+        infinitive = '',
+        imperativ = '',
+        presens = '',
+        preteritum = '',
+        supinum = '',
+      ] = line.split(',');
       return { cefr, grammar, infinitive, imperativ, presens, preteritum, supinum };
     });
   }

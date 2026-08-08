@@ -203,6 +203,7 @@ export function PracticeCard({
 
       // Pick a random unrevealed index
       const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+      if (randomIndex === undefined) return;
       setRevealedHints((prev) => [...prev, randomIndex]);
     }
   };
@@ -232,6 +233,7 @@ export function PracticeCard({
   }, [infinitive, form]);
 
   const handlePronounceForm = (formToPronounce: Form) => {
+    if (!conjugated) return;
     const text = conjugated[formToPronounce];
     if (text && text !== '(not available)') {
       speakSwedish(text, muteAudio);

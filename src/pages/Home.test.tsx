@@ -41,7 +41,9 @@ vi.mock('@/hooks/useSrsProgress', () => ({
       const lengths = [5, 1, 1, 1, 1];
       const idx = Math.min(mocks.dueItemsCallIndex, lengths.length - 1);
       mocks.dueItemsCallIndex += 1;
-      const len = lengths[idx];
+      // idx is always in bounds; the fallback only satisfies
+      // noUncheckedIndexedAccess (#105).
+      const len = lengths[idx] ?? 1;
       return Array.from({ length: len }, (_, i) => ({
         verbId: String(i),
         infinitive: 'vara',
