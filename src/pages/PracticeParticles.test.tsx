@@ -100,7 +100,11 @@ describe('particle practice flow', () => {
 
     renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
-    expect(await screen.findByText(/No particle verbs are ready for you yet/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        /Nothing is due right now, and you have already met every particle verb/,
+      ),
+    ).toBeInTheDocument();
     // Never a dead end: free practice is offered instead.
     expect(await screen.findByRole('button', { name: 'Keep practising' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Back to Home' })).toBeInTheDocument();
@@ -434,7 +438,9 @@ describe('particle practice flow', () => {
       renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
       expect(
-        await screen.findByText(/No particle verbs are ready for you yet/),
+        await screen.findByText(
+          /Nothing is due right now, and you have already met every particle verb/,
+        ),
       ).toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent(BANNER_TEXT);
     });
