@@ -88,3 +88,20 @@ export function initializeSrsState(itemId: string): SrsState {
 export function isDue(state: SrsState): boolean {
   return state.dueAt <= Date.now();
 }
+
+// The learner's local calendar day as 'YYYY-MM-DD'. This is the day boundary
+// the app counts against (docs/learning/session-shape-and-daily-goal.md:
+// "day boundary | local midnight").
+//
+// Deliberately NOT toISOString().slice(0, 10): that returns the UTC date, so
+// an answer at 2026-03-01T00:30 in Stockholm (UTC+1) would be filed under
+// 2026-02-28 and a day-rollover check would fire a day late. Building the key
+// from getFullYear/getMonth/getDate reads the host's local calendar directly,
+// so it stays correct across DST transitions (no 86_400_000-ms arithmetic is
+// involved at all) and across month and year boundaries.
+export function localDateKey(at: number = Date.now()): string {
+  const d = new Date(at);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}

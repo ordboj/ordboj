@@ -1,5 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { SrsState, initializeSrsState, calculateNextReview, isDue, Grade } from '@/lib/srs';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  SrsState,
+  initializeSrsState,
+  calculateNextReview,
+  isDue,
+  localDateKey,
+  Grade,
+} from '@/lib/srs';
 import { getVerbs, Form, Verb, conjugateVerb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
@@ -54,6 +61,71 @@ function parseStoredProgress(raw: string): Record<string, SrsState> {
   return rebaseLegacyEase(parsed as Record<string, SrsState>);
 }
 
+// --- answeredToday: the per-local-day answer counter -----------------------
+//
+// Stored under its own key rather than inside the SRS envelope above, so the
+// irreplaceable per-item schedule and this cheap, regenerable counter cannot
+// corrupt each other, and so adding it needs no version bump (and therefore no
+// migration risk) on the progress payload.
+//
+// Shape: { version: 1, date: 'YYYY-MM-DD', count: number } — the
+// { date, count } pair specified in
+// docs/learning/session-shape-and-daily-goal.md, plus a version marker so a
+// future shape change has something to migrate from. An absent key means "no
+// answers recorded today", which is exactly what a first-ever read should
+// yield, so there is no legacy shape to migrate forward.
+const DAILY_COUNT_KEY = 'swedish-verbs-daily-count';
+const DAILY_COUNT_VERSION = 1;
+
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export interface DailyCount {
+  date: string;
+  count: number;
+}
+
+// Tolerant read: absent key, unreadable storage, malformed JSON, a partial or
+// wrongly-typed object, and a stale date all collapse to "0 answers today".
+// A newer `version` is NOT rejected: `date` and `count` are this schema's core
+// fields, and a payload that still carries them structurally is read rather
+// than discarded, because discarding it would silently un-cap a day the
+// learner has already spent. Anything whose date/count cannot be trusted
+// resets to zero instead of guessing.
+function readDailyCount(todayKey: string): DailyCount {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(DAILY_COUNT_KEY);
+  } catch (e) {
+    // Storage access itself can throw (e.g. blocked cookies in some browsers).
+    console.error('Failed to read daily answer count', e);
+    return { date: todayKey, count: 0 };
+  }
+  if (!raw) {
+    return { date: todayKey, count: 0 };
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { date: todayKey, count: 0 };
+    }
+    const { date, count } = parsed as Partial<DailyCount>;
+    if (typeof date !== 'string' || !DATE_KEY_PATTERN.test(date)) {
+      return { date: todayKey, count: 0 };
+    }
+    if (typeof count !== 'number' || !Number.isFinite(count) || count < 0) {
+      return { date: todayKey, count: 0 };
+    }
+    // The local date has rolled over since the last write: the counter resets.
+    if (date !== todayKey) {
+      return { date: todayKey, count: 0 };
+    }
+    return { date, count: Math.floor(count) };
+  } catch (e) {
+    console.error('Failed to parse daily answer count', e);
+    return { date: todayKey, count: 0 };
+  }
+}
+
 export interface PracticeItem {
   verbId: string;
   infinitive: string;
@@ -64,6 +136,10 @@ export interface PracticeItem {
 export function useSrsProgress(cefrLevels?: string[]) {
   const [srsStates, setSrsStates] = useState<Record<string, SrsState>>({});
   const [isLoading, setIsLoading] = useState(true);
+  // Hydrated synchronously (unlike srsStates, which waits on getVerbs) so the
+  // session bound is never briefly evaluated against a phantom count of 0.
+  const [dailyCount, setDailyCount] = useState<DailyCount>(() => readDailyCount(localDateKey()));
+  const dailyCountHydrated = useRef(false);
 
   // Load from localStorage and initialize
   useEffect(() => {
@@ -116,6 +192,31 @@ export function useSrsProgress(cefrLevels?: string[]) {
       }
     }
   }, [srsStates, isLoading]);
+
+  // Persist the daily counter on change. The first pass is skipped on purpose:
+  // mount-time state is either what storage already holds or a reset derived
+  // from it, and writing it back would overwrite a newer-version payload's
+  // extra fields before the learner has answered anything.
+  useEffect(() => {
+    if (!dailyCountHydrated.current) {
+      dailyCountHydrated.current = true;
+      return;
+    }
+    try {
+      localStorage.setItem(
+        DAILY_COUNT_KEY,
+        JSON.stringify({
+          version: DAILY_COUNT_VERSION,
+          date: dailyCount.date,
+          count: dailyCount.count,
+        }),
+      );
+    } catch (e) {
+      // Quota or storage failure: the in-memory count still bounds this
+      // session; only cross-reload continuity is lost.
+      console.error('Failed to save daily answer count', e);
+    }
+  }, [dailyCount]);
 
   // Force refresh all items (useful for debugging)
   const initializeAllItems = () => {
@@ -177,6 +278,14 @@ export function useSrsProgress(cefrLevels?: string[]) {
       ...prev,
       [itemId]: newState,
     }));
+    // Every recorded answer counts once, right or wrong. Free practice does
+    // not reach this function at all, so it cannot inflate the count.
+    const todayKey = localDateKey();
+    setDailyCount((prev) =>
+      prev.date === todayKey
+        ? { date: todayKey, count: prev.count + 1 }
+        : { date: todayKey, count: 1 },
+    );
   };
 
   // Export/Import for backup
@@ -200,7 +309,13 @@ export function useSrsProgress(cefrLevels?: string[]) {
   // Reset all progress
   const resetProgress = () => {
     setSrsStates({});
+    setDailyCount({ date: localDateKey(), count: 0 });
   };
+
+  // Re-derived on every render rather than stored pre-resolved, so a session
+  // left open across local midnight reports 0 again as soon as anything
+  // re-renders instead of carrying yesterday's count into today.
+  const answeredToday = dailyCount.date === localDateKey() ? dailyCount.count : 0;
 
   return {
     srsStates,
@@ -208,6 +323,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
     initializeAllItems,
     getDueItems,
     recordAnswer,
+    answeredToday,
     exportData,
     importData,
     resetProgress,
