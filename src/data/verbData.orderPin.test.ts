@@ -2,20 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { VERB_DATA } from '@/data/verbData';
 import { getVerbs } from '@/lib/verbs';
 
-// SRS item ids are `${String(index + 1)}-${form}` (src/lib/verbs.ts:22), so
-// a verb's identity in every learner's localStorage is its *position* in
-// VERB_DATA and nothing else. Reordering the array, inserting a row in the
-// middle, or deleting one silently repoints every stored key from that
-// position onward: a learner's `bygga` history becomes their `börja`
-// history, with no error and no way to notice. Progress is irreplaceable
-// (CLAUDE.md), so the mapping is pinned here as a literal table and any
-// change to it has to be a deliberate edit of this file rather than an
+// SRS item ids are `${infinitive}-${form}` (src/lib/verbs.ts, issue #53):
+// a verb's identity in every learner's localStorage is its infinitive, not
+// its position in VERB_DATA. Before that migration, ids were positional
+// (`${String(index + 1)}-${form}`), so reordering the array silently
+// repointed every stored key from the change point onward. The infinitive
+// scheme fixes that class of bug, but it depends on every infinitive in the
+// table being unique (see "pins no infinitive twice" below) - a duplicate
+// would make two verbs share one id and silently merge their progress. This
+// table is still pinned as a literal snapshot so any change to VERB_DATA's
+// contents is a deliberate, reviewable edit of this file rather than an
 // accident in that one.
-//
-// This is prework for the stable-id migration (v2 -> v3) tracked separately:
-// the same snapshot is the lookup table that migration needs to rewrite
-// index-derived keys into slug-derived ones. Until that ships, VERB_DATA
-// order is frozen and this test is the freeze.
 //
 // Appending a new verb at the END is the only safe growth, and it requires
 // adding its row to the bottom of this table in the same commit.
@@ -101,9 +98,10 @@ describe('VERB_DATA order pin', () => {
   it('derives the same verb ids the SRS store already holds', () => {
     // The pin only protects learner progress if it protects the *id*, so
     // assert against the id-producing path rather than the raw array.
+    // Issue #53: the id is the infinitive itself, not a 1-based position.
     return getVerbs().then((verbs) => {
       expect(verbs.map((verb) => [verb.id, verb.infinitive])).toEqual(
-        PINNED_INFINITIVES.map((infinitive, index) => [String(index + 1), infinitive]),
+        PINNED_INFINITIVES.map((infinitive) => [infinitive, infinitive]),
       );
     });
   });

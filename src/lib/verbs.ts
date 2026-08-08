@@ -27,8 +27,8 @@ export interface ConjugatedVerb extends Verb {
 
 // Get all basic verbs
 export async function getVerbs(): Promise<Verb[]> {
-  return VERB_DATA.map((verb, index) => ({
-    id: String(index + 1),
+  return VERB_DATA.map((verb) => ({
+    id: verb.infinitive,
     infinitive: verb.infinitive,
     cefr: verb.cefr,
   }));
@@ -121,8 +121,8 @@ export function getAlternatesDisclosure(infinitive: string, form: Form): string 
 
 // Get all conjugated verbs efficiently (no file reads needed!)
 export async function getAllConjugatedVerbs(): Promise<ConjugatedVerb[]> {
-  return VERB_DATA.map((verb, index) => ({
-    id: String(index + 1),
+  return VERB_DATA.map((verb) => ({
+    id: verb.infinitive,
     infinitive: verb.infinitive,
     presens: verb.presens || '(not available)',
     preteritum: verb.preteritum || '(not available)',
@@ -138,9 +138,8 @@ export async function conjugateVerb(infinitive: string): Promise<ConjugatedVerb>
   const verb = VERB_DATA.find((v) => v.infinitive === infinitive);
 
   if (verb) {
-    const index = VERB_DATA.indexOf(verb);
     return {
-      id: String(index + 1),
+      id: verb.infinitive,
       infinitive: verb.infinitive,
       presens: verb.presens || '(not available)',
       preteritum: verb.preteritum || '(not available)',
@@ -266,8 +265,8 @@ export function getExampleSentence(infinitive: string, form: Form): string | nul
 }
 
 // Legacy export for backward compatibility
-export const verbs: Verb[] = VERB_DATA.map((verb, index) => ({
-  id: String(index + 1),
+export const verbs: Verb[] = VERB_DATA.map((verb) => ({
+  id: verb.infinitive,
   infinitive: verb.infinitive,
   cefr: verb.cefr,
 }));

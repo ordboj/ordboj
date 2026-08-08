@@ -582,7 +582,10 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
   it("offers only 'Keep practising', enabled, when future items exist but nothing is due", async () => {
     mocks.dueItems = [];
     mocks.srsStates = {
-      '1-presens': futureState('1-presens', Date.now() + DAY_MS),
+      // Issue #53: itemId is infinitive-keyed, not positional. "vara" is
+      // VERB_DATA[0], matching the real getVerbs()/conjugateVerb() lookup
+      // buildFreePracticePool uses (unmocked - see the file header comment).
+      'vara-presens': futureState('vara-presens', Date.now() + DAY_MS),
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -628,13 +631,15 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     // reads insertion order instead of sorting by dueAt would still pass by
     // accident if these were declared ascending.
     mocks.srsStates = {
-      '2-presens': futureState('2-presens', now + 3 * DAY_MS), // ha -> "har"
-      '1-presens': futureState('1-presens', now + 1 * DAY_MS), // vara -> "är"
-      // "komma" (id 7), not "unna" (id 4): #42 re-tagged "unna" A1 -> B2, so
-      // under the STABLE_SETTINGS cefrLevels: ['A1'] filter it would no
-      // longer be in the free-practice pool at all and this fixture's
-      // 3-item assumption would silently break.
-      '7-presens': futureState('7-presens', now + 2 * DAY_MS), // komma -> "kommer"
+      // Issue #53: itemId is infinitive-keyed (buildFreePracticePool reads
+      // the real, unmocked getVerbs()/conjugateVerb()).
+      'ha-presens': futureState('ha-presens', now + 3 * DAY_MS), // ha -> "har"
+      'vara-presens': futureState('vara-presens', now + 1 * DAY_MS), // vara -> "är"
+      // "komma", not "unna": #42 re-tagged "unna" A1 -> B2, so under the
+      // STABLE_SETTINGS cefrLevels: ['A1'] filter it would no longer be in
+      // the free-practice pool at all and this fixture's 3-item assumption
+      // would silently break.
+      'komma-presens': futureState('komma-presens', now + 2 * DAY_MS), // komma -> "kommer"
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -689,7 +694,7 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
   it('never records a wrong answer during free practice either', async () => {
     mocks.dueItems = [];
     mocks.srsStates = {
-      '1-presens': futureState('1-presens', Date.now() + DAY_MS),
+      'vara-presens': futureState('vara-presens', Date.now() + DAY_MS),
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -710,16 +715,17 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     mocks.dueItems = [];
     const now = Date.now();
     mocks.srsStates = {
-      '1-presens': futureState('1-presens', now + 1 * DAY_MS), // vara
-      '2-presens': futureState('2-presens', now + 2 * DAY_MS), // ha
-      '3-presens': futureState('3-presens', now + 3 * DAY_MS), // kunna
-      // "komma" (id 7), not "unna" (id 4): #42 re-tagged "unna" A1 -> B2, so
-      // it would be filtered out under cefrLevels: ['A1'] before the cap
-      // logic even runs, leaving only 5 eligible items and letting this
-      // test pass without ever exercising the 6-down-to-5 cap it names.
-      '7-presens': futureState('7-presens', now + 4 * DAY_MS), // komma
-      '5-presens': futureState('5-presens', now + 5 * DAY_MS), // få
-      '6-presens': futureState('6-presens', now + 6 * DAY_MS), // bli
+      // Issue #53: itemId is infinitive-keyed.
+      'vara-presens': futureState('vara-presens', now + 1 * DAY_MS), // vara
+      'ha-presens': futureState('ha-presens', now + 2 * DAY_MS), // ha
+      'kunna-presens': futureState('kunna-presens', now + 3 * DAY_MS), // kunna
+      // "komma", not "unna": #42 re-tagged "unna" A1 -> B2, so it would be
+      // filtered out under cefrLevels: ['A1'] before the cap logic even
+      // runs, leaving only 5 eligible items and letting this test pass
+      // without ever exercising the 6-down-to-5 cap it names.
+      'komma-presens': futureState('komma-presens', now + 4 * DAY_MS), // komma
+      'få-presens': futureState('få-presens', now + 5 * DAY_MS), // få
+      'bli-presens': futureState('bli-presens', now + 6 * DAY_MS), // bli
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -734,9 +740,9 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     const now = Date.now();
     mocks.srsStates = {
       // Already due -- must never appear in "Keep practising".
-      '1-presens': futureState('1-presens', now - DAY_MS),
+      'vara-presens': futureState('vara-presens', now - DAY_MS),
       // Genuinely future -- the only eligible candidate.
-      '2-presens': futureState('2-presens', now + DAY_MS),
+      'ha-presens': futureState('ha-presens', now + DAY_MS),
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 

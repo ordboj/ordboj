@@ -1483,3 +1483,97 @@ describe('PracticeCard - grupp badge (issue #228)', () => {
     expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument();
   });
 });
+
+// Issue #110 AC: answer-correctness feedback must be announced via
+// aria-live, since screen reader users must not be required to move focus
+// onto the feedback region to hear it.
+describe('PracticeCard - aria-live feedback (issue #110 AC)', () => {
+  it('announces "Correct!" through a polite aria-live status region', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, VARA_PRESENS_ANSWER);
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveTextContent('Correct!');
+    // The region announces itself; the learner is never required to move
+    // focus onto it to perceive the feedback.
+    expect(document.activeElement).not.toBe(status);
+  });
+
+  it('announces "Not quite" through the same aria-live status region on a wrong answer', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'definitely-not-the-answer');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveTextContent('Not quite');
+  });
+});
+
+// Issue #110 AC: touch targets must be at least 44px. The per-form
+// pronounce buttons in the post-answer "Complete pattern" row were 24px
+// (h-6 w-6) before this fix.
+describe('PracticeCard - pronounce button touch target (issue #110 AC)', () => {
+  it('renders the per-form pronounce buttons in the complete pattern at 44px (h-11 w-11) with an aria-label', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, VARA_PRESENS_ANSWER);
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    // "vara" pattern has multiple non-missing forms, each with its own
+    // per-form pronounce button (aria-label="Pronounce <form label>"),
+    // distinct from the unrelated "Pronounce answer" button below the
+    // pattern, which has no aria-label attribute of its own.
+    const pronounceButtons = Array.from(
+      container.querySelectorAll('button[aria-label^="Pronounce "]'),
+    );
+    expect(pronounceButtons.length).toBeGreaterThan(0);
+    for (const button of pronounceButtons) {
+      expect(button).toHaveClass('h-11');
+      expect(button).toHaveClass('w-11');
+      expect(button).not.toHaveClass('h-6');
+      expect(button).not.toHaveClass('w-6');
+    }
+  });
+});
