@@ -45,14 +45,17 @@ describe('Progress page - header emoji fix (AC #2, issue #112)', () => {
 });
 
 describe("Progress page - 'New' stage badge color token (AC #4, issue #112)", () => {
-  it('renders the New badge using the bg-primary token, not the off-palette bg-purple-500', async () => {
+  it('renders the New badge using the bg-stage-new token, not the off-palette bg-purple-500', async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
 
     // Every verb starts at stage 0 ("New") with empty srsStates.
     const newBadges = await screen.findAllByText('New');
     expect(newBadges.length).toBeGreaterThan(0);
     for (const badge of newBadges) {
-      expect(badge).toHaveClass('bg-primary');
+      // Issue #227 moved this color from the generic bg-primary token to
+      // the dedicated bg-stage-new token; the off-palette-purple guard
+      // from issue #112 still applies.
+      expect(badge).toHaveClass('bg-stage-new');
       expect(badge).not.toHaveClass('bg-purple-500');
     }
   });

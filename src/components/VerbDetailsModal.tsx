@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Volume2 } from 'lucide-react';
 import { ConjugatedVerb, Form, getExampleSentence, getFormLabel, getVerbGrupp } from '@/lib/verbs';
 import { conjugationItemId } from '@/lib/itemIds';
-import { isDue, SrsState } from '@/lib/srs';
+import { getMasteryStageBadge, isDue, SrsState } from '@/lib/srs';
 import { speakSwedish } from '@/lib/speech';
 import { useSettings } from '@/hooks/useSettings';
 
@@ -20,14 +20,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
 
   const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
 
-  const getStageBadge = (stage: number) => {
-    if (stage === 0) return { label: 'New', color: 'bg-primary' };
-    if (stage <= 2) return { label: 'Learning', color: 'bg-orange-500' };
-    if (stage <= 4) return { label: 'Reviewing', color: 'bg-yellow-500' };
-    return { label: 'Mastered', color: 'bg-green-500' };
-  };
-
-  const badge = getStageBadge(srsStage);
+  const badge = getMasteryStageBadge(srsStage);
   // Konjugationsgrupp predicts the answer's ending pattern, so it's only
   // ever surfaced here (a reference view, opened after the fact) — never
   // pre-answer on the practice card. undefined means "not known" and is
@@ -74,7 +67,15 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
                 <Volume2 className="w-5 h-5" />
               </Button>
             </div>
-            <Badge className={badge.color}>{badge.label}</Badge>
+            {/* Issue #227: outline hardcoded, not badge.variant. Badge defaults to
+                the `default` variant when none is passed, whose hover:bg-primary
+                opacity class clashes with badge.color's stage token on hover for
+                every non-New stage (the #313 regression). `outline` carries no
+                background or hover utility, so badge.color's stage bg and
+                foreground text classes are the only source of color. */}
+            <Badge variant="outline" className={badge.color}>
+              {badge.label}
+            </Badge>
           </DialogTitle>
         </DialogHeader>
 

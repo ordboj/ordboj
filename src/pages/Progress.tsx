@@ -25,6 +25,7 @@ import { ArrowLeft, Search, ArrowUpDown, Trophy } from 'lucide-react';
 import { getAllConjugatedVerbs, getVerbGrupp, ConjugatedVerb, type Form } from '@/lib/verbs';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
 import { getVerifiedParticleVerbs, hasRecallItem, renderLemma } from '@/lib/particleVerbs';
+import { getMasteryStageBadge, averageMasteryStage, MASTERED_STAGE_THRESHOLD } from '@/lib/srs';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { VerbDetailsModal } from '@/components/VerbDetailsModal';
@@ -59,31 +60,10 @@ export default function Progress() {
   const getSrsStage = useCallback(
     (verbId: string): number => {
       const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
-      let totalReps = 0;
-      let count = 0;
-
-      forms.forEach((form) => {
-        const itemId = conjugationItemId(verbId, form);
-        const state = srsStates[itemId];
-        if (state) {
-          totalReps += state.repetitions;
-          count++;
-        }
-      });
-
-      return count > 0 ? Math.floor(totalReps / count) : 0;
+      return averageMasteryStage(forms.map((form) => srsStates[conjugationItemId(verbId, form)]));
     },
     [srsStates],
   );
-
-  const getStageBadge = (stage: number) => {
-    if (stage === 0) return { label: 'New', variant: 'default' as const, color: 'bg-primary' };
-    if (stage <= 2)
-      return { label: 'Learning', variant: 'secondary' as const, color: 'bg-orange-500' };
-    if (stage <= 4)
-      return { label: 'Reviewing', variant: 'outline' as const, color: 'bg-yellow-500' };
-    return { label: 'Mastered', variant: 'default' as const, color: 'bg-green-500' };
-  };
 
   const filteredAndSortedVerbs = useMemo(() => {
     let filtered = verbs;
@@ -104,7 +84,7 @@ export default function Progress() {
     if (srsFilter !== 'all') {
       filtered = filtered.filter((verb) => {
         const stage = getSrsStage(verb.id);
-        const badge = getStageBadge(stage);
+        const badge = getMasteryStageBadge(stage);
         return badge.label.toLowerCase() === srsFilter;
       });
     }
@@ -126,7 +106,9 @@ export default function Progress() {
 
   const progressStats = useMemo(() => {
     const total = verbs.length;
-    const mastered = verbs.filter((verb) => getSrsStage(verb.id) >= 5).length;
+    const mastered = verbs.filter(
+      (verb) => getSrsStage(verb.id) >= MASTERED_STAGE_THRESHOLD,
+    ).length;
     const percentage = total > 0 ? (mastered / total) * 100 : 0;
     return { total, mastered, percentage };
   }, [verbs, getSrsStage]);
@@ -268,7 +250,7 @@ export default function Progress() {
                     {particleVerbList
                       .filter((verb) => verb.started)
                       .map((verb) => {
-                        const badge = getStageBadge(verb.clozeRepetitions);
+                        const badge = getMasteryStageBadge(verb.clozeRepetitions);
                         return (
                           <TableRow key={verb.id}>
                             <TableCell className="font-medium">
@@ -279,7 +261,15 @@ export default function Progress() {
                               <Badge variant="outline">{verb.cefr}</Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={badge.variant} className={badge.color}>
+                              {/* Issue #227: hardcode `outline` instead of badge.variant.
+                                  The default/secondary Badge variants each carry their own
+                                  hover-opacity background class, which conflicts with
+                                  badge.color's stage token and flips the badge back to
+                                  primary/secondary blue on hover (the #313 regression).
+                                  `outline` contributes no background or hover utility, so
+                                  badge.color's stage bg and foreground text classes are the
+                                  only source of color, on hover or otherwise. */}
+                              <Badge variant="outline" className={badge.color}>
                                 {badge.label}
                               </Badge>
                             </TableCell>
@@ -393,7 +383,7 @@ export default function Progress() {
               <TableBody>
                 {filteredAndSortedVerbs.map((verb, index) => {
                   const stage = getSrsStage(verb.id);
-                  const badge = getStageBadge(stage);
+                  const badge = getMasteryStageBadge(stage);
                   // Reference-only surface (never rendered pre-answer on
                   // the practice card); undefined stays absent, never
                   // guessed (src/lib/verbs.ts:29-32).
@@ -471,7 +461,9 @@ export default function Progress() {
                         <Badge variant="outline">{verb.cefr}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={badge.variant} className={badge.color}>
+                        {/* Issue #227: outline hardcoded, not badge.variant — see the
+                            particle table's badge above for why. */}
+                        <Badge variant="outline" className={badge.color}>
                           {badge.label}
                         </Badge>
                       </TableCell>

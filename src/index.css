@@ -36,6 +36,26 @@ All colors MUST be HSL.
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
 
+    /* SRS mastery stage badge tokens (issue #227). Same pattern as
+       --success/--success-foreground above: a bg/foreground pair per stage,
+       consumed via bg-stage-* / text-stage-*-foreground utilities. "New"
+       aliases --primary directly (no separate number) so the badge tracks
+       the brand color instead of drifting from it; the other three are
+       distinct values chosen to keep the existing visual identity
+       (orange/yellow/green) while each independently clearing WCAG 4.5:1
+       text contrast — verified against this light theme only, no .dark
+       palette ships (see docs/product/2026-08-08-dark-mode-decision.md):
+       stage-new 8.03:1 (= --primary, unchanged), stage-learning 5.81:1,
+       stage-reviewing 5.83:1, stage-mastered 4.84:1. */
+    --stage-new: var(--primary);
+    --stage-new-foreground: var(--primary-foreground);
+    --stage-learning: 22 85% 36%;
+    --stage-learning-foreground: 0 0% 100%;
+    --stage-reviewing: 38 92% 45%;
+    --stage-reviewing-foreground: 210 40% 15%;
+    --stage-mastered: 142 71% 30%;
+    --stage-mastered-foreground: 0 0% 100%;
+
     --border: 210 40% 90%;
     --input: 210 40% 95%;
     --ring: 207 100% 29%;

@@ -166,6 +166,87 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+// Mastery stage: a coarse "how well known" bucket, shown as a badge on the
+// Progress page and in VerbDetailsModal. `stage` is a repetitions count (or
+// the floor of an average of several - see averageMasteryStage below).
+//
+// This was duplicated, byte-for-byte identical, in both UI files (#108) -
+// pedagogy logic living in pages, with real drift risk since the two
+// copies had no shared source. The thresholds themselves are unchanged
+// from what those two files already agreed on: 0 = untouched item ("New"),
+// 1-2 reps = still consolidating ("Learning"), 3-4 reps = spaced but not
+// yet long-interval ("Reviewing"), 5+ reps = "Mastered". Changing these
+// numbers is a learning-designer decision, not an engineering one; no such
+// change is made here.
+export type MasteryStageLabel = 'New' | 'Learning' | 'Reviewing' | 'Mastered';
+
+export interface MasteryStageBadge {
+  label: MasteryStageLabel;
+  variant: 'default' | 'secondary' | 'outline';
+  color: string;
+}
+
+// Stage floor at which the badge reads "Mastered". Exposed so a caller
+// doing its own bucketing (e.g. an aggregate "X / Y mastered" count) reads
+// this constant instead of re-encoding the number 5.
+export const MASTERED_STAGE_THRESHOLD = 5;
+
+const NEW_BADGE: MasteryStageBadge = {
+  label: 'New',
+  variant: 'default',
+  color: 'bg-stage-new text-stage-new-foreground border-transparent',
+};
+const LEARNING_BADGE: MasteryStageBadge = {
+  label: 'Learning',
+  variant: 'secondary',
+  color: 'bg-stage-learning text-stage-learning-foreground border-transparent',
+};
+const REVIEWING_BADGE: MasteryStageBadge = {
+  label: 'Reviewing',
+  variant: 'outline',
+  color: 'bg-stage-reviewing text-stage-reviewing-foreground border-transparent',
+};
+const MASTERED_BADGE: MasteryStageBadge = {
+  label: 'Mastered',
+  variant: 'default',
+  color: 'bg-stage-mastered text-stage-mastered-foreground border-transparent',
+};
+
+// `stage` is expected to be a non-negative integer repetitions count.
+// Negative or non-finite input (should never happen from real state, but
+// this only ever drives a label) is treated as 0 rather than thrown.
+export function getMasteryStageBadge(stage: number): MasteryStageBadge {
+  const safeStage = isFiniteNumber(stage) && stage > 0 ? stage : 0;
+  if (safeStage === 0) return NEW_BADGE;
+  if (safeStage <= 2) return LEARNING_BADGE;
+  if (safeStage < MASTERED_STAGE_THRESHOLD) return REVIEWING_BADGE;
+  return MASTERED_BADGE;
+}
+
+// Reduces a set of possibly-untracked SRS states to one integer stage, by
+// averaging `repetitions` and flooring. Built for a verb whose several
+// conjugation forms (presens/preteritum/supinum/imperativ) are each their
+// own SRS item: callers pass in the state for each form (or `undefined`
+// for a form never studied yet).
+//
+// A form with no stored state is excluded from both the sum and the count,
+// so an unstarted form doesn't drag the average toward 0 for a verb that
+// is otherwise well known. If none of the forms have been started
+// (count === 0), the result is 0 ("New") rather than dividing by zero.
+export function averageMasteryStage(
+  states: ReadonlyArray<{ repetitions: number } | undefined>,
+): number {
+  let totalReps = 0;
+  let count = 0;
+  for (const state of states) {
+    if (state) {
+      totalReps += state.repetitions;
+      count += 1;
+    }
+  }
+  return count > 0 ? Math.floor(totalReps / count) : 0;
+}
+
 // Structural validator for one stored/imported item. Used by the import
 // path, which is the only place untrusted data enters the store: the file
 // comes off the user's disk and can be any JSON at all. Deliberately

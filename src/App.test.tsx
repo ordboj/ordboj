@@ -5,7 +5,7 @@ import App from '@/App';
 
 // This suite exercises the acceptance criteria for issue #18 end-to-end
 // through the real App.tsx wiring (AppErrorBoundary + per-route
-// RouteErrorBoundary): a crash confined to one route must not take down the
+// RouteChunk): a crash confined to one route must not take down the
 // rest of the app, and the other routes must stay reachable afterwards.
 //
 // The four page modules are mocks-owned-as-boundary here (frontend-expert
@@ -49,7 +49,7 @@ beforeEach(() => {
 });
 
 describe('route-level crash containment (issue #18)', () => {
-  it('a route that throws renders the RouteErrorBoundary fallback, not a blank page or an unhandled exception', async () => {
+  it('a route that throws renders the route-level crash fallback, not a blank page or an unhandled exception', async () => {
     window.history.pushState({}, '', '/practice');
 
     expect(() => render(<App />)).not.toThrow();
@@ -61,8 +61,8 @@ describe('route-level crash containment (issue #18)', () => {
   });
 
   // Regression test for the route-reachability bug fixed in f4bd9c8: every
-  // <Route> in src/App.tsx now wraps its page in a RouteErrorBoundary keyed
-  // on the route path (e.g. `<RouteErrorBoundary key="/progress">`), so
+  // <Route> in src/App.tsx now wraps its page in a RouteChunk keyed
+  // on the route path (e.g. `<RouteChunk key="/progress">`), so
   // react-router switching the matched route unmounts/remounts a fresh
   // boundary instance instead of reconciling onto the crashed one. Without
   // that key, AppErrorBoundary's `hasError` state would survive the route
