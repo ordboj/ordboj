@@ -151,3 +151,26 @@ describe('forward-compat: merging stored settings over defaults', () => {
     expect(result.current.settings).toEqual(DEFAULTS);
   });
 });
+
+describe('issue #137: coercing a stored empty cefrLevels', () => {
+  it('restores DEFAULT_SETTINGS.cefrLevels when the stored object has cefrLevels: []', async () => {
+    // Before the checkbox guard shipped, a user could reach this state and
+    // get stuck: an empty stored selection must not read as "zero verbs"
+    // forever, so it is coerced back to every level on load.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, cefrLevels: [] }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.cefrLevels).toEqual(DEFAULTS.cefrLevels);
+  });
+
+  it('leaves a non-empty stored cefrLevels selection untouched', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULTS, cefrLevels: ['B1'] }));
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.cefrLevels).toEqual(['B1']);
+  });
+});

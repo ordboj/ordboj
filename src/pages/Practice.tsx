@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -7,20 +7,29 @@ import { PracticeCard } from '@/components/PracticeCard';
 import { useSrsProgress, type PracticeItem } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { Grade, MAX_REQUEUES_PER_DAY, isEligibleForRequeue } from '@/lib/srs';
+import { getVerbs, conjugateVerb, type Form } from '@/lib/verbs';
+
+// How many items "Keep practising" draws per batch.
+const FREE_PRACTICE_SIZE = 5;
+const PRACTICE_FORMS: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
+
+// 'due' and 'extra' both record answers to real SRS state; 'free' never
+// does. Kept as a union (not a boolean) because the completion screen's
+// copy and the header hint below the progress bar branch on it too.
+type SessionKind = 'due' | 'free' | 'extra';
 
 // Per-item in-session bookkeeping for the same-sitting relearning queue
 // (docs/learning/lapse-handling.md, "Decision" and "Interaction with the
-// sitting cap"). This is sitting/day bookkeeping only, never persisted to
-// localStorage: it is rebuilt from scratch whenever the page loads.
+// sitting cap"). This is day-level bookkeeping and outlives any single
+// round: requeuesToday is a per-item-per-day cap, so it survives a switch
+// between 'due'/'free'/'extra' rounds within the same mount. `pending` and
+// `itemsSinceLapse` are round-structural instead -- they describe a retry's
+// position in the *current* queue, so a new round clears them (a retry
+// still pending when a round ends is dropped; the lapse already moved the
+// item's own schedule, so nothing is lost).
 interface RequeueEntry {
-  // Items answered since this item's most recent lapse, this sitting.
   itemsSinceLapse: number;
-  // Times this item has been re-queued today, across sittings (capped at
-  // MAX_REQUEUES_PER_DAY by srs.ts's isEligibleForRequeue).
   requeuesToday: number;
-  // True while the item has an unresolved lapse waiting for a same-sitting
-  // retry (either not yet eligible to reappear, or currently back in the
-  // queue awaiting its retry answer).
   pending: boolean;
 }
 
@@ -31,31 +40,101 @@ function getLocalDayKey(): string {
 export default function Practice() {
   const navigate = useNavigate();
   const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
-  const { getDueItems, recordAnswer, isLoading } = useSrsProgress(settings.cefrLevels);
+  const { getDueItems, recordAnswer, srsStates, isLoading } = useSrsProgress(settings.cefrLevels);
 
-  // `sessionItems` is the fixed set loaded at sitting start: it is the
-  // denominator for the progress display and never grows. `queue` is the
-  // live, mutable working list that a lapse can splice items back into.
-  const [sessionItems, setSessionItems] = useState<PracticeItem[]>([]);
-  const [queue, setQueue] = useState<PracticeItem[]>([]);
+  // `items` is the current round's live, mutable working list -- a lapse in
+  // a 'due'/'extra' round can splice a same-sitting retry back into it.
+  // `roundItemIds` is the fixed set the round started with, snapshotted at
+  // round load: it is the denominator for the progress display and the
+  // membership test for "did this already-graded item belong to this
+  // round", and never grows even when `items` does.
+  const [items, setItems] = useState<PracticeItem[]>([]);
+  const [roundItemIds, setRoundItemIds] = useState<Set<string>>(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [practiceComplete, setPracticeComplete] = useState(false);
+  const [sessionKind, setSessionKind] = useState<SessionKind>('due');
+  const [sessionComplete, setSessionComplete] = useState(false);
   const [completedItemIds, setCompletedItemIds] = useState<Set<string>>(new Set());
   const [requeueMap, setRequeueMap] = useState<Record<string, RequeueEntry>>({});
   const [requeueDay, setRequeueDay] = useState(getLocalDayKey);
+  // The due/free pools available once a session ends, computed once
+  // srsStates has actually caught up with any answer just recorded (see the
+  // effect below). The completion screen's counts and its "Extra reviews" /
+  // "Keep practising" actions both read from these same arrays, so a button
+  // can never advertise a count it can't then deliver.
+  const [pendingExtraReview, setPendingExtraReview] = useState<PracticeItem[]>([]);
+  const [pendingFreePractice, setPendingFreePractice] = useState<PracticeItem[]>([]);
 
   // getDueItems is recreated every time srsStates changes (i.e. after every
-  // answer). Keep the latest reference in a ref so the load effect below can
-  // call it without depending on its identity, otherwise the deck would be
+  // answer). Keep the latest reference in a ref so effects can call it
+  // without depending on its identity, otherwise the deck would be
   // recomputed and reshuffled mid-session while currentIndex still points
-  // into the old array, causing skipped/repeated cards.
+  // into the old array, causing skipped/repeated cards (issue #103, PR #122).
   const getDueItemsRef = useRef(getDueItems);
   useEffect(() => {
     getDueItemsRef.current = getDueItems;
   }, [getDueItems]);
 
+  // Up to FREE_PRACTICE_SIZE items that are NOT currently due, nearest
+  // future dueAt first. Reads srsStates only -- never calls recordAnswer,
+  // so drawing (or re-drawing) this pool never disturbs the real schedule.
+  const buildFreePracticePool = useCallback(async (): Promise<PracticeItem[]> => {
+    const now = Date.now();
+    const allVerbs = await getVerbs();
+    const verbs =
+      settings.cefrLevels.length > 0
+        ? allVerbs.filter((verb) => verb.cefr && settings.cefrLevels.includes(verb.cefr))
+        : allVerbs;
+
+    const candidates: Array<PracticeItem & { dueAt: number }> = [];
+    for (const verb of verbs) {
+      const conjugated = await conjugateVerb(verb.infinitive);
+      for (const form of PRACTICE_FORMS) {
+        if (conjugated[form] === '(not available)' || !conjugated[form]) continue;
+        const itemId = `${verb.id}-${form}`;
+        const state = srsStates[itemId];
+        if (!state || state.dueAt <= now) continue;
+        candidates.push({
+          verbId: verb.id,
+          infinitive: verb.infinitive,
+          form,
+          itemId,
+          dueAt: state.dueAt,
+        });
+      }
+    }
+
+    candidates.sort((a, b) => a.dueAt - b.dueAt);
+    return candidates.slice(0, FREE_PRACTICE_SIZE).map(({ dueAt: _dueAt, ...item }) => item);
+  }, [settings.cefrLevels, srsStates]);
+
+  // Starts a fresh round: resets the queue-structural state (items,
+  // roundItemIds, currentIndex, completedItemIds) and clears any retry that
+  // was still pending from the previous round without discarding the
+  // day-level requeue-cap bookkeeping (docs/learning/lapse-handling.md: the
+  // cap is per item per day, not per round). A day change wipes the whole
+  // map, same as the mid-round check in handleAnswer.
+  const startRound = (roundItems: PracticeItem[], kind: SessionKind) => {
+    setItems(roundItems);
+    setRoundItemIds(new Set(roundItems.map((item) => item.itemId)));
+    setCurrentIndex(0);
+    setSessionKind(kind);
+    setSessionComplete(false);
+    setCompletedItemIds(new Set());
+
+    const today = getLocalDayKey();
+    const carriedMap = today === requeueDay ? requeueMap : {};
+    const clearedMap: Record<string, RequeueEntry> = {};
+    for (const [id, entry] of Object.entries(carriedMap)) {
+      clearedMap[id] = entry.pending ? { ...entry, pending: false, itemsSinceLapse: 0 } : entry;
+    }
+    setRequeueMap(clearedMap);
+    setRequeueDay(today);
+  };
+
   // Load the deck exactly once per session (i.e. once per mount), when the
-  // underlying data first becomes available.
+  // underlying data first becomes available. Mirrors PR #122's stable-load
+  // pattern: depending on isLoading/settingsLoading only (not getDueItems)
+  // keeps this from re-firing on every post-answer render.
   const deckLoadedRef = useRef(false);
   useEffect(() => {
     if (deckLoadedRef.current || isLoading || settingsLoading) {
@@ -65,130 +144,179 @@ export default function Practice() {
 
     const loadDueItems = async () => {
       try {
-        const items = await getDueItemsRef.current();
-        setSessionItems(items);
-        setQueue(items);
+        const due = await getDueItemsRef.current();
+        // First load of the mount: requeueMap is still its initial {}, so
+        // there is nothing pending to carry over or clear yet -- this can
+        // set state directly instead of going through startRound.
+        setItems(due);
+        setRoundItemIds(new Set(due.map((item) => item.itemId)));
         setCurrentIndex(0);
+        setSessionKind('due');
         setCompletedItemIds(new Set());
-        setRequeueMap({});
         setRequeueDay(getLocalDayKey());
-        if (items.length === 0) {
-          setPracticeComplete(true);
+        if (due.length === 0) {
+          setSessionComplete(true);
         }
       } catch (error) {
         console.error('Failed to load due items for practice session', error);
-        setPracticeComplete(true);
+        setSessionComplete(true);
       }
     };
     loadDueItems();
   }, [isLoading, settingsLoading]);
 
-  const sessionItemIds = useMemo(
-    () => new Set(sessionItems.map((item) => item.itemId)),
-    [sessionItems],
-  );
+  // Recomputes the completion screen's two post-session pools whenever a
+  // session ends, keyed on srsStates rather than read from a closure
+  // captured inside handleAnswer. recordAnswer's state update and this
+  // effect's re-run are two separate React commits, so by the time this
+  // runs, srsStates (and therefore getDueItems/buildFreePracticePool) is
+  // guaranteed to reflect the answer that was just recorded -- reading it
+  // inside handleAnswer itself would race the pending state update and
+  // could report the just-answered item as still due.
+  useEffect(() => {
+    if (!sessionComplete) return;
+    let cancelled = false;
+
+    const loadPending = async () => {
+      const [due, free] = await Promise.all([getDueItemsRef.current(), buildFreePracticePool()]);
+      if (!cancelled) {
+        setPendingExtraReview(due);
+        setPendingFreePractice(free);
+      }
+    };
+    loadPending();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionComplete, srsStates, buildFreePracticePool]);
+
+  const startFreePractice = () => {
+    if (pendingFreePractice.length === 0) return;
+    startRound(pendingFreePractice, 'free');
+  };
+
+  const startExtraReview = () => {
+    if (pendingExtraReview.length === 0) return;
+    startRound(pendingExtraReview, 'extra');
+  };
 
   const handleAnswer = (grade: Grade) => {
-    const answeredItem = queue[currentIndex];
+    const answeredItem = items[currentIndex];
     if (!answeredItem) return;
 
-    recordAnswer(answeredItem.itemId, grade);
-
-    const isCorrect = grade === 5;
-    const today = getLocalDayKey();
-    // Local-day boundary: bookkeeping from a previous day never carries in.
-    const baseMap = today === requeueDay ? requeueMap : {};
-
-    // Every other item still waiting on its re-queue gets one item closer to
-    // eligibility now that another card has been answered.
-    const advancedMap: Record<string, RequeueEntry> = {};
-    for (const [id, entry] of Object.entries(baseMap)) {
-      advancedMap[id] =
-        entry.pending && id !== answeredItem.itemId
-          ? { ...entry, itemsSinceLapse: entry.itemsSinceLapse + 1 }
-          : entry;
+    const isFree = sessionKind === 'free';
+    if (!isFree) {
+      recordAnswer(answeredItem.itemId, grade);
     }
 
-    const priorEntry = advancedMap[answeredItem.itemId] ?? {
-      itemsSinceLapse: 0,
-      requeuesToday: 0,
-      pending: false,
-    };
+    let nextQueue = items;
+    let nextCompletedItemIds = completedItemIds;
 
-    const nextEntryForAnswered: RequeueEntry = isCorrect
-      ? // Correct answer resolves any pending lapse (first try or the
-        // required retry after a re-queue).
-        { ...priorEntry, pending: false }
-      : priorEntry.requeuesToday < MAX_REQUEUES_PER_DAY
-        ? // Lapsed, and still under the daily re-queue cap: wait for the gap.
-          { ...priorEntry, itemsSinceLapse: 0, pending: true }
-        : // Cap already spent today: leave it for its normal `dueAt` (already
-          // set to tomorrow by recordAnswer -> calculateNextReview).
-          { ...priorEntry, pending: false };
+    if (isFree) {
+      // Free practice never grades to real SRS state (ticket #27), so it
+      // can never lapse into a same-sitting requeue: every free-round card
+      // resolves the instant it's answered.
+      if (roundItemIds.has(answeredItem.itemId)) {
+        nextCompletedItemIds = new Set(completedItemIds).add(answeredItem.itemId);
+      }
+    } else {
+      const isCorrect = grade === 5;
+      const today = getLocalDayKey();
+      // Local-day boundary: bookkeeping from a previous day never carries in.
+      const baseMap = today === requeueDay ? requeueMap : {};
 
-    const nextMap: Record<string, RequeueEntry> = {
-      ...advancedMap,
-      [answeredItem.itemId]: nextEntryForAnswered,
-    };
+      // Every other item still waiting on its re-queue gets one item closer
+      // to eligibility now that another card has been answered.
+      const advancedMap: Record<string, RequeueEntry> = {};
+      for (const [id, entry] of Object.entries(baseMap)) {
+        advancedMap[id] =
+          entry.pending && id !== answeredItem.itemId
+            ? { ...entry, itemsSinceLapse: entry.itemsSinceLapse + 1 }
+            : entry;
+      }
 
-    // Splice back in every pending item that has now cleared the gap.
-    // Invariant: an itemId may appear at most once beyond the currently-shown
-    // card. A pending item stays pending after its splice, and every later
-    // answer keeps advancing its itemsSinceLapse, so without this guard the
-    // gap clears a second time before the first retry is ever shown -- a
-    // duplicate copy lands in the queue, silently burns the daily cap, and
-    // (because PracticeCard is keyed on itemId) React never remounts the
-    // card for the back-to-back copy, freezing the sitting on the previous
-    // attempt's feedback panel.
-    let nextQueue = queue;
-    for (const [id, entry] of Object.entries(nextMap)) {
-      if (entry.pending && isEligibleForRequeue(entry.itemsSinceLapse, entry.requeuesToday)) {
-        const alreadyQueuedAhead = nextQueue.some(
-          (q, index) => index > currentIndex && q.itemId === id,
-        );
-        const item = queue.find((q) => q.itemId === id);
-        if (item && !alreadyQueuedAhead) {
-          nextQueue = [...nextQueue, item];
-          nextMap[id] = { ...entry, requeuesToday: entry.requeuesToday + 1, itemsSinceLapse: 0 };
+      const priorEntry = advancedMap[answeredItem.itemId] ?? {
+        itemsSinceLapse: 0,
+        requeuesToday: 0,
+        pending: false,
+      };
+
+      const nextEntryForAnswered: RequeueEntry = isCorrect
+        ? // Correct answer resolves any pending lapse (first try or the
+          // required retry after a re-queue).
+          { ...priorEntry, pending: false }
+        : priorEntry.requeuesToday < MAX_REQUEUES_PER_DAY
+          ? // Lapsed, and still under the daily re-queue cap: wait for the gap.
+            { ...priorEntry, itemsSinceLapse: 0, pending: true }
+          : // Cap already spent today: leave it for its normal `dueAt` (already
+            // set to tomorrow by recordAnswer -> calculateNextReview).
+            { ...priorEntry, pending: false };
+
+      const nextMap: Record<string, RequeueEntry> = {
+        ...advancedMap,
+        [answeredItem.itemId]: nextEntryForAnswered,
+      };
+
+      // Splice back in every pending item that has now cleared the gap.
+      // Invariant: an itemId may appear at most once beyond the
+      // currently-shown card, so the cap is only spent on retries actually
+      // shown (see PR #166/#13 for the duplicate-splice freeze this guards).
+      for (const [id, entry] of Object.entries(nextMap)) {
+        if (entry.pending && isEligibleForRequeue(entry.itemsSinceLapse, entry.requeuesToday)) {
+          const alreadyQueuedAhead = nextQueue.some(
+            (q, index) => index > currentIndex && q.itemId === id,
+          );
+          const item = items.find((q) => q.itemId === id);
+          if (item && !alreadyQueuedAhead) {
+            nextQueue = [...nextQueue, item];
+            nextMap[id] = { ...entry, requeuesToday: entry.requeuesToday + 1, itemsSinceLapse: 0 };
+          }
         }
       }
+
+      // A round item ticks the progress display once it stops being pending
+      // a re-queue (correct, or the daily cap is spent) -- never on the
+      // re-queued attempt itself, so a lapse cannot inflate the numerator by
+      // being shown twice.
+      const stillPending = nextMap[answeredItem.itemId]?.pending ?? false;
+      nextCompletedItemIds =
+        !stillPending && roundItemIds.has(answeredItem.itemId)
+          ? new Set(completedItemIds).add(answeredItem.itemId)
+          : completedItemIds;
+
+      setRequeueMap(nextMap);
+      setRequeueDay(today);
     }
 
-    // A session item ticks the progress display once it stops being pending
-    // a re-queue (correct, or the daily cap is spent) -- never on the
-    // re-queued attempt itself, so a lapse cannot inflate the numerator by
-    // being shown twice.
-    const stillPending = nextMap[answeredItem.itemId]?.pending ?? false;
-    const nextCompletedItemIds =
-      !stillPending && sessionItemIds.has(answeredItem.itemId)
-        ? new Set(completedItemIds).add(answeredItem.itemId)
-        : completedItemIds;
-
-    setRequeueMap(nextMap);
-    setRequeueDay(today);
-    setQueue(nextQueue);
+    setItems(nextQueue);
     setCompletedItemIds(nextCompletedItemIds);
 
     if (currentIndex < nextQueue.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      setPracticeComplete(true);
+      setSessionComplete(true);
     }
   };
 
-  const totalSessionItems = sessionItems.length;
-  const currentItem = queue[currentIndex];
-  const requeuesSoFar = currentItem ? (requeueMap[currentItem.itemId]?.requeuesToday ?? 0) : 0;
-  const willRequeueIfWrong = requeuesSoFar < MAX_REQUEUES_PER_DAY;
-  const isRequeueAttempt = requeuesSoFar > 0;
-  // Session position never counts a re-queued attempt as a new card, so a
+  const totalRoundItems = roundItemIds.size;
+  const currentItem = items[currentIndex];
+  const requeuesSoFar =
+    currentItem && sessionKind !== 'free'
+      ? (requeueMap[currentItem.itemId]?.requeuesToday ?? 0)
+      : 0;
+  // Free rounds never grade to real SRS state, so a wrong answer there can
+  // never trigger a same-sitting requeue either.
+  const willRequeueIfWrong = sessionKind !== 'free' && requeuesSoFar < MAX_REQUEUES_PER_DAY;
+  const isRequeueAttempt = sessionKind !== 'free' && requeuesSoFar > 0;
+  // Round position never counts a re-queued attempt as a new card, so a
   // lapse cannot make the "N / total" readout look further along than it is.
   const displayedPosition = Math.min(
     completedItemIds.size + (isRequeueAttempt ? 0 : 1),
-    totalSessionItems,
+    totalRoundItems,
   );
   const progressPercent =
-    totalSessionItems > 0 ? (completedItemIds.size / totalSessionItems) * 100 : 100;
+    totalRoundItems > 0 ? (completedItemIds.size / totalRoundItems) * 100 : 100;
 
   if (isLoading || settingsLoading) {
     return (
@@ -200,21 +328,75 @@ export default function Practice() {
     );
   }
 
-  if (practiceComplete) {
+  if (sessionComplete) {
+    // "All due cards" is only true for the session that was actually the
+    // due queue; a free round records nothing, and an extra-review round
+    // that still leaves more extra reviews behind is not "all" of anything.
+    // Also never claim the due queue is fully clear directly above a button
+    // offering more of it.
+    let subtitle: string;
+    if (sessionKind === 'free') {
+      subtitle =
+        "You've completed this free-practice round — nothing here was saved to your progress.";
+    } else if (sessionKind === 'extra') {
+      subtitle =
+        pendingExtraReview.length > 0
+          ? "You've completed this round of extra reviews — more are ready."
+          : "You've completed your extra reviews for today.";
+    } else {
+      subtitle =
+        pendingExtraReview.length > 0
+          ? "You've completed today's due cards — a few more came due while you were practising."
+          : "You've completed all due cards for today.";
+    }
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <div className="w-full max-w-2xl text-center space-y-6">
           <h1 className="text-5xl font-bold text-primary">Great Work! 🎉</h1>
-          <p className="text-xl text-muted-foreground">You've completed all due cards for today</p>
-          <Button onClick={() => navigate('/')} size="lg" className="text-lg px-8 py-6">
-            Back to Home
-          </Button>
+          <p className="text-xl text-muted-foreground">{subtitle}</p>
+          <div className="flex flex-col items-center gap-3">
+            <Button
+              onClick={startFreePractice}
+              size="lg"
+              variant="secondary"
+              className="text-lg px-8 py-6 w-full max-w-xs"
+              disabled={pendingFreePractice.length === 0}
+            >
+              Keep practising
+            </Button>
+            {pendingExtraReview.length > 0 && (
+              <Button
+                onClick={startExtraReview}
+                size="lg"
+                className="text-lg px-8 py-6 w-full max-w-xs"
+              >
+                Extra reviews ({pendingExtraReview.length})
+              </Button>
+            )}
+            <Button
+              onClick={() => {
+                // Leaving a free round should never leave sessionKind stuck
+                // on 'free': if this component were ever kept mounted
+                // across navigation, a later 'due'/'extra' session would
+                // silently skip recordAnswer under handleAnswer's `sessionKind
+                // !== 'free'` guard.
+                setSessionKind('due');
+                navigate('/');
+              }}
+              variant="ghost"
+              size="lg"
+              className="text-lg px-8 py-6 w-full max-w-xs"
+            >
+              Back to Home
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (queue.length === 0 || !currentItem) {
+  if (items.length === 0 || !currentItem) {
     return null;
   }
 
@@ -229,7 +411,7 @@ export default function Practice() {
           </Button>
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-muted-foreground">
-              {displayedPosition} / {totalSessionItems}
+              {displayedPosition} / {totalRoundItems}
             </span>
             <Button
               variant="outline"
@@ -245,7 +427,12 @@ export default function Practice() {
           </div>
         </div>
 
-        <Progress value={progressPercent} className="h-3" />
+        <Progress value={progressPercent} className="h-3 bg-muted-foreground" />
+        {sessionKind === 'free' && (
+          <p className="text-xs text-center text-muted-foreground">
+            Free practice — this round isn't saved to your progress
+          </p>
+        )}
       </div>
 
       {/* Practice Card */}
@@ -259,6 +446,7 @@ export default function Practice() {
           autoplayAudio={settings.autoplayAudio}
           muteAudio={settings.muteAudio}
           willRequeueIfWrong={willRequeueIfWrong}
+          repetitions={srsStates[currentItem.itemId]?.repetitions ?? 0}
           onAnswer={handleAnswer}
         />
       </div>

@@ -7,7 +7,7 @@ import {
   isSrsState,
   Grade,
 } from '@/lib/srs';
-import { getVerbs, Form, Verb, conjugateVerb } from '@/lib/verbs';
+import { getVerbs, getAllConjugatedVerbs, Form, Verb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -139,6 +139,10 @@ export interface PracticeItem {
   itemId: string;
 }
 
+// `cefrLevels` filter semantics (see getDueItems below): `undefined` means
+// "no filter, all verbs in scope"; any array - including `[]` - is an
+// explicit selection and is honored exactly, so an empty selection matches
+// zero verbs rather than silently falling back to "all verbs".
 export function useSrsProgress(cefrLevels?: string[]) {
   const [srsStates, setSrsStates] = useState<Record<string, SrsState>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -209,15 +213,29 @@ export function useSrsProgress(cefrLevels?: string[]) {
 
     const allVerbs = await getVerbs();
 
-    // Filter verbs by CEFR level if specified
+    // CEFR filter semantics: `cefrLevels === undefined` means the caller did
+    // not opt into filtering at all, so every verb is in scope. Any array
+    // value, including an empty one, is the caller stating an explicit
+    // selection, and the result must respect exactly that selection - an
+    // empty array must yield zero verbs, never "no filter". Silently
+    // widening an empty selection back to "all verbs" is the bug this
+    // guards against (see issue #137): it would let a UI state that looks
+    // like "nothing selected" quietly practice the entire deck.
     const verbs =
-      cefrLevels && cefrLevels.length > 0
-        ? allVerbs.filter((verb) => verb.cefr && cefrLevels.includes(verb.cefr))
-        : allVerbs;
+      cefrLevels === undefined
+        ? allVerbs
+        : allVerbs.filter((verb) => verb.cefr && cefrLevels.includes(verb.cefr));
+
+    // Conjugate every verb once (O(V) total, no per-item scan of VERB_DATA
+    // by infinitive) and index the results by id, so the loop below is
+    // O(1) per verb instead of re-searching VERB_DATA for each one.
+    const allConjugated = await getAllConjugatedVerbs();
+    const conjugatedById = new Map(allConjugated.map((c) => [c.id, c]));
 
     // Check each verb's forms for availability
     for (const verb of verbs) {
-      const conjugated = await conjugateVerb(verb.infinitive);
+      const conjugated = conjugatedById.get(verb.id);
+      if (!conjugated) continue;
 
       for (const form of forms) {
         // Skip forms that are not available
