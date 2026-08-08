@@ -100,7 +100,7 @@ export default function Practice() {
           </div>
         </div>
 
-        <Progress value={progressPercent} className="h-3" />
+        <Progress value={progressPercent} className="h-3 bg-muted" />
       </div>
 
       {/* Practice Card */}
