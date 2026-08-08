@@ -3,9 +3,12 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 // Regression suite for issue #119 (PR #161): react-router 7 upgrade, with
-// React 19 and Tailwind 4 explicitly deferred. These are static-manifest
-// checks (package.json / package-lock.json / postcss.config.js), not
-// node_modules introspection: node_modules reflects whatever was last
+// React 19 explicitly deferred (React is still 18.x); the Tailwind 4
+// deferral ended with the migration in epic #259 / issue #69, and the
+// Tailwind block below now pins the post-migration state. These are
+// static-manifest checks (package.json / package-lock.json /
+// postcss.config.js), not node_modules introspection: node_modules
+// reflects whatever was last
 // `npm install`ed in this environment, but the manifests are the actual
 // contract the PR changes and the one that regresses silently if someone
 // reverts a version bump by hand. devops owns these files; qa only reads
@@ -72,18 +75,27 @@ describe('caniuse-lite / browserslist data refreshed (issue #119)', () => {
   });
 });
 
-describe('Tailwind 4 explicitly deferred, with a documented reason (issue #119)', () => {
-  // Deliberately not asserting "tailwindcss stays on 3.x" here: that line in
-  // package.json is untouched by this PR (it was already ^3.4.17 at the
-  // merge-base), so a revert-to-merge-base check of it would pass on both
-  // pre- and post-fix code - vacuous per the fail-first rule. The
-  // deferral itself is pinned by the documented-reason check below, which
-  // *is* new in this diff.
-  it('postcss.config.js documents why the Tailwind 4 upgrade was deferred', () => {
-    expect(postcssConfig).toMatch(/tailwind 4/i);
-    expect(postcssConfig).toMatch(/deferr?ed/i);
-    // The note has to reference issue #119 specifically, not just say
-    // "later" - otherwise a future reader can't find the reasoning.
-    expect(postcssConfig).toMatch(/#119/);
+describe('Tailwind 4 active via @tailwindcss/postcss (issue #267)', () => {
+  // The Tailwind 4 upgrade that issue #119 deferred landed via epic #259 /
+  // issue #69 (see postcss.config.js). This pins the current, post-migration
+  // truth instead of the old deferral: v4's PostCSS plugin is
+  // @tailwindcss/postcss, declared as a real dependency and wired into the
+  // PostCSS pipeline.
+  it('package.json declares @tailwindcss/postcss on a 4.x range', () => {
+    const declared = packageJson.devDependencies['@tailwindcss/postcss'];
+    expect(declared, '@tailwindcss/postcss must be a declared dependency').toBeDefined();
+    expect(declared).toMatch(/^\^4\./);
+  });
+
+  it('postcss.config.js wires up @tailwindcss/postcss as a plugin, not just in a comment', () => {
+    // A bare /@tailwindcss\/postcss/ match is vacuous: the file's own header
+    // comment names the package, so reverting only the plugin entry back to
+    // `tailwindcss: {}` would keep that assertion green. Anchor on the
+    // plugin-key shape instead.
+    expect(postcssConfig).toMatch(/^\s*['"]@tailwindcss\/postcss['"]\s*:/m);
+  });
+
+  it('postcss.config.js no longer registers the legacy tailwindcss v3 plugin entry', () => {
+    expect(postcssConfig).not.toMatch(/^\s*['"]?tailwindcss['"]?\s*:/m);
   });
 });
