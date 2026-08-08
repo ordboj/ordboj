@@ -3,6 +3,12 @@
 Owner: `swedish-linguist`. Research deliverable for a GitHub issue.
 No production file was edited to produce this.
 
+Revision 2026-08-09: 17 entries removed pending human review — the 16
+NEEDS HUMAN CHECK rows (section 4.8) and `trycka på` (section 4.2).
+Lead decision on the tracking issue. Ranks are preserved, so the rank
+column has gaps. Headline counts in the prose (1069, 569, 415/654)
+describe the original measurement and are kept as the historical record.
+
 ## Method
 
 Two independent sources, combined. Neither is complete on its own, and that
@@ -40,7 +46,7 @@ lemma contains its own stated particle, there are no duplicate lemmas, and all
 **absent**, not merely unlikely. What that check cannot catch is a
 semantically wrong entry that still looks like Swedish, so I verified the
 entries against my own knowledge as well — see sections 4.8 and 4.9 for the
-two I rejected and the sixteen I flagged.
+two I rejected and the sixteen since removed pending human review.
 
 _Copyright._ Source C is in copyright. This file records **facts only**:
 which verb combines with which particle. Every gloss is reformulated in my own
@@ -113,7 +119,7 @@ are deliberately excluded** — too rare to teach (`hägna in`, `knåpa ihop`,
 `tufsa till`, `rationalisera bort`), not particle verbs at all (`bero på`,
 `titta på`), or not confidently glossable. All 94 are listed in section 4.3,
 so the cuts are auditable rather than silent. Two source-C entries are rejected
-outright (4.7) and sixteen are included but flagged (4.8).
+outright (4.7) and sixteen more are removed pending human review (4.8).
 
 **Spelling variants are not separate entries.** Swedish writes several
 particles two ways: `ner`/`ned`, `igång`/`i gång`, `iväg`/`i väg`. SVALex
@@ -767,577 +773,560 @@ handling in the data model (section 3.6).
 - `v+p+prep` — verb + particle + preposition, e.g. _hålla fast vid_,
   _bli av med_, _råka ut för_ (42)
 
-| #    | Partikelverb       | Basverb | Partikel | Betydelse (EN)                                                                                                                                  | CEFR | Klass    |
-| ---- | ------------------ | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---- | -------- |
-| 501  | bli av med         | bli     | av       | lose; get rid of                                                                                                                                | B1   | v+p+prep |
-| 502  | bli ifrån sig      | bli     | ifrån    | become beside oneself, distraught                                                                                                               | B1   | refl     |
-| 503  | bli till           | bli     | till     | come into existence                                                                                                                             | B1   | plain    |
-| 504  | bli till sig       | bli     | till     | get very excited or worked up                                                                                                                   | B1   | refl     |
-| 505  | få av              | få      | av       | manage to get off, remove                                                                                                                       | B1   | plain    |
-| 506  | få hem             | få      | hem      | get delivered into stock or home                                                                                                                | B1   | plain    |
-| 507  | få igen            | få      | igen     | get properly shut; get back (something lent); get paid back (revenge)                                                                           | B1   | plain    |
-| 508  | få igenom          | få      | igenom   | get others to accept                                                                                                                            | B1   | plain    |
-| 509  | få med sig         | få      | med      | manage to bring along; win over as supporters                                                                                                   | B1   | refl     |
-| 510  | få till            | få      | till     | manage to produce; spin a fanciful tale                                                                                                         | B1   | plain    |
-| 511  | få undan           | få      | undan    | clear away; get (a chore) done                                                                                                                  | B1   | plain    |
-| 512  | få ur              | få      | ur       | manage to squeeze out; coax (information) out of someone                                                                                        | B1   | plain    |
-| 513  | få över            | få      | över     | get transferred; have left over                                                                                                                 | B1   | plain    |
-| 514  | ge efter           | ge      | efter    | yield, relent; give way physically                                                                                                              | B1   | plain    |
-| 515  | ge ifrån sig       | ge      | ifrån    | hand over; emit (a sound)                                                                                                                       | B1   | refl     |
-| 516  | ge med sig         | ge      | med      | relent; ease off (pain); give way physically                                                                                                    | B1   | refl     |
-| 517  | ge sig ut för      | ge      | ut       | pass oneself off as                                                                                                                             | B1   | refl     |
-| 518  | ge till            | ge      | till     | let out (a cry, a laugh)                                                                                                                        | B1   | plain    |
-| 519  | gå av och an       | gå      | av       | pace back and forth                                                                                                                             | B1   | v+p+prep |
-| 520  | gå efter           | gå      | efter    | walk behind; run slow (a clock); go fetch                                                                                                       | B1   | plain    |
-| 521  | gå emellan         | gå      | emellan  | mediate, step in between                                                                                                                        | B1   | plain    |
-| 522  | gå emot            | gå      | emot     | walk into; oppose, go against                                                                                                                   | B1   | plain    |
-| 523  | gå för sig         | gå      | för      | be suitable, be permissible                                                                                                                     | B1   | refl     |
-| 524  | gå förbi           | gå      | förbi    | pass by, overtake                                                                                                                               | B1   | plain    |
-| 525  | gå i               | gå      | i        | get into (water); fit into; sink in, be believed (impersonal) — **NEEDS HUMAN CHECK**: the "be believed" sense cannot be confirmed              | C1   | plain    |
-| 526  | gå ifrån           | gå      | ifrån    | leave one's post briefly; abandon (a partner)                                                                                                   | B1   | plain    |
-| 527  | gå igång           | gå      | igång    | start (an engine)                                                                                                                               | B1   | plain    |
-| 528  | gå itu             | gå      | itu      | break in two                                                                                                                                    | B1   | plain    |
-| 529  | gå ner sig         | gå      | ner      | sink through ice or bog; let oneself decline                                                                                                    | B1   | refl     |
-| 530  | gå tillbaka        | gå      | tillbaka | go back; slowly recede                                                                                                                          | B1   | plain    |
-| 531  | gå under           | gå      | under    | go beneath; sink, be destroyed                                                                                                                  | B1   | plain    |
-| 532  | gå upp för         | gå      | upp      | become clear to, dawn on (impersonal)                                                                                                           | C1   | v+p+prep |
-| 533  | gå upp i           | gå      | upp      | be absorbed into; immerse oneself in                                                                                                            | B1   | v+p+prep |
-| 534  | gå ut på           | gå      | ut       | aim at, be about                                                                                                                                | B1   | v+p+prep |
-| 535  | gå ut över         | gå      | ut       | take its toll on, hit negatively                                                                                                                | B1   | v+p+prep |
-| 536  | gå utför           | gå      | utför    | go downhill, deteriorate                                                                                                                        | B1   | plain    |
-| 537  | göra ner           | göra    | ner      | criticize harshly, demolish                                                                                                                     | B1   | plain    |
-| 538  | ha emot            | ha      | emot     | object to, dislike                                                                                                                              | B1   | plain    |
-| 539  | ha för sig         | ha      | för      | be up to, be occupied with; have a vague belief                                                                                                 | B1   | refl     |
-| 540  | ha över            | ha      | över     | have left over                                                                                                                                  | B1   | plain    |
-| 541  | hålla efter        | hålla   | efter    | keep in check, supervise                                                                                                                        | B1   | plain    |
-| 542  | hålla fast vid     | hålla   | fast     | stick to, remain loyal to                                                                                                                       | B1   | v+p+prep |
-| 543  | hålla i sig        | hålla   | i        | hold on to avoid falling; persist (weather, impersonal)                                                                                         | C1   | refl     |
-| 544  | hålla inne med     | hålla   | inne     | keep secret                                                                                                                                     | B1   | v+p+prep |
-| 545  | hålla på med       | hålla   | på       | be occupied with                                                                                                                                | B1   | v+p+prep |
-| 546  | hålla sig undan    | hålla   | undan    | hide, stay out of reach                                                                                                                         | B1   | refl     |
-| 547  | hålla sig uppe     | hålla   | uppe     | stay awake, stay upright                                                                                                                        | B1   | refl     |
-| 548  | höra av            | höra    | av       | receive word from                                                                                                                               | B1   | plain    |
-| 549  | höra efter         | höra    | efter    | inquire, ask                                                                                                                                    | B1   | plain    |
-| 550  | höra hit           | höra    | hit      | be relevant; belong to a group                                                                                                                  | B1   | plain    |
-| 551  | höra på            | höra    | på       | listen attentively                                                                                                                              | B1   | plain    |
-| 552  | höra sig för       | höra    | för      | make inquiries, ask around                                                                                                                      | B1   | refl     |
-| 553  | höra upp           | höra    | upp      | listen up                                                                                                                                       | B1   | plain    |
-| 554  | komma an på        | komma   | an       | depend on                                                                                                                                       | B1   | v+p+prep |
-| 555  | komma av           | komma   | av       | get off (a vehicle); result from                                                                                                                | B1   | plain    |
-| 556  | komma efter        | komma   | efter    | follow later; fall behind                                                                                                                       | B1   | plain    |
-| 557  | komma före         | komma   | före     | arrive ahead of                                                                                                                                 | B1   | plain    |
-| 558  | komma ifrån        | komma   | ifrån    | get away from one's post                                                                                                                        | B1   | plain    |
-| 559  | komma igenom       | komma   | igenom   | get through; overcome (a hard period)                                                                                                           | B1   | plain    |
-| 560  | komma ihop sig     | komma   | ihop     | quarrel, fall out                                                                                                                               | B1   | refl     |
-| 561  | komma iväg         | komma   | iväg     | get going, get off                                                                                                                              | B1   | plain    |
-| 562  | komma loss         | komma   | loss     | come free; get away; loosen up                                                                                                                  | B1   | plain    |
-| 563  | komma om           | komma   | om       | overtake                                                                                                                                        | B1   | plain    |
-| 564  | komma runt         | komma   | runt     | get around (an obstacle or problem)                                                                                                             | B1   | plain    |
-| 565  | komma sig upp      | komma   | upp      | advance in life                                                                                                                                 | B1   | refl     |
-| 566  | komma upp sig      | komma   | upp      | rise socially or professionally — **NEEDS HUMAN CHECK**: form doubtful; "komma sig upp" is the standard order                                   | B1   | refl     |
-| 567  | känna på           | känna   | på       | try out what something feels like                                                                                                               | B1   | plain    |
-| 568  | ligga av sig       | ligga   | av       | get rusty from disuse                                                                                                                           | B1   | refl     |
-| 569  | ligga bakom        | ligga   | bakom    | be behind, be the cause of                                                                                                                      | B1   | plain    |
-| 570  | ligga efter        | ligga   | efter    | drive behind; be behind schedule; nag                                                                                                           | B1   | plain    |
-| 571  | ligga för          | ligga   | för      | suit someone's nature (impersonal)                                                                                                              | C1   | plain    |
-| 572  | ligga före         | ligga   | före     | be ahead                                                                                                                                        | B1   | plain    |
-| 573  | ligga i            | ligga   | i        | work hard, keep at it                                                                                                                           | B1   | plain    |
-| 574  | ligga inne         | ligga   | inne     | be in hospital; do military service indoors                                                                                                     | B1   | plain    |
-| 575  | ligga inne med     | ligga   | inne     | hold, have in one's possession (claims, stock)                                                                                                  | B1   | v+p+prep |
-| 576  | ligga nere         | ligga   | nere     | be at a standstill                                                                                                                              | B1   | plain    |
-| 577  | ligga på           | ligga   | på       | beat down strongly (sun); keep pressing, nag                                                                                                    | B1   | plain    |
-| 578  | ligga till         | ligga   | till     | be positioned, stand (in a competition); be the state of things (impersonal)                                                                    | C1   | plain    |
-| 579  | ligga till sig     | ligga   | till     | improve by resting, ripen                                                                                                                       | B1   | refl     |
-| 580  | ligga under        | ligga   | under    | be trailing, be behind in score                                                                                                                 | B1   | plain    |
-| 581  | ligga ute          | ligga   | ute      | camp outdoors; be out somewhere                                                                                                                 | B1   | plain    |
-| 582  | ligga ute med      | ligga   | ute      | have money lent out, be owed                                                                                                                    | B1   | v+p+prep |
-| 583  | ligga över         | ligga   | över     | stay overnight; be leading in score; weigh on someone                                                                                           | B1   | plain    |
-| 584  | lägga an på        | lägga   | an       | make a play for, court                                                                                                                          | B1   | v+p+prep |
-| 585  | lägga emellan      | lägga   | emellan  | pay the difference                                                                                                                              | B1   | plain    |
-| 586  | lägga för          | lägga   | för      | put in the way of; serve (food) onto a plate                                                                                                    | B2   | plain    |
-| 587  | lägga sig till med | lägga   | till     | acquire (a new look or habit)                                                                                                                   | B1   | refl     |
-| 588  | lägga sig ut för   | lägga   | ut       | put in a good word for                                                                                                                          | B1   | refl     |
-| 589  | lägga undan        | lägga   | undan    | put aside; save up                                                                                                                              | B1   | plain    |
-| 590  | lägga under sig    | lägga   | under    | conquer, subjugate                                                                                                                              | B1   | refl     |
-| 591  | läsa av            | läsa    | av       | read off (a meter)                                                                                                                              | B1   | plain    |
-| 592  | läsa upp           | läsa    | upp      | read aloud                                                                                                                                      | C1   | plain    |
-| 593  | läsa ut            | läsa    | ut       | make sense of (a text)                                                                                                                          | B1   | plain    |
-| 594  | se fram emot       | se      | fram     | look forward to                                                                                                                                 | B1   | v+p+prep |
-| 595  | se ner på          | se      | ner      | despise, look down on                                                                                                                           | B1   | v+p+prep |
-| 596  | se upp till        | se      | upp      | admire                                                                                                                                          | B1   | v+p+prep |
-| 597  | skriva av          | skriva  | av       | copy in writing                                                                                                                                 | B1   | plain    |
-| 598  | skriva in sig      | skriva  | in       | register, enroll                                                                                                                                | B1   | refl     |
-| 599  | skriva om          | skriva  | om       | rewrite; write about                                                                                                                            | B1   | plain    |
-| 600  | skriva över        | skriva  | över     | overwrite; sign over (property)                                                                                                                 | B1   | plain    |
-| 601  | stå bakom          | stå     | bakom    | be behind, be responsible for; back, support                                                                                                    | B1   | plain    |
-| 602  | stå emot           | stå     | emot     | withstand, resist                                                                                                                               | B1   | plain    |
-| 603  | stå fast vid       | stå     | fast     | stand by, not change one's position                                                                                                             | B1   | v+p+prep |
-| 604  | stå fram           | stå     | fram     | step forward publicly                                                                                                                           | B1   | plain    |
-| 605  | stå framme         | stå     | framme   | be left out (food); stand at the front                                                                                                          | B1   | plain    |
-| 606  | stå för            | stå     | för      | block (a view); provide, be responsible for                                                                                                     | B1   | plain    |
-| 607  | stå före           | stå     | före     | be ahead in a queue                                                                                                                             | B1   | plain    |
-| 608  | stå i              | stå     | i        | bustle, work busily                                                                                                                             | B1   | plain    |
-| 609  | stå inne           | stå     | inne     | remain deposited (money in the bank)                                                                                                            | B1   | plain    |
-| 610  | stå på             | stå     | på       | be going on (impersonal); be happening                                                                                                          | B1   | plain    |
-| 611  | stå över           | stå     | över     | pass, skip one's turn                                                                                                                           | B1   | plain    |
-| 612  | ställa av          | ställa  | av       | set down; deregister (a vehicle) temporarily                                                                                                    | B1   | plain    |
-| 613  | ställa in sig      | ställa  | in       | prepare oneself mentally for                                                                                                                    | B1   | refl     |
-| 614  | ställa om sig      | ställa  | om       | adapt one's way of life                                                                                                                         | B1   | refl     |
-| 615  | ställa sig in      | ställa  | in       | ingratiate oneself                                                                                                                              | B1   | refl     |
-| 616  | ställa tillbaka    | ställa  | tillbaka | put back; set (a clock) back                                                                                                                    | B1   | plain    |
-| 617  | säga efter         | säga    | efter    | repeat after someone                                                                                                                            | B1   | plain    |
-| 618  | säga emot          | säga    | emot     | contradict, object                                                                                                                              | B1   | plain    |
-| 619  | säga ifrån         | säga    | ifrån    | speak up in protest                                                                                                                             | B1   | plain    |
-| 620  | säga om            | säga    | om       | say again; object to (impersonal) — **NEEDS HUMAN CHECK**: the "object to" sense cannot be confirmed                                            | C1   | plain    |
-| 621  | säga till om       | säga    | till     | have authority over                                                                                                                             | B1   | v+p+prep |
-| 622  | sätta av           | sätta   | av       | drop off (a passenger); set aside (money); dash off                                                                                             | B2   | plain    |
-| 623  | sätta efter        | sätta   | efter    | set off in pursuit                                                                                                                              | B1   | plain    |
-| 624  | sätta fram         | sätta   | fram     | put out (dishes)                                                                                                                                | B1   | plain    |
-| 625  | sätta för          | sätta   | för      | put in front of, cover with                                                                                                                     | B1   | plain    |
-| 626  | sätta ner          | sätta   | ner      | put down; reduce (prices)                                                                                                                       | B1   | plain    |
-| 627  | sätta om           | sätta   | om       | repot (plants); reset (printed text)                                                                                                            | B1   | plain    |
-| 628  | sätta på sig       | sätta   | på       | put on (one's clothes)                                                                                                                          | B1   | refl     |
-| 629  | sätta sig emot     | sätta   | emot     | oppose actively                                                                                                                                 | B1   | refl     |
-| 630  | sätta sig in i     | sätta   | in       | familiarize oneself with                                                                                                                        | B1   | refl     |
-| 631  | sätta sig upp mot  | sätta   | upp      | defy, rebel against                                                                                                                             | B1   | refl     |
-| 632  | sätta sig över     | sätta   | över     | disregard, put oneself above                                                                                                                    | B1   | refl     |
-| 633  | sätta till         | sätta   | till     | add (ingredients)                                                                                                                               | B1   | plain    |
-| 634  | sätta undan        | sätta   | undan    | put out of reach; save for later                                                                                                                | B1   | plain    |
-| 635  | ta för sig         | ta      | för      | help oneself; grab without regard for others                                                                                                    | B1   | refl     |
-| 636  | ta igen            | ta      | igen     | make up (lost ground)                                                                                                                           | B1   | plain    |
-| 637  | ta igen sig        | ta      | igen     | rest, recover                                                                                                                                   | B1   | refl     |
-| 638  | ta in på           | ta      | in       | close the gap on                                                                                                                                | B1   | v+p+prep |
-| 639  | ta itu med         | ta      | itu      | get down to; take someone to task                                                                                                               | B1   | v+p+prep |
-| 640  | ta sig fram        | ta      | fram     | make one's way, get ahead                                                                                                                       | B1   | refl     |
-| 641  | ta sig för         | ta      | för      | occupy oneself with                                                                                                                             | B1   | refl     |
-| 642  | ta sig före        | ta      | före     | undertake, decide to do                                                                                                                         | B1   | refl     |
-| 643  | ta sig till        | ta      | till     | do, resort to doing                                                                                                                             | B1   | refl     |
-| 644  | ta sig ut          | ta      | ut       | get out; look, appear                                                                                                                           | B1   | refl     |
-| 645  | ta undan           | ta      | undan    | clear away; set aside for oneself                                                                                                               | B1   | plain    |
-| 646  | ta ur              | ta      | ur       | take out of; gut (a bird); disabuse someone of a belief                                                                                         | B1   | plain    |
-| 647  | ta vid             | ta      | vid      | take over where another stops                                                                                                                   | B1   | plain    |
-| 648  | ta vid sig         | ta      | vid      | take (a remark) to heart                                                                                                                        | B1   | refl     |
-| 649  | tycka till         | tycka   | till     | voice one's opinion                                                                                                                             | B1   | plain    |
-| 650  | tänka sig in i     | tänka   | in       | imagine oneself in                                                                                                                              | B1   | refl     |
-| 651  | tänka till         | tänka   | till     | put in real thought                                                                                                                             | B1   | plain    |
-| 652  | vara av            | vara    | av       | be broken in two                                                                                                                                | B1   | plain    |
-| 653  | vara av med        | vara    | av       | be rid of                                                                                                                                       | B1   | v+p+prep |
-| 654  | vara efter         | vara    | efter    | chase; be behind with                                                                                                                           | B1   | plain    |
-| 655  | vara emot          | vara    | emot     | be against, oppose                                                                                                                              | B1   | plain    |
-| 656  | vara för           | vara    | för      | be drawn (curtains); be in favor of                                                                                                             | B1   | plain    |
-| 657  | vara ifrån sig     | vara    | ifrån    | be beside oneself                                                                                                                               | B1   | refl     |
-| 658  | vara kvar          | vara    | kvar     | remain, be left                                                                                                                                 | B1   | plain    |
-| 659  | vara med om        | vara    | med      | experience, be involved in                                                                                                                      | B1   | v+p+prep |
-| 660  | vara med på        | vara    | med      | accept, agree to                                                                                                                                | B1   | v+p+prep |
-| 661  | vara om sig        | vara    | om       | be thrifty, look out for one's own advantage                                                                                                    | B1   | refl     |
-| 662  | vara på            | vara    | på       | be switched on; keep close watch on someone                                                                                                     | A2   | plain    |
-| 663  | vara till för      | vara    | till     | exist for the purpose of                                                                                                                        | B1   | v+p+prep |
-| 664  | vara till sig      | vara    | till     | be worked up, excited                                                                                                                           | B1   | refl     |
-| 665  | veta av            | veta    | av       | tolerate, want to hear of                                                                                                                       | B1   | plain    |
-| 666  | veta med sig       | veta    | med      | be privately aware                                                                                                                              | B1   | refl     |
-| 667  | visa bort          | visa    | bort     | turn away, dismiss                                                                                                                              | B1   | plain    |
-| 668  | visa tillbaka      | visa    | tillbaka | reject (accusations)                                                                                                                            | B1   | plain    |
-| 669  | visa ut            | visa    | ut       | show out; expel from the premises                                                                                                               | B1   | plain    |
-| 670  | bygga för          | bygga   | för      | block something by building                                                                                                                     | B2   | plain    |
-| 671  | bygga på           | bygga   | på       | add height or a storey; supplement (education)                                                                                                  | B2   | plain    |
-| 672  | bygga till         | bygga   | till     | enlarge by building an extension                                                                                                                | B2   | plain    |
-| 673  | bära av            | bära    | av       | set off (impersonal)                                                                                                                            | C1   | plain    |
-| 674  | bära emot          | bära    | emot     | feel hard or unpleasant to do (impersonal)                                                                                                      | C1   | plain    |
-| 675  | bära iväg          | bära    | iväg     | carry off; head off (impersonal)                                                                                                                | C1   | plain    |
-| 676  | bära sig åt        | bära    | åt       | behave; go about doing something                                                                                                                | B2   | refl     |
-| 677  | bära upp           | bära    | upp      | carry upstairs; wear (clothes) elegantly                                                                                                        | B2   | plain    |
-| 678  | börja på           | börja   | på       | begin; start at (a school, job)                                                                                                                 | B2   | plain    |
-| 679  | kunna med          | kunna   | med      | stand, tolerate (usually negated)                                                                                                               | B2   | plain    |
-| 680  | riva av            | riva    | av       | tear off; rattle off (a tune)                                                                                                                   | B2   | plain    |
-| 681  | riva i             | riva    | i        | snap angrily; rummage roughly                                                                                                                   | B2   | plain    |
-| 682  | riva ut            | riva    | ut       | tear out (a page)                                                                                                                               | B2   | plain    |
-| 683  | riva åt sig        | riva    | åt       | snatch up                                                                                                                                       | B2   | refl     |
-| 684  | stänga igen        | stänga  | igen     | shut properly                                                                                                                                   | B2   | plain    |
-| 685  | stänga till        | stänga  | till     | close temporarily, push shut                                                                                                                    | B2   | plain    |
-| 686  | stänga ute         | stänga  | ute      | keep out, shut out                                                                                                                              | B2   | plain    |
-| 687  | dra bort           | dra     | bort     | pull away; subtract; move away (weather)                                                                                                        | B1   | plain    |
-| 688  | dra fram           | dra     | fram     | pull out; keep dredging up; sweep through in a group                                                                                            | B1   | plain    |
-| 689  | dra för            | dra     | för      | pull (curtains) closed                                                                                                                          | B1   | plain    |
-| 690  | dra ihop sig       | dra     | ihop     | contract; be approaching (impersonal, e.g. storm)                                                                                               | C1   | refl     |
-| 691  | dra in på          | dra     | in       | cut down on                                                                                                                                     | B1   | v+p+prep |
-| 692  | dra ner på         | dra     | ner      | cut back on                                                                                                                                     | B1   | v+p+prep |
-| 693  | dra omkring        | dra     | omkring  | scatter about, make a mess of things — **NEEDS HUMAN CHECK**: source gloss "scatter about" disputed — I read this as "to roam, to wander about" | B1   | plain    |
-| 694  | dra på             | dra     | på       | pull on (clothing, with effort); speed up; carry (an illness) around                                                                            | B1   | plain    |
-| 695  | dra sig fram       | dra     | fram     | scrape by financially                                                                                                                           | B1   | refl     |
-| 696  | dra sig tillbaka   | dra     | tillbaka | retreat, move away; retire from activity                                                                                                        | B1   | refl     |
-| 697  | dra sig ur         | dra     | ur       | pull out of, quit an undertaking                                                                                                                | B1   | refl     |
-| 698  | dra till           | dra     | till     | tighten; pull shut                                                                                                                              | B1   | plain    |
-| 699  | dra till med       | dra     | till     | blurt out a guess                                                                                                                               | B1   | v+p+prep |
-| 700  | dra till sig       | dra     | till     | attract                                                                                                                                         | B1   | refl     |
-| 701  | dra ut på          | dra     | ut       | run over, take longer than planned                                                                                                              | B1   | v+p+prep |
-| 702  | dra åt sig         | dra     | åt       | pull toward oneself; absorb                                                                                                                     | B1   | refl     |
-| 703  | dra över           | dra     | över     | run over (allotted time); pull (a cover) over                                                                                                   | C1   | plain    |
-| 704  | hoppa i            | hoppa   | i        | jump into (water)                                                                                                                               | B1   | plain    |
-| 705  | hoppa på           | hoppa   | på       | jump onto (a bus); seize on trying; attack with criticism                                                                                       | B1   | plain    |
-| 706  | hoppa till         | hoppa   | till     | give a start, jump in surprise                                                                                                                  | B1   | plain    |
-| 707  | hämta ner          | hämta   | ner      | download to one's computer                                                                                                                      | B1   | plain    |
-| 708  | hänga av sig       | hänga   | av       | hang up one's outdoor clothes                                                                                                                   | B1   | refl     |
-| 709  | hänga efter        | hänga   | efter    | trail after someone annoyingly                                                                                                                  | B1   | plain    |
-| 710  | hänga på           | hänga   | på       | follow close behind; hang out at a place                                                                                                        | B1   | plain    |
-| 711  | hänga sig på       | hänga   | på       | tag along uninvited                                                                                                                             | B1   | refl     |
-| 712  | hänga upp sig      | hänga   | upp      | jam, freeze (a machine); fixate on a detail                                                                                                     | B1   | refl     |
-| 713  | hänga över         | hänga   | över     | move (clothes) over; loom over, worry; pore over                                                                                                | B1   | plain    |
-| 714  | kasta av           | kasta   | av       | throw off (a rider)                                                                                                                             | B1   | plain    |
-| 715  | kasta fram         | kasta   | fram     | toss out hastily; float (a proposal)                                                                                                            | B1   | plain    |
-| 716  | kasta i sig        | kasta   | i        | wolf down food                                                                                                                                  | B1   | refl     |
-| 717  | kasta om           | kasta   | om       | throw again; reverse the order of                                                                                                               | B1   | plain    |
-| 718  | kasta omkull       | kasta   | omkull   | knock over                                                                                                                                      | B1   | plain    |
-| 719  | kasta upp          | kasta   | upp      | throw upward; vomit                                                                                                                             | C1   | plain    |
-| 720  | klä av             | klä     | av       | undress                                                                                                                                         | B1   | refl     |
-| 721  | klä om             | klä     | om       | change clothes; reupholster                                                                                                                     | B2   | refl     |
-| 722  | klä på             | klä     | på       | dress                                                                                                                                           | B1   | refl     |
-| 723  | klä upp            | klä     | upp      | dress up in fine clothes                                                                                                                        | B1   | refl     |
-| 724  | köpa hem           | köpa    | hem      | buy in (groceries)                                                                                                                              | B1   | plain    |
-| 725  | köpa ut            | köpa    | ut       | buy alcohol for someone; buy out a co-owner                                                                                                     | B1   | plain    |
-| 726  | köra av            | köra    | av       | drive off (the road)                                                                                                                            | B1   | plain    |
-| 727  | köra ihop          | köra    | ihop     | collide; heap together carelessly                                                                                                               | B1   | plain    |
-| 728  | köra ihop sig      | köra    | ihop     | become chaotic (impersonal)                                                                                                                     | C1   | refl     |
-| 729  | köra iväg          | köra    | iväg     | drive off; chase away                                                                                                                           | B1   | plain    |
-| 730  | sitta emellan      | sitta   | emellan  | be caught in the middle, suffer from others' conflict                                                                                           | B1   | plain    |
-| 731  | sitta i            | sitta   | i        | linger, persist (pain)                                                                                                                          | B1   | plain    |
-| 732  | sitta ihop         | sitta   | ihop     | be stuck together                                                                                                                               | B1   | plain    |
-| 733  | sitta inne         | sitta   | inne     | stay indoors; serve a prison sentence                                                                                                           | B1   | plain    |
-| 734  | sitta inne med     | sitta   | inne     | possess (knowledge)                                                                                                                             | B1   | v+p+prep |
-| 735  | sitta upp          | sitta   | upp      | mount (a horse); sit upright                                                                                                                    | B1   | plain    |
-| 736  | sitta uppe         | sitta   | uppe     | stay up late                                                                                                                                    | B1   | plain    |
-| 737  | sitta åt           | sitta   | åt       | fit tightly                                                                                                                                     | B1   | plain    |
-| 738  | slå an             | slå     | an       | strike (a chord)                                                                                                                                | B1   | plain    |
-| 739  | slå an på          | slå     | an       | appeal to, charm                                                                                                                                | B1   | v+p+prep |
-| 740  | slå av på          | slå     | av       | ease off (the pace)                                                                                                                             | B1   | v+p+prep |
-| 741  | slå av sig         | slå     | av       | go flat (a drink) — **NEEDS HUMAN CHECK**: cannot confirm                                                                                       | B1   | refl     |
-| 742  | slå bort           | slå     | bort     | knock away; pour off; brush aside (criticism)                                                                                                   | B1   | plain    |
-| 743  | slå i              | slå     | i        | hammer in; bump (a toe); pour into; make someone believe a lie                                                                                  | B1   | plain    |
-| 744  | slå ifrån          | slå     | ifrån    | switch off (power)                                                                                                                              | B1   | plain    |
-| 745  | slå ifrån sig      | slå     | ifrån    | refuse to accept, fend off (accusations)                                                                                                        | B1   | refl     |
-| 746  | slå igen           | slå     | igen     | shut (a book, a door); close down (a business)                                                                                                  | B1   | plain    |
-| 747  | slå igenom         | slå     | igenom   | achieve one's breakthrough, become famous                                                                                                       | B1   | plain    |
-| 748  | slå in på          | slå     | in       | take up (a new path or career)                                                                                                                  | B1   | v+p+prep |
-| 749  | slå ner på         | slå     | ner      | swoop on; single out for criticism                                                                                                              | B1   | v+p+prep |
-| 750  | slå om             | slå     | om       | tie around; change suddenly (weather, impersonal)                                                                                               | C1   | plain    |
-| 751  | slå omkull         | slå     | omkull   | knock over                                                                                                                                      | B1   | plain    |
-| 752  | slå runt           | slå     | runt     | overturn completely; party hard                                                                                                                 | B1   | plain    |
-| 753  | slå sig på         | slå     | på       | take up, go in for                                                                                                                              | B1   | refl     |
-| 754  | slå över           | slå     | över     | pour into another container; overdo it emotionally                                                                                              | B1   | plain    |
-| 755  | spela av           | spela   | av       | win off someone at gambling; copy (a recording)                                                                                                 | B1   | plain    |
-| 756  | spela bort         | spela   | bort     | gamble away                                                                                                                                     | B1   | plain    |
-| 757  | spela om           | spela   | om       | play again; gamble for (money)                                                                                                                  | B1   | plain    |
-| 758  | spela ut           | spela   | ut       | play off (rivals) against each other                                                                                                            | B1   | plain    |
-| 759  | spela över         | spela   | över     | record over; overact                                                                                                                            | B1   | plain    |
-| 760  | springa bort       | springa | bort     | run away, go missing                                                                                                                            | B1   | plain    |
-| 761  | springa efter      | springa | efter    | run after; run and fetch; chase (romantically)                                                                                                  | B1   | plain    |
-| 762  | springa om         | springa | om       | overtake while running                                                                                                                          | B1   | plain    |
-| 763  | springa på         | springa | på       | collide with while running; bump into (a person)                                                                                                | B1   | plain    |
-| 764  | vika av            | vika    | av       | turn off (a road)                                                                                                                               | B1   | plain    |
-| 765  | vänta in           | vänta   | in       | wait for (to arrive)                                                                                                                            | B2   | plain    |
-| 766  | vänta ut           | vänta   | ut       | wait out, outlast                                                                                                                               | B1   | plain    |
-| 767  | åka dit            | åka     | dit      | get caught and punished                                                                                                                         | B1   | plain    |
-| 768  | åka med            | åka     | med      | get a lift                                                                                                                                      | B1   | plain    |
-| 769  | åka om             | åka     | om       | overtake                                                                                                                                        | B1   | plain    |
-| 770  | åka på             | åka     | på       | be landed with (a chore); catch (something bad)                                                                                                 | B1   | plain    |
-| 771  | åka ur             | åka     | ur       | go off course; be relegated                                                                                                                     | B1   | plain    |
-| 772  | åka ut             | åka     | ut       | go out (to the country); be thrown out; be eliminated                                                                                           | B1   | plain    |
-| 773  | äta upp sig        | äta     | upp      | regain weight by eating                                                                                                                         | B1   | refl     |
-| 774  | arbeta av          | arbeta  | av       | pay off a debt through work rather than money                                                                                                   | B2   | plain    |
-| 775  | arbeta av sig      | arbeta  | av       | get rid of a feeling by working                                                                                                                 | B2   | refl     |
-| 776  | arbeta fram        | arbeta  | fram     | produce or finish something through work                                                                                                        | B2   | plain    |
-| 777  | arbeta ifatt       | arbeta  | ifatt    | catch up on delayed work                                                                                                                        | B2   | plain    |
-| 778  | arbeta in          | arbeta  | in       | work extra hours to bank time off; make a name or product established; knead or mix in; keep working as long as possible                        | B2   | plain    |
-| 779  | arbeta om          | arbeta  | om       | rework, revise                                                                                                                                  | B2   | plain    |
-| 780  | arbeta på          | arbeta  | på       | keep on working                                                                                                                                 | B2   | plain    |
-| 781  | arbeta undan       | arbeta  | undan    | get pending work out of the way                                                                                                                 | B2   | plain    |
-| 782  | arbeta ut          | arbeta  | ut       | devise and complete (a plan)                                                                                                                    | B2   | plain    |
-| 783  | arbeta ut sig      | arbeta  | ut       | exhaust oneself by overworking                                                                                                                  | B2   | refl     |
-| 784  | arbeta över        | arbeta  | över     | work overtime                                                                                                                                   | B2   | plain    |
-| 785  | backa på           | backa   | på       | collide with something while reversing                                                                                                          | B2   | plain    |
-| 786  | backa upp          | backa   | upp      | support; reverse a vehicle up to something                                                                                                      | B2   | plain    |
-| 787  | backa ur           | backa   | ur       | back out, withdraw from participation                                                                                                           | B2   | plain    |
-| 788  | bena ut            | bena    | ut       | untangle, analyze (a problem)                                                                                                                   | B2   | plain    |
-| 789  | binda för          | binda   | för      | tie something over (e.g. blindfold)                                                                                                             | B2   | plain    |
-| 790  | binda in           | binda   | in       | bind (books) in hard covers                                                                                                                     | B2   | plain    |
-| 791  | binda upp          | binda   | upp      | tie up high (hair, plants)                                                                                                                      | C1   | plain    |
-| 792  | binda upp sig      | binda   | upp      | commit oneself                                                                                                                                  | B2   | refl     |
-| 793  | binda åt           | binda   | åt       | tie tightly — **NEEDS HUMAN CHECK**: cannot confirm                                                                                             | B2   | plain    |
-| 794  | bita av            | bita    | av       | bite off; cut someone short rudely                                                                                                              | B2   | plain    |
-| 795  | bita ifrån         | bita    | ifrån    | defend oneself sharply in words                                                                                                                 | B2   | refl     |
-| 796  | bjuda emot         | bjuda   | emot     | be repugnant, feel distasteful (impersonal)                                                                                                     | C1   | plain    |
-| 797  | bjuda till         | bjuda   | till     | make an effort                                                                                                                                  | B2   | plain    |
-| 798  | bjuda upp          | bjuda   | upp      | ask someone to dance                                                                                                                            | B2   | plain    |
-| 799  | bjuda ut           | bjuda   | ut       | take someone out (restaurant etc); offer for sale                                                                                               | B2   | plain    |
-| 800  | bjuda ut sig       | bjuda   | ut       | offer oneself sexually (pejorative)                                                                                                             | C1   | refl     |
-| 801  | bjuda över         | bjuda   | över     | invite to one's home; outbid                                                                                                                    | B2   | plain    |
-| 802  | bre på             | bre     | på       | spread on; exaggerate                                                                                                                           | B2   | plain    |
-| 803  | bre ut             | bre     | ut       | spread out flat                                                                                                                                 | B1   | plain    |
-| 804  | bre ut sig         | bre     | ut       | take up much room; spread over an area                                                                                                          | B2   | refl     |
-| 805  | brinna av          | brinna  | av       | go off, be fired (a shot); burn with eagerness                                                                                                  | B2   | plain    |
-| 806  | brinna ner         | brinna  | ner      | burn to the ground                                                                                                                              | B2   | plain    |
-| 807  | brinna upp         | brinna  | upp      | be destroyed by fire                                                                                                                            | B1   | plain    |
-| 808  | brinna ut          | brinna  | ut       | burn out slowly                                                                                                                                 | B2   | plain    |
-| 809  | bryta av           | bryta   | av       | break in two                                                                                                                                    | B2   | plain    |
-| 810  | bryta igenom       | bryta   | igenom   | force a way through; achieve a breakthrough to fame                                                                                             | B2   | plain    |
-| 811  | bryta ihop         | bryta   | ihop     | collapse, break down emotionally                                                                                                                | B2   | plain    |
-| 812  | bryta ner          | bryta   | ner      | weaken severely; decompose (chemistry)                                                                                                          | B2   | plain    |
-| 813  | bryta samman       | bryta   | samman   | collapse in despair; fail (negotiations)                                                                                                        | B2   | plain    |
-| 814  | bränna ner         | bränna  | ner      | burn down completely                                                                                                                            | B2   | plain    |
-| 815  | bränna upp         | bränna  | upp      | destroy by burning                                                                                                                              | B2   | plain    |
-| 816  | bränna vid         | bränna  | vid      | let food scorch in the pan                                                                                                                      | B2   | plain    |
-| 817  | böja av            | böja    | av       | turn, curve off (a road)                                                                                                                        | B2   | plain    |
-| 818  | cykla på           | cykla   | på       | keep cycling; hit someone while cycling                                                                                                         | B2   | plain    |
-| 819  | dela av            | dela    | av       | partition into smaller units                                                                                                                    | B2   | plain    |
-| 820  | dela med sig       | dela    | med      | share what one has                                                                                                                              | B2   | refl     |
-| 821  | dikta ihop         | dikta   | ihop     | make up (a false story)                                                                                                                         | B2   | plain    |
-| 822  | dikta upp          | dikta   | upp      | invent, fabricate (a tale)                                                                                                                      | B2   | plain    |
-| 823  | driva igenom       | driva   | igenom   | push through despite resistance                                                                                                                 | B2   | plain    |
-| 824  | driva in           | driva   | in       | herd in; collect (debts) by force                                                                                                               | B2   | plain    |
-| 825  | driva omkring      | driva   | omkring  | drift about aimlessly                                                                                                                           | B2   | plain    |
-| 826  | driva på           | driva   | på       | urge to hurry                                                                                                                                   | B2   | plain    |
-| 827  | droppa in          | droppa  | in       | leak in; arrive one by one unplanned                                                                                                            | B2   | plain    |
-| 828  | duka fram          | duka    | fram     | set out food on the table                                                                                                                       | B2   | plain    |
-| 829  | duka under         | duka    | under    | perish, succumb                                                                                                                                 | B2   | plain    |
-| 830  | duka ut            | duka    | ut       | carry dishes back out to the kitchen                                                                                                            | B2   | plain    |
-| 831  | dyka på            | dyka    | på       | accost someone abruptly                                                                                                                         | B2   | plain    |
-| 832  | dö bort            | dö      | bort     | fade away slowly (sound)                                                                                                                        | B2   | plain    |
-| 833  | falla ifrån        | falla   | ifrån    | pass away, die                                                                                                                                  | B2   | plain    |
-| 834  | falla igenom       | falla   | igenom   | fail (an exam)                                                                                                                                  | B2   | plain    |
-| 835  | falla någon in     | falla   | in       | occur to someone (impersonal)                                                                                                                   | C1   | v+p+prep |
-| 836  | falla på           | falla   | på       | set in (darkness, an urge)                                                                                                                      | B2   | plain    |
-| 837  | falla undan        | falla   | undan    | stop resisting, give in (to)                                                                                                                    | B2   | plain    |
-| 838  | falla ut           | falla   | ut       | fall out; turn out, develop                                                                                                                     | B2   | plain    |
-| 839  | falla ut med       | falla   | ut       | yield as a result (e.g. a win) — **NEEDS HUMAN CHECK**: cannot confirm                                                                          | B2   | v+p+prep |
-| 840  | fara på            | fara    | på       | attack fiercely                                                                                                                                 | B2   | plain    |
-| 841  | fara upp           | fara    | upp      | jump up abruptly                                                                                                                                | B2   | plain    |
-| 842  | fara ut mot        | fara    | ut       | lash out verbally at                                                                                                                            | B2   | v+p+prep |
-| 843  | festa om           | festa   | om       | party hard                                                                                                                                      | B2   | plain    |
-| 844  | festa upp          | festa   | upp      | squander (money) on partying                                                                                                                    | B2   | plain    |
-| 845  | flyga i            | flyga   | i        | suddenly possess, get into someone (impersonal)                                                                                                 | C1   | plain    |
-| 846  | flyga på           | flyga   | på       | attack physically                                                                                                                               | B2   | plain    |
-| 847  | flyga upp          | flyga   | upp      | fly up; jump up abruptly; fly open (a door)                                                                                                     | B2   | plain    |
-| 848  | flyta in           | flyta   | in       | float in; come in steadily (money)                                                                                                              | B2   | plain    |
-| 849  | fresta på          | fresta  | på       | be a strain, be taxing                                                                                                                          | B2   | plain    |
-| 850  | frysa om           | frysa   | om       | freeze again — **NEEDS HUMAN CHECK**: source gloss "freeze again" disputed — I read om as body-part ("jag fryser om fötterna")                  | B2   | plain    |
-| 851  | frysa på           | frysa   | på       | turn much colder, freeze over (weather)                                                                                                         | B2   | plain    |
-| 852  | frysa till         | frysa   | till     | freeze to ice                                                                                                                                   | C1   | plain    |
-| 853  | frysa ut           | frysa   | ut       | ostracize, freeze out socially                                                                                                                  | B2   | plain    |
-| 854  | fråga om           | fråga   | om       | ask again                                                                                                                                       | B2   | plain    |
-| 855  | fråga ut           | fråga   | ut       | question in detail, interrogate                                                                                                                 | B2   | plain    |
-| 856  | fälla ut           | fälla   | ut       | fold out, spread out; precipitate (chemistry)                                                                                                   | B2   | plain    |
-| 857  | följa upp          | följa   | upp      | follow up, monitor the result of                                                                                                                | B1   | plain    |
-| 858  | föra med sig       | föra    | med      | bring along; entail, cause                                                                                                                      | B2   | refl     |
-| 859  | föra upp           | föra    | upp      | enter, record (in accounts)                                                                                                                     | B1   | plain    |
-| 860  | föra över          | föra    | över     | transfer (money between accounts)                                                                                                               | B2   | plain    |
-| 861  | gripa sig an       | gripa   | an       | set about, tackle (a task)                                                                                                                      | B2   | refl     |
-| 862  | haka på            | haka    | på       | latch on close behind, tag along                                                                                                                | B2   | plain    |
-| 863  | haka upp sig       | haka    | upp      | jam, get stuck (a machine); fixate on                                                                                                           | B2   | refl     |
-| 864  | hinna upp          | hinna   | upp      | catch up with                                                                                                                                   | B2   | plain    |
-| 865  | hugga av           | hugga   | av       | chop off                                                                                                                                        | B2   | plain    |
-| 866  | hugga för sig      | hugga   | för      | grab a big share brazenly                                                                                                                       | B2   | refl     |
-| 867  | hugga till         | hugga   | till     | hurt with a sudden stab                                                                                                                         | B2   | plain    |
-| 868  | hugga till med     | hugga   | till     | venture a guess                                                                                                                                 | B2   | v+p+prep |
-| 869  | hugga upp          | hugga   | upp      | chop up (firewood)                                                                                                                              | B2   | plain    |
-| 870  | hyra in            | hyra    | in       | hire (temporary staff)                                                                                                                          | B2   | plain    |
-| 871  | härda ut           | härda   | ut       | endure, stick it out                                                                                                                            | B2   | plain    |
-| 872  | häva upp           | häva    | upp      | heave up; let out (a loud cry)                                                                                                                  | B2   | plain    |
-| 873  | häva ur sig        | häva    | ur       | blurt out (something offensive)                                                                                                                 | B2   | refl     |
-| 874  | kamma hem          | kamma   | hem      | win, pull off a success                                                                                                                         | B2   | plain    |
-| 875  | kamma in           | kamma   | in       | rake in (money)                                                                                                                                 | B2   | plain    |
-| 876  | kavla upp          | kavla   | upp      | roll up (sleeves)                                                                                                                               | B2   | plain    |
-| 877  | kavla ut           | kavla   | ut       | roll out flat (dough)                                                                                                                           | B2   | plain    |
-| 878  | klappa igen        | klappa  | igen     | shut down (a shop)                                                                                                                              | B2   | plain    |
-| 879  | klappa ihop        | klappa  | ihop     | collapse physically                                                                                                                             | B2   | plain    |
-| 880  | klappa på          | klappa  | på       | knock (on the door)                                                                                                                             | B2   | plain    |
-| 881  | klara upp          | klara   | upp      | solve (a crime), clear up                                                                                                                       | B2   | plain    |
-| 882  | klara ut           | klara   | ut       | sort out, resolve                                                                                                                               | B2   | plain    |
-| 883  | klippa av          | klippa  | av       | cut through; cut someone off curtly                                                                                                             | B2   | plain    |
-| 884  | klippa ner         | klippa  | ner      | cut back, prune (plants)                                                                                                                        | B2   | plain    |
-| 885  | klippa till        | klippa  | till     | hit someone; strike while the chance is there; cut to shape                                                                                     | B2   | plain    |
-| 886  | klämma fram        | klämma  | fram     | force out (words) reluctantly                                                                                                                   | B2   | plain    |
-| 887  | klämma i           | klämma  | i        | burst into loud song or playing                                                                                                                 | B2   | plain    |
-| 888  | klämma i sig       | klämma  | i        | force food down                                                                                                                                 | B2   | refl     |
-| 889  | klämma till        | klämma  | till     | squeeze hard; hit, hurt                                                                                                                         | B2   | plain    |
-| 890  | klämma till med    | klämma  | till     | venture a guess                                                                                                                                 | B2   | v+p+prep |
-| 891  | klämma åt          | klämma  | åt       | squeeze tight; crack down on someone                                                                                                            | B2   | plain    |
-| 892  | knyta an till      | knyta   | an       | connect to, relate to                                                                                                                           | B2   | v+p+prep |
-| 893  | knyta till sig     | knyta   | till     | recruit, attach (people) to oneself                                                                                                             | B2   | refl     |
-| 894  | knyta upp          | knyta   | upp      | untie                                                                                                                                           | B2   | plain    |
-| 895  | knyta åt           | knyta   | åt       | tie tightly                                                                                                                                     | B2   | plain    |
-| 896  | knäppa av          | knäppa  | av       | switch off                                                                                                                                      | B2   | plain    |
-| 897  | knäppa ihop        | knäppa  | ihop     | button up, fasten together                                                                                                                      | B2   | plain    |
-| 898  | knäppa på          | knäppa  | på       | switch on; pluck (strings)                                                                                                                      | B2   | plain    |
-| 899  | knäppa till        | knäppa  | till     | fasten (a button); turn suddenly cold                                                                                                           | B2   | plain    |
-| 900  | koppla på          | koppla  | på       | switch on (electricity)                                                                                                                         | B2   | plain    |
-| 901  | koppla ur          | koppla  | ur       | disconnect (electricity)                                                                                                                        | B2   | plain    |
-| 902  | kosta på           | kosta   | på       | invest money in; be taxing (impersonal)                                                                                                         | C1   | plain    |
-| 903  | kränga av sig      | kränga  | av       | pull off (clothes) hastily                                                                                                                      | B2   | refl     |
-| 904  | kränga på sig      | kränga  | på       | pull on (clothes) hastily                                                                                                                       | B2   | refl     |
-| 905  | kränga till        | kränga  | till     | lurch, heel over briefly — **NEEDS HUMAN CHECK**: cannot confirm                                                                                | B2   | plain    |
-| 906  | kännas vid         | kännas  | vid      | acknowledge, own up to                                                                                                                          | B2   | plain    |
-| 907  | ladda in           | ladda   | in       | shovel in (food) — **NEEDS HUMAN CHECK**: slang; cannot confirm                                                                                 | B2   | plain    |
-| 908  | ladda om           | ladda   | om       | reload                                                                                                                                          | B2   | plain    |
-| 909  | ladda ur           | ladda   | ur       | discharge (a battery)                                                                                                                           | B2   | plain    |
-| 910  | leva kvar          | leva    | kvar     | survive, live on                                                                                                                                | B2   | plain    |
-| 911  | leva om            | leva    | om       | live over again; make a mess or racket                                                                                                          | B1   | plain    |
-| 912  | leva sig in i      | leva    | in       | immerse oneself in, empathize with                                                                                                              | B2   | refl     |
-| 913  | leva upp           | leva    | upp      | use up (money); come back to life                                                                                                               | B2   | plain    |
-| 914  | leva upp till      | leva    | upp      | live up to                                                                                                                                      | B2   | v+p+prep |
-| 915  | leva ut            | leva    | ut       | act out, give expression to                                                                                                                     | B2   | plain    |
-| 916  | linda in           | linda   | in       | wrap up; soften, sugar-coat (criticism)                                                                                                         | B2   | plain    |
-| 917  | linda om           | linda   | om       | bandage, wrap around                                                                                                                            | B2   | plain    |
-| 918  | lugna ner sig      | lugna   | ner      | calm down                                                                                                                                       | B2   | refl     |
-| 919  | lura av            | lura    | av       | trick someone out of (money)                                                                                                                    | B2   | plain    |
-| 920  | lura i             | lura    | i        | make someone believe a falsehood                                                                                                                | B2   | plain    |
-| 921  | lura på            | lura    | på       | foist something unwanted onto; ponder                                                                                                           | B2   | plain    |
-| 922  | lura till sig      | lura    | till     | obtain by trickery                                                                                                                              | B2   | refl     |
-| 923  | lura ur            | lura    | ur       | coax (secrets) out by trickery                                                                                                                  | B2   | plain    |
-| 924  | lura ut            | lura    | ut       | entice someone out; figure out                                                                                                                  | B2   | plain    |
-| 925  | lysa upp           | lysa    | upp      | light up (a room); brighten (a face)                                                                                                            | B2   | plain    |
-| 926  | lysa ut            | lysa    | ut       | shine out; advertise (a vacancy) — **NEEDS HUMAN CHECK**: standard term is the compound "utlysa"                                                | B2   | plain    |
-| 927  | låsa sig ute       | låsa    | ute      | lock oneself out                                                                                                                                | B2   | refl     |
-| 928  | låsa upp           | låsa    | upp      | unlock                                                                                                                                          | B2   | plain    |
-| 929  | lämna av           | lämna   | av       | drop off, deliver                                                                                                                               | B2   | plain    |
-| 930  | lämna upp          | lämna   | upp      | deliver up                                                                                                                                      | B2   | plain    |
-| 931  | lätta upp          | lätta   | upp      | lighten (a mood)                                                                                                                                | B2   | plain    |
-| 932  | lösa av            | lösa    | av       | relieve, take over from                                                                                                                         | B2   | plain    |
-| 933  | lösa in            | lösa    | in       | cash, redeem                                                                                                                                    | B2   | plain    |
-| 934  | lösa upp           | lösa    | upp      | dissolve                                                                                                                                        | B2   | plain    |
-| 935  | lösa ut            | lösa    | ut       | trigger (an alarm); collect against payment                                                                                                     | B2   | plain    |
-| 936  | muta in            | muta    | in       | stake a claim to (land, a research field)                                                                                                       | B2   | plain    |
-| 937  | måla av            | måla    | av       | paint a likeness of                                                                                                                             | B2   | plain    |
-| 938  | måla om            | måla    | om       | repaint                                                                                                                                         | B2   | plain    |
-| 939  | måla upp           | måla    | upp      | paint a tempting picture of                                                                                                                     | C1   | plain    |
-| 940  | måla ut            | måla    | ut       | portray negatively                                                                                                                              | B2   | plain    |
-| 941  | mäta ut            | mäta    | ut       | measure out a position; seize property for debt                                                                                                 | B2   | plain    |
-| 942  | nöta in            | nöta    | in       | drill in by repetition                                                                                                                          | B2   | plain    |
-| 943  | nötas av           | nötas   | av       | wear through by friction — **NEEDS HUMAN CHECK**: deponent base "nötas"; class needs confirming                                                 | B2   | plain    |
-| 944  | ordna in           | ordna   | in       | arrange into a system                                                                                                                           | B2   | plain    |
-| 945  | ordna om           | ordna   | om       | rearrange                                                                                                                                       | B2   | plain    |
-| 946  | ordna upp          | ordna   | upp      | put in order, sort out                                                                                                                          | B2   | plain    |
-| 947  | packa om           | packa   | om       | repack                                                                                                                                          | B2   | plain    |
-| 948  | packa sig iväg     | packa   | iväg     | clear off quickly                                                                                                                               | B2   | refl     |
-| 949  | passa upp          | passa   | upp      | wait on, serve                                                                                                                                  | B2   | plain    |
-| 950  | plocka av          | plocka  | av       | pick everything off; help oneself from                                                                                                          | B2   | plain    |
-| 951  | plocka ner         | plocka  | ner      | take down; dismantle                                                                                                                            | B2   | plain    |
-| 952  | plöja igenom       | plöja   | igenom   | plough through (a lot of text)                                                                                                                  | B2   | plain    |
-| 953  | plöja ner          | plöja   | ner      | plough under; invest heavily                                                                                                                    | B2   | plain    |
-| 954  | plöja upp          | plöja   | upp      | plough up (a field)                                                                                                                             | B2   | plain    |
-| 955  | prata av sig       | prata   | av       | unburden oneself by talking                                                                                                                     | B2   | refl     |
-| 956  | prata bort         | prata   | bort     | chat away (time); talk someone's objections aside                                                                                               | B2   | plain    |
-| 957  | prata omkull       | prata   | omkull   | talk someone into submission — **NEEDS HUMAN CHECK**: cannot confirm                                                                            | B2   | plain    |
-| 958  | prata på           | prata   | på       | keep on talking                                                                                                                                 | B2   | plain    |
-| 959  | pröva på           | pröva   | på       | get a taste of, experience                                                                                                                      | B2   | plain    |
-| 960  | pröva ut           | pröva   | ut       | test until right, calibrate                                                                                                                     | B2   | plain    |
-| 961  | pyssla om          | pyssla  | om       | tend to, care for                                                                                                                               | B2   | plain    |
-| 962  | reda upp           | reda    | upp      | straighten out (a tangled situation)                                                                                                            | B2   | plain    |
-| 963  | resa upp           | resa    | upp      | raise upright; travel north; spend (money) travelling — **NEEDS HUMAN CHECK**: the "spend money travelling" sense cannot be confirmed           | B2   | plain    |
-| 964  | rikta in sig på    | rikta   | in       | aim for, set one's sights on                                                                                                                    | B2   | refl     |
-| 965  | rusta ner          | rusta   | ner      | disarm, reduce armaments                                                                                                                        | B2   | plain    |
-| 966  | rusta upp          | rusta   | upp      | rearm; renovate                                                                                                                                 | B2   | plain    |
-| 967  | rycka till         | rycka   | till     | flinch, jerk                                                                                                                                    | B2   | plain    |
-| 968  | rycka till sig     | rycka   | till     | snatch to oneself                                                                                                                               | B2   | refl     |
-| 969  | rycka upp sig      | rycka   | upp      | pull oneself together, cheer up                                                                                                                 | B2   | refl     |
-| 970  | rycka ut           | rycka   | ut       | yank out; rush out on an emergency call; finish military service                                                                                | C1   | plain    |
-| 971  | ryka ihop          | ryka    | ihop     | fly at each other                                                                                                                               | B2   | plain    |
-| 972  | ryka på            | ryka    | på       | attack, fly at                                                                                                                                  | B2   | plain    |
-| 973  | rå för             | rå      | för      | be to blame for, be able to help                                                                                                                | B2   | plain    |
-| 974  | rå om              | rå      | om       | own                                                                                                                                             | B2   | plain    |
-| 975  | rå på              | rå      | på       | be stronger than, get the better of                                                                                                             | B2   | plain    |
-| 976  | råka på            | råka    | på       | run into by chance                                                                                                                              | B2   | plain    |
-| 977  | råka ut för        | råka    | ut       | be the victim of, meet with                                                                                                                     | B2   | v+p+prep |
-| 978  | röra ihop          | röra    | ihop     | stir together quickly; mix up, confuse                                                                                                          | B2   | plain    |
-| 979  | röra ner           | röra    | ner      | stir in                                                                                                                                         | B2   | plain    |
-| 980  | röra om            | röra    | om       | stir around                                                                                                                                     | B2   | plain    |
-| 981  | röra till          | röra    | till     | make a mess                                                                                                                                     | B2   | plain    |
-| 982  | röra upp           | röra    | upp      | stir up (dust); stir up (feelings)                                                                                                              | B2   | plain    |
-| 983  | röra ut            | röra    | ut       | dissolve by stirring                                                                                                                            | B2   | plain    |
-| 984  | sadla av           | sadla   | av       | unsaddle                                                                                                                                        | B2   | plain    |
-| 985  | sadla om           | sadla   | om       | change career or direction                                                                                                                      | B2   | plain    |
-| 986  | sjunga ut          | sjunga  | ut       | speak one's mind openly                                                                                                                         | B2   | plain    |
-| 987  | skjuta fram        | skjuta  | fram     | push forward; postpone                                                                                                                          | B2   | plain    |
-| 988  | skjuta ner         | skjuta  | ner      | shoot down                                                                                                                                      | B2   | plain    |
-| 989  | skjuta på          | skjuta  | på       | push from behind; postpone                                                                                                                      | B2   | plain    |
-| 990  | skjuta till        | skjuta  | till     | push shut; contribute (money)                                                                                                                   | B2   | plain    |
-| 991  | skratta till       | skratta | till     | give a sudden laugh                                                                                                                             | B2   | plain    |
-| 992  | skratta ut         | skratta | ut       | laugh someone to scorn; laugh oneself out                                                                                                       | B2   | plain    |
-| 993  | skruva av          | skruva  | av       | unscrew                                                                                                                                         | B2   | plain    |
-| 994  | skruva i           | skruva  | i        | screw in                                                                                                                                        | B2   | plain    |
-| 995  | skruva på          | skruva  | på       | turn on (a tap)                                                                                                                                 | B2   | plain    |
-| 996  | skynda till        | skynda  | till     | rush to help                                                                                                                                    | B2   | plain    |
-| 997  | skälla ut          | skälla  | ut       | scold, tell off                                                                                                                                 | B2   | plain    |
-| 998  | skära ihop         | skära   | ihop     | seize up (an engine)                                                                                                                            | B2   | plain    |
-| 999  | smälla av          | smälla  | av       | set off (fireworks); explode with emotion (slang)                                                                                               | C1   | plain    |
-| 1000 | smälla ihop        | smälla  | ihop     | slam shut; concoct (an excuse)                                                                                                                  | B2   | plain    |
-| 1001 | smälla till        | smälla  | till     | swat, strike                                                                                                                                    | B2   | plain    |
-| 1002 | smälla upp         | smälla  | upp      | throw up (buildings) quickly                                                                                                                    | B2   | plain    |
-| 1003 | snappa till sig    | snappa  | till     | snatch up — **NEEDS HUMAN CHECK**: identical gloss to "snappa åt sig"; one of the pair is likely wrong                                          | B2   | refl     |
-| 1004 | snappa upp         | snappa  | upp      | pick up (news) by chance                                                                                                                        | B2   | plain    |
-| 1005 | snappa åt sig      | snappa  | åt       | snatch up                                                                                                                                       | B2   | refl     |
-| 1006 | spåra ur           | spåra   | ur       | derail (a train); degenerate (a discussion)                                                                                                     | B2   | plain    |
-| 1007 | spänna av          | spänna  | av       | unfasten; relax (colloquial)                                                                                                                    | B2   | plain    |
-| 1008 | spänna fast        | spänna  | fast     | fasten, buckle                                                                                                                                  | A2   | plain    |
-| 1009 | spänna åt          | spänna  | åt       | tighten (a belt)                                                                                                                                | B2   | plain    |
-| 1010 | spärra av          | spärra  | av       | cordon off, block                                                                                                                               | B2   | plain    |
-| 1011 | spärra in          | spärra  | in       | lock up, imprison                                                                                                                               | B2   | plain    |
-| 1012 | spärra upp         | spärra  | upp      | open wide (the eyes)                                                                                                                            | B2   | plain    |
-| 1013 | spöka ut sig       | spöka   | ut       | dress up outlandishly                                                                                                                           | B2   | refl     |
-| 1014 | sticka av          | sticka  | av       | stand out against the surroundings                                                                                                              | C1   | plain    |
-| 1015 | sticka emellan     | sticka  | emellan  | interject                                                                                                                                       | B2   | plain    |
-| 1016 | sticka till        | sticka  | till     | give a sudden stab of pain; slip something to someone secretly                                                                                  | B2   | plain    |
-| 1017 | sticka åt          | sticka  | åt       | slip to someone secretly                                                                                                                        | B2   | plain    |
-| 1018 | stjälpa av         | stjälpa | av       | tip off (a load)                                                                                                                                | B2   | plain    |
-| 1019 | stjälpa i sig      | stjälpa | i        | gulp down (a drink)                                                                                                                             | B2   | refl     |
-| 1020 | streta emot        | streta  | emot     | resist, struggle against                                                                                                                        | B2   | plain    |
-| 1021 | streta på          | streta  | på       | toil on despite difficulty                                                                                                                      | B2   | plain    |
-| 1022 | stryka av          | stryka  | av       | wipe off                                                                                                                                        | B2   | plain    |
-| 1023 | stryka för         | stryka  | för      | mark, highlight (in a text)                                                                                                                     | B2   | plain    |
-| 1024 | stryka med         | stryka  | med      | perish, be lost                                                                                                                                 | B2   | plain    |
-| 1025 | stryka om          | stryka  | om       | iron again                                                                                                                                      | B2   | plain    |
-| 1026 | stryka på          | stryka  | på       | brush on (paint)                                                                                                                                | B2   | plain    |
-| 1027 | stryka under       | stryka  | under    | underline; emphasize                                                                                                                            | B2   | plain    |
-| 1028 | stryka ut          | stryka  | ut       | spread out evenly (paint); erase                                                                                                                | B2   | plain    |
-| 1029 | stråla samman      | stråla  | samman   | converge from different directions                                                                                                              | B2   | plain    |
-| 1030 | stråla ut          | stråla  | ut       | radiate outward from a point (impersonal) — **NEEDS HUMAN CHECK**: "(impersonal)" tag looks wrong                                               | C1   | plain    |
-| 1031 | stöta bort         | stöta   | bort     | push away, repel (people)                                                                                                                       | B2   | plain    |
-| 1032 | stöta ihop med     | stöta   | ihop     | run into unexpectedly                                                                                                                           | B2   | v+p+prep |
-| 1033 | stöta på           | stöta   | på       | bump into (a person); prompt, remind; make a pass at                                                                                            | B2   | plain    |
-| 1034 | stöta till         | stöta   | till     | bump into accidentally                                                                                                                          | B2   | plain    |
-| 1035 | stöta upp          | stöta   | upp      | bring up, regurgitate                                                                                                                           | B2   | plain    |
-| 1036 | stöta ut           | stöta   | ut       | push out (a boat); ostracize                                                                                                                    | B2   | plain    |
-| 1037 | suga ut            | suga    | ut       | suck out (air); exploit, bleed dry                                                                                                              | B2   | plain    |
-| 1038 | suga åt sig        | suga    | åt       | absorb                                                                                                                                          | B2   | refl     |
-| 1039 | sy in              | sy      | in       | take in (a garment); imprison (slang)                                                                                                           | C1   | plain    |
-| 1040 | sy om              | sy      | om       | alter (a garment)                                                                                                                               | B2   | plain    |
-| 1041 | sy upp             | sy      | upp      | shorten (a garment); sew up a batch                                                                                                             | B2   | plain    |
-| 1042 | titta efter        | titta   | efter    | check carefully; gaze after                                                                                                                     | B2   | plain    |
-| 1043 | titta till         | titta   | till     | look in on, check on                                                                                                                            | B2   | plain    |
-| 1044 | titta över         | titta   | över     | drop by; review                                                                                                                                 | B2   | plain    |
-| 1045 | tjäna av           | tjäna   | av       | serve out (a prison sentence)                                                                                                                   | B2   | plain    |
-| 1046 | tjäna in           | tjäna   | in       | save (time or money)                                                                                                                            | B2   | plain    |
-| 1047 | tjäna ut           | tjäna   | ut       | be worn out after long service                                                                                                                  | B2   | plain    |
-| 1048 | tona bort          | tona    | bort     | fade away (sound)                                                                                                                               | B2   | plain    |
-| 1049 | tona fram          | tona    | fram     | emerge into view                                                                                                                                | B2   | plain    |
-| 1050 | tona ut            | tona    | ut       | fade out (sound)                                                                                                                                | B2   | plain    |
-| 1051 | trycka av          | trycka  | av       | pull the trigger                                                                                                                                | B2   | plain    |
-| 1052 | trycka på          | trycka  | på       | press (a button); apply pressure to hurry                                                                                                       | B2   | plain    |
-| 1053 | trycka upp         | trycka  | upp      | push up into; call (an elevator); print a large run                                                                                             | B2   | plain    |
-| 1054 | träda emellan      | träda   | emellan  | intervene, mediate                                                                                                                              | B2   | plain    |
-| 1055 | träda fram         | träda   | fram     | come forward, reveal oneself                                                                                                                    | B2   | plain    |
-| 1056 | tända på           | tända   | på       | set fire to; be turned on by                                                                                                                    | B2   | plain    |
-| 1057 | tända till         | tända   | till     | flare up in anger; spark (attraction, impersonal)                                                                                               | C1   | plain    |
-| 1058 | varva ner          | varva   | ner      | slow the revs; wind down, relax                                                                                                                 | B1   | plain    |
-| 1059 | veckla av          | veckla  | av       | unwrap                                                                                                                                          | B2   | plain    |
-| 1060 | veckla in          | veckla  | in       | wrap up                                                                                                                                         | B2   | plain    |
-| 1061 | veckla in sig      | veckla  | in       | get tangled up in (explanations)                                                                                                                | B2   | refl     |
-| 1062 | veckla ut          | veckla  | ut       | unfold                                                                                                                                          | B2   | plain    |
-| 1063 | vräka i sig        | vräka   | i        | devour, gobble                                                                                                                                  | B2   | refl     |
-| 1064 | vräka ur sig       | vräka   | ur       | blurt out (offensive things)                                                                                                                    | B2   | refl     |
-| 1065 | växla in           | växla   | in       | be switched onto another track; exchange (currency)                                                                                             | B2   | plain    |
-| 1066 | växla ner          | växla   | ner      | shift to a lower gear                                                                                                                           | B2   | plain    |
-| 1067 | växla om           | växla   | om       | take turns; switch (channels)                                                                                                                   | B2   | plain    |
-| 1068 | ösa på             | ösa     | på       | ladle on more; speed up (slang)                                                                                                                 | C1   | plain    |
-| 1069 | ösa över           | ösa     | över     | pour into another container; shower (someone with gifts)                                                                                        | B2   | plain    |
+| #    | Partikelverb       | Basverb | Partikel | Betydelse (EN)                                                                                                           | CEFR | Klass    |
+| ---- | ------------------ | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------ | ---- | -------- |
+| 501  | bli av med         | bli     | av       | lose; get rid of                                                                                                         | B1   | v+p+prep |
+| 502  | bli ifrån sig      | bli     | ifrån    | become beside oneself, distraught                                                                                        | B1   | refl     |
+| 503  | bli till           | bli     | till     | come into existence                                                                                                      | B1   | plain    |
+| 504  | bli till sig       | bli     | till     | get very excited or worked up                                                                                            | B1   | refl     |
+| 505  | få av              | få      | av       | manage to get off, remove                                                                                                | B1   | plain    |
+| 506  | få hem             | få      | hem      | get delivered into stock or home                                                                                         | B1   | plain    |
+| 507  | få igen            | få      | igen     | get properly shut; get back (something lent); get paid back (revenge)                                                    | B1   | plain    |
+| 508  | få igenom          | få      | igenom   | get others to accept                                                                                                     | B1   | plain    |
+| 509  | få med sig         | få      | med      | manage to bring along; win over as supporters                                                                            | B1   | refl     |
+| 510  | få till            | få      | till     | manage to produce; spin a fanciful tale                                                                                  | B1   | plain    |
+| 511  | få undan           | få      | undan    | clear away; get (a chore) done                                                                                           | B1   | plain    |
+| 512  | få ur              | få      | ur       | manage to squeeze out; coax (information) out of someone                                                                 | B1   | plain    |
+| 513  | få över            | få      | över     | get transferred; have left over                                                                                          | B1   | plain    |
+| 514  | ge efter           | ge      | efter    | yield, relent; give way physically                                                                                       | B1   | plain    |
+| 515  | ge ifrån sig       | ge      | ifrån    | hand over; emit (a sound)                                                                                                | B1   | refl     |
+| 516  | ge med sig         | ge      | med      | relent; ease off (pain); give way physically                                                                             | B1   | refl     |
+| 517  | ge sig ut för      | ge      | ut       | pass oneself off as                                                                                                      | B1   | refl     |
+| 518  | ge till            | ge      | till     | let out (a cry, a laugh)                                                                                                 | B1   | plain    |
+| 519  | gå av och an       | gå      | av       | pace back and forth                                                                                                      | B1   | v+p+prep |
+| 520  | gå efter           | gå      | efter    | walk behind; run slow (a clock); go fetch                                                                                | B1   | plain    |
+| 521  | gå emellan         | gå      | emellan  | mediate, step in between                                                                                                 | B1   | plain    |
+| 522  | gå emot            | gå      | emot     | walk into; oppose, go against                                                                                            | B1   | plain    |
+| 523  | gå för sig         | gå      | för      | be suitable, be permissible                                                                                              | B1   | refl     |
+| 524  | gå förbi           | gå      | förbi    | pass by, overtake                                                                                                        | B1   | plain    |
+| 526  | gå ifrån           | gå      | ifrån    | leave one's post briefly; abandon (a partner)                                                                            | B1   | plain    |
+| 527  | gå igång           | gå      | igång    | start (an engine)                                                                                                        | B1   | plain    |
+| 528  | gå itu             | gå      | itu      | break in two                                                                                                             | B1   | plain    |
+| 529  | gå ner sig         | gå      | ner      | sink through ice or bog; let oneself decline                                                                             | B1   | refl     |
+| 530  | gå tillbaka        | gå      | tillbaka | go back; slowly recede                                                                                                   | B1   | plain    |
+| 531  | gå under           | gå      | under    | go beneath; sink, be destroyed                                                                                           | B1   | plain    |
+| 532  | gå upp för         | gå      | upp      | become clear to, dawn on (impersonal)                                                                                    | C1   | v+p+prep |
+| 533  | gå upp i           | gå      | upp      | be absorbed into; immerse oneself in                                                                                     | B1   | v+p+prep |
+| 534  | gå ut på           | gå      | ut       | aim at, be about                                                                                                         | B1   | v+p+prep |
+| 535  | gå ut över         | gå      | ut       | take its toll on, hit negatively                                                                                         | B1   | v+p+prep |
+| 536  | gå utför           | gå      | utför    | go downhill, deteriorate                                                                                                 | B1   | plain    |
+| 537  | göra ner           | göra    | ner      | criticize harshly, demolish                                                                                              | B1   | plain    |
+| 538  | ha emot            | ha      | emot     | object to, dislike                                                                                                       | B1   | plain    |
+| 539  | ha för sig         | ha      | för      | be up to, be occupied with; have a vague belief                                                                          | B1   | refl     |
+| 540  | ha över            | ha      | över     | have left over                                                                                                           | B1   | plain    |
+| 541  | hålla efter        | hålla   | efter    | keep in check, supervise                                                                                                 | B1   | plain    |
+| 542  | hålla fast vid     | hålla   | fast     | stick to, remain loyal to                                                                                                | B1   | v+p+prep |
+| 543  | hålla i sig        | hålla   | i        | hold on to avoid falling; persist (weather, impersonal)                                                                  | C1   | refl     |
+| 544  | hålla inne med     | hålla   | inne     | keep secret                                                                                                              | B1   | v+p+prep |
+| 545  | hålla på med       | hålla   | på       | be occupied with                                                                                                         | B1   | v+p+prep |
+| 546  | hålla sig undan    | hålla   | undan    | hide, stay out of reach                                                                                                  | B1   | refl     |
+| 547  | hålla sig uppe     | hålla   | uppe     | stay awake, stay upright                                                                                                 | B1   | refl     |
+| 548  | höra av            | höra    | av       | receive word from                                                                                                        | B1   | plain    |
+| 549  | höra efter         | höra    | efter    | inquire, ask                                                                                                             | B1   | plain    |
+| 550  | höra hit           | höra    | hit      | be relevant; belong to a group                                                                                           | B1   | plain    |
+| 551  | höra på            | höra    | på       | listen attentively                                                                                                       | B1   | plain    |
+| 552  | höra sig för       | höra    | för      | make inquiries, ask around                                                                                               | B1   | refl     |
+| 553  | höra upp           | höra    | upp      | listen up                                                                                                                | B1   | plain    |
+| 554  | komma an på        | komma   | an       | depend on                                                                                                                | B1   | v+p+prep |
+| 555  | komma av           | komma   | av       | get off (a vehicle); result from                                                                                         | B1   | plain    |
+| 556  | komma efter        | komma   | efter    | follow later; fall behind                                                                                                | B1   | plain    |
+| 557  | komma före         | komma   | före     | arrive ahead of                                                                                                          | B1   | plain    |
+| 558  | komma ifrån        | komma   | ifrån    | get away from one's post                                                                                                 | B1   | plain    |
+| 559  | komma igenom       | komma   | igenom   | get through; overcome (a hard period)                                                                                    | B1   | plain    |
+| 560  | komma ihop sig     | komma   | ihop     | quarrel, fall out                                                                                                        | B1   | refl     |
+| 561  | komma iväg         | komma   | iväg     | get going, get off                                                                                                       | B1   | plain    |
+| 562  | komma loss         | komma   | loss     | come free; get away; loosen up                                                                                           | B1   | plain    |
+| 563  | komma om           | komma   | om       | overtake                                                                                                                 | B1   | plain    |
+| 564  | komma runt         | komma   | runt     | get around (an obstacle or problem)                                                                                      | B1   | plain    |
+| 565  | komma sig upp      | komma   | upp      | advance in life                                                                                                          | B1   | refl     |
+| 567  | känna på           | känna   | på       | try out what something feels like                                                                                        | B1   | plain    |
+| 568  | ligga av sig       | ligga   | av       | get rusty from disuse                                                                                                    | B1   | refl     |
+| 569  | ligga bakom        | ligga   | bakom    | be behind, be the cause of                                                                                               | B1   | plain    |
+| 570  | ligga efter        | ligga   | efter    | drive behind; be behind schedule; nag                                                                                    | B1   | plain    |
+| 571  | ligga för          | ligga   | för      | suit someone's nature (impersonal)                                                                                       | C1   | plain    |
+| 572  | ligga före         | ligga   | före     | be ahead                                                                                                                 | B1   | plain    |
+| 573  | ligga i            | ligga   | i        | work hard, keep at it                                                                                                    | B1   | plain    |
+| 574  | ligga inne         | ligga   | inne     | be in hospital; do military service indoors                                                                              | B1   | plain    |
+| 575  | ligga inne med     | ligga   | inne     | hold, have in one's possession (claims, stock)                                                                           | B1   | v+p+prep |
+| 576  | ligga nere         | ligga   | nere     | be at a standstill                                                                                                       | B1   | plain    |
+| 577  | ligga på           | ligga   | på       | beat down strongly (sun); keep pressing, nag                                                                             | B1   | plain    |
+| 578  | ligga till         | ligga   | till     | be positioned, stand (in a competition); be the state of things (impersonal)                                             | C1   | plain    |
+| 579  | ligga till sig     | ligga   | till     | improve by resting, ripen                                                                                                | B1   | refl     |
+| 580  | ligga under        | ligga   | under    | be trailing, be behind in score                                                                                          | B1   | plain    |
+| 581  | ligga ute          | ligga   | ute      | camp outdoors; be out somewhere                                                                                          | B1   | plain    |
+| 582  | ligga ute med      | ligga   | ute      | have money lent out, be owed                                                                                             | B1   | v+p+prep |
+| 583  | ligga över         | ligga   | över     | stay overnight; be leading in score; weigh on someone                                                                    | B1   | plain    |
+| 584  | lägga an på        | lägga   | an       | make a play for, court                                                                                                   | B1   | v+p+prep |
+| 585  | lägga emellan      | lägga   | emellan  | pay the difference                                                                                                       | B1   | plain    |
+| 586  | lägga för          | lägga   | för      | put in the way of; serve (food) onto a plate                                                                             | B2   | plain    |
+| 587  | lägga sig till med | lägga   | till     | acquire (a new look or habit)                                                                                            | B1   | refl     |
+| 588  | lägga sig ut för   | lägga   | ut       | put in a good word for                                                                                                   | B1   | refl     |
+| 589  | lägga undan        | lägga   | undan    | put aside; save up                                                                                                       | B1   | plain    |
+| 590  | lägga under sig    | lägga   | under    | conquer, subjugate                                                                                                       | B1   | refl     |
+| 591  | läsa av            | läsa    | av       | read off (a meter)                                                                                                       | B1   | plain    |
+| 592  | läsa upp           | läsa    | upp      | read aloud                                                                                                               | C1   | plain    |
+| 593  | läsa ut            | läsa    | ut       | make sense of (a text)                                                                                                   | B1   | plain    |
+| 594  | se fram emot       | se      | fram     | look forward to                                                                                                          | B1   | v+p+prep |
+| 595  | se ner på          | se      | ner      | despise, look down on                                                                                                    | B1   | v+p+prep |
+| 596  | se upp till        | se      | upp      | admire                                                                                                                   | B1   | v+p+prep |
+| 597  | skriva av          | skriva  | av       | copy in writing                                                                                                          | B1   | plain    |
+| 598  | skriva in sig      | skriva  | in       | register, enroll                                                                                                         | B1   | refl     |
+| 599  | skriva om          | skriva  | om       | rewrite; write about                                                                                                     | B1   | plain    |
+| 600  | skriva över        | skriva  | över     | overwrite; sign over (property)                                                                                          | B1   | plain    |
+| 601  | stå bakom          | stå     | bakom    | be behind, be responsible for; back, support                                                                             | B1   | plain    |
+| 602  | stå emot           | stå     | emot     | withstand, resist                                                                                                        | B1   | plain    |
+| 603  | stå fast vid       | stå     | fast     | stand by, not change one's position                                                                                      | B1   | v+p+prep |
+| 604  | stå fram           | stå     | fram     | step forward publicly                                                                                                    | B1   | plain    |
+| 605  | stå framme         | stå     | framme   | be left out (food); stand at the front                                                                                   | B1   | plain    |
+| 606  | stå för            | stå     | för      | block (a view); provide, be responsible for                                                                              | B1   | plain    |
+| 607  | stå före           | stå     | före     | be ahead in a queue                                                                                                      | B1   | plain    |
+| 608  | stå i              | stå     | i        | bustle, work busily                                                                                                      | B1   | plain    |
+| 609  | stå inne           | stå     | inne     | remain deposited (money in the bank)                                                                                     | B1   | plain    |
+| 610  | stå på             | stå     | på       | be going on (impersonal); be happening                                                                                   | B1   | plain    |
+| 611  | stå över           | stå     | över     | pass, skip one's turn                                                                                                    | B1   | plain    |
+| 612  | ställa av          | ställa  | av       | set down; deregister (a vehicle) temporarily                                                                             | B1   | plain    |
+| 613  | ställa in sig      | ställa  | in       | prepare oneself mentally for                                                                                             | B1   | refl     |
+| 614  | ställa om sig      | ställa  | om       | adapt one's way of life                                                                                                  | B1   | refl     |
+| 615  | ställa sig in      | ställa  | in       | ingratiate oneself                                                                                                       | B1   | refl     |
+| 616  | ställa tillbaka    | ställa  | tillbaka | put back; set (a clock) back                                                                                             | B1   | plain    |
+| 617  | säga efter         | säga    | efter    | repeat after someone                                                                                                     | B1   | plain    |
+| 618  | säga emot          | säga    | emot     | contradict, object                                                                                                       | B1   | plain    |
+| 619  | säga ifrån         | säga    | ifrån    | speak up in protest                                                                                                      | B1   | plain    |
+| 621  | säga till om       | säga    | till     | have authority over                                                                                                      | B1   | v+p+prep |
+| 622  | sätta av           | sätta   | av       | drop off (a passenger); set aside (money); dash off                                                                      | B2   | plain    |
+| 623  | sätta efter        | sätta   | efter    | set off in pursuit                                                                                                       | B1   | plain    |
+| 624  | sätta fram         | sätta   | fram     | put out (dishes)                                                                                                         | B1   | plain    |
+| 625  | sätta för          | sätta   | för      | put in front of, cover with                                                                                              | B1   | plain    |
+| 626  | sätta ner          | sätta   | ner      | put down; reduce (prices)                                                                                                | B1   | plain    |
+| 627  | sätta om           | sätta   | om       | repot (plants); reset (printed text)                                                                                     | B1   | plain    |
+| 628  | sätta på sig       | sätta   | på       | put on (one's clothes)                                                                                                   | B1   | refl     |
+| 629  | sätta sig emot     | sätta   | emot     | oppose actively                                                                                                          | B1   | refl     |
+| 630  | sätta sig in i     | sätta   | in       | familiarize oneself with                                                                                                 | B1   | refl     |
+| 631  | sätta sig upp mot  | sätta   | upp      | defy, rebel against                                                                                                      | B1   | refl     |
+| 632  | sätta sig över     | sätta   | över     | disregard, put oneself above                                                                                             | B1   | refl     |
+| 633  | sätta till         | sätta   | till     | add (ingredients)                                                                                                        | B1   | plain    |
+| 634  | sätta undan        | sätta   | undan    | put out of reach; save for later                                                                                         | B1   | plain    |
+| 635  | ta för sig         | ta      | för      | help oneself; grab without regard for others                                                                             | B1   | refl     |
+| 636  | ta igen            | ta      | igen     | make up (lost ground)                                                                                                    | B1   | plain    |
+| 637  | ta igen sig        | ta      | igen     | rest, recover                                                                                                            | B1   | refl     |
+| 638  | ta in på           | ta      | in       | close the gap on                                                                                                         | B1   | v+p+prep |
+| 639  | ta itu med         | ta      | itu      | get down to; take someone to task                                                                                        | B1   | v+p+prep |
+| 640  | ta sig fram        | ta      | fram     | make one's way, get ahead                                                                                                | B1   | refl     |
+| 641  | ta sig för         | ta      | för      | occupy oneself with                                                                                                      | B1   | refl     |
+| 642  | ta sig före        | ta      | före     | undertake, decide to do                                                                                                  | B1   | refl     |
+| 643  | ta sig till        | ta      | till     | do, resort to doing                                                                                                      | B1   | refl     |
+| 644  | ta sig ut          | ta      | ut       | get out; look, appear                                                                                                    | B1   | refl     |
+| 645  | ta undan           | ta      | undan    | clear away; set aside for oneself                                                                                        | B1   | plain    |
+| 646  | ta ur              | ta      | ur       | take out of; gut (a bird); disabuse someone of a belief                                                                  | B1   | plain    |
+| 647  | ta vid             | ta      | vid      | take over where another stops                                                                                            | B1   | plain    |
+| 648  | ta vid sig         | ta      | vid      | take (a remark) to heart                                                                                                 | B1   | refl     |
+| 649  | tycka till         | tycka   | till     | voice one's opinion                                                                                                      | B1   | plain    |
+| 650  | tänka sig in i     | tänka   | in       | imagine oneself in                                                                                                       | B1   | refl     |
+| 651  | tänka till         | tänka   | till     | put in real thought                                                                                                      | B1   | plain    |
+| 652  | vara av            | vara    | av       | be broken in two                                                                                                         | B1   | plain    |
+| 653  | vara av med        | vara    | av       | be rid of                                                                                                                | B1   | v+p+prep |
+| 654  | vara efter         | vara    | efter    | chase; be behind with                                                                                                    | B1   | plain    |
+| 655  | vara emot          | vara    | emot     | be against, oppose                                                                                                       | B1   | plain    |
+| 656  | vara för           | vara    | för      | be drawn (curtains); be in favor of                                                                                      | B1   | plain    |
+| 657  | vara ifrån sig     | vara    | ifrån    | be beside oneself                                                                                                        | B1   | refl     |
+| 658  | vara kvar          | vara    | kvar     | remain, be left                                                                                                          | B1   | plain    |
+| 659  | vara med om        | vara    | med      | experience, be involved in                                                                                               | B1   | v+p+prep |
+| 660  | vara med på        | vara    | med      | accept, agree to                                                                                                         | B1   | v+p+prep |
+| 661  | vara om sig        | vara    | om       | be thrifty, look out for one's own advantage                                                                             | B1   | refl     |
+| 662  | vara på            | vara    | på       | be switched on; keep close watch on someone                                                                              | A2   | plain    |
+| 663  | vara till för      | vara    | till     | exist for the purpose of                                                                                                 | B1   | v+p+prep |
+| 664  | vara till sig      | vara    | till     | be worked up, excited                                                                                                    | B1   | refl     |
+| 665  | veta av            | veta    | av       | tolerate, want to hear of                                                                                                | B1   | plain    |
+| 666  | veta med sig       | veta    | med      | be privately aware                                                                                                       | B1   | refl     |
+| 667  | visa bort          | visa    | bort     | turn away, dismiss                                                                                                       | B1   | plain    |
+| 668  | visa tillbaka      | visa    | tillbaka | reject (accusations)                                                                                                     | B1   | plain    |
+| 669  | visa ut            | visa    | ut       | show out; expel from the premises                                                                                        | B1   | plain    |
+| 670  | bygga för          | bygga   | för      | block something by building                                                                                              | B2   | plain    |
+| 671  | bygga på           | bygga   | på       | add height or a storey; supplement (education)                                                                           | B2   | plain    |
+| 672  | bygga till         | bygga   | till     | enlarge by building an extension                                                                                         | B2   | plain    |
+| 673  | bära av            | bära    | av       | set off (impersonal)                                                                                                     | C1   | plain    |
+| 674  | bära emot          | bära    | emot     | feel hard or unpleasant to do (impersonal)                                                                               | C1   | plain    |
+| 675  | bära iväg          | bära    | iväg     | carry off; head off (impersonal)                                                                                         | C1   | plain    |
+| 676  | bära sig åt        | bära    | åt       | behave; go about doing something                                                                                         | B2   | refl     |
+| 677  | bära upp           | bära    | upp      | carry upstairs; wear (clothes) elegantly                                                                                 | B2   | plain    |
+| 678  | börja på           | börja   | på       | begin; start at (a school, job)                                                                                          | B2   | plain    |
+| 679  | kunna med          | kunna   | med      | stand, tolerate (usually negated)                                                                                        | B2   | plain    |
+| 680  | riva av            | riva    | av       | tear off; rattle off (a tune)                                                                                            | B2   | plain    |
+| 681  | riva i             | riva    | i        | snap angrily; rummage roughly                                                                                            | B2   | plain    |
+| 682  | riva ut            | riva    | ut       | tear out (a page)                                                                                                        | B2   | plain    |
+| 683  | riva åt sig        | riva    | åt       | snatch up                                                                                                                | B2   | refl     |
+| 684  | stänga igen        | stänga  | igen     | shut properly                                                                                                            | B2   | plain    |
+| 685  | stänga till        | stänga  | till     | close temporarily, push shut                                                                                             | B2   | plain    |
+| 686  | stänga ute         | stänga  | ute      | keep out, shut out                                                                                                       | B2   | plain    |
+| 687  | dra bort           | dra     | bort     | pull away; subtract; move away (weather)                                                                                 | B1   | plain    |
+| 688  | dra fram           | dra     | fram     | pull out; keep dredging up; sweep through in a group                                                                     | B1   | plain    |
+| 689  | dra för            | dra     | för      | pull (curtains) closed                                                                                                   | B1   | plain    |
+| 690  | dra ihop sig       | dra     | ihop     | contract; be approaching (impersonal, e.g. storm)                                                                        | C1   | refl     |
+| 691  | dra in på          | dra     | in       | cut down on                                                                                                              | B1   | v+p+prep |
+| 692  | dra ner på         | dra     | ner      | cut back on                                                                                                              | B1   | v+p+prep |
+| 694  | dra på             | dra     | på       | pull on (clothing, with effort); speed up; carry (an illness) around                                                     | B1   | plain    |
+| 695  | dra sig fram       | dra     | fram     | scrape by financially                                                                                                    | B1   | refl     |
+| 696  | dra sig tillbaka   | dra     | tillbaka | retreat, move away; retire from activity                                                                                 | B1   | refl     |
+| 697  | dra sig ur         | dra     | ur       | pull out of, quit an undertaking                                                                                         | B1   | refl     |
+| 698  | dra till           | dra     | till     | tighten; pull shut                                                                                                       | B1   | plain    |
+| 699  | dra till med       | dra     | till     | blurt out a guess                                                                                                        | B1   | v+p+prep |
+| 700  | dra till sig       | dra     | till     | attract                                                                                                                  | B1   | refl     |
+| 701  | dra ut på          | dra     | ut       | run over, take longer than planned                                                                                       | B1   | v+p+prep |
+| 702  | dra åt sig         | dra     | åt       | pull toward oneself; absorb                                                                                              | B1   | refl     |
+| 703  | dra över           | dra     | över     | run over (allotted time); pull (a cover) over                                                                            | C1   | plain    |
+| 704  | hoppa i            | hoppa   | i        | jump into (water)                                                                                                        | B1   | plain    |
+| 705  | hoppa på           | hoppa   | på       | jump onto (a bus); seize on trying; attack with criticism                                                                | B1   | plain    |
+| 706  | hoppa till         | hoppa   | till     | give a start, jump in surprise                                                                                           | B1   | plain    |
+| 707  | hämta ner          | hämta   | ner      | download to one's computer                                                                                               | B1   | plain    |
+| 708  | hänga av sig       | hänga   | av       | hang up one's outdoor clothes                                                                                            | B1   | refl     |
+| 709  | hänga efter        | hänga   | efter    | trail after someone annoyingly                                                                                           | B1   | plain    |
+| 710  | hänga på           | hänga   | på       | follow close behind; hang out at a place                                                                                 | B1   | plain    |
+| 711  | hänga sig på       | hänga   | på       | tag along uninvited                                                                                                      | B1   | refl     |
+| 712  | hänga upp sig      | hänga   | upp      | jam, freeze (a machine); fixate on a detail                                                                              | B1   | refl     |
+| 713  | hänga över         | hänga   | över     | move (clothes) over; loom over, worry; pore over                                                                         | B1   | plain    |
+| 714  | kasta av           | kasta   | av       | throw off (a rider)                                                                                                      | B1   | plain    |
+| 715  | kasta fram         | kasta   | fram     | toss out hastily; float (a proposal)                                                                                     | B1   | plain    |
+| 716  | kasta i sig        | kasta   | i        | wolf down food                                                                                                           | B1   | refl     |
+| 717  | kasta om           | kasta   | om       | throw again; reverse the order of                                                                                        | B1   | plain    |
+| 718  | kasta omkull       | kasta   | omkull   | knock over                                                                                                               | B1   | plain    |
+| 719  | kasta upp          | kasta   | upp      | throw upward; vomit                                                                                                      | C1   | plain    |
+| 720  | klä av             | klä     | av       | undress                                                                                                                  | B1   | refl     |
+| 721  | klä om             | klä     | om       | change clothes; reupholster                                                                                              | B2   | refl     |
+| 722  | klä på             | klä     | på       | dress                                                                                                                    | B1   | refl     |
+| 723  | klä upp            | klä     | upp      | dress up in fine clothes                                                                                                 | B1   | refl     |
+| 724  | köpa hem           | köpa    | hem      | buy in (groceries)                                                                                                       | B1   | plain    |
+| 725  | köpa ut            | köpa    | ut       | buy alcohol for someone; buy out a co-owner                                                                              | B1   | plain    |
+| 726  | köra av            | köra    | av       | drive off (the road)                                                                                                     | B1   | plain    |
+| 727  | köra ihop          | köra    | ihop     | collide; heap together carelessly                                                                                        | B1   | plain    |
+| 728  | köra ihop sig      | köra    | ihop     | become chaotic (impersonal)                                                                                              | C1   | refl     |
+| 729  | köra iväg          | köra    | iväg     | drive off; chase away                                                                                                    | B1   | plain    |
+| 730  | sitta emellan      | sitta   | emellan  | be caught in the middle, suffer from others' conflict                                                                    | B1   | plain    |
+| 731  | sitta i            | sitta   | i        | linger, persist (pain)                                                                                                   | B1   | plain    |
+| 732  | sitta ihop         | sitta   | ihop     | be stuck together                                                                                                        | B1   | plain    |
+| 733  | sitta inne         | sitta   | inne     | stay indoors; serve a prison sentence                                                                                    | B1   | plain    |
+| 734  | sitta inne med     | sitta   | inne     | possess (knowledge)                                                                                                      | B1   | v+p+prep |
+| 735  | sitta upp          | sitta   | upp      | mount (a horse); sit upright                                                                                             | B1   | plain    |
+| 736  | sitta uppe         | sitta   | uppe     | stay up late                                                                                                             | B1   | plain    |
+| 737  | sitta åt           | sitta   | åt       | fit tightly                                                                                                              | B1   | plain    |
+| 738  | slå an             | slå     | an       | strike (a chord)                                                                                                         | B1   | plain    |
+| 739  | slå an på          | slå     | an       | appeal to, charm                                                                                                         | B1   | v+p+prep |
+| 740  | slå av på          | slå     | av       | ease off (the pace)                                                                                                      | B1   | v+p+prep |
+| 742  | slå bort           | slå     | bort     | knock away; pour off; brush aside (criticism)                                                                            | B1   | plain    |
+| 743  | slå i              | slå     | i        | hammer in; bump (a toe); pour into; make someone believe a lie                                                           | B1   | plain    |
+| 744  | slå ifrån          | slå     | ifrån    | switch off (power)                                                                                                       | B1   | plain    |
+| 745  | slå ifrån sig      | slå     | ifrån    | refuse to accept, fend off (accusations)                                                                                 | B1   | refl     |
+| 746  | slå igen           | slå     | igen     | shut (a book, a door); close down (a business)                                                                           | B1   | plain    |
+| 747  | slå igenom         | slå     | igenom   | achieve one's breakthrough, become famous                                                                                | B1   | plain    |
+| 748  | slå in på          | slå     | in       | take up (a new path or career)                                                                                           | B1   | v+p+prep |
+| 749  | slå ner på         | slå     | ner      | swoop on; single out for criticism                                                                                       | B1   | v+p+prep |
+| 750  | slå om             | slå     | om       | tie around; change suddenly (weather, impersonal)                                                                        | C1   | plain    |
+| 751  | slå omkull         | slå     | omkull   | knock over                                                                                                               | B1   | plain    |
+| 752  | slå runt           | slå     | runt     | overturn completely; party hard                                                                                          | B1   | plain    |
+| 753  | slå sig på         | slå     | på       | take up, go in for                                                                                                       | B1   | refl     |
+| 754  | slå över           | slå     | över     | pour into another container; overdo it emotionally                                                                       | B1   | plain    |
+| 755  | spela av           | spela   | av       | win off someone at gambling; copy (a recording)                                                                          | B1   | plain    |
+| 756  | spela bort         | spela   | bort     | gamble away                                                                                                              | B1   | plain    |
+| 757  | spela om           | spela   | om       | play again; gamble for (money)                                                                                           | B1   | plain    |
+| 758  | spela ut           | spela   | ut       | play off (rivals) against each other                                                                                     | B1   | plain    |
+| 759  | spela över         | spela   | över     | record over; overact                                                                                                     | B1   | plain    |
+| 760  | springa bort       | springa | bort     | run away, go missing                                                                                                     | B1   | plain    |
+| 761  | springa efter      | springa | efter    | run after; run and fetch; chase (romantically)                                                                           | B1   | plain    |
+| 762  | springa om         | springa | om       | overtake while running                                                                                                   | B1   | plain    |
+| 763  | springa på         | springa | på       | collide with while running; bump into (a person)                                                                         | B1   | plain    |
+| 764  | vika av            | vika    | av       | turn off (a road)                                                                                                        | B1   | plain    |
+| 765  | vänta in           | vänta   | in       | wait for (to arrive)                                                                                                     | B2   | plain    |
+| 766  | vänta ut           | vänta   | ut       | wait out, outlast                                                                                                        | B1   | plain    |
+| 767  | åka dit            | åka     | dit      | get caught and punished                                                                                                  | B1   | plain    |
+| 768  | åka med            | åka     | med      | get a lift                                                                                                               | B1   | plain    |
+| 769  | åka om             | åka     | om       | overtake                                                                                                                 | B1   | plain    |
+| 770  | åka på             | åka     | på       | be landed with (a chore); catch (something bad)                                                                          | B1   | plain    |
+| 771  | åka ur             | åka     | ur       | go off course; be relegated                                                                                              | B1   | plain    |
+| 772  | åka ut             | åka     | ut       | go out (to the country); be thrown out; be eliminated                                                                    | B1   | plain    |
+| 773  | äta upp sig        | äta     | upp      | regain weight by eating                                                                                                  | B1   | refl     |
+| 774  | arbeta av          | arbeta  | av       | pay off a debt through work rather than money                                                                            | B2   | plain    |
+| 775  | arbeta av sig      | arbeta  | av       | get rid of a feeling by working                                                                                          | B2   | refl     |
+| 776  | arbeta fram        | arbeta  | fram     | produce or finish something through work                                                                                 | B2   | plain    |
+| 777  | arbeta ifatt       | arbeta  | ifatt    | catch up on delayed work                                                                                                 | B2   | plain    |
+| 778  | arbeta in          | arbeta  | in       | work extra hours to bank time off; make a name or product established; knead or mix in; keep working as long as possible | B2   | plain    |
+| 779  | arbeta om          | arbeta  | om       | rework, revise                                                                                                           | B2   | plain    |
+| 780  | arbeta på          | arbeta  | på       | keep on working                                                                                                          | B2   | plain    |
+| 781  | arbeta undan       | arbeta  | undan    | get pending work out of the way                                                                                          | B2   | plain    |
+| 782  | arbeta ut          | arbeta  | ut       | devise and complete (a plan)                                                                                             | B2   | plain    |
+| 783  | arbeta ut sig      | arbeta  | ut       | exhaust oneself by overworking                                                                                           | B2   | refl     |
+| 784  | arbeta över        | arbeta  | över     | work overtime                                                                                                            | B2   | plain    |
+| 785  | backa på           | backa   | på       | collide with something while reversing                                                                                   | B2   | plain    |
+| 786  | backa upp          | backa   | upp      | support; reverse a vehicle up to something                                                                               | B2   | plain    |
+| 787  | backa ur           | backa   | ur       | back out, withdraw from participation                                                                                    | B2   | plain    |
+| 788  | bena ut            | bena    | ut       | untangle, analyze (a problem)                                                                                            | B2   | plain    |
+| 789  | binda för          | binda   | för      | tie something over (e.g. blindfold)                                                                                      | B2   | plain    |
+| 790  | binda in           | binda   | in       | bind (books) in hard covers                                                                                              | B2   | plain    |
+| 791  | binda upp          | binda   | upp      | tie up high (hair, plants)                                                                                               | C1   | plain    |
+| 792  | binda upp sig      | binda   | upp      | commit oneself                                                                                                           | B2   | refl     |
+| 794  | bita av            | bita    | av       | bite off; cut someone short rudely                                                                                       | B2   | plain    |
+| 795  | bita ifrån         | bita    | ifrån    | defend oneself sharply in words                                                                                          | B2   | refl     |
+| 796  | bjuda emot         | bjuda   | emot     | be repugnant, feel distasteful (impersonal)                                                                              | C1   | plain    |
+| 797  | bjuda till         | bjuda   | till     | make an effort                                                                                                           | B2   | plain    |
+| 798  | bjuda upp          | bjuda   | upp      | ask someone to dance                                                                                                     | B2   | plain    |
+| 799  | bjuda ut           | bjuda   | ut       | take someone out (restaurant etc); offer for sale                                                                        | B2   | plain    |
+| 800  | bjuda ut sig       | bjuda   | ut       | offer oneself sexually (pejorative)                                                                                      | C1   | refl     |
+| 801  | bjuda över         | bjuda   | över     | invite to one's home; outbid                                                                                             | B2   | plain    |
+| 802  | bre på             | bre     | på       | spread on; exaggerate                                                                                                    | B2   | plain    |
+| 803  | bre ut             | bre     | ut       | spread out flat                                                                                                          | B1   | plain    |
+| 804  | bre ut sig         | bre     | ut       | take up much room; spread over an area                                                                                   | B2   | refl     |
+| 805  | brinna av          | brinna  | av       | go off, be fired (a shot); burn with eagerness                                                                           | B2   | plain    |
+| 806  | brinna ner         | brinna  | ner      | burn to the ground                                                                                                       | B2   | plain    |
+| 807  | brinna upp         | brinna  | upp      | be destroyed by fire                                                                                                     | B1   | plain    |
+| 808  | brinna ut          | brinna  | ut       | burn out slowly                                                                                                          | B2   | plain    |
+| 809  | bryta av           | bryta   | av       | break in two                                                                                                             | B2   | plain    |
+| 810  | bryta igenom       | bryta   | igenom   | force a way through; achieve a breakthrough to fame                                                                      | B2   | plain    |
+| 811  | bryta ihop         | bryta   | ihop     | collapse, break down emotionally                                                                                         | B2   | plain    |
+| 812  | bryta ner          | bryta   | ner      | weaken severely; decompose (chemistry)                                                                                   | B2   | plain    |
+| 813  | bryta samman       | bryta   | samman   | collapse in despair; fail (negotiations)                                                                                 | B2   | plain    |
+| 814  | bränna ner         | bränna  | ner      | burn down completely                                                                                                     | B2   | plain    |
+| 815  | bränna upp         | bränna  | upp      | destroy by burning                                                                                                       | B2   | plain    |
+| 816  | bränna vid         | bränna  | vid      | let food scorch in the pan                                                                                               | B2   | plain    |
+| 817  | böja av            | böja    | av       | turn, curve off (a road)                                                                                                 | B2   | plain    |
+| 818  | cykla på           | cykla   | på       | keep cycling; hit someone while cycling                                                                                  | B2   | plain    |
+| 819  | dela av            | dela    | av       | partition into smaller units                                                                                             | B2   | plain    |
+| 820  | dela med sig       | dela    | med      | share what one has                                                                                                       | B2   | refl     |
+| 821  | dikta ihop         | dikta   | ihop     | make up (a false story)                                                                                                  | B2   | plain    |
+| 822  | dikta upp          | dikta   | upp      | invent, fabricate (a tale)                                                                                               | B2   | plain    |
+| 823  | driva igenom       | driva   | igenom   | push through despite resistance                                                                                          | B2   | plain    |
+| 824  | driva in           | driva   | in       | herd in; collect (debts) by force                                                                                        | B2   | plain    |
+| 825  | driva omkring      | driva   | omkring  | drift about aimlessly                                                                                                    | B2   | plain    |
+| 826  | driva på           | driva   | på       | urge to hurry                                                                                                            | B2   | plain    |
+| 827  | droppa in          | droppa  | in       | leak in; arrive one by one unplanned                                                                                     | B2   | plain    |
+| 828  | duka fram          | duka    | fram     | set out food on the table                                                                                                | B2   | plain    |
+| 829  | duka under         | duka    | under    | perish, succumb                                                                                                          | B2   | plain    |
+| 830  | duka ut            | duka    | ut       | carry dishes back out to the kitchen                                                                                     | B2   | plain    |
+| 831  | dyka på            | dyka    | på       | accost someone abruptly                                                                                                  | B2   | plain    |
+| 832  | dö bort            | dö      | bort     | fade away slowly (sound)                                                                                                 | B2   | plain    |
+| 833  | falla ifrån        | falla   | ifrån    | pass away, die                                                                                                           | B2   | plain    |
+| 834  | falla igenom       | falla   | igenom   | fail (an exam)                                                                                                           | B2   | plain    |
+| 835  | falla någon in     | falla   | in       | occur to someone (impersonal)                                                                                            | C1   | v+p+prep |
+| 836  | falla på           | falla   | på       | set in (darkness, an urge)                                                                                               | B2   | plain    |
+| 837  | falla undan        | falla   | undan    | stop resisting, give in (to)                                                                                             | B2   | plain    |
+| 838  | falla ut           | falla   | ut       | fall out; turn out, develop                                                                                              | B2   | plain    |
+| 840  | fara på            | fara    | på       | attack fiercely                                                                                                          | B2   | plain    |
+| 841  | fara upp           | fara    | upp      | jump up abruptly                                                                                                         | B2   | plain    |
+| 842  | fara ut mot        | fara    | ut       | lash out verbally at                                                                                                     | B2   | v+p+prep |
+| 843  | festa om           | festa   | om       | party hard                                                                                                               | B2   | plain    |
+| 844  | festa upp          | festa   | upp      | squander (money) on partying                                                                                             | B2   | plain    |
+| 845  | flyga i            | flyga   | i        | suddenly possess, get into someone (impersonal)                                                                          | C1   | plain    |
+| 846  | flyga på           | flyga   | på       | attack physically                                                                                                        | B2   | plain    |
+| 847  | flyga upp          | flyga   | upp      | fly up; jump up abruptly; fly open (a door)                                                                              | B2   | plain    |
+| 848  | flyta in           | flyta   | in       | float in; come in steadily (money)                                                                                       | B2   | plain    |
+| 849  | fresta på          | fresta  | på       | be a strain, be taxing                                                                                                   | B2   | plain    |
+| 851  | frysa på           | frysa   | på       | turn much colder, freeze over (weather)                                                                                  | B2   | plain    |
+| 852  | frysa till         | frysa   | till     | freeze to ice                                                                                                            | C1   | plain    |
+| 853  | frysa ut           | frysa   | ut       | ostracize, freeze out socially                                                                                           | B2   | plain    |
+| 854  | fråga om           | fråga   | om       | ask again                                                                                                                | B2   | plain    |
+| 855  | fråga ut           | fråga   | ut       | question in detail, interrogate                                                                                          | B2   | plain    |
+| 856  | fälla ut           | fälla   | ut       | fold out, spread out; precipitate (chemistry)                                                                            | B2   | plain    |
+| 857  | följa upp          | följa   | upp      | follow up, monitor the result of                                                                                         | B1   | plain    |
+| 858  | föra med sig       | föra    | med      | bring along; entail, cause                                                                                               | B2   | refl     |
+| 859  | föra upp           | föra    | upp      | enter, record (in accounts)                                                                                              | B1   | plain    |
+| 860  | föra över          | föra    | över     | transfer (money between accounts)                                                                                        | B2   | plain    |
+| 861  | gripa sig an       | gripa   | an       | set about, tackle (a task)                                                                                               | B2   | refl     |
+| 862  | haka på            | haka    | på       | latch on close behind, tag along                                                                                         | B2   | plain    |
+| 863  | haka upp sig       | haka    | upp      | jam, get stuck (a machine); fixate on                                                                                    | B2   | refl     |
+| 864  | hinna upp          | hinna   | upp      | catch up with                                                                                                            | B2   | plain    |
+| 865  | hugga av           | hugga   | av       | chop off                                                                                                                 | B2   | plain    |
+| 866  | hugga för sig      | hugga   | för      | grab a big share brazenly                                                                                                | B2   | refl     |
+| 867  | hugga till         | hugga   | till     | hurt with a sudden stab                                                                                                  | B2   | plain    |
+| 868  | hugga till med     | hugga   | till     | venture a guess                                                                                                          | B2   | v+p+prep |
+| 869  | hugga upp          | hugga   | upp      | chop up (firewood)                                                                                                       | B2   | plain    |
+| 870  | hyra in            | hyra    | in       | hire (temporary staff)                                                                                                   | B2   | plain    |
+| 871  | härda ut           | härda   | ut       | endure, stick it out                                                                                                     | B2   | plain    |
+| 872  | häva upp           | häva    | upp      | heave up; let out (a loud cry)                                                                                           | B2   | plain    |
+| 873  | häva ur sig        | häva    | ur       | blurt out (something offensive)                                                                                          | B2   | refl     |
+| 874  | kamma hem          | kamma   | hem      | win, pull off a success                                                                                                  | B2   | plain    |
+| 875  | kamma in           | kamma   | in       | rake in (money)                                                                                                          | B2   | plain    |
+| 876  | kavla upp          | kavla   | upp      | roll up (sleeves)                                                                                                        | B2   | plain    |
+| 877  | kavla ut           | kavla   | ut       | roll out flat (dough)                                                                                                    | B2   | plain    |
+| 878  | klappa igen        | klappa  | igen     | shut down (a shop)                                                                                                       | B2   | plain    |
+| 879  | klappa ihop        | klappa  | ihop     | collapse physically                                                                                                      | B2   | plain    |
+| 880  | klappa på          | klappa  | på       | knock (on the door)                                                                                                      | B2   | plain    |
+| 881  | klara upp          | klara   | upp      | solve (a crime), clear up                                                                                                | B2   | plain    |
+| 882  | klara ut           | klara   | ut       | sort out, resolve                                                                                                        | B2   | plain    |
+| 883  | klippa av          | klippa  | av       | cut through; cut someone off curtly                                                                                      | B2   | plain    |
+| 884  | klippa ner         | klippa  | ner      | cut back, prune (plants)                                                                                                 | B2   | plain    |
+| 885  | klippa till        | klippa  | till     | hit someone; strike while the chance is there; cut to shape                                                              | B2   | plain    |
+| 886  | klämma fram        | klämma  | fram     | force out (words) reluctantly                                                                                            | B2   | plain    |
+| 887  | klämma i           | klämma  | i        | burst into loud song or playing                                                                                          | B2   | plain    |
+| 888  | klämma i sig       | klämma  | i        | force food down                                                                                                          | B2   | refl     |
+| 889  | klämma till        | klämma  | till     | squeeze hard; hit, hurt                                                                                                  | B2   | plain    |
+| 890  | klämma till med    | klämma  | till     | venture a guess                                                                                                          | B2   | v+p+prep |
+| 891  | klämma åt          | klämma  | åt       | squeeze tight; crack down on someone                                                                                     | B2   | plain    |
+| 892  | knyta an till      | knyta   | an       | connect to, relate to                                                                                                    | B2   | v+p+prep |
+| 893  | knyta till sig     | knyta   | till     | recruit, attach (people) to oneself                                                                                      | B2   | refl     |
+| 894  | knyta upp          | knyta   | upp      | untie                                                                                                                    | B2   | plain    |
+| 895  | knyta åt           | knyta   | åt       | tie tightly                                                                                                              | B2   | plain    |
+| 896  | knäppa av          | knäppa  | av       | switch off                                                                                                               | B2   | plain    |
+| 897  | knäppa ihop        | knäppa  | ihop     | button up, fasten together                                                                                               | B2   | plain    |
+| 898  | knäppa på          | knäppa  | på       | switch on; pluck (strings)                                                                                               | B2   | plain    |
+| 899  | knäppa till        | knäppa  | till     | fasten (a button); turn suddenly cold                                                                                    | B2   | plain    |
+| 900  | koppla på          | koppla  | på       | switch on (electricity)                                                                                                  | B2   | plain    |
+| 901  | koppla ur          | koppla  | ur       | disconnect (electricity)                                                                                                 | B2   | plain    |
+| 902  | kosta på           | kosta   | på       | invest money in; be taxing (impersonal)                                                                                  | C1   | plain    |
+| 903  | kränga av sig      | kränga  | av       | pull off (clothes) hastily                                                                                               | B2   | refl     |
+| 904  | kränga på sig      | kränga  | på       | pull on (clothes) hastily                                                                                                | B2   | refl     |
+| 906  | kännas vid         | kännas  | vid      | acknowledge, own up to                                                                                                   | B2   | plain    |
+| 908  | ladda om           | ladda   | om       | reload                                                                                                                   | B2   | plain    |
+| 909  | ladda ur           | ladda   | ur       | discharge (a battery)                                                                                                    | B2   | plain    |
+| 910  | leva kvar          | leva    | kvar     | survive, live on                                                                                                         | B2   | plain    |
+| 911  | leva om            | leva    | om       | live over again; make a mess or racket                                                                                   | B1   | plain    |
+| 912  | leva sig in i      | leva    | in       | immerse oneself in, empathize with                                                                                       | B2   | refl     |
+| 913  | leva upp           | leva    | upp      | use up (money); come back to life                                                                                        | B2   | plain    |
+| 914  | leva upp till      | leva    | upp      | live up to                                                                                                               | B2   | v+p+prep |
+| 915  | leva ut            | leva    | ut       | act out, give expression to                                                                                              | B2   | plain    |
+| 916  | linda in           | linda   | in       | wrap up; soften, sugar-coat (criticism)                                                                                  | B2   | plain    |
+| 917  | linda om           | linda   | om       | bandage, wrap around                                                                                                     | B2   | plain    |
+| 918  | lugna ner sig      | lugna   | ner      | calm down                                                                                                                | B2   | refl     |
+| 919  | lura av            | lura    | av       | trick someone out of (money)                                                                                             | B2   | plain    |
+| 920  | lura i             | lura    | i        | make someone believe a falsehood                                                                                         | B2   | plain    |
+| 921  | lura på            | lura    | på       | foist something unwanted onto; ponder                                                                                    | B2   | plain    |
+| 922  | lura till sig      | lura    | till     | obtain by trickery                                                                                                       | B2   | refl     |
+| 923  | lura ur            | lura    | ur       | coax (secrets) out by trickery                                                                                           | B2   | plain    |
+| 924  | lura ut            | lura    | ut       | entice someone out; figure out                                                                                           | B2   | plain    |
+| 925  | lysa upp           | lysa    | upp      | light up (a room); brighten (a face)                                                                                     | B2   | plain    |
+| 927  | låsa sig ute       | låsa    | ute      | lock oneself out                                                                                                         | B2   | refl     |
+| 928  | låsa upp           | låsa    | upp      | unlock                                                                                                                   | B2   | plain    |
+| 929  | lämna av           | lämna   | av       | drop off, deliver                                                                                                        | B2   | plain    |
+| 930  | lämna upp          | lämna   | upp      | deliver up                                                                                                               | B2   | plain    |
+| 931  | lätta upp          | lätta   | upp      | lighten (a mood)                                                                                                         | B2   | plain    |
+| 932  | lösa av            | lösa    | av       | relieve, take over from                                                                                                  | B2   | plain    |
+| 933  | lösa in            | lösa    | in       | cash, redeem                                                                                                             | B2   | plain    |
+| 934  | lösa upp           | lösa    | upp      | dissolve                                                                                                                 | B2   | plain    |
+| 935  | lösa ut            | lösa    | ut       | trigger (an alarm); collect against payment                                                                              | B2   | plain    |
+| 936  | muta in            | muta    | in       | stake a claim to (land, a research field)                                                                                | B2   | plain    |
+| 937  | måla av            | måla    | av       | paint a likeness of                                                                                                      | B2   | plain    |
+| 938  | måla om            | måla    | om       | repaint                                                                                                                  | B2   | plain    |
+| 939  | måla upp           | måla    | upp      | paint a tempting picture of                                                                                              | C1   | plain    |
+| 940  | måla ut            | måla    | ut       | portray negatively                                                                                                       | B2   | plain    |
+| 941  | mäta ut            | mäta    | ut       | measure out a position; seize property for debt                                                                          | B2   | plain    |
+| 942  | nöta in            | nöta    | in       | drill in by repetition                                                                                                   | B2   | plain    |
+| 944  | ordna in           | ordna   | in       | arrange into a system                                                                                                    | B2   | plain    |
+| 945  | ordna om           | ordna   | om       | rearrange                                                                                                                | B2   | plain    |
+| 946  | ordna upp          | ordna   | upp      | put in order, sort out                                                                                                   | B2   | plain    |
+| 947  | packa om           | packa   | om       | repack                                                                                                                   | B2   | plain    |
+| 948  | packa sig iväg     | packa   | iväg     | clear off quickly                                                                                                        | B2   | refl     |
+| 949  | passa upp          | passa   | upp      | wait on, serve                                                                                                           | B2   | plain    |
+| 950  | plocka av          | plocka  | av       | pick everything off; help oneself from                                                                                   | B2   | plain    |
+| 951  | plocka ner         | plocka  | ner      | take down; dismantle                                                                                                     | B2   | plain    |
+| 952  | plöja igenom       | plöja   | igenom   | plough through (a lot of text)                                                                                           | B2   | plain    |
+| 953  | plöja ner          | plöja   | ner      | plough under; invest heavily                                                                                             | B2   | plain    |
+| 954  | plöja upp          | plöja   | upp      | plough up (a field)                                                                                                      | B2   | plain    |
+| 955  | prata av sig       | prata   | av       | unburden oneself by talking                                                                                              | B2   | refl     |
+| 956  | prata bort         | prata   | bort     | chat away (time); talk someone's objections aside                                                                        | B2   | plain    |
+| 958  | prata på           | prata   | på       | keep on talking                                                                                                          | B2   | plain    |
+| 959  | pröva på           | pröva   | på       | get a taste of, experience                                                                                               | B2   | plain    |
+| 960  | pröva ut           | pröva   | ut       | test until right, calibrate                                                                                              | B2   | plain    |
+| 961  | pyssla om          | pyssla  | om       | tend to, care for                                                                                                        | B2   | plain    |
+| 962  | reda upp           | reda    | upp      | straighten out (a tangled situation)                                                                                     | B2   | plain    |
+| 964  | rikta in sig på    | rikta   | in       | aim for, set one's sights on                                                                                             | B2   | refl     |
+| 965  | rusta ner          | rusta   | ner      | disarm, reduce armaments                                                                                                 | B2   | plain    |
+| 966  | rusta upp          | rusta   | upp      | rearm; renovate                                                                                                          | B2   | plain    |
+| 967  | rycka till         | rycka   | till     | flinch, jerk                                                                                                             | B2   | plain    |
+| 968  | rycka till sig     | rycka   | till     | snatch to oneself                                                                                                        | B2   | refl     |
+| 969  | rycka upp sig      | rycka   | upp      | pull oneself together, cheer up                                                                                          | B2   | refl     |
+| 970  | rycka ut           | rycka   | ut       | yank out; rush out on an emergency call; finish military service                                                         | C1   | plain    |
+| 971  | ryka ihop          | ryka    | ihop     | fly at each other                                                                                                        | B2   | plain    |
+| 972  | ryka på            | ryka    | på       | attack, fly at                                                                                                           | B2   | plain    |
+| 973  | rå för             | rå      | för      | be to blame for, be able to help                                                                                         | B2   | plain    |
+| 974  | rå om              | rå      | om       | own                                                                                                                      | B2   | plain    |
+| 975  | rå på              | rå      | på       | be stronger than, get the better of                                                                                      | B2   | plain    |
+| 976  | råka på            | råka    | på       | run into by chance                                                                                                       | B2   | plain    |
+| 977  | råka ut för        | råka    | ut       | be the victim of, meet with                                                                                              | B2   | v+p+prep |
+| 978  | röra ihop          | röra    | ihop     | stir together quickly; mix up, confuse                                                                                   | B2   | plain    |
+| 979  | röra ner           | röra    | ner      | stir in                                                                                                                  | B2   | plain    |
+| 980  | röra om            | röra    | om       | stir around                                                                                                              | B2   | plain    |
+| 981  | röra till          | röra    | till     | make a mess                                                                                                              | B2   | plain    |
+| 982  | röra upp           | röra    | upp      | stir up (dust); stir up (feelings)                                                                                       | B2   | plain    |
+| 983  | röra ut            | röra    | ut       | dissolve by stirring                                                                                                     | B2   | plain    |
+| 984  | sadla av           | sadla   | av       | unsaddle                                                                                                                 | B2   | plain    |
+| 985  | sadla om           | sadla   | om       | change career or direction                                                                                               | B2   | plain    |
+| 986  | sjunga ut          | sjunga  | ut       | speak one's mind openly                                                                                                  | B2   | plain    |
+| 987  | skjuta fram        | skjuta  | fram     | push forward; postpone                                                                                                   | B2   | plain    |
+| 988  | skjuta ner         | skjuta  | ner      | shoot down                                                                                                               | B2   | plain    |
+| 989  | skjuta på          | skjuta  | på       | push from behind; postpone                                                                                               | B2   | plain    |
+| 990  | skjuta till        | skjuta  | till     | push shut; contribute (money)                                                                                            | B2   | plain    |
+| 991  | skratta till       | skratta | till     | give a sudden laugh                                                                                                      | B2   | plain    |
+| 992  | skratta ut         | skratta | ut       | laugh someone to scorn; laugh oneself out                                                                                | B2   | plain    |
+| 993  | skruva av          | skruva  | av       | unscrew                                                                                                                  | B2   | plain    |
+| 994  | skruva i           | skruva  | i        | screw in                                                                                                                 | B2   | plain    |
+| 995  | skruva på          | skruva  | på       | turn on (a tap)                                                                                                          | B2   | plain    |
+| 996  | skynda till        | skynda  | till     | rush to help                                                                                                             | B2   | plain    |
+| 997  | skälla ut          | skälla  | ut       | scold, tell off                                                                                                          | B2   | plain    |
+| 998  | skära ihop         | skära   | ihop     | seize up (an engine)                                                                                                     | B2   | plain    |
+| 999  | smälla av          | smälla  | av       | set off (fireworks); explode with emotion (slang)                                                                        | C1   | plain    |
+| 1000 | smälla ihop        | smälla  | ihop     | slam shut; concoct (an excuse)                                                                                           | B2   | plain    |
+| 1001 | smälla till        | smälla  | till     | swat, strike                                                                                                             | B2   | plain    |
+| 1002 | smälla upp         | smälla  | upp      | throw up (buildings) quickly                                                                                             | B2   | plain    |
+| 1004 | snappa upp         | snappa  | upp      | pick up (news) by chance                                                                                                 | B2   | plain    |
+| 1005 | snappa åt sig      | snappa  | åt       | snatch up                                                                                                                | B2   | refl     |
+| 1006 | spåra ur           | spåra   | ur       | derail (a train); degenerate (a discussion)                                                                              | B2   | plain    |
+| 1007 | spänna av          | spänna  | av       | unfasten; relax (colloquial)                                                                                             | B2   | plain    |
+| 1008 | spänna fast        | spänna  | fast     | fasten, buckle                                                                                                           | A2   | plain    |
+| 1009 | spänna åt          | spänna  | åt       | tighten (a belt)                                                                                                         | B2   | plain    |
+| 1010 | spärra av          | spärra  | av       | cordon off, block                                                                                                        | B2   | plain    |
+| 1011 | spärra in          | spärra  | in       | lock up, imprison                                                                                                        | B2   | plain    |
+| 1012 | spärra upp         | spärra  | upp      | open wide (the eyes)                                                                                                     | B2   | plain    |
+| 1013 | spöka ut sig       | spöka   | ut       | dress up outlandishly                                                                                                    | B2   | refl     |
+| 1014 | sticka av          | sticka  | av       | stand out against the surroundings                                                                                       | C1   | plain    |
+| 1015 | sticka emellan     | sticka  | emellan  | interject                                                                                                                | B2   | plain    |
+| 1016 | sticka till        | sticka  | till     | give a sudden stab of pain; slip something to someone secretly                                                           | B2   | plain    |
+| 1017 | sticka åt          | sticka  | åt       | slip to someone secretly                                                                                                 | B2   | plain    |
+| 1018 | stjälpa av         | stjälpa | av       | tip off (a load)                                                                                                         | B2   | plain    |
+| 1019 | stjälpa i sig      | stjälpa | i        | gulp down (a drink)                                                                                                      | B2   | refl     |
+| 1020 | streta emot        | streta  | emot     | resist, struggle against                                                                                                 | B2   | plain    |
+| 1021 | streta på          | streta  | på       | toil on despite difficulty                                                                                               | B2   | plain    |
+| 1022 | stryka av          | stryka  | av       | wipe off                                                                                                                 | B2   | plain    |
+| 1023 | stryka för         | stryka  | för      | mark, highlight (in a text)                                                                                              | B2   | plain    |
+| 1024 | stryka med         | stryka  | med      | perish, be lost                                                                                                          | B2   | plain    |
+| 1025 | stryka om          | stryka  | om       | iron again                                                                                                               | B2   | plain    |
+| 1026 | stryka på          | stryka  | på       | brush on (paint)                                                                                                         | B2   | plain    |
+| 1027 | stryka under       | stryka  | under    | underline; emphasize                                                                                                     | B2   | plain    |
+| 1028 | stryka ut          | stryka  | ut       | spread out evenly (paint); erase                                                                                         | B2   | plain    |
+| 1029 | stråla samman      | stråla  | samman   | converge from different directions                                                                                       | B2   | plain    |
+| 1031 | stöta bort         | stöta   | bort     | push away, repel (people)                                                                                                | B2   | plain    |
+| 1032 | stöta ihop med     | stöta   | ihop     | run into unexpectedly                                                                                                    | B2   | v+p+prep |
+| 1033 | stöta på           | stöta   | på       | bump into (a person); prompt, remind; make a pass at                                                                     | B2   | plain    |
+| 1034 | stöta till         | stöta   | till     | bump into accidentally                                                                                                   | B2   | plain    |
+| 1035 | stöta upp          | stöta   | upp      | bring up, regurgitate                                                                                                    | B2   | plain    |
+| 1036 | stöta ut           | stöta   | ut       | push out (a boat); ostracize                                                                                             | B2   | plain    |
+| 1037 | suga ut            | suga    | ut       | suck out (air); exploit, bleed dry                                                                                       | B2   | plain    |
+| 1038 | suga åt sig        | suga    | åt       | absorb                                                                                                                   | B2   | refl     |
+| 1039 | sy in              | sy      | in       | take in (a garment); imprison (slang)                                                                                    | C1   | plain    |
+| 1040 | sy om              | sy      | om       | alter (a garment)                                                                                                        | B2   | plain    |
+| 1041 | sy upp             | sy      | upp      | shorten (a garment); sew up a batch                                                                                      | B2   | plain    |
+| 1042 | titta efter        | titta   | efter    | check carefully; gaze after                                                                                              | B2   | plain    |
+| 1043 | titta till         | titta   | till     | look in on, check on                                                                                                     | B2   | plain    |
+| 1044 | titta över         | titta   | över     | drop by; review                                                                                                          | B2   | plain    |
+| 1045 | tjäna av           | tjäna   | av       | serve out (a prison sentence)                                                                                            | B2   | plain    |
+| 1046 | tjäna in           | tjäna   | in       | save (time or money)                                                                                                     | B2   | plain    |
+| 1047 | tjäna ut           | tjäna   | ut       | be worn out after long service                                                                                           | B2   | plain    |
+| 1048 | tona bort          | tona    | bort     | fade away (sound)                                                                                                        | B2   | plain    |
+| 1049 | tona fram          | tona    | fram     | emerge into view                                                                                                         | B2   | plain    |
+| 1050 | tona ut            | tona    | ut       | fade out (sound)                                                                                                         | B2   | plain    |
+| 1051 | trycka av          | trycka  | av       | pull the trigger                                                                                                         | B2   | plain    |
+| 1053 | trycka upp         | trycka  | upp      | push up into; call (an elevator); print a large run                                                                      | B2   | plain    |
+| 1054 | träda emellan      | träda   | emellan  | intervene, mediate                                                                                                       | B2   | plain    |
+| 1055 | träda fram         | träda   | fram     | come forward, reveal oneself                                                                                             | B2   | plain    |
+| 1056 | tända på           | tända   | på       | set fire to; be turned on by                                                                                             | B2   | plain    |
+| 1057 | tända till         | tända   | till     | flare up in anger; spark (attraction, impersonal)                                                                        | C1   | plain    |
+| 1058 | varva ner          | varva   | ner      | slow the revs; wind down, relax                                                                                          | B1   | plain    |
+| 1059 | veckla av          | veckla  | av       | unwrap                                                                                                                   | B2   | plain    |
+| 1060 | veckla in          | veckla  | in       | wrap up                                                                                                                  | B2   | plain    |
+| 1061 | veckla in sig      | veckla  | in       | get tangled up in (explanations)                                                                                         | B2   | refl     |
+| 1062 | veckla ut          | veckla  | ut       | unfold                                                                                                                   | B2   | plain    |
+| 1063 | vräka i sig        | vräka   | i        | devour, gobble                                                                                                           | B2   | refl     |
+| 1064 | vräka ur sig       | vräka   | ur       | blurt out (offensive things)                                                                                             | B2   | refl     |
+| 1065 | växla in           | växla   | in       | be switched onto another track; exchange (currency)                                                                      | B2   | plain    |
+| 1066 | växla ner          | växla   | ner      | shift to a lower gear                                                                                                    | B2   | plain    |
+| 1067 | växla om           | växla   | om       | take turns; switch (channels)                                                                                            | B2   | plain    |
+| 1068 | ösa på             | ösa     | på       | ladle on more; speed up (slang)                                                                                          | C1   | plain    |
+| 1069 | ösa över           | ösa     | över     | pour into another container; shower (someone with gifts)                                                                 | B2   | plain    |
 
 ---
 
@@ -1638,7 +1627,7 @@ short of SAOL.
 `trycka på` also gained a source-C gloss ("press a button; apply pressure to
 hurry"), which confirms both readings exist but does **not** settle my actual
 question: whether the button sense is a particle verb or a prepositional verb.
-It stays flagged on that ground rather than on meaning.
+It is removed from the table on that ground rather than on meaning (revision 2026-08-09).
 
 ### 4.3 Corpus rows deliberately excluded (94 total)
 
@@ -1735,11 +1724,12 @@ pipeline
 would be expected to produce if it produced anything, and two out of 834 is a
 low rate.
 
-### 4.8 Source C: included but not vouched for (16)
+### 4.8 Source C: removed pending human review (16)
 
-These are in band 9 and each carries **NEEDS HUMAN CHECK** inline with the
-reason. They are not dropped, because the lead's instruction was to flag
-rather than silently discard, and because most are probably fine.
+These were in band 9, each flagged **NEEDS HUMAN CHECK** inline. Revision
+2026-08-09: removed from the table and the CSV by lead decision, pending
+human review. They are listed here so the omission stays visible; any of
+them can be restored once confirmed.
 
 Two are cases where I dispute the source's gloss rather than the entry:
 
