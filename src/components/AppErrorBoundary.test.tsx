@@ -1,3 +1,4 @@
+import { lazy, type ComponentType } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,8 +8,10 @@ import {
   AppCrashFallback,
   RouteCrashFallback,
   RouteErrorBoundary,
+  RouteChunk,
   downloadProgressBackup,
 } from '@/components/AppErrorBoundary';
+import { lazyRoute } from '@/lib/utils';
 
 // A component that throws unconditionally, used to exercise the boundary's
 // catch path deterministically instead of relying on a real page crashing.
@@ -242,5 +245,161 @@ describe('RouteCrashFallback keeps the rest of the app navigable', () => {
 
     const reloadLink = screen.getByRole('link', { name: /reload from the start/i });
     expect(reloadLink).toHaveAttribute('href', '/');
+  });
+});
+
+// Issue #220 acceptance criterion: React.lazy() caches whatever its factory
+// promise resolves *or rejects* to, permanently. RouteChunk pairs with
+// retryImport()/lazyRoute() (src/lib/utils.ts) to (a) recover automatically
+// from a transient chunk-load failure via backoff before React ever sees a
+// rejection, and (b) once retries are truly exhausted, force a full document
+// reload instead of a useless soft reset against an already-poisoned lazy
+// import. A plain render crash elsewhere on the page must be unaffected.
+describe('RouteChunk chunk-load retry and recovery (#220)', () => {
+  // Rejects `failCount` times, then resolves - simulates a flaky network
+  // that succeeds on a later attempt, within retryImport()'s retry budget.
+  function makeFlakyImport<T>(component: T, failCount: number) {
+    let calls = 0;
+    return () => {
+      calls += 1;
+      if (calls <= failCount) {
+        return Promise.reject(new Error(`simulated network hiccup #${calls}`));
+      }
+      return Promise.resolve({ default: component } as { default: T });
+    };
+  }
+
+  it('recovers automatically from a route chunk import that fails transiently, with no user interaction required', async () => {
+    vi.useFakeTimers();
+    try {
+      function Page() {
+        return <p>page loaded</p>;
+      }
+      // retryImport() allows 2 retries (300ms, then 600ms backoff) before
+      // giving up - failing exactly twice keeps this inside that budget.
+      const flakyImport = makeFlakyImport(Page, 2);
+      const LazyPage = lazyRoute(flakyImport);
+
+      render(
+        <RouteChunk
+          component={LazyPage}
+          loading={<p>loading...</p>}
+          fallback={(retry) => <button onClick={retry}>retry</button>}
+        />,
+      );
+
+      expect(screen.getByText('loading...')).toBeInTheDocument();
+
+      // Advance past both backoff delays; retryImport() resolves internally
+      // (it never hands React a rejected promise here), so no click/retry
+      // is needed - this must self-heal.
+      await vi.advanceTimersByTimeAsync(300);
+      await vi.advanceTimersByTimeAsync(600);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(screen.getByText('page loaded')).toBeInTheDocument();
+      expect(screen.queryByText('loading...')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'retry' })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('falls back to a full document reload (not a soft reset) once retryImport has exhausted its retries on a chunk that keeps failing', async () => {
+    vi.useFakeTimers();
+    // jsdom's window.location.reload is read-only/non-configurable on the
+    // Location object itself, so vi.spyOn(window.location, 'reload') cannot
+    // redefine it directly - swap the whole `window.location` for a plain
+    // object that carries a spyable reload, then restore the original.
+    const reloadSpy = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...originalLocation, reload: reloadSpy },
+    });
+
+    try {
+      const alwaysFailingImport = () =>
+        Promise.reject<{ default: ComponentType }>(new Error('chunk 404: stale build hash'));
+      const LazyPage = lazyRoute(alwaysFailingImport);
+
+      render(
+        <RouteChunk
+          component={LazyPage}
+          loading={<p>loading...</p>}
+          fallback={(retry) => <button onClick={retry}>retry</button>}
+        />,
+      );
+
+      // Exhaust retryImport()'s own retries (300ms + 600ms backoff); it then
+      // wraps the final rejection in ChunkLoadError, which the Suspense
+      // boundary surfaces to AppErrorBoundary.
+      await vi.advanceTimersByTimeAsync(300);
+      await vi.advanceTimersByTimeAsync(600);
+      await vi.advanceTimersByTimeAsync(0);
+
+      const retryButton = screen.getByRole('button', { name: 'retry' });
+      fireEvent.click(retryButton);
+
+      expect(reloadSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+    }
+  });
+
+  // Regression guard: RouteChunk's reload path must only fire for a genuine
+  // ChunkLoadError. A component whose chunk loaded fine but whose render
+  // throws a plain Error must still get the existing soft "Try again"
+  // (reset()) behavior, with no reload at all.
+  it('a plain render error (not a chunk-load failure) still gets the existing soft reset, never a reload', async () => {
+    const reloadSpy = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...originalLocation, reload: reloadSpy },
+    });
+
+    try {
+      let shouldThrow = true;
+      function MaybeBoom() {
+        if (shouldThrow) throw new Error('plain render crash, not a chunk import failure');
+        return <p>recovered</p>;
+      }
+      // The chunk import itself succeeds immediately - only the rendered
+      // component throws, so this must never be treated as a ChunkLoadError.
+      const LazyMaybeBoom = lazy(() => Promise.resolve({ default: MaybeBoom }));
+
+      render(
+        <RouteChunk
+          component={LazyMaybeBoom}
+          loading={<p>loading...</p>}
+          fallback={(retry) => (
+            <button
+              onClick={() => {
+                shouldThrow = false;
+                retry();
+              }}
+            >
+              retry
+            </button>
+          )}
+        />,
+      );
+
+      const retryButton = await screen.findByRole('button', { name: 'retry' });
+      fireEvent.click(retryButton);
+
+      expect(await screen.findByText('recovered')).toBeInTheDocument();
+      expect(reloadSpy).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+    }
   });
 });
