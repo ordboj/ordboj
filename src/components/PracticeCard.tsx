@@ -450,10 +450,7 @@ export function PracticeCard({
                 {showExamples && exampleSentence && (
                   <div className="bg-accent/10 rounded-lg p-4">
                     <p className="text-sm text-muted-foreground mb-1">Example:</p>
-                    <p
-                      className="text-base italic"
-                      lang={exampleSentence.startsWith('[') ? undefined : 'sv'}
-                    >
+                    <p className="text-base italic" lang="sv">
                       {exampleSentence}
                     </p>
                   </div>

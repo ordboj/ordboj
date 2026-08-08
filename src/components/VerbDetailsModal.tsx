@@ -68,9 +68,9 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
-          {/* Infinitive */}
+          {/* Infinitiv */}
           <div>
-            <p className="text-sm text-muted-foreground">Infinitive</p>
+            <p className="text-sm text-muted-foreground">{getFormLabel('infinitive')}</p>
             <p className="text-lg font-medium" lang="sv">
               {verb.infinitive}
             </p>
@@ -129,20 +129,18 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
                     )}
 
                     {/* Example sentence */}
-                    <div className="mt-2 pt-2 border-t">
-                      {(() => {
-                        const example = getExampleSentence(verb.infinitive, form);
-                        const isPlaceholder = example.startsWith('[');
-                        return (
-                          <p
-                            className="text-sm italic text-muted-foreground"
-                            lang={isPlaceholder ? undefined : 'sv'}
-                          >
+                    {(() => {
+                      const example = getExampleSentence(verb.infinitive, form);
+                      if (!example) return null;
+
+                      return (
+                        <div className="mt-2 pt-2 border-t">
+                          <p className="text-sm italic text-muted-foreground" lang="sv">
                             {example}
                           </p>
-                        );
-                      })()}
-                    </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
