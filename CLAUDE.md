@@ -106,13 +106,19 @@ Done.
 
 - `swedish_verbs.csv` has ~1537 rows; `VERB_DATA` in `verbData.ts` has ~50.
   They have drifted and only the TS table ships.
-- Verb ids come from array index (`String(index + 1)`), so SRS items keyed on
-  them break if the verb table is reordered or extended.
 - The manifest carries many Radix and utility packages the Lovable scaffold
   installed; several are likely unused.
 - The settings store (`swedish-verbs-settings`) is still unversioned. The SRS
-  progress store is versioned (`STORAGE_VERSION = 2`, `{version, items}`
+  progress store is versioned (`STORAGE_VERSION = 3`, `{version, items}`
   envelope with legacy migration in `useSrsProgress.ts`); new fields there
-  mean a v2→v3 bump, not greenfield versioning. `dueAt` is clamped to the
+  mean a v3→v4 bump, not greenfield versioning. `dueAt` is clamped to the
   next local day and `isDue` uses an end-of-local-day boundary (`srs.ts`) —
-  the old "due today is ambiguous" issue is resolved.
+  the old "due today is ambiguous" issue is resolved. Issue #53 (v2→v3)
+  re-keyed items onto the verb's infinitive instead of `String(index + 1)`
+  over `VERB_DATA` (`src/lib/verbs.ts`), so stored ids survive the verb table
+  being reordered or extended; `itemId` is no longer duplicated inside the
+  stored value (it is the map key); and an item that was never practised is
+  no longer persisted at all, since it is derivable on load. A one-shot,
+  never-overwritten copy of the pre-v3 payload is kept at
+  `swedish-verbs-srs-progress-backup-pre-v3`; "Reset all progress" does not
+  clear it today (open question, see PR #311).

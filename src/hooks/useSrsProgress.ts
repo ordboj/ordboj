@@ -57,7 +57,7 @@ const LEGACY_BACKUP_KEY = 'swedish-verbs-srs-progress-backup-pre-v3';
 // them apart, so the field name and the monotonic counter are kept and only
 // the item shape changes. Flagged for staff-engineer / product-manager
 // sign-off in the PR rather than decided here.
-const STORAGE_VERSION = 3;
+export const STORAGE_VERSION = 3;
 
 // The ease rebase belongs to the v1 -> v2 upgrade only. Anything already
 // stamped version 2 or later was written by the flat-delta scheduler and

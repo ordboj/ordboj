@@ -9,16 +9,16 @@ import type { Form } from '@/lib/verbs';
 // template literal was written out in five files, so keeping them in step
 // depended on nobody ever editing one of them alone.
 //
-// The format is `<verbId>-<form>` and it is frozen: `verbId` is
-// `String(index + 1)` over VERB_DATA (see src/lib/verbs.ts and the order pin
-// test in src/data/verbData.orderPin.test.ts). Changing the shape here
-// orphans every stored key and needs a storage migration, not an edit.
+// The format is `<verbId>-<form>`, where `verbId` is the verb's infinitive
+// (issue #53, see src/lib/verbs.ts). Infinitives are pinned unique by
+// src/data/verbData.orderPin.test.ts. Changing the shape here orphans every
+// stored key and needs a storage migration, not an edit.
 export function conjugationItemId(verbId: string, form: Form): string {
   return `${verbId}-${form}`;
 }
 
 // Particle-verb items live in their own namespace, disjoint from the
-// `<digits>-<form>` keys above. That disjointness is what makes the whole
+// `<infinitive>-<form>` keys above. That disjointness is what makes the whole
 // feature additive to the progress store: no existing key is renamed, and a
 // build that does not know about particle verbs simply ignores these.
 export const PARTICLE_ID_PREFIX = 'pv:';
