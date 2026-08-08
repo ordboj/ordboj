@@ -57,7 +57,11 @@ Rules:
   (semantic-set interference: bygga upp / bygga ut).
 - Introduction card (unscheduled, untested) appears at the top of the sitting;
   the verb's first cloze appears at the end of the same sitting, at least six
-  items later, not counted toward the goal.
+  items later, not counted toward the goal. Short-sitting fallback
+  (learning-designer): place the first cloze last with whatever gap the
+  sitting affords, provided at least two items intervene; with fewer than
+  two, defer it to the next sitting (adjacent reveal-then-ask is a
+  familiarity check, not retrieval).
 
 40 verbs ≈ up to 80 scheduled items (fewer: reflexives contribute one each).
 
