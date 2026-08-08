@@ -226,6 +226,48 @@ describe("PracticeCard - wrong-answer feedback shows the learner's own input (#1
     );
   });
 
+  it('renders the wrong-answer line at reduced size with no pronounce button, and the missing form in the pattern reveal at full prominence (#254)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'totallywrong');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    await screen.findByText('Not quite');
+
+    // The wrong-answer line is visually subordinate: small text, struck
+    // through and muted, never at the same weight as the correct form.
+    const wrongAnswerLine = screen.getByText(/You typed:/);
+    expect(wrongAnswerLine).toHaveClass('text-xs');
+    const struckSpan = wrongAnswerLine.querySelector('span');
+    expect(struckSpan).toHaveClass('line-through');
+    expect(struckSpan).toHaveClass('opacity-60');
+
+    // The correct form, shown in the "Complete pattern" reveal, keeps full
+    // prominence: larger text inside a highlighted, bold wrapper.
+    const missingFormSpan = screen.getByText(VARA_PRESENS_ANSWER, { selector: 'span' });
+    expect(missingFormSpan).toHaveClass('text-lg');
+    const missingFormWrapper = missingFormSpan.parentElement;
+    expect(missingFormWrapper).toHaveClass('bg-primary');
+    expect(missingFormWrapper).toHaveClass('font-bold');
+
+    // The wrong answer is never spoken: no pronounce button anywhere near it.
+    expect(
+      within(wrongAnswerLine).queryByRole('button', { name: /^Pronounce/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it('preserves the exact case the learner typed in the wrong-answer line (comparison is case-insensitive, display is not)', async () => {
     const user = userEvent.setup();
     renderWithProviders(
