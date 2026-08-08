@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,12 +10,29 @@ import {
   generateVerbPattern,
   getFormLabel,
   getFormHint,
+  getAllConjugatedVerbs,
+  getVerbGrupp,
+  getAcceptedAnswers,
+  getAlternatesDisclosure,
+  isAcceptedAnswer,
   type ConjugatedVerb,
   type VerbPattern,
+  type Grupp,
 } from '@/lib/verbs';
 import { speakSwedish } from '@/lib/speech';
 import { ConfettiEffect } from './ConfettiEffect';
 import { Grade } from '@/lib/srs';
+
+// Once an item has been answered correctly this many times, the learner no
+// longer needs the full paradigm as a cue — showing every conjugated form
+// (e.g. "skriva - skriver - skrev - ___") lets the missing form be derived
+// from the pattern rather than recalled. See issue #32.
+const MATURE_REPETITIONS_THRESHOLD = 3;
+
+// Fixed Swedish special-character row: always these three keys, in this
+// order, on every card regardless of the answer. Never derived from the
+// correct answer — see docs/learning/2026-08-08-ux-pedagogy-red-lines.md (P4, P11).
+const SWEDISH_SPECIAL_CHARS = ['å', 'ä', 'ö'];
 
 interface PracticeCardProps {
   infinitive: string;
@@ -24,6 +41,12 @@ interface PracticeCardProps {
   showExamples: boolean;
   autoplayAudio: boolean;
   muteAudio: boolean;
+  // Whether, if this card is answered wrong, the item is still eligible to
+  // re-queue into the same sitting (docs/learning/lapse-handling.md). Drives
+  // the "you'll see this again" feedback copy; the re-queue decision itself
+  // is made by the caller (Practice.tsx).
+  willRequeueIfWrong?: boolean;
+  repetitions?: number;
   onAnswer: (grade: Grade) => void;
 }
 
@@ -34,78 +57,161 @@ export function PracticeCard({
   showExamples,
   autoplayAudio,
   muteAudio,
+  willRequeueIfWrong = false,
+  repetitions = 0,
   onAnswer,
 }: PracticeCardProps) {
   const [userAnswer, setUserAnswer] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
   const [conjugated, setConjugated] = useState<ConjugatedVerb | null>(null);
   const [pattern, setPattern] = useState<VerbPattern | null>(null);
-  const [shuffledLetters, setShuffledLetters] = useState<string[]>([]);
   const [options, setOptions] = useState<string[]>([]);
 
   // Load verb data
   useEffect(() => {
-    conjugateVerb(infinitive).then((result) => {
-      setConjugated(result);
-      const uniqueLetters = [...new Set(result[form].split(''))];
-      setShuffledLetters(uniqueLetters.sort(() => Math.random() - 0.5));
-    });
+    conjugateVerb(infinitive).then(setConjugated);
     generateVerbPattern(infinitive, form).then(setPattern);
   }, [infinitive, form]);
 
   const correctAnswer = conjugated?.[form] || '';
+  // A verb's conjugated form is only ever '' before data loads, or the
+  // literal placeholder for a form that verb doesn't have (modal verbs have
+  // no imperativ, etc). Neither is a real answer, so neither may be offered
+  // as the correct multiple-choice button.
+  const isAnswerAvailable = correctAnswer !== '' && correctAnswer !== '(not available)';
+  // Multiple choice with no valid correct answer has nothing to test; fall
+  // back to typing mode rather than render a card whose "correct" button is
+  // the unavailable-form placeholder.
+  const effectiveMode = mode === 'multiple-choice' && !isAnswerAvailable ? 'typing' : mode;
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
+  const alternatesDisclosure = getAlternatesDisclosure(infinitive, form);
 
-  // Generate multiple choice options
-
+  // Generate multiple choice options.
+  //
+  // Distractor policy (learning-designer decision, P14 in
+  // docs/learning/2026-08-08-ux-pedagogy-red-lines.md, RED LINE): distractors
+  // must come from the target verb's conjugation group or an adjacent group
+  // (never cross-group, no exceptions) and, where known, match its CEFR
+  // level; they must be the same form as the target; they must never be a
+  // correct form of the target verb in a different slot; and an empty or
+  // "(not available)" conjugated form is never a valid option. Candidates
+  // that don't satisfy the group constraint are excluded before ranking, so
+  // if fewer than three qualify the option list degrades to fewer
+  // distractors rather than fill the remaining slots cross-group. Candidates
+  // are ranked once and the top three taken, so building the option list is
+  // a single bounded pass with no unbounded retry loop.
+  //
+  // Product policy P7 (docs/product/2026-08-08-alternate-answers-decision.md):
+  // a candidate is also rejected when it is anywhere in the card's accepted
+  // set (primary or alternate) -- otherwise a documented alternate (e.g.
+  // "lade") could render as a second correct button alongside the primary.
   useEffect(() => {
     const generateOptions = async () => {
-      const opts = [correctAnswer];
-      const allVerbs = ['vara', 'ha', 'gå', 'komma', 'skriva', 'läsa', 'säga', 'få'];
+      const allVerbs = await getAllConjugatedVerbs();
+      const targetGrupp = getVerbGrupp(infinitive);
+      const adjacentGrupp: Partial<Record<Grupp, Grupp[]>> = {
+        '2a': ['2b'],
+        '2b': ['2a'],
+      };
 
-      while (opts.length < 4) {
-        const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
-        const randomConjugation = await conjugateVerb(randomVerb);
-        const conjugatedForm = randomConjugation[form];
-        if (!opts.includes(conjugatedForm)) {
-          opts.push(conjugatedForm);
-        }
-      }
+      const targetOwnForms = new Set(
+        (['infinitive', 'presens', 'preteritum', 'supinum', 'imperativ'] as Form[])
+          .map((f) => conjugated?.[f])
+          .filter((value): value is string => !!value && value !== '(not available)'),
+      );
+      const acceptedForCard = new Set(
+        getAcceptedAnswers(infinitive, form).map((accepted) => accepted.trim().toLowerCase()),
+      );
 
-      setOptions(opts.sort(() => Math.random() - 0.5));
+      const seen = new Set<string>([correctAnswer]);
+      const candidates = allVerbs
+        .filter((v) => v.infinitive !== infinitive)
+        .reduce<{ value: string; score: number }[]>((acc, v) => {
+          const value = v[form];
+          if (!value || value === '(not available)') return acc;
+          if (seen.has(value) || targetOwnForms.has(value)) return acc;
+          if (acceptedForCard.has(value.trim().toLowerCase())) return acc;
+
+          const vGrupp = getVerbGrupp(v.infinitive);
+          const isSameGroup = targetGrupp !== undefined && vGrupp === targetGrupp;
+          const isAdjacentGroup =
+            targetGrupp !== undefined &&
+            vGrupp !== undefined &&
+            (adjacentGrupp[targetGrupp]?.includes(vGrupp) ?? false);
+          // P14 hard constraint: same or adjacent group only, never cross-group.
+          if (!isSameGroup && !isAdjacentGroup) return acc;
+
+          seen.add(value);
+          let score = isSameGroup ? 20 : 10;
+          if (conjugated?.cefr && v.cefr === conjugated.cefr) {
+            score += 1;
+          }
+          acc.push({ value, score });
+          return acc;
+        }, []);
+
+      const distractors = candidates
+        .sort(() => Math.random() - 0.5)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .map((c) => c.value);
+
+      setOptions([correctAnswer, ...distractors].sort(() => Math.random() - 0.5));
     };
 
-    if (correctAnswer) {
+    if (isAnswerAvailable && conjugated) {
       generateOptions();
     }
-  }, [correctAnswer, form]);
+  }, [correctAnswer, isAnswerAvailable, form, infinitive, conjugated]);
 
-  const handleSubmit = (answer: string) => {
-    const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
-    setIsCorrect(correct);
-    setShowFeedback(true);
+  const handleSubmit = useCallback(
+    (answer: string) => {
+      const correct = isAcceptedAnswer(infinitive, form, answer);
+      setIsCorrect(correct);
+      setSubmittedAnswer(answer);
+      setShowFeedback(true);
 
-    if (correct) {
-      setShowConfetti(true);
-      if (autoplayAudio) {
-        speakSwedish(correctAnswer, muteAudio);
+      if (correct) {
+        setShowConfetti(true);
+        if (autoplayAudio) {
+          speakSwedish(correctAnswer, muteAudio);
+        }
       }
-    }
-  };
+    },
+    [infinitive, form, correctAnswer, autoplayAudio, muteAudio],
+  );
 
-  // Auto-submit when answer is correct
+  // Auto-submit when the typed value matches an accepted answer -- except
+  // product policy P4: suppress it while the normalized typed value is a
+  // strict prefix of another accepted answer for this card. The shipped data
+  // stores the short form as primary ("la", "sa"), so this can't be written
+  // as "primary waits, alternate fires" -- it has to check the whole accepted
+  // set both ways. A learner who means the shorter form submits deliberately
+  // with Check Answer or Enter.
   useEffect(() => {
-    if (userAnswer && !showFeedback) {
-      const isAnswerCorrect =
-        userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
-      if (isAnswerCorrect) {
-        handleSubmit(userAnswer);
-      }
-    }
-  }, [userAnswer, showFeedback, correctAnswer]);
+    if (!userAnswer || showFeedback) return;
+
+    const normalized = userAnswer.trim().toLowerCase();
+    const normalizedAccepted = getAcceptedAnswers(infinitive, form).map((accepted) =>
+      accepted.trim().toLowerCase(),
+    );
+    const matchIndex = normalizedAccepted.indexOf(normalized);
+    if (matchIndex === -1) return;
+
+    const isPrefixOfAnotherAccepted = normalizedAccepted.some(
+      (candidate, index) =>
+        index !== matchIndex &&
+        candidate.length > normalized.length &&
+        candidate.startsWith(normalized),
+    );
+    if (isPrefixOfAnotherAccepted) return;
+
+    handleSubmit(userAnswer);
+  }, [userAnswer, showFeedback, infinitive, form, handleSubmit]);
 
   const handleHint = () => {
     if (revealedHints.length < correctAnswer.length) {
@@ -122,7 +228,14 @@ export function PracticeCard({
   };
 
   const getPatternWithHints = () => {
-    return pattern.patternParts
+    // Mature items drop the other paradigm forms from the cue, leaving just
+    // the infinitive and the blank, so the label below is the only cue.
+    const isMature = repetitions >= MATURE_REPETITIONS_THRESHOLD;
+    const visibleParts = isMature
+      ? pattern.patternParts.filter((part) => part.form === 'infinitive' || part.isMissing)
+      : pattern.patternParts;
+
+    return visibleParts
       .map((part) => {
         if (part.isMissing) {
           // Show the blank with revealed hints
@@ -159,6 +272,7 @@ export function PracticeCard({
     setUserAnswer('');
     setShowFeedback(false);
     setIsCorrect(false);
+    setSubmittedAnswer('');
     setShowConfetti(false);
     setRevealedHints([]);
     setOptions([]);
@@ -171,9 +285,9 @@ export function PracticeCard({
     }
   };
 
-  const handleLetterClick = (letter: string) => {
+  const handleSpecialCharClick = (char: string) => {
     if (!showFeedback) {
-      setUserAnswer((prev) => prev + letter);
+      setUserAnswer((prev) => prev + char);
     }
   };
 
@@ -209,7 +323,7 @@ export function PracticeCard({
           {/* Input Area */}
           {!showFeedback && (
             <div className="space-y-4">
-              {mode === 'typing' ? (
+              {effectiveMode === 'typing' ? (
                 <div className="space-y-4">
                   <Input
                     value={userAnswer}
@@ -219,17 +333,22 @@ export function PracticeCard({
                     }
                     placeholder="Type your answer..."
                     className="text-2xl text-center py-6 caret-transparent"
+                    maxLength={60}
                     autoFocus
+                    lang="sv"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                   />
                   <div className="flex flex-wrap justify-center gap-2">
-                    {shuffledLetters.map((letter, index) => (
+                    {SWEDISH_SPECIAL_CHARS.map((char) => (
                       <Button
-                        key={index}
-                        onClick={() => handleLetterClick(letter)}
+                        key={char}
+                        onClick={() => handleSpecialCharClick(char)}
                         variant="outline"
                         className="w-12 h-12 text-xl font-semibold"
                       >
-                        <span lang="sv">{letter}</span>
+                        <span lang="sv">{char}</span>
                       </Button>
                     ))}
                     <Button
@@ -296,6 +415,37 @@ export function PracticeCard({
                   </>
                 )}
               </div>
+
+              {alternatesDisclosure && (
+                <p className="text-sm text-muted-foreground text-center">{alternatesDisclosure}</p>
+              )}
+
+              {!isCorrect && willRequeueIfWrong && (
+                <p className="text-sm text-muted-foreground text-center">
+                  You'll see this one again later in today's session — one more correct answer and
+                  it's done.
+                </p>
+              )}
+
+              {!isCorrect && (
+                <div className="flex flex-wrap items-center justify-center gap-4 text-center">
+                  <div className="space-y-1 min-w-0 max-w-full">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                      {mode === 'typing' ? 'You wrote' : 'You chose'}
+                    </p>
+                    <p className="text-lg font-semibold text-destructive break-words">
+                      {submittedAnswer.trim() || '(nothing)'}
+                    </p>
+                  </div>
+                  <span className="text-muted-foreground text-xl shrink-0">→</span>
+                  <div className="space-y-1 min-w-0 max-w-full">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Correct</p>
+                    <p className="text-lg font-semibold text-success break-words">
+                      {correctAnswer}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 {/* Show full pattern with pronunciation buttons */}
