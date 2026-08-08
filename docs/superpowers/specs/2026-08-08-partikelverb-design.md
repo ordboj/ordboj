@@ -334,8 +334,9 @@ proposed the format). Full ruling:
 - Choice answers take the weaker-credit path: ease unchanged, interval
   multiplier capped at 1.6, wrong = full lapse. Modality stops being
   plumb-and-ignore; srs-engine is notified before any related provider work.
-- Lifecycle trigger: target cloze `repetitions >= 3` and every distractor
-  particle already introduced; otherwise the item renders as typed cloze.
+- Lifecycle trigger: target cloze `repetitions >= 3` and at least three
+  introduced distractor particles; only introduced particles become options;
+  otherwise the item renders as typed cloze.
 - Build trigger is data-gated: work starts when the corpus holds at least 8
   certified frames across at least 5 distinct verbs, counted after the F2
   additions land.

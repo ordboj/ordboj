@@ -30,32 +30,36 @@ deterministically, per review, whether the item renders as typed cloze or as a
 four-option choice. It is **not** a third scheduled item: no new id namespace,
 no new stored state, no storage version bump.
 
-| Parameter              | Value                                                                                                   |
-| ---------------------- | ------------------------------------------------------------------------------------------------------- |
-| item                   | `pv:<slug>:cloze` — a render mode, never a new SRS item                                                 |
-| options                | exactly 4: the target particle plus 3 distractors; never 3, never 5                                     |
-| distractor source      | the frame's `excludedParticles`, certified per frame by `swedish-linguist`                              |
-| distractor construal   | same-base different-particle: every option completes `<base> ___`                                       |
-| distractor eligibility | particle already introduced (see below)                                                                 |
-| distractor pick        | eligible list in authored order; take 3 cyclically from index `repetitions % n` when n > 3              |
-| option order           | sort alphabetically (`localeCompare('sv')`), then rotate by `repetitions % 4`                           |
-| variant trigger        | eligible AND `repetitions % 3 === 0` — one review in three                                              |
-| eligibility            | target cloze `repetitions >= 3` AND at least 3 eligible distractors                                     |
-| ineligible fallback    | render typed cloze as normal; never a reduced option set                                                |
-| commit                 | first option tapped commits, no re-tap ([[2026-08-08-latency-and-attempt-signals]])                     |
-| choice correct         | ease unchanged, `repetitions += 1`, `intervalDays = max(1, round(intervalDays * min(easeFactor, 1.6)))` |
-| choice wrong           | full lapse, identical to typed wrong                                                                    |
-| modality               | `recordAnswer` gets `modality: 'choice'`; credit branches on it at answer time                          |
-| learner control        | none in v1 — `practiceMode` does not apply to particle items                                            |
-| per-option feedback    | none in v1; standard cloze feedback panel, correct option marked                                        |
-| build gate             | >= 8 certified frames across >= 5 distinct verbs, counted after F2 lands                                |
-| storage                | no shape change, no version bump                                                                        |
+| Parameter              | Value                                                                                                             |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| item                   | `pv:<slug>:cloze` — a render mode, never a new SRS item                                                           |
+| options                | exactly 4: the target particle plus 3 distractors; never 3, never 5                                               |
+| distractor source      | the frame's `excludedParticles`, certified per frame by `swedish-linguist`                                        |
+| distractor construal   | same-base different-particle: every option completes `<base> ___`                                                 |
+| distractor eligibility | particle already introduced (see below)                                                                           |
+| distractor pick        | eligible list in authored order; take 3 cyclically from index `(repetitions / 3) % n` when n > 3                  |
+| option order           | sort alphabetically (`a.localeCompare(b, 'sv')`), then rotate by `repetitions % 4`                                |
+| variant trigger        | eligible AND `repetitions % 3 === 0` — one review in three                                                        |
+| eligibility            | target cloze `repetitions >= 3` AND at least 3 eligible distractors                                               |
+| ineligible fallback    | render typed cloze as normal; never a reduced option set                                                          |
+| commit                 | first option tapped commits, no re-tap ([[2026-08-08-latency-and-attempt-signals]])                               |
+| choice correct         | ease unchanged, `repetitions += 1`, `intervalDays = min(365, max(1, round(intervalDays * min(easeFactor, 1.6))))` |
+| choice wrong           | full lapse, identical to typed wrong                                                                              |
+| modality               | `recordAnswer` gets `modality: 'choice'`; credit branches on it at answer time                                    |
+| learner control        | none in v1 — `practiceMode` does not apply to particle items                                                      |
+| per-option feedback    | none in v1; standard cloze feedback panel, correct option marked                                                  |
+| build gate             | >= 8 certified frames across >= 5 distinct verbs, counted after F2 lands                                          |
+| storage                | no shape change, no version bump                                                                                  |
 
 "Introduced", for a distractor particle `p`: at least one particle-verb item
 whose `particle === p` has SRS state in the store, i.e. its cloze card has
 been presented at least once. A lure the learner has never met is noise, not a
 competitor, and it would also teach a new particle inside a test, which is
 introduction work done in the wrong place.
+
+The authored `excludedParticles` list may hold more than three particles;
+only introduced particles become options, and the card needs at least three
+of them.
 
 ## Why a variant and not a third item
 
@@ -81,8 +85,10 @@ The rotation rules exist for one reason: determinism without position memory.
 A fixed alphabetical order would let a learner remember "bottom option" across
 reviews of the same frame; rotating by `repetitions % 4` changes the position
 every review while staying a pure function of stored state. The distractor
-window rotation (`repetitions % n` when more than three particles are
-eligible) varies the lure set the same way.
+window rotation (`(repetitions / 3) % n` when more than three particles are
+eligible) varies the lure set the same way: each successive discrimination
+render of the frame — one per three reviews — steps the window by one
+particle, so the lure set changes across renders instead of staying fixed.
 
 ## Distractors: certified exclusivity, nothing else
 
@@ -125,11 +131,11 @@ specified in advance:
 ```
 typed correct  : easeFactor += 0.05 (ceiling 2.80), repetitions += 1, normal interval
 choice correct : easeFactor unchanged,              repetitions += 1,
-                 intervalDays = max(1, round(intervalDays * min(easeFactor, 1.6)))
+                 intervalDays = min(365, max(1, round(intervalDays * min(easeFactor, 1.6))))
 choice wrong   : full lapse, identical to typed wrong
 ```
 
-Both paths still clamp to `MAX_INTERVAL_DAYS = 365` (`srs.ts:27`); the 1.6 cap
+Both paths still clamp to `MAX_INTERVAL_DAYS = 365` (`srs.ts:46`); the 1.6 cap
 does not remove the existing hard interval ceiling.
 
 Recognition success is weaker evidence than production success, so it advances
