@@ -1,27 +1,8 @@
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
-import { getVerbs, getAllConjugatedVerbs, verbs, type Form } from '@/lib/verbs';
+import { getVerbs, getAllConjugatedVerbs, type Form } from '@/lib/verbs';
 import { getVerifiedParticleVerbs, hasRecallItem } from '@/lib/particleVerbs';
 import type { SrsState } from '@/lib/srs';
 import type { ParticleVerbData } from '@/data/particleVerbData';
-
-// This provider is not wired into useSrsProgress (see createConjugationProvider,
-// which is); it predates the particleQueue module owning the sitting-build
-// logic and is kept only for its own existing test contract. Its base-verb
-// gate is therefore local and deliberately not shared with
-// src/lib/particleQueue.ts, which dropped this gate for due reviews per
-// issue #315 — see the "Rules" bullet removed from
-// docs/superpowers/specs/2026-08-08-partikelverb-design.md.
-const BASE_VERB_GATE_REPETITIONS = 2;
-const verbIdByInfinitive = new Map(verbs.map((verb) => [verb.infinitive, verb.id]));
-
-function isBaseVerbReady(entry: ParticleVerbData, srsStates: Record<string, SrsState>): boolean {
-  const verbId = verbIdByInfinitive.get(entry.baseInfinitive);
-  if (!verbId) return false;
-  return (['presens', 'preteritum'] as const).every((form) => {
-    const state = srsStates[conjugationItemId(verbId, form)];
-    return (state?.repetitions ?? 0) >= BASE_VERB_GATE_REPETITIONS;
-  });
-}
 
 // The four conjugated forms the app schedules. 'infinitive' is deliberately
 // absent: it is the prompt, never the answer.
@@ -145,7 +126,6 @@ export function createParticleProvider(
     async listAvailableItems() {
       const items: ParticleItem[] = [];
       for (const entry of getVerifiedParticleVerbs()) {
-        if (!isBaseVerbReady(entry, srsStates)) continue;
         const kinds: Array<'cloze' | 'recall'> = hasRecallItem(entry)
           ? ['cloze', 'recall']
           : ['cloze'];
