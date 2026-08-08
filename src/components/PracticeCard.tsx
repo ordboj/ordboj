@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -83,7 +83,7 @@ export function PracticeCard({
     }
   }, [correctAnswer, form]);
 
-  const handleSubmit = (answer: string) => {
+  const handleSubmit = useCallback((answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
     setIsCorrect(correct);
     setShowFeedback(true);
@@ -94,7 +94,7 @@ export function PracticeCard({
         speakSwedish(correctAnswer, muteAudio);
       }
     }
-  };
+  }, [correctAnswer, autoplayAudio, muteAudio]);
 
   // Auto-submit when answer is correct
   useEffect(() => {
@@ -105,7 +105,7 @@ export function PracticeCard({
         handleSubmit(userAnswer);
       }
     }
-  }, [userAnswer, showFeedback, correctAnswer]);
+  }, [userAnswer, showFeedback, correctAnswer, handleSubmit]);
 
   const handleHint = () => {
     if (revealedHints.length < correctAnswer.length) {
