@@ -10,8 +10,11 @@ import {
   generateVerbPattern,
   getFormLabel,
   getFormHint,
+  getAllConjugatedVerbs,
+  getVerbGrupp,
   type ConjugatedVerb,
   type VerbPattern,
+  type Grupp,
 } from '@/lib/verbs';
 import { speakSwedish } from '@/lib/speech';
 import { ConfettiEffect } from './ConfettiEffect';
@@ -57,31 +60,85 @@ export function PracticeCard({
   }, [infinitive, form]);
 
   const correctAnswer = conjugated?.[form] || '';
+  // A verb's conjugated form is only ever '' before data loads, or the
+  // literal placeholder for a form that verb doesn't have (modal verbs have
+  // no imperativ, etc). Neither is a real answer, so neither may be offered
+  // as the correct multiple-choice button.
+  const isAnswerAvailable = correctAnswer !== '' && correctAnswer !== '(not available)';
+  // Multiple choice with no valid correct answer has nothing to test; fall
+  // back to typing mode rather than render a card whose "correct" button is
+  // the unavailable-form placeholder.
+  const effectiveMode = mode === 'multiple-choice' && !isAnswerAvailable ? 'typing' : mode;
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
 
-  // Generate multiple choice options
-
+  // Generate multiple choice options.
+  //
+  // Distractor policy (learning-designer decision, P14 in
+  // docs/learning/2026-08-08-ux-pedagogy-red-lines.md, RED LINE): distractors
+  // must come from the target verb's conjugation group or an adjacent group
+  // (never cross-group, no exceptions) and, where known, match its CEFR
+  // level; they must be the same form as the target; they must never be a
+  // correct form of the target verb in a different slot; and an empty or
+  // "(not available)" conjugated form is never a valid option. Candidates
+  // that don't satisfy the group constraint are excluded before ranking, so
+  // if fewer than three qualify the option list degrades to fewer
+  // distractors rather than fill the remaining slots cross-group. Candidates
+  // are ranked once and the top three taken, so building the option list is
+  // a single bounded pass with no unbounded retry loop.
   useEffect(() => {
     const generateOptions = async () => {
-      const opts = [correctAnswer];
-      const allVerbs = ['vara', 'ha', 'gå', 'komma', 'skriva', 'läsa', 'säga', 'få'];
+      const allVerbs = await getAllConjugatedVerbs();
+      const targetGrupp = getVerbGrupp(infinitive);
+      const adjacentGrupp: Partial<Record<Grupp, Grupp[]>> = {
+        '2a': ['2b'],
+        '2b': ['2a'],
+      };
 
-      while (opts.length < 4) {
-        const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
-        const randomConjugation = await conjugateVerb(randomVerb);
-        const conjugatedForm = randomConjugation[form];
-        if (!opts.includes(conjugatedForm)) {
-          opts.push(conjugatedForm);
-        }
-      }
+      const targetOwnForms = new Set(
+        (['infinitive', 'presens', 'preteritum', 'supinum', 'imperativ'] as Form[])
+          .map((f) => conjugated?.[f])
+          .filter((value): value is string => !!value && value !== '(not available)'),
+      );
 
-      setOptions(opts.sort(() => Math.random() - 0.5));
+      const seen = new Set<string>([correctAnswer]);
+      const candidates = allVerbs
+        .filter((v) => v.infinitive !== infinitive)
+        .reduce<{ value: string; score: number }[]>((acc, v) => {
+          const value = v[form];
+          if (!value || value === '(not available)') return acc;
+          if (seen.has(value) || targetOwnForms.has(value)) return acc;
+
+          const vGrupp = getVerbGrupp(v.infinitive);
+          const isSameGroup = targetGrupp !== undefined && vGrupp === targetGrupp;
+          const isAdjacentGroup =
+            targetGrupp !== undefined &&
+            vGrupp !== undefined &&
+            (adjacentGrupp[targetGrupp]?.includes(vGrupp) ?? false);
+          // P14 hard constraint: same or adjacent group only, never cross-group.
+          if (!isSameGroup && !isAdjacentGroup) return acc;
+
+          seen.add(value);
+          let score = isSameGroup ? 20 : 10;
+          if (conjugated?.cefr && v.cefr === conjugated.cefr) {
+            score += 1;
+          }
+          acc.push({ value, score });
+          return acc;
+        }, []);
+
+      const distractors = candidates
+        .sort(() => Math.random() - 0.5)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .map((c) => c.value);
+
+      setOptions([correctAnswer, ...distractors].sort(() => Math.random() - 0.5));
     };
 
-    if (correctAnswer) {
+    if (isAnswerAvailable && conjugated) {
       generateOptions();
     }
-  }, [correctAnswer, form]);
+  }, [correctAnswer, isAnswerAvailable, form, infinitive, conjugated]);
 
   const handleSubmit = useCallback((answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
@@ -209,7 +266,7 @@ export function PracticeCard({
           {/* Input Area */}
           {!showFeedback && (
             <div className="space-y-4">
-              {mode === 'typing' ? (
+              {effectiveMode === 'typing' ? (
                 <div className="space-y-4">
                   <Input
                     value={userAnswer}
