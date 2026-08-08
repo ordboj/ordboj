@@ -272,7 +272,7 @@ export default function Practice() {
           </div>
         </div>
 
-        <Progress value={progressPercent} className="h-3" />
+        <Progress value={progressPercent} className="h-3 bg-muted-foreground" />
         {sessionKind === 'free' && (
           <p className="text-xs text-center text-muted-foreground">
             Free practice — this round isn't saved to your progress
