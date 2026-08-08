@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useSettings } from '@/hooks/useSettings';
+import { useSettings, SETTINGS_STORAGE_VERSION } from '@/hooks/useSettings';
 
 const STORAGE_KEY = 'swedish-verbs-settings';
 
@@ -36,7 +36,12 @@ describe('persistence', () => {
 
     await waitFor(() => expect(result.current.settings.dailyGoal).toBe(5));
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored).toEqual({ ...DEFAULTS, dailyGoal: 5 });
+    // Writes go out in the versioned envelope as of #240. Still an exact
+    // whole-payload comparison, so an unexpected extra key still fails.
+    expect(stored).toEqual({
+      version: SETTINGS_STORAGE_VERSION,
+      settings: { ...DEFAULTS, dailyGoal: 5 },
+    });
   });
 
   it('merges a partial update onto the previous settings rather than replacing them', async () => {
@@ -112,8 +117,135 @@ describe('issue #92: interfaceLanguage removal', () => {
     // that was already loaded rides along - it is not the app writing a new
     // interfaceLanguage decision, just an untouched legacy value.
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.dailyGoal).toBe(42);
+    expect(stored.settings.dailyGoal).toBe(42);
+    expect(stored.settings.interfaceLanguage).toBe('sv');
     expect(Object.keys(DEFAULTS)).not.toContain('interfaceLanguage');
+  });
+});
+
+describe('#240: settings store versioning', () => {
+  it('upgrades a legacy bare object to the versioned envelope on first write, losing nothing', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        practiceMode: 'multiple-choice',
+        showExamples: true,
+        autoplayAudio: false,
+        muteAudio: true,
+        dailyGoal: 33,
+        cefrLevels: ['A2', 'B1'],
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // Read of the legacy shape is unchanged: nothing is migrated on load.
+    expect(localStorage.getItem(STORAGE_KEY) as string).not.toContain('"version"');
+    expect(result.current.settings).toEqual({
+      practiceMode: 'multiple-choice',
+      showExamples: true,
+      autoplayAudio: false,
+      muteAudio: true,
+      dailyGoal: 33,
+      cefrLevels: ['A2', 'B1'],
+    });
+
+    act(() => {
+      result.current.updateSettings({ muteAudio: false });
+    });
+    await waitFor(() => expect(result.current.settings.muteAudio).toBe(false));
+
+    // Every pre-existing choice survives the upgrade; only the edited field
+    // changed and the version marker appeared.
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) as string)).toEqual({
+      version: SETTINGS_STORAGE_VERSION,
+      settings: {
+        practiceMode: 'multiple-choice',
+        showExamples: true,
+        autoplayAudio: false,
+        muteAudio: false,
+        dailyGoal: 33,
+        cefrLevels: ['A2', 'B1'],
+      },
+    });
+  });
+
+  it('reads settings back out of the versioned envelope', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: SETTINGS_STORAGE_VERSION,
+        settings: { ...DEFAULTS, dailyGoal: 11, cefrLevels: ['C1'] },
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings).toEqual({ ...DEFAULTS, dailyGoal: 11, cefrLevels: ['C1'] });
+  });
+
+  it('round-trips: what updateSettings writes is what a fresh mount reads', async () => {
+    const first = renderHook(() => useSettings());
+    await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+    act(() => {
+      first.result.current.updateSettings({ dailyGoal: 8, showExamples: true });
+    });
+    await waitFor(() => expect(first.result.current.settings.dailyGoal).toBe(8));
+
+    const second = renderHook(() => useSettings());
+    await waitFor(() => expect(second.result.current.isLoading).toBe(false));
+    expect(second.result.current.settings).toEqual({
+      ...DEFAULTS,
+      dailyGoal: 8,
+      showExamples: true,
+    });
+  });
+
+  it('still applies the #137 empty-cefrLevels guard inside the envelope', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: SETTINGS_STORAGE_VERSION,
+        settings: { ...DEFAULTS, cefrLevels: [] },
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.cefrLevels).toEqual(DEFAULTS.cefrLevels);
+  });
+
+  it('reads what it can from an envelope written by a newer build rather than resetting', async () => {
+    // Preferences are cheap to re-pick, so a store from the future is read
+    // best-effort. (Progress does the opposite and refuses one outright —
+    // see useSrsProgress: a lost schedule cannot be re-picked from a menu.)
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: SETTINGS_STORAGE_VERSION + 99,
+        settings: { ...DEFAULTS, dailyGoal: 44, aSettingFromTheFuture: true },
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.dailyGoal).toBe(44);
+  });
+
+  it('falls back to defaults when the envelope has no usable settings object', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: SETTINGS_STORAGE_VERSION, settings: null }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings).toEqual(DEFAULTS);
   });
 });
 
