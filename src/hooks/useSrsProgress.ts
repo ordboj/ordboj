@@ -7,7 +7,7 @@ import {
   isSrsState,
   Grade,
 } from '@/lib/srs';
-import { getVerbs, Form, Verb, conjugateVerb } from '@/lib/verbs';
+import { getVerbs, getAllConjugatedVerbs, Form, Verb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -215,9 +215,16 @@ export function useSrsProgress(cefrLevels?: string[]) {
         ? allVerbs.filter((verb) => verb.cefr && cefrLevels.includes(verb.cefr))
         : allVerbs;
 
+    // Conjugate every verb once (O(V) total, no per-item scan of VERB_DATA
+    // by infinitive) and index the results by id, so the loop below is
+    // O(1) per verb instead of re-searching VERB_DATA for each one.
+    const allConjugated = await getAllConjugatedVerbs();
+    const conjugatedById = new Map(allConjugated.map((c) => [c.id, c]));
+
     // Check each verb's forms for availability
     for (const verb of verbs) {
-      const conjugated = await conjugateVerb(verb.infinitive);
+      const conjugated = conjugatedById.get(verb.id);
+      if (!conjugated) continue;
 
       for (const form of forms) {
         // Skip forms that are not available
