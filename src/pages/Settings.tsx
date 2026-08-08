@@ -1,11 +1,27 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Upload, Trash2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
@@ -15,7 +31,6 @@ export default function Settings() {
   const navigate = useNavigate();
   const { settings, updateSettings } = useSettings();
   const { exportData, importData, resetProgress } = useSrsProgress();
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleExport = () => {
     const data = exportData();
@@ -50,15 +65,9 @@ export default function Settings() {
     input.click();
   };
 
-  const handleReset = () => {
-    if (showResetConfirm) {
-      resetProgress();
-      toast.success('All progress has been reset');
-      setShowResetConfirm(false);
-    } else {
-      setShowResetConfirm(true);
-      setTimeout(() => setShowResetConfirm(false), 5000);
-    }
+  const handleConfirmReset = () => {
+    resetProgress();
+    toast.success('All progress has been reset');
   };
 
   return (
@@ -66,11 +75,7 @@ export default function Settings() {
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="gap-2"
-          >
+          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
@@ -88,7 +93,7 @@ export default function Settings() {
               <Label htmlFor="practice-mode">Practice Mode</Label>
               <Select
                 value={settings.practiceMode}
-                onValueChange={(value: 'typing' | 'multiple-choice') => 
+                onValueChange={(value: 'typing' | 'multiple-choice') =>
                   updateSettings({ practiceMode: value })
                 }
               >
@@ -131,7 +136,8 @@ export default function Settings() {
                       onCheckedChange={(checked) => {
                         const newLevels = checked
                           ? [...settings.cefrLevels, level]
-                          : settings.cefrLevels.filter(l => l !== level);
+                          : settings.cefrLevels.filter((l) => l !== level);
+                        if (newLevels.length === 0) return; // Prevent unselecting all
                         updateSettings({ cefrLevels: newLevels });
                       }}
                     />
@@ -145,7 +151,8 @@ export default function Settings() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                Select which difficulty levels you want to practice. At least one level must be selected.
+                Select which difficulty levels you want to practice. At least one level must be
+                selected.
               </p>
             </div>
           </CardContent>
@@ -158,37 +165,56 @@ export default function Settings() {
             <CardDescription>Backup and restore your progress</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2"
-              onClick={handleExport}
-            >
+            <Button variant="outline" className="w-full justify-start gap-2" onClick={handleExport}>
               <Download className="w-4 h-4" />
               Export Progress
             </Button>
 
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2"
-              onClick={handleImport}
-            >
+            <Button variant="outline" className="w-full justify-start gap-2" onClick={handleImport}>
               <Upload className="w-4 h-4" />
               Import Progress
             </Button>
 
-            <Button
-              variant="destructive"
-              className="w-full justify-start gap-2"
-              onClick={handleReset}
-            >
-              <Trash2 className="w-4 h-4" />
-              {showResetConfirm ? 'Click again to confirm reset' : 'Reset All Progress'}
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full justify-start gap-2">
+                  <Trash2 className="w-4 h-4" />
+                  Reset All Progress
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset all progress?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This deletes all practice progress on this device, and it cannot be undone.
+                    Export a backup first if you want to keep it.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                  onClick={handleExport}
+                >
+                  <Download className="w-4 h-4" />
+                  Export Progress
+                </Button>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={handleConfirmReset}
+                  >
+                    Reset All Progress
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          All data is stored locally on your device
+          Progress lives only in this browser's storage — clearing site data, switching browsers, or
+          a new device loses it for good. Export regularly to keep a backup.
         </p>
       </div>
     </div>

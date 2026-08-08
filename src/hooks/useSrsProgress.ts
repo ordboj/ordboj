@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { SrsState, initializeSrsState, calculateNextReview, isDue, Grade } from '@/lib/srs';
-import { getVerbs, Form, Verb, conjugateVerb } from '@/lib/verbs';
+import {
+  SrsState,
+  initializeSrsState,
+  calculateNextReview,
+  isDue,
+  isSrsState,
+  Grade,
+} from '@/lib/srs';
+import { getVerbs, getAllConjugatedVerbs, Form, Verb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -54,6 +61,77 @@ function parseStoredProgress(raw: string): Record<string, SrsState> {
   return rebaseLegacyEase(parsed as Record<string, SrsState>);
 }
 
+// Import is the only untrusted entry point into the store. Storage reads
+// stay permissive (whatever is at STORAGE_KEY is still the user's own
+// data), but an imported file is rejected outright unless every item
+// structurally matches SrsState, because the alternative — accepting a
+// settings export or an arbitrary JSON file — replaces irreplaceable
+// progress with nothing. Returns the migrated item map, or null if the
+// payload is not a progress backup this version can read.
+//
+// Version ladder:
+//   no version field -> legacy v1 bare map, ease rebase applied
+//   version 1         -> envelope form of v1, ease rebase applied
+//   version 2         -> current shape, taken as-is
+//   version > 2       -> written by a newer build; rejected rather than
+//                        guessed at, since the migration cannot be reasoned
+//                        about here. The user's current store is left alone.
+function parseImportedProgress(raw: string): Record<string, SrsState> | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return null;
+  }
+
+  const envelope = parsed as { version?: unknown; items?: unknown };
+  const unversioned = envelope.version === undefined;
+  let items: unknown;
+  let needsEaseRebase: boolean;
+
+  if (unversioned) {
+    items = parsed;
+    needsEaseRebase = true;
+  } else {
+    const version = envelope.version;
+    if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
+      return null;
+    }
+    if (version > STORAGE_VERSION) {
+      return null;
+    }
+    items = envelope.items;
+    needsEaseRebase = version < STORAGE_VERSION;
+  }
+
+  if (!items || typeof items !== 'object' || Array.isArray(items)) {
+    return null;
+  }
+
+  const entries = Object.entries(items as Record<string, unknown>);
+  // A versioned envelope with zero items is a legitimate "no progress yet"
+  // backup. A bare `{}` is indistinguishable from any other JSON object and
+  // is not accepted as one.
+  if (unversioned && entries.length === 0) {
+    return null;
+  }
+
+  const validated: Record<string, SrsState> = {};
+  for (const [itemId, state] of entries) {
+    // All-or-nothing: one malformed item rejects the whole file rather than
+    // silently importing a partial schedule the user cannot see is partial.
+    if (!isSrsState(state)) {
+      return null;
+    }
+    validated[itemId] = state;
+  }
+
+  return needsEaseRebase ? rebaseLegacyEase(validated) : validated;
+}
+
 export interface PracticeItem {
   verbId: string;
   infinitive: string;
@@ -61,6 +139,10 @@ export interface PracticeItem {
   itemId: string;
 }
 
+// `cefrLevels` filter semantics (see getDueItems below): `undefined` means
+// "no filter, all verbs in scope"; any array - including `[]` - is an
+// explicit selection and is honored exactly, so an empty selection matches
+// zero verbs rather than silently falling back to "all verbs".
 export function useSrsProgress(cefrLevels?: string[]) {
   const [srsStates, setSrsStates] = useState<Record<string, SrsState>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -131,15 +213,29 @@ export function useSrsProgress(cefrLevels?: string[]) {
 
     const allVerbs = await getVerbs();
 
-    // Filter verbs by CEFR level if specified
+    // CEFR filter semantics: `cefrLevels === undefined` means the caller did
+    // not opt into filtering at all, so every verb is in scope. Any array
+    // value, including an empty one, is the caller stating an explicit
+    // selection, and the result must respect exactly that selection - an
+    // empty array must yield zero verbs, never "no filter". Silently
+    // widening an empty selection back to "all verbs" is the bug this
+    // guards against (see issue #137): it would let a UI state that looks
+    // like "nothing selected" quietly practice the entire deck.
     const verbs =
-      cefrLevels && cefrLevels.length > 0
-        ? allVerbs.filter((verb) => verb.cefr && cefrLevels.includes(verb.cefr))
-        : allVerbs;
+      cefrLevels === undefined
+        ? allVerbs
+        : allVerbs.filter((verb) => verb.cefr && cefrLevels.includes(verb.cefr));
+
+    // Conjugate every verb once (O(V) total, no per-item scan of VERB_DATA
+    // by infinitive) and index the results by id, so the loop below is
+    // O(1) per verb instead of re-searching VERB_DATA for each one.
+    const allConjugated = await getAllConjugatedVerbs();
+    const conjugatedById = new Map(allConjugated.map((c) => [c.id, c]));
 
     // Check each verb's forms for availability
     for (const verb of verbs) {
-      const conjugated = await conjugateVerb(verb.infinitive);
+      const conjugated = conjugatedById.get(verb.id);
+      if (!conjugated) continue;
 
       for (const form of forms) {
         // Skip forms that are not available
@@ -191,16 +287,18 @@ export function useSrsProgress(cefrLevels?: string[]) {
   };
 
   // Accepts both versioned exports and legacy bare-map exports; legacy
-  // imports get the same one-time ease rebase as legacy storage.
+  // imports get the same one-time ease rebase as legacy storage. Anything
+  // that is not a structurally valid backup is rejected: false is returned
+  // (the Settings page raises the error toast) and neither the in-memory
+  // state nor localStorage is touched.
   const importData = (jsonString: string) => {
-    try {
-      const imported = parseStoredProgress(jsonString);
-      setSrsStates(imported);
-      return true;
-    } catch (e) {
-      console.error('Failed to import data', e);
+    const imported = parseImportedProgress(jsonString);
+    if (imported === null) {
+      console.error('Failed to import data: not a valid progress backup');
       return false;
     }
+    setSrsStates(imported);
+    return true;
   };
 
   // Reset all progress
