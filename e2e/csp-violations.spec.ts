@@ -19,7 +19,7 @@ import { buildSingleDueSeed, SRS_STORAGE_KEY } from './support/seed';
 // src/test/csp-meta.test.ts.
 const CSP_VIOLATION_PATTERN = /Content Security Policy|Refused to/i;
 
-const ITEM_ID = '1-presens'; // VERB_DATA[0] = vara, presens = "är"
+const ITEM_ID = 'vara-presens'; // VERB_DATA[0] = vara, presens = "är"
 const VERB = 'vara';
 const ANSWER = 'är';
 
