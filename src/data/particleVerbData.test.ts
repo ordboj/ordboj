@@ -41,23 +41,6 @@ describe('particle verb dataset - the verified gate', () => {
     expect(VERIFIED.length).toBeGreaterThanOrEqual(40);
   });
 
-  it('resolves every verified entry base verb in VERB_DATA', () => {
-    // The introduction gate joins on the base verb's conjugation progress.
-    // An unresolvable base is not a cosmetic defect: it is content no
-    // learner can ever reach, sitting in the dataset looking shipped.
-    const unresolvable = VERIFIED.filter((entry) => !BASE_INFINITIVES.has(entry.baseInfinitive));
-    expect(unresolvable.map((entry) => `${entry.id} -> ${entry.baseInfinitive}`)).toEqual([]);
-  });
-
-  it('marks every entry with an unresolvable base as unverified', () => {
-    // The contrapositive of the rule above, stated so that the fix for a
-    // missing base is never "quietly ship it anyway".
-    const wronglyVerified = PARTICLE_VERB_DATA.filter(
-      (entry) => !BASE_INFINITIVES.has(entry.baseInfinitive) && entry.verified,
-    );
-    expect(wronglyVerified.map((entry) => entry.id)).toEqual([]);
-  });
-
   it('gives every unverified entry a stated reason', () => {
     const unexplained = PARTICLE_VERB_DATA.filter(
       (entry) => !entry.verified && !entry.unverifiedReason?.trim(),
@@ -68,6 +51,50 @@ describe('particle verb dataset - the verified gate', () => {
   it('never exposes an unverified entry through the shipping accessor', () => {
     expect(getVerifiedParticleVerbs().every((entry) => entry.verified)).toBe(true);
     expect(getVerifiedParticleVerbs().length).toBe(VERIFIED.length);
+  });
+});
+
+describe('particle verb dataset - baseInfinitive format (#317)', () => {
+  // #317: VERB_DATA membership stopped being a validity constraint on
+  // baseInfinitive (that gate was already dead code after #315). What still
+  // matters is the field's own shape, since the 7-day same-base rule in
+  // particleQueue.ts joins entries to each other on this exact string, never
+  // on VERB_DATA. Every current entry proves every assertion below; a
+  // future authoring mistake reports here instead of only showing up as a
+  // silently disabled interference rule.
+  it('is non-empty, matches the lemma head, is NFC, and is one string per base', () => {
+    const untrimmed: string[] = [];
+    const detachedFromLemma: string[] = [];
+    const notNfc: string[] = [];
+    const groups = new Map<string, Set<string>>();
+
+    for (const entry of PARTICLE_VERB_DATA) {
+      const base = entry.baseInfinitive;
+
+      if (base.length === 0 || base !== base.trim()) {
+        untrimmed.push(entry.id);
+      }
+      if (entry.lemma.split(' ')[0] !== base) {
+        detachedFromLemma.push(`${entry.id}: lemma "${entry.lemma}" vs base "${base}"`);
+      }
+      if (base !== base.normalize('NFC')) {
+        notNfc.push(entry.id);
+      }
+
+      const key = base.normalize('NFC').toLowerCase();
+      const raw = groups.get(key) ?? new Set<string>();
+      raw.add(base);
+      groups.set(key, raw);
+    }
+
+    const inconsistentGroups = [...groups.entries()]
+      .filter(([, raw]) => raw.size > 1)
+      .map(([key, raw]) => `${key}: ${[...raw].join(' / ')}`);
+
+    expect(untrimmed).toEqual([]);
+    expect(detachedFromLemma).toEqual([]);
+    expect(notNfc).toEqual([]);
+    expect(inconsistentGroups).toEqual([]);
   });
 });
 
@@ -299,7 +326,10 @@ describe('particle verb dataset - embedded reference forms (#318)', () => {
       const base = VERB_DATA.find((verb) => verb.infinitive === entry.baseInfinitive);
       if (!entry.forms) continue;
       if (!base) {
-        drift.push(`${entry.id}: base "${entry.baseInfinitive}" is absent from VERB_DATA`);
+        // #317: an absent base is coverage, not drift. The embedded `forms`
+        // (#318) are the authoritative, linguist-verified strings; the
+        // VERB_DATA comparison below is an opportunistic cross-check that
+        // only applies where a base row exists.
         continue;
       }
       const tail = renderLemma(entry).slice(entry.baseInfinitive.length);
