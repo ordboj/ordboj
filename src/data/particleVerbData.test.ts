@@ -71,6 +71,37 @@ describe('particle verb dataset - the verified gate', () => {
   });
 });
 
+describe('particle verb dataset - #262 base verb unlock', () => {
+  // #262: stänga, sätta, stiga, hälsa, bygga, ställa were appended to
+  // VERB_DATA specifically to unlock these six particle verbs, which had
+  // been drafted verified:false because their base was unresolvable. Pins
+  // the acceptance criteria directly rather than relying only on the
+  // generic "every verified entry resolves" checks above, so a partial
+  // flip (e.g. one entry left at verified:false, or a base typo that
+  // happens to still resolve to some other row) reports by name.
+  const ISSUE_262_IDS = [
+    'pv:stanga-av',
+    'pv:satta-pa',
+    'pv:stiga-upp',
+    'pv:halsa-pa',
+    'pv:bygga-ut',
+    'pv:stalla-in',
+  ];
+
+  it('flips every #262 particle verb to verified, with a resolvable base and a second frame', () => {
+    for (const id of ISSUE_262_IDS) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      expect(found!.verified, `${id} is still not verified`).toBe(true);
+      expect(
+        BASE_INFINITIVES.has(found!.baseInfinitive),
+        `${id} base "${found!.baseInfinitive}" does not resolve in VERB_DATA`,
+      ).toBe(true);
+      expect(found!.examples.length, `${id} has fewer than two frames`).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
+
 describe('particle verb dataset - answers', () => {
   it('lists the entry particle first in acceptedParticles', () => {
     // What the card displays as the answer and what it grades against are

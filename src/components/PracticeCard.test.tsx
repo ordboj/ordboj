@@ -32,7 +32,7 @@ describe('PracticeCard - typing mode', () => {
     expect(heading.textContent).toBe('vara');
     expect(heading.textContent).not.toContain('_');
     expect(heading.textContent).not.toContain('–');
-    expect(screen.getByText(/Missing:/)).toHaveTextContent('Present');
+    expect(screen.getByText(/Missing:/)).toHaveTextContent('Presens');
 
     // The full pattern (with sibling forms) is a feedback-only reveal, never
     // shown while the learner is still trying to recall the answer.
@@ -920,6 +920,35 @@ describe("PracticeCard - lang='sv' on inline Swedish word display (issue #112 AC
   // be made fail-first without editing production code, which qa does not
   // own. See PR #199 review notes for the owner (frontend-expert) if that
   // conditional needs its own regression test later.
+});
+
+// Tickets #229/#44: getExampleSentence now returns null instead of a
+// "[Example with ...]" placeholder for verbs with no hand-written example.
+// Regression: the feedback screen must render nothing in that case, never
+// the literal placeholder text.
+describe('PracticeCard - no "[Example with ...]" placeholder (tickets #229/#44)', () => {
+  it('renders no example section at all for a verb with no hand-written example, even with showExamples on', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="tala"
+        form="presens"
+        mode="typing"
+        showExamples={true}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'talar');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    expect(screen.queryByText(/\[Example with/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Example:')).not.toBeInTheDocument();
+  });
 });
 
 describe('PracticeCard - empty imperativ', () => {
