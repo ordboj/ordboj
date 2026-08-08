@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import PracticeParticles from '@/pages/PracticeParticles';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
+import { FREE_PARTICLE_PRACTICE_SIZE } from '@/lib/particleQueue';
 import { findParticleVerb, getVerifiedParticleVerbs } from '@/lib/particleVerbs';
 import { verbs } from '@/lib/verbs';
 import { STORAGE_VERSION } from '@/hooks/useSrsProgress';
@@ -340,6 +341,46 @@ describe('particle practice flow', () => {
     // The whole point: a free round never writes, whatever else is in the
     // pool. The real schedule for the card just answered did not move.
     await waitFor(() => expect(JSON.stringify(storedItems()[clozeId])).toBe(before));
+  });
+
+  it('shows the free-practice completion message once the round is answered through', async () => {
+    // Regression: an earlier revision of this suite asserted this message
+    // right after one answer, back when the free pool held a single card.
+    // Issue #315 grew the pool to up to FREE_PARTICLE_PRACTICE_SIZE items, so
+    // that assertion was dropped rather than updated, leaving the string
+    // uncovered. This answers every card the round actually draws and checks
+    // the real completion screen it lands on.
+    const user = userEvent.setup();
+    const clozeId = particleItemId('pv:tycka-om', 'cloze');
+    const recallId = particleItemId('pv:tycka-om', 'recall');
+    seed({
+      ...readyBase('tycka'),
+      ...otherEntriesAlreadyIntroduced(['pv:tycka-om']),
+      [clozeId]: state(clozeId, { repetitions: 4, dueAt: NOW + 10 * DAY }),
+      [recallId]: state(recallId, { repetitions: 2, dueAt: NOW + 30 * DAY }),
+    });
+
+    renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+
+    const keepPractising = await screen.findByRole('button', { name: 'Keep practising' });
+    await waitFor(() => expect(keepPractising).toBeEnabled());
+    await user.click(keepPractising);
+
+    for (let cardIndex = 0; cardIndex < FREE_PARTICLE_PRACTICE_SIZE; cardIndex++) {
+      // Content does not matter here: a free round never grades, so a
+      // deliberately wrong answer exercises the same "advance" path as a
+      // right one without depending on each card's accepted answer.
+      await user.type(await screen.findByRole('textbox'), 'zzz');
+      const checkAnswer = screen.queryByRole('button', { name: 'Check Answer' });
+      if (checkAnswer) await user.click(checkAnswer);
+      await user.click(await screen.findByRole('button', { name: 'Next Card' }));
+    }
+
+    expect(
+      await screen.findByText(
+        "You've finished this free-practice round — nothing here was saved to your progress.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it('never puts both items of one verb in the same sitting', async () => {

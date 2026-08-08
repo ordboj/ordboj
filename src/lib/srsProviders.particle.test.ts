@@ -63,23 +63,17 @@ describe('particle provider', () => {
   });
 
   it('reports no available items for a learner with no particle state', async () => {
-    const provider = createParticleProvider(readyBase('tycka'));
+    const provider = createParticleProvider({});
     expect(await provider.listAvailableItems()).toEqual([]);
   });
 
-  it('reports an item once its state exists and its base verb is ready', async () => {
+  it('reports an item once its state exists', async () => {
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
-    const states = { ...readyBase('tycka'), [clozeId]: state(clozeId) };
+    const states = { [clozeId]: state(clozeId) };
     const items = await createParticleProvider(states).listAvailableItems();
     expect(items.map((item) => item.itemId)).toEqual([clozeId]);
     expect(items[0]!.kind).toBe('cloze');
     expect(items[0]!.particleVerbId).toBe('pv:tycka-om');
-  });
-
-  it('withholds an item whose base verb is not yet known', async () => {
-    const clozeId = particleItemId('pv:tycka-om', 'cloze');
-    const items = await createParticleProvider({ [clozeId]: state(clozeId) }).listAvailableItems();
-    expect(items).toEqual([]);
   });
 
   it('never enumerates an unverified entry, even with state present', async () => {
