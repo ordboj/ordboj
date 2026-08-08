@@ -303,6 +303,10 @@ serve the cloze and hold the recall to the next sitting.
 
 **3. Multiple choice gets weaker credit — but is not offered in v1.**
 
+Amended 2026-08-08 by #319 — a data-gated discrimination variant of the cloze
+item is approved for a later revision; see
+`docs/learning/2026-08-08-discrimination-exercise.md`.
+
 Not offered for particle items, because the typed answer is two to four characters
 and the mobile-friction argument that justifies multiple choice elsewhere (P11,
 P15 in [[2026-08-08-ux-pedagogy-red-lines]]) does not apply, and because safe
