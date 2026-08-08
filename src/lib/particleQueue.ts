@@ -1,6 +1,5 @@
 import { isDue, type SrsState } from '@/lib/srs';
-import { conjugationItemId, particleItemId } from '@/lib/itemIds';
-import { verbs } from '@/lib/verbs';
+import { particleItemId } from '@/lib/itemIds';
 import { getVerifiedParticleVerbs, hasRecallItem } from '@/lib/particleVerbs';
 import type { ParticleVerbData } from '@/data/particleVerbData';
 
@@ -21,10 +20,6 @@ export const REVIEWS_PER_NEW_CARD = 4;
 // this many times. Before that, a production prompt has nothing to retrieve
 // and degrades into a reveal.
 export const RECALL_UNLOCK_REPETITIONS = 2;
-
-// A particle verb is only introduced once its base verb is genuinely known:
-// this many correct answers on presens *and* preteritum.
-export const BASE_VERB_GATE_REPETITIONS = 2;
 
 // Items that must fall between a verb's introduction card and its first
 // cloze. Six is the preference; two is the floor, below which the pair is an
@@ -112,24 +107,6 @@ function fisherYates<T>(items: T[]): T[] {
   return copy;
 }
 
-const verbIdByInfinitive = new Map(verbs.map((verb) => [verb.infinitive, verb.id]));
-
-// The base verb must be known before its particle verb is introduced:
-// repetitions >= 2 on both presens and preteritum. A base that does not
-// resolve in VERB_DATA can never pass, which is why the dataset test refuses
-// to let a verified entry have one.
-export function isBaseVerbReady(
-  entry: ParticleVerbData,
-  srsStates: Record<string, SrsState>,
-): boolean {
-  const verbId = verbIdByInfinitive.get(entry.baseInfinitive);
-  if (!verbId) return false;
-  return (['presens', 'preteritum'] as const).every((form) => {
-    const state = srsStates[conjugationItemId(verbId, form)];
-    return (state?.repetitions ?? 0) >= BASE_VERB_GATE_REPETITIONS;
-  });
-}
-
 // "Never introduce two particle verbs sharing a base verb within a week"
 // (semantic-set interference; bygga upp / bygga ut is the case it guards).
 //
@@ -169,8 +146,10 @@ export function buildParticleSitting({
   shuffle = fisherYates,
   entries = getVerifiedParticleVerbs(),
 }: BuildOptions): ParticleSitting {
-  const eligible = entries.filter((entry) => isBaseVerbReady(entry, srsStates));
-
+  // Due reviews are never gated on the conjugation store: once an item has
+  // been introduced, its schedule is the only thing that decides whether it
+  // is due. See docs/superpowers/specs/2026-08-08-partikelverb-design.md.
+  //
   // --- due reviews -------------------------------------------------------
   // The two items of one verb never share a sitting: the cloze feedback
   // screen shows the phrase in full, so a recall card later in the same
@@ -178,7 +157,7 @@ export function buildParticleSitting({
   // learner did not earn. When both are due, the cloze wins and the recall
   // waits for the next sitting.
   const dueCards: Array<{ card: ParticleSittingCard; dueAt: number }> = [];
-  for (const entry of eligible) {
+  for (const entry of entries) {
     const clozeId = particleItemId(entry.id, 'cloze');
     const clozeState = srsStates[clozeId];
     if (clozeState && isDue(clozeState, now)) {
@@ -215,7 +194,7 @@ export function buildParticleSitting({
   let remaining = newAllowedToday;
 
   const recallUnlocks: ParticleSittingCard[] = [];
-  for (const entry of eligible) {
+  for (const entry of entries) {
     if (remaining <= 0) break;
     if (!hasRecallItem(entry)) continue;
     const recallId = particleItemId(entry.id, 'recall');
@@ -231,7 +210,7 @@ export function buildParticleSitting({
 
   const introductions: ParticleSittingCard[] = [];
   const newPerParticle = new Map<string, number>();
-  for (const entry of eligible) {
+  for (const entry of entries) {
     if (remaining <= 0) break;
     if (srsStates[particleItemId(entry.id, 'cloze')]) continue;
     if (isBaseRecentlyUsed(entry, srsStates, entries)) continue;
