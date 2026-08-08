@@ -74,7 +74,7 @@ example sentences contain commas.
 export interface ParticleVerbData {
   id: string; // "pv:hora-av-sig" — ASCII-folded slug, stable, never positional
   cefr: 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
-  baseInfinitive: string; // "höra" — MUST resolve in VERB_DATA (eligibility gate joins on it in v1)
+  baseInfinitive: string; // "höra" — MUST resolve in VERB_DATA (display and data-integrity only)
   particle: string; // "av" — the cloze answer
   reflexive: 'none' | 'beforeParticle' | 'afterParticle';
   lemma: string; // "höra av {refl}" — placeholder, never literal "sig"
@@ -105,8 +105,7 @@ Key constraints:
 - Glosses must be narrow enough to select one phrase for recall, or the recall
   item carries `acceptedRecall`.
 - Every `baseInfinitive` MUST resolve to a VERB_DATA verb — enforced by a
-  build-time/test assertion, so a miss is a data defect, not a silently
-  unsatisfiable eligibility gate (dead content).
+  test assertion, so a miss is a data defect rather than an orphaned entry.
 - **CEFR bands come from SVALex** (CEFRLex project, UCLouvain/Språkbanken —
   graded lexicon derived from 12 CEFR-graded Swedish coursebooks incl.
   Rivstart; 429 verb+particle combinations, A1: 25 / A2: 70 / B1: 122 /
