@@ -36,12 +36,15 @@ Counted directly from `public/data/swedish_verbs.csv` (1537 data rows) and
 `src/data/verbData.ts` (~50 rows, the only table that ships — the CSV is
 read by tests, not by the app):
 
-- **7 annotated lemmas** (CSV lines 12, 18, 78, 133, 217, 679, 799):
+- **7 annotated lemmas, plus one further parenthetical lemma handled
+  separately** (CSV lines 12, 18, 78, 133, 217, 679, 799):
   `ta (el. taga)`, `ge (formellt giva)`, `fungera (vardagl. funka)`,
   `be (el. bedja)`, `jämföra (förk. jfr)`, `klä (el. kläda)`,
   `fotografera (vardagl. fota)`. `verbData.ts` already stripped two of them
   silently (`ta`, `ge`), so CSV and TS disagree on the exact string #8 wants
-  as the id.
+  as the id. An eighth row carries parentheses in the lemma without being an
+  annotation: CSV line 1482, `betyg(s)sätta`. It is handled by C2b, not by
+  the note rule.
 - **15 reflexive lemmas** (CSV lines 20, 82, 286, 393, 509, 524, 566, 577,
   579, 640, 668, 854, 914, 924, 926): `te sig`, `åta sig`, `bry sig`,
   `närma sig`, `lämpa sig`, `bege sig`, `förhålla sig`, `bete sig`,
@@ -55,13 +58,16 @@ read by tests, not by the app):
   `mala` (CSV line 1326) carries no slash today but belongs to the same
   family; if the linguist adds its documented alternates, the same rules
   apply.
+- **One shipped accepted set the CSV does not encode:** `lägga` (CSV line 40) stores preteritum `la` with no slash, while `src/data/verbData.ts`
+  ships `alternates: { preteritum: ["lade"] }`. Under C4 the CSV cell must
+  become `la/lade`. The sync is therefore two-way, not CSV-to-TS only.
 
 The machinery for alternates already exists and is not re-decided here:
 `alternates` on `VerbData`, `getAcceptedAnswers` / `isAcceptedAnswer` /
 `getAlternatesDisclosure` in `src/lib/verbs.ts`, and policies P1–P9 in the
-#123 decision doc. `säga` (sa/sade) already ships under it. This ruling
-extends that mechanism to the remaining rows and settles the questions #123
-left open.
+#123 decision doc. `säga` (sa/sade) and `lägga` (la/lade) already ship under
+it. This ruling extends that mechanism to the remaining rows and settles the
+questions #123 left open.
 
 ## 2. C1–C2 — Lemma column and the `note` field
 
@@ -97,6 +103,19 @@ Rules:
   #125 audit family, not to this ticket — the linguist should report it to
   the lead, not fix it here.)
 
+**C2b — Orthographic doublets in the lemma (`betyg(s)sätta`).** The `(s)` is
+not editorial prose and not an archaic variant: `betygssätta` and
+`betygsätta` are both current standard spellings, so the C2 recognition-only
+rule must not be applied to either. C1 still holds — the cell carries one
+spelling with no parentheses. `swedish-linguist` picks the primary spelling
+against SAOL and records the rejected spelling in `note` for display only,
+with an explicit source comment stating that the note here marks a spelling
+doublet and not an archaism. The app cannot accept both, because
+`getAcceptedAnswers` and `getAlternateForms` in `src/lib/verbs.ts` both
+return early for `form === 'infinitive'` and alternates are not modeled for
+the dictionary form (#123). Widening the accepted set to cover infinitive
+doublets is out of scope here and belongs to #257 if it is ever wanted.
+
 ## 3. C3 — Reflexives
 
 - The 15 lemmas keep `sig`: lemma `bry sig`, presens `bryr sig`, and so on
@@ -122,7 +141,14 @@ first token is the primary. The TS importer (and the linguist's manual sync
 for the ~50 shipped rows) maps the first token to the plain field and the
 rest into `alternates`. The infinitive column never carries a slash (C1).
 Prose in any cell — `(el. …)`, `(vardagl. …)` — is banned everywhere; only
-the `note` column holds prose.
+the `note` column holds prose. Parentheses that mark an optional letter
+rather than prose (CSV line 691 `gläd(i)er`, CSV line 1300 `anförtro(r)`)
+have no encoding under C4 and must not be invented here. Both rows are
+unshipped. `swedish-linguist` reports them to the lead for the #125 audit
+family; if a row like this is ever promoted into `VERB_DATA`, it must first
+be rewritten as either a single form or a `/` accepted set under C4.
+`gläd(i)er` in particular looks like a typo for the glädjer/gläder doublet
+and must be verified against SAOL, never guessed.
 
 **C5 — Grading rule (the acceptance criterion of #43).** Every form in a
 row's accepted set earns **full credit, grade 5**, indistinguishable from
@@ -200,11 +226,14 @@ becomes the shipping source under #257.
 ## 6. Acceptance checks for the implementing PR
 
 1. No cell in the infinitive column of CSV or TS contains `(`, `)` or `/`.
+   This includes CSV line 1482 (`betyg(s)sätta`), resolved under C2b.
 2. The 15 reflexive lemmas are unchanged and carry `sig` in every non-empty
    stored form; any stored reflexive imperativ uses `dig`.
 3. Every slash cell parses as `form(/form)+` with no spaces; the TS row for
    each shipped slash verb has the first token as its field value and the
-   verified remainder in `alternates`.
+   verified remainder in `alternates`; and, in the other direction, every
+   `alternates` entry in `VERB_DATA` has a matching `/` cell in the CSV row
+   for that lemma (today `lägga` preteritum fails this).
 4. For each of the 9 rows + `mala`: a source comment naming the category
    (free variant / sense-conditioned / archaic-dropped) per form.
 5. Typing any accepted alternate for a shipped row grades correct with
@@ -217,8 +246,8 @@ becomes the shipping source under #257.
 
 ## 7. Out of scope
 
-- Fixing suspect conjugations in unshipped CSV rows (`jämförar` etc.) —
-  #125 audit family.
+- Fixing suspect conjugations in unshipped CSV rows (`jämförar`,
+  `gläd(i)er`, `anförtro(r)`) — #125 audit family.
 - CSV→TS sync and content growth — #257.
 - Sense-discrimination exercises (a card that _does_ give sentence context
   and grades the sense-appropriate form) — a real future idea; file it as
