@@ -6,7 +6,8 @@ column becomes the identity key, so it must be clean before #8 starts.
 
 ## 0. Decision
 
-Three rulings, stated fully in sections 2–4:
+Three rulings, stated fully in sections 2–4, plus C2b for the one
+orthographic doublet:
 
 1. **One clean lemma per row.** The infinitive column carries exactly one
    citation form: no parentheses, no slashes, no editorial prose. The seven
@@ -32,7 +33,7 @@ data only, and the cleanup must not insert, delete or reorder rows in
 
 ## 1. The data as it stands
 
-Counted directly from `public/data/swedish_verbs.csv` (1537 data rows) and
+Counted directly from `public/data/swedish_verbs.csv` (1538 data rows) and
 `src/data/verbData.ts` (~50 rows, the only table that ships — the CSV is
 read by tests, not by the app):
 
@@ -58,9 +59,11 @@ read by tests, not by the app):
   `mala` (CSV line 1326) carries no slash today but belongs to the same
   family; if the linguist adds its documented alternates, the same rules
   apply.
-- **One shipped accepted set the CSV does not encode:** `lägga` (CSV line 40) stores preteritum `la` with no slash, while `src/data/verbData.ts`
-  ships `alternates: { preteritum: ["lade"] }`. Under C4 the CSV cell must
-  become `la/lade`. The sync is therefore two-way, not CSV-to-TS only.
+- **One shipped accepted set the CSV does not encode:** `lägga` (CSV
+  line 40) stores preteritum `la` with no slash, while
+  `src/data/verbData.ts` ships `alternates: { preteritum: ["lade"] }`.
+  Under C4 the CSV cell must become `la/lade`. The sync is therefore
+  two-way, not CSV-to-TS only.
 
 The machinery for alternates already exists and is not re-decided here:
 `alternates` on `VerbData`, `getAcceptedAnswers` / `isAcceptedAnswer` /
@@ -104,17 +107,25 @@ Rules:
   the lead, not fix it here.)
 
 **C2b — Orthographic doublets in the lemma (`betyg(s)sätta`).** The `(s)` is
-not editorial prose and not an archaic variant: `betygssätta` and
-`betygsätta` are both current standard spellings, so the C2 recognition-only
-rule must not be applied to either. C1 still holds — the cell carries one
-spelling with no parentheses. `swedish-linguist` picks the primary spelling
-against SAOL and records the rejected spelling in `note` for display only,
-with an explicit source comment stating that the note here marks a spelling
-doublet and not an archaism. The app cannot accept both, because
-`getAcceptedAnswers` and `getAlternateForms` in `src/lib/verbs.ts` both
-return early for `form === 'infinitive'` and alternates are not modeled for
-the dictionary form (#123). Widening the accepted set to cover infinitive
-doublets is out of scope here and belongs to #257 if it is ever wanted.
+not editorial prose; it marks an orthographic variation, not necessarily an
+archaic one. C1 still holds — the cell carries one spelling with no
+parentheses. `swedish-linguist` checks both `betygssätta` and `betygsätta`
+against SAOL. **Only if both are listed as current standard spellings** does
+the linguist pick the primary and record the rejected spelling in `note` for
+display only, with an explicit source comment stating that the note marks a
+spelling doublet and not an archaism — the ordinary C2 recognition-only rule
+must not be applied in that case. **If SAOL lists one spelling as archaic or
+non-standard**, that spelling is not a doublet at all, and the ordinary C2
+rule applies instead: the non-standard form goes to `note` as a recognition-
+only archaic variant, same as `taga`/`giva`/`bedja`/`kläda`. The chosen lemma
+spelling must match the row's own conjugation cells (line 1482 stores
+`betygsätter`/`betygsatte`/`betygsatt` today); if the linguist makes the
+double-s spelling primary, the paradigm cells change with it. The app cannot
+accept both spellings as answers either way, because `getAcceptedAnswers` and
+`getAlternateForms` in `src/lib/verbs.ts` both return early for
+`form === 'infinitive'` and alternates are not modeled for the dictionary
+form (#123). Widening the accepted set to cover infinitive doublets is out
+of scope here and belongs to #257 if it is ever wanted.
 
 ## 3. C3 — Reflexives
 
@@ -124,7 +135,13 @@ doublets is out of scope here and belongs to #257 if it is ever wanted.
 - **Grading:** `sig` is part of every accepted answer. An answer missing
   `sig` is incorrect — it is a different or incomplete lexeme, and P2
   normalization (`.toLowerCase().trim()`, nothing more) already gives this
-  for free. Do not add whitespace-collapsing: `brysig` is wrong.
+  for free. An answer with no space at all (`brysig`) is wrong because it is
+  not the lemma — it has merged two words into one that does not exist.
+  Whether runs of internal whitespace should collapse (`bry  sig` with a
+  double space) is a separate question that #123 P2 did not settle, and this
+  ruling does not change it either way; do not read the `brysig` example as
+  settling it, since collapsing `\s+` to a single space would still reject
+  `brysig`.
 - **Imperativ:** the reflexive pronoun shifts to the second person in
   commands, so a stored imperativ for these verbs uses `dig`, never `sig`.
   Whether a given reflexive has a natural imperative at all is a per-verb
@@ -214,12 +231,18 @@ becomes the shipping source under #257.
 
 1. This ruling merges (learning-designer, this doc).
 2. `swedish-linguist` implements #43 in `public/data/swedish_verbs.csv`,
-   `src/data/verbData.ts`, `src/lib/verbs.ts`: C1 lemma cleanup (7 rows +
-   TS audit), `note` column/field, C3 reflexive audit, C5 classification of
-   the 9 slash rows + `mala`, C6 primaries, C6a notes. No row
-   insert/delete/reorder in `VERB_DATA`.
-3. `qa` updates the CSV-reading tests for the new column and adds the
-   checks in section 6.
+   `src/data/verbData.ts`, `src/lib/verbs.ts`: C1 lemma cleanup (7 annotated
+   rows + `betyg(s)sätta` under C2b + TS audit), `note` column/field, C3
+   reflexive audit, C5 classification of the 9 slash rows + `mala`, C6
+   primaries, C6a notes. No row insert/delete/reorder in `VERB_DATA`.
+   (tracked as #279)
+3. `qa` updates the CSV-reading tests for the new column; `swedish-linguist`
+   confirms `scripts/validate-verb-forms.mjs` still passes (`note` is not in
+   `FORM_FIELDS`, so it is not char-validated, and the header-derived
+   field-count check absorbs the extra column). A `note` containing a comma
+   must be double-quoted per RFC 4180; the validator's splitter handles
+   quotes, the bare-comma parser in `src/data/verbData.test.ts` does not.
+   `qa` also adds the checks in section 6.
 4. Only then does #8 flip ids to the (now clean and CSV/TS-agreed) lemma
    strings.
 
@@ -243,6 +266,11 @@ becomes the shipping source under #257.
 7. `taga`, `giva`, `funka`-forms and other note-only variants grade
    incorrect.
 8. `VERB_DATA` row order and length are unchanged (id stability until #8).
+9. Line 1482's lemma spelling and its presens/preteritum/supinum cells use
+   the same compound form.
+10. After the C1 cleanup, every lemma in the CSV infinitive column is
+    unique, and every `VERB_DATA.infinitive` is unique — the #8 id depends
+    on it.
 
 ## 7. Out of scope
 
