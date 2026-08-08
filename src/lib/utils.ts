@@ -34,13 +34,37 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
+ * A module that fetched fine but threw while evaluating is a code bug, not
+ * a chunk-load failure: reloading just reproduces it. Only failures that
+ * look like a failed fetch/network problem loading the chunk itself get
+ * the reload path. "network" is included alongside the browser-specific
+ * dynamic-import failure phrasings because a flaky connection dropping
+ * mid-fetch is exactly the transient case retryImport() exists to recover
+ * from, and it does not always surface with the word "chunk" or "fetch"
+ * in its message.
+ */
+function isChunkFetchFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return true;
+  return /(failed to fetch|dynamically imported module|error loading|importing a module script failed|chunk|network)/i.test(
+    error.message,
+  );
+}
+
+/**
  * Retries a route chunk's dynamic import with backoff before ever handing
- * a rejected promise to React.lazy(). This recovers a transient chunk-load
- * failure (flaky network) automatically, without the user ever seeing a
- * crash. If every retry still fails - most likely a stale client asking
- * for a chunk hash a fresh deploy has already removed from the server -
- * the final rejection is wrapped in ChunkLoadError so the caller's
- * fallback can offer a full reload instead of a useless soft retry.
+ * a rejected promise to React.lazy(). This can recover a transient
+ * chunk-load failure automatically. Note that native ESM records a failed
+ * module fetch in the module map keyed on URL, so a retry of the same
+ * specifier may replay the cached failure without re-fetching; the
+ * reliable recovery for a genuinely unavailable chunk is the full reload
+ * in RouteChunk. If every retry still fails - most likely a stale client
+ * asking for a chunk hash a fresh deploy has already removed from the
+ * server - the final rejection is wrapped in ChunkLoadError so the
+ * caller's fallback can offer a full reload instead of a useless soft
+ * retry. An error that is not itself a fetch failure (e.g. the module
+ * evaluated but threw) is not retried and is not wrapped: it propagates
+ * as-is so the caller's ordinary soft reset applies instead of a reload
+ * loop that would just reproduce the same code bug.
  */
 async function retryImport<T>(
   importFn: () => Promise<T>,
@@ -50,7 +74,8 @@ async function retryImport<T>(
   try {
     return await importFn();
   } catch (error) {
-    if (retriesLeft <= 0) throw new ChunkLoadError(error);
+    if (!isChunkFetchFailure(error)) throw error;
+    if (retriesLeft <= 0) throw isChunkFetchFailure(error) ? new ChunkLoadError(error) : error;
     await delay(delayMs);
     return retryImport(importFn, retriesLeft - 1, delayMs * 2);
   }
