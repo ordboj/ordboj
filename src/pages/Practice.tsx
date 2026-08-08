@@ -2,11 +2,18 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, DoorOpen, Volume2, VolumeX } from 'lucide-react';
 import { PracticeCard } from '@/components/PracticeCard';
 import { useSrsProgress, type PracticeItem } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { Grade } from '@/lib/srs';
+
+// A sitting is a bounded run of cards, not the whole due queue: 15 items,
+// then a stopping point offered as a door (one tap continues, one tap
+// stops), never enforced as a wall. See
+// docs/learning/session-shape-and-daily-goal.md.
+const SITTING_SIZE = 15;
 
 export default function Practice() {
   const navigate = useNavigate();
@@ -16,6 +23,7 @@ export default function Practice() {
   const [dueItems, setDueItems] = useState<PracticeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [practiceComplete, setPracticeComplete] = useState(false);
+  const [atSittingDoor, setAtSittingDoor] = useState(false);
 
   useEffect(() => {
     const loadDueItems = async () => {
@@ -34,14 +42,21 @@ export default function Practice() {
     const currentItem = dueItems[currentIndex];
     recordAnswer(currentItem.itemId, grade);
 
-    if (currentIndex < dueItems.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= dueItems.length) {
       setPracticeComplete(true);
+    } else if (nextIndex % SITTING_SIZE === 0) {
+      setCurrentIndex(nextIndex);
+      setAtSittingDoor(true);
+    } else {
+      setCurrentIndex(nextIndex);
     }
   };
 
-  const progressPercent = dueItems.length > 0 ? ((currentIndex + 1) / dueItems.length) * 100 : 100;
+  const sittingStart = Math.floor(currentIndex / SITTING_SIZE) * SITTING_SIZE;
+  const sittingSize = Math.min(SITTING_SIZE, dueItems.length - sittingStart);
+  const positionInSitting = currentIndex - sittingStart + 1;
+  const progressPercent = sittingSize > 0 ? (positionInSitting / sittingSize) * 100 : 100;
 
   if (isLoading || settingsLoading) {
     return (
@@ -67,6 +82,41 @@ export default function Practice() {
     );
   }
 
+  if (atSittingDoor && dueItems[currentIndex]) {
+    const remaining = dueItems.length - currentIndex;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center space-y-2">
+            <DoorOpen className="w-10 h-10 mx-auto text-muted-foreground" aria-hidden="true" />
+            <CardTitle className="text-2xl">Stopping point</CardTitle>
+            <CardDescription className="text-base">
+              You've done {SITTING_SIZE} this sitting. Keep going or stop here — both are a fine
+              choice.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <Button
+              onClick={() => setAtSittingDoor(false)}
+              size="lg"
+              className="w-full text-lg py-6"
+            >
+              Keep going ({remaining} more due)
+            </Button>
+            <Button
+              onClick={() => navigate('/')}
+              variant="outline"
+              size="lg"
+              className="w-full text-lg py-6"
+            >
+              Done for now
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (dueItems.length === 0 || !dueItems[currentIndex]) {
     return null;
   }
@@ -84,7 +134,7 @@ export default function Practice() {
           </Button>
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-muted-foreground">
-              {currentIndex + 1} / {dueItems.length}
+              {positionInSitting} / {sittingSize}
             </span>
             <Button
               variant="outline"
