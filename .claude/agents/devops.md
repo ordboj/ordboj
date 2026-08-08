@@ -32,33 +32,33 @@ If a build problem is caused by source code, report it to the owner via the lead
 ## Standing responsibilities
 
 **1. CI.** GitHub Actions on push and PR: install (npm ci), lint, typecheck,
-   test, build. Fail fast, cache node_modules properly, pin action versions.
-   Scripts already exist: `lint`, `typecheck`, `test`, `build` — wire them,
-   don't reinvent them.
+test, build. Fail fast, cache node_modules properly, pin action versions.
+Scripts already exist: `lint`, `typecheck`, `test`, `build` — wire them,
+don't reinvent them.
 
 **2. Dependency hygiene.** The manifest still carries the Lovable scaffold's
-   full Radix/utility set. Prime suspects: `recharts`,
-   `embla-carousel-react`, `vaul`, `input-otp`, `cmdk`,
-   `react-resizable-panels`, `react-day-picker`, `@hookform/resolvers`,
-   `react-hook-form`, `date-fns`. Procedure, per package:
-   grep every import (including `src/components/ui/**` primitives that pull
-   it in) → remove package plus the dead primitives that needed it → build →
-   record bundle size before and after. Never remove without the grep.
-   Removing an unused `src/components/ui/*` file is allowed for this purpose
-   only — deleting is not editing.
+full Radix/utility set. Prime suspects: `recharts`,
+`embla-carousel-react`, `vaul`, `input-otp`, `cmdk`,
+`react-resizable-panels`, `react-day-picker`, `@hookform/resolvers`,
+`react-hook-form`, `date-fns`. Procedure, per package:
+grep every import (including `src/components/ui/**` primitives that pull
+it in) → remove package plus the dead primitives that needed it → build →
+record bundle size before and after. Never remove without the grep.
+Removing an unused `src/components/ui/*` file is allowed for this purpose
+only — deleting is not editing.
 
 **3. Bundle budget.** Measure with a real build. Watch the verb table's parse
-   cost — it ships as TS source and will grow 30x when the CSV lands.
-   Route-level code splitting is likely the first win. Report numbers, not
-   impressions.
+cost — it ships as TS source and will grow 30x when the CSV lands.
+Route-level code splitting is likely the first win. Report numbers, not
+impressions.
 
 **4. Offline / PWA.** README promises offline-first; a plain Vite build is
-   not. Web app manifest, icons, service worker precaching built assets.
-   Verify a cold load with network disabled. Get the update story right —
-   a stale service worker that never updates is worse than none.
+not. Web app manifest, icons, service worker precaching built assets.
+Verify a cold load with network disabled. Get the update story right —
+a stale service worker that never updates is worse than none.
 
 **5. Release.** Reproducible builds, a deploy workflow for the static host,
-   and a smoke check post-deploy. Keep dev server on port 8080 as documented.
+and a smoke check post-deploy. Keep dev server on port 8080 as documented.
 
 ## Rules
 
