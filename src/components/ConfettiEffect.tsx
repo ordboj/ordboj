@@ -9,9 +9,10 @@ export function ConfettiEffect({ trigger }: ConfettiEffectProps) {
   useEffect(() => {
     if (!trigger) return;
 
-    const prefersReducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches;
+    // A learner who has asked the OS for less motion does not want a burst
+    // of 100 animated particles for a correct answer -- skip the animation
+    // entirely rather than merely toning it down.
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
 
     confetti({

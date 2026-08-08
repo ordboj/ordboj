@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
+import { getVerbs, getAllConjugatedVerbs, conjugateVerb } from '@/lib/verbs';
 import type { ConjugatedVerb, Verb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
@@ -55,6 +56,11 @@ vi.mock('@/lib/verbs', async (importOriginal) => {
         }
       );
     }),
+    // getDueItems (src/hooks/useSrsProgress.ts) calls this bulk entry point
+    // instead of per-verb conjugateVerb (see #56); it must agree with
+    // FIXTURE_CONJUGATIONS or this mock silently falls through to the real
+    // ~50-verb VERB_DATA table and the fixture-based assertions below break.
+    getAllConjugatedVerbs: vi.fn(async () => Object.values(FIXTURE_CONJUGATIONS)),
   };
 });
 
@@ -109,7 +115,7 @@ describe('persistence - the irreplaceable-progress invariant', () => {
     act(() => {
       first.result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(first.result.current.srsStates['1-presens'].repetitions).toBe(1));
+    await waitFor(() => expect(first.result.current.srsStates['1-presens']!.repetitions).toBe(1));
 
     const stored = localStorage.getItem(STORAGE_KEY);
     expect(stored).not.toBeNull();
@@ -142,7 +148,7 @@ describe('recordAnswer', () => {
     act(() => {
       result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(1));
 
     const after = await result.current.getDueItems();
     expect(after.map((i) => i.itemId)).not.toContain('1-presens');
@@ -183,6 +189,33 @@ describe('getDueItems filtering', () => {
     const second = await result.current.getDueItems();
     expect(first.map((i) => i.itemId)).toEqual(second.map((i) => i.itemId));
   });
+
+  // Regression test for issue #137: an explicit empty cefrLevels selection
+  // must never be silently widened back to "no filter = every verb". The
+  // two calls below are the entire contract: `undefined` (caller did not
+  // opt in to filtering) means "all verbs in scope", while `[]` (caller
+  // explicitly selected nothing) means zero verbs in scope. These are
+  // deliberately different outcomes for what a naive `cefrLevels?.length`
+  // check would treat identically.
+  it('issue #137: treats an explicit empty cefrLevels array as "match nothing", not as "no filter"', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    const noFilter = renderHook(() => useSrsProgress(undefined));
+    await waitFor(() => expect(noFilter.result.current.isLoading).toBe(false));
+    const dueWithNoFilter = await noFilter.result.current.getDueItems();
+    // Sanity check: with no filter argument at all, verbs from both CEFR
+    // levels in the fixture are in scope.
+    expect(dueWithNoFilter.some((item) => item.verbId === '1')).toBe(true);
+    expect(dueWithNoFilter.some((item) => item.verbId === '2')).toBe(true);
+
+    const emptyFilter = renderHook(() => useSrsProgress([]));
+    await waitFor(() => expect(emptyFilter.result.current.isLoading).toBe(false));
+    const dueWithEmptyFilter = await emptyFilter.result.current.getDueItems();
+
+    // The bug this guards against: an empty array silently falling back to
+    // "all verbs" (i.e. behaving like the `undefined` case above).
+    expect(dueWithEmptyFilter).toEqual([]);
+  });
 });
 
 describe('corrupt localStorage', () => {
@@ -204,7 +237,7 @@ describe('importData', () => {
     act(() => {
       result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(1));
 
     const snapshot = JSON.parse(JSON.stringify(result.current.srsStates));
 
@@ -264,9 +297,9 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.srsStates['1-presens'].easeFactor).toBe(1.8);
-    expect(result.current.srsStates['1-presens'].repetitions).toBe(3); // other fields carried through unchanged
-    expect(result.current.srsStates['1-preteritum'].easeFactor).toBe(1.3); // repetitions < 2: not rebased
+    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
+    expect(result.current.srsStates['1-presens']!.repetitions).toBe(3); // other fields carried through unchanged
+    expect(result.current.srsStates['1-preteritum']!.easeFactor).toBe(1.3); // repetitions < 2: not rebased
   });
 
   it('does not lower an already-higher easeFactor when rebasing', async () => {
@@ -284,7 +317,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.srsStates['1-presens'].easeFactor).toBe(2.4);
+    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(2.4);
   });
 
   it('persists the migration as a version 2 envelope and does not re-rebase an already-versioned payload on remount (one-shot)', async () => {
@@ -301,7 +334,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
 
     const first = renderHook(() => useSrsProgress());
     await waitFor(() => expect(first.result.current.isLoading).toBe(false));
-    expect(first.result.current.srsStates['1-presens'].easeFactor).toBe(1.8);
+    expect(first.result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
     first.unmount();
 
     const storedAfterFirst = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
@@ -317,7 +350,72 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
 
     const second = renderHook(() => useSrsProgress());
     await waitFor(() => expect(second.result.current.isLoading).toBe(false));
-    expect(second.result.current.srsStates['1-presens'].easeFactor).toBe(1.3);
+    expect(second.result.current.srsStates['1-presens']!.easeFactor).toBe(1.3);
+  });
+});
+
+// Integration-level proof (issue #11) that the hook's getDueItems - and
+// therefore Home.tsx's dueCount, which is just getDueItems().length - picks
+// up srs.ts's local-end-of-day isDue boundary rather than some independent
+// (and possibly stale) comparison. isDue is unit-tested in isolation in
+// srs.test.ts; this exercises the real load -> getDueItems path through
+// localStorage so a regression where the hook stopped calling isDue (or
+// wrapped it with its own now/boundary logic) would show up here too.
+describe('getDueItems - local day boundary (issue #11)', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'Europe/Stockholm';
+  });
+
+  afterEach(() => {
+    // Assigning undefined would store the literal string "undefined" as
+    // the timezone; delete the key instead.
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
+  });
+
+  it('includes an item due later the same local day and excludes one due at the start of the next local day', async () => {
+    const now = new Date(2026, 0, 15, 10, 0, 0, 0).getTime(); // Jan 15, 2026 10:00 local
+    vi.setSystemTime(now);
+
+    const dueLaterToday = new Date(2026, 0, 15, 22, 0, 0, 0).getTime(); // same local day, 12h ahead
+    const dueStartOfTomorrow = new Date(2026, 0, 16, 0, 0, 0, 0).getTime(); // next local day, 14h ahead
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        items: {
+          '1-presens': {
+            itemId: '1-presens',
+            repetitions: 1,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            dueAt: dueLaterToday,
+          },
+          '2-presens': {
+            itemId: '2-presens',
+            repetitions: 1,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            dueAt: dueStartOfTomorrow,
+          },
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const due = await result.current.getDueItems();
+    const dueIds = due.map((i) => i.itemId);
+
+    // Note the excluded item is *further* from `now` in raw ms (14h) than
+    // the included one (12h) - only the calendar-day boundary, not ms
+    // distance, explains why one is due and the other isn't.
+    expect(dueIds).toContain('1-presens');
+    expect(dueIds).not.toContain('2-presens');
   });
 });
 
@@ -349,8 +447,8 @@ describe('importData legacy rebase', () => {
     });
 
     expect(importResult).toBe(true);
-    expect(result.current.srsStates['1-presens'].easeFactor).toBe(1.8);
-    expect(result.current.srsStates['1-preteritum'].easeFactor).toBe(1.3);
+    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
+    expect(result.current.srsStates['1-preteritum']!.easeFactor).toBe(1.3);
   });
 
   it('does not rebase a versioned (v2) import even when its easeFactor is below the legacy threshold', async () => {
@@ -374,8 +472,122 @@ describe('importData legacy rebase', () => {
       result.current.importData(versionedExport);
     });
 
-    expect(result.current.srsStates['1-presens'].easeFactor).toBe(1.3);
+    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.3);
   });
+});
+
+describe('getDueItems scaling (regression guard for #56: O(V^2) per-verb lookup)', () => {
+  // Before #56, getDueItems called conjugateVerb(infinitive) once per verb,
+  // and conjugateVerb's real implementation does an O(V) VERB_DATA.find()
+  // internally -> O(V) calls x O(V) search = O(V^2) total. The fix replaced
+  // that with a single getAllConjugatedVerbs() call (O(V)) indexed into a
+  // Map for O(1) per-verb lookups in the loop.
+  //
+  // To make that complexity difference observable without depending on
+  // real wall-clock noise at small V, both conjugateVerb and
+  // getAllConjugatedVerbs are given an artificial per-call cost
+  // proportional to the verb count N, mirroring the real functions' O(N)
+  // shape. getDueItems's current (fixed) implementation only ever calls
+  // getAllConjugatedVerbs once, so total cost stays O(N) regardless of how
+  // many verbs there are. If a future change reintroduces a per-verb
+  // conjugateVerb call in that loop, this test's large-N run pays for N
+  // calls at O(N) each and the assertion below fails loudly (or the test
+  // times out) instead of drifting unnoticed.
+  it(
+    'keeps getDueItems wall time close to linear as verb count grows 10x',
+    { timeout: 15000 },
+    async () => {
+      function busyWork(n: number) {
+        let acc = 0;
+        for (let i = 0; i < n * 2000; i++) acc += i % 7;
+        return acc;
+      }
+
+      function makeVerbs(n: number): Verb[] {
+        return Array.from({ length: n }, (_, i) => ({
+          id: String(i + 1),
+          infinitive: `verb${i}`,
+          cefr: 'A1',
+        }));
+      }
+
+      function makeConjugated(n: number): ConjugatedVerb[] {
+        return Array.from({ length: n }, (_, i) => ({
+          id: String(i + 1),
+          infinitive: `verb${i}`,
+          cefr: 'A1',
+          presens: 'x',
+          preteritum: 'x',
+          supinum: 'x',
+          imperativ: 'x',
+        }));
+      }
+
+      async function timeGetDueItems(n: number): Promise<number> {
+        const verbs = makeVerbs(n);
+        const conjugated = makeConjugated(n);
+
+        vi.mocked(getVerbs).mockImplementation(async () => verbs);
+        vi.mocked(getAllConjugatedVerbs).mockImplementation(async () => {
+          busyWork(n); // one O(n) pass, mirroring a real VERB_DATA.map()
+          return conjugated;
+        });
+        vi.mocked(conjugateVerb).mockImplementation(async (infinitive: string) => {
+          busyWork(n); // one O(n) scan, mirroring a real VERB_DATA.find()
+          return (
+            conjugated.find((c) => c.infinitive === infinitive) ?? {
+              id: 'unknown',
+              infinitive,
+              presens: '(not available)',
+              preteritum: '(not available)',
+              supinum: '(not available)',
+              imperativ: '(not available)',
+            }
+          );
+        });
+
+        const { result } = renderHook(() => useSrsProgress());
+        await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+        const start = performance.now();
+        await result.current.getDueItems();
+        return performance.now() - start;
+      }
+
+      try {
+        const small = await timeGetDueItems(100);
+        const large = await timeGetDueItems(1000); // 10x verb count
+
+        // O(V) work should land near ~10x; the pre-#56 O(V^2) bug would be
+        // ~100x. Generous slack (15x, plus a flat floor) keeps this stable
+        // under CI timer noise while still catching a real quadratic
+        // regression.
+        expect(large).toBeLessThan(Math.max(small * 15, small + 50));
+      } finally {
+        // These three are module-scoped vi.fn()s shared by every test in
+        // this file via the top-level vi.mock('@/lib/verbs', ...) factory;
+        // restore their fixture-backed behavior so later test runs (or a
+        // different execution order) don't inherit this test's synthetic
+        // large-N implementations.
+        vi.mocked(getVerbs).mockImplementation(async () => FIXTURE_VERBS);
+        vi.mocked(getAllConjugatedVerbs).mockImplementation(async () =>
+          Object.values(FIXTURE_CONJUGATIONS),
+        );
+        vi.mocked(conjugateVerb).mockImplementation(async (infinitive: string) => {
+          return (
+            FIXTURE_CONJUGATIONS[infinitive] ?? {
+              id: 'unknown',
+              infinitive,
+              presens: '(not available)',
+              preteritum: '(not available)',
+              supinum: '(not available)',
+              imperativ: '(not available)',
+            }
+          );
+        });
+      }
+    },
+  );
 });
 
 // Issue #135: "Import Progress accepts any JSON and overwrites the store
@@ -427,7 +639,7 @@ describe('importData shape validation (issue #135)', () => {
     act(() => {
       result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
@@ -457,7 +669,7 @@ describe('importData shape validation (issue #135)', () => {
     act(() => {
       result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
@@ -499,7 +711,7 @@ describe('importData shape validation (issue #135)', () => {
     act(() => {
       result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
@@ -551,7 +763,7 @@ describe('importData shape validation (issue #135)', () => {
     act(() => {
       result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
@@ -562,5 +774,102 @@ describe('importData shape validation (issue #135)', () => {
 
     expect(importResult).toBe(false);
     expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+  });
+});
+
+describe('#241: forward-compat guard against a newer store', () => {
+  // A build older than the store it finds must not write to it. The store
+  // holds the only copy of a learner's schedule, so rewriting a version-3
+  // envelope as version 2 would discard whatever the newer build recorded
+  // with no backup and no error. The session runs read-only instead.
+  const futureStore = JSON.stringify({
+    version: 99,
+    items: {
+      '1-presens': {
+        itemId: '1-presens',
+        repetitions: 7,
+        intervalDays: 30,
+        easeFactor: 2.5,
+        dueAt: FIXED_NOW - 1000,
+        somethingNewerBuildsTrack: 'do not lose me',
+      },
+    },
+  });
+
+  it('reports the store as read-only', async () => {
+    localStorage.setItem(STORAGE_KEY, futureStore);
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.isReadOnly).toBe(true);
+  });
+
+  it('leaves the stored bytes exactly as found, even after an answer', async () => {
+    localStorage.setItem(STORAGE_KEY, futureStore);
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(futureStore);
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(8));
+
+    // In-memory the session advances, so the learner can still practise.
+    // On disk nothing moved — including the field this build cannot read.
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(futureStore);
+  });
+
+  it('still persists normally for a store this build understands', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        items: {
+          '1-presens': {
+            itemId: '1-presens',
+            repetitions: 1,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            dueAt: FIXED_NOW - 1000,
+          },
+        },
+      }),
+    );
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.isReadOnly).toBe(false);
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(2));
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored.version).toBe(2);
+    expect(stored.items['1-presens'].repetitions).toBe(2);
+  });
+
+  it('treats a legacy unversioned store as writable, not as newer', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        '1-presens': {
+          itemId: '1-presens',
+          repetitions: 3,
+          intervalDays: 6,
+          easeFactor: 1.3,
+          dueAt: FIXED_NOW - 1000,
+        },
+      }),
+    );
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.isReadOnly).toBe(false);
+    // And the legacy ease rebase still ran on the way in.
+    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
   });
 });

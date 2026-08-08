@@ -4,8 +4,15 @@ import {
   generateVerbPattern,
   getFormLabel,
   getFormHint,
+  getExampleSentence,
   getVerbs,
   getVerbGrupp,
+  getAlternateForms,
+  getAcceptedAnswers,
+  getAlternatesDisclosure,
+  isAcceptedAnswer,
+  isImperativNotApplicable,
+  getAllConjugatedVerbs,
   type Form,
 } from '@/lib/verbs';
 import { VERB_DATA } from '@/data/verbData';
@@ -51,20 +58,85 @@ describe('conjugateVerb - "(not available)" fallback for a known verb missing on
   });
 });
 
+// Issue #124: modal verbs (kunna, få, vilja) grammatically have no
+// imperativ in Swedish. isImperativNotApplicable() and the
+// ConjugatedVerb.imperativNotApplicable field let a consumer tell that
+// apart from "not filled in yet" instead of relying solely on the
+// "(not available)" placeholder string.
+describe('isImperativNotApplicable (issue #124)', () => {
+  it.each(['kunna', 'få', 'vilja'] as const)('returns true for modal verb "%s"', (infinitive) => {
+    expect(isImperativNotApplicable(infinitive)).toBe(true);
+  });
+
+  it('returns false for a non-modal verb that has a real imperativ', () => {
+    expect(isImperativNotApplicable('vara')).toBe(false);
+  });
+
+  it('returns false for a verb not found in VERB_DATA (lookup miss) - never guesses "true" for an unknown verb', () => {
+    expect(isImperativNotApplicable('this-infinitive-does-not-exist')).toBe(false);
+  });
+
+  // "te sig" and "anse" have an empty imperativ pending human review
+  // (issue #132), which is a different fact from "grammatically confirmed
+  // absent" (issue #124). Conflating the two would let the UI treat an
+  // unconfirmed gap as a settled grammatical fact.
+  it.each(['te sig', 'anse'] as const)(
+    'returns false for "%s" even though its imperativ is still empty (empty-pending-review is not the same as confirmed-absent)',
+    (infinitive) => {
+      expect(isImperativNotApplicable(infinitive)).toBe(false);
+    },
+  );
+});
+
+describe('conjugateVerb / getAllConjugatedVerbs - imperativNotApplicable flag (issue #124)', () => {
+  it('flags kunna imperativNotApplicable: true', async () => {
+    const result = await conjugateVerb('kunna');
+    expect(result.imperativNotApplicable).toBe(true);
+  });
+
+  it('does not flag a non-modal verb (vara) even though it has a real imperativ', async () => {
+    const result = await conjugateVerb('vara');
+    expect(result.imperativNotApplicable).toBeFalsy();
+  });
+
+  it('does not flag the unknown-verb fallback: the app has no basis to claim the form does not exist', async () => {
+    const result = await conjugateVerb('this-infinitive-does-not-exist');
+    expect(result.imperativNotApplicable).toBeFalsy();
+  });
+
+  it('flags exactly the three modal verbs (få, kunna, vilja) across the whole table, no more, no fewer', async () => {
+    const all = await getAllConjugatedVerbs();
+    const flagged = all
+      .filter((v) => v.imperativNotApplicable)
+      .map((v) => v.infinitive)
+      .sort();
+    expect(flagged).toEqual(['få', 'kunna', 'vilja']);
+  });
+
+  it.each(['te sig', 'anse'] as const)(
+    'does not flag "%s" even though its imperativ is still "(not available)" pending human review',
+    async (infinitive) => {
+      const result = await conjugateVerb(infinitive);
+      expect(result.imperativ).toBe('(not available)');
+      expect(result.imperativNotApplicable).toBeFalsy();
+    },
+  );
+});
+
 describe('getVerbs - id scheme', () => {
   it('assigns ids as String(index + 1), matching VERB_DATA order', async () => {
     const verbs = await getVerbs();
     expect(verbs[0]).toEqual({
       id: '1',
-      infinitive: VERB_DATA[0].infinitive,
-      cefr: VERB_DATA[0].cefr,
+      infinitive: VERB_DATA[0]!.infinitive,
+      cefr: VERB_DATA[0]!.cefr,
     });
     expect(verbs[1]).toEqual({
       id: '2',
-      infinitive: VERB_DATA[1].infinitive,
-      cefr: VERB_DATA[1].cefr,
+      infinitive: VERB_DATA[1]!.infinitive,
+      cefr: VERB_DATA[1]!.cefr,
     });
-    expect(verbs[verbs.length - 1].id).toBe(String(VERB_DATA.length));
+    expect(verbs[verbs.length - 1]!.id).toBe(String(VERB_DATA.length));
   });
 
   // KNOWN ISSUE (see CLAUDE.md "Known issues"): ids are positional, not
@@ -157,8 +229,8 @@ describe('generateVerbPattern - 4-slot pattern', () => {
 
     const blanks = pattern.patternParts.filter((p) => p.isMissing);
     expect(blanks).toHaveLength(1);
-    expect(blanks[0].form).toBe('presens');
-    expect(blanks[0].text).toBe('_____');
+    expect(blanks[0]!.form).toBe('presens');
+    expect(blanks[0]!.text).toBe('_____');
 
     expect(pattern.patternParts.find((p) => p.form === 'infinitive')?.text).toBe('vara');
     expect(pattern.patternParts.find((p) => p.form === 'preteritum')?.text).toBe('var');
@@ -226,5 +298,157 @@ describe('getFormLabel / getFormHint', () => {
   it('gives each form a distinct label (no accidental duplicate mapping)', () => {
     const labels = ALL_FORMS.map(getFormLabel);
     expect(new Set(labels).size).toBe(ALL_FORMS.length);
+  });
+
+  // Tickets #229/#44: labels are the Swedish grammar terms a learner meets in
+  // class, not the old English words ("Infinitive", "Present", "Past",
+  // "Supine", "Imperative"). Pinned exactly so a future change to the label
+  // set is loud, not a silent drift back to English or to "Imperfekt" (the
+  // older, no-longer-taught name for the simple past).
+  it('returns the exact Swedish term for every form', () => {
+    expect(getFormLabel('infinitive')).toBe('Infinitiv');
+    expect(getFormLabel('presens')).toBe('Presens');
+    expect(getFormLabel('preteritum')).toBe('Preteritum');
+    expect(getFormLabel('supinum')).toBe('Supinum');
+    expect(getFormLabel('imperativ')).toBe('Imperativ');
+  });
+
+  it('never labels preteritum (or any other form) "Imperfekt"', () => {
+    for (const form of ALL_FORMS) {
+      expect(getFormLabel(form)).not.toBe('Imperfekt');
+    }
+  });
+
+  // The Swedish term must lead the hint (not just appear somewhere in it),
+  // with the English gloss trailing in parentheses for a learner who doesn't
+  // know the term yet.
+  it('leads each hint with its Swedish term', () => {
+    expect(getFormHint('infinitive').startsWith('Infinitiv:')).toBe(true);
+    expect(getFormHint('presens').startsWith('Presens:')).toBe(true);
+    expect(getFormHint('preteritum').startsWith('Preteritum:')).toBe(true);
+    expect(getFormHint('supinum').startsWith('Supinum:')).toBe(true);
+    expect(getFormHint('imperativ').startsWith('Imperativ:')).toBe(true);
+  });
+});
+
+// Tickets #229/#44: only vara, ha and gå have hand-written example sentences.
+// Every other verb+form must return null (never a "[Example with ...]"
+// placeholder, which taught nothing and read as a bug).
+describe('getExampleSentence', () => {
+  it('returns null for a verb with no hand-written examples', () => {
+    expect(getExampleSentence('tala', 'presens')).toBeNull();
+    expect(getExampleSentence('tala', 'preteritum')).toBeNull();
+  });
+
+  it('returns null for an unknown infinitive', () => {
+    expect(getExampleSentence('this-infinitive-does-not-exist', 'presens')).toBeNull();
+  });
+
+  it('returns the real Swedish sentence for a fixture verb + form that has one', () => {
+    expect(getExampleSentence('vara', 'presens')).toBe('Jag är glad');
+  });
+});
+
+// Issue #123: "lade" (lägga preteritum) and "sade" (säga preteritum) are
+// documented SAOL alternates for their respective primary short forms
+// ("la", "sa"). These pin AC2 ("checker accepts documented alternate forms")
+// at the lib level, independent of the UI.
+describe('getAlternateForms', () => {
+  it('returns the documented alternate(s) for lägga preteritum ("lade" alongside primary "la")', () => {
+    expect(getAlternateForms('lägga', 'preteritum')).toEqual(['lade']);
+  });
+
+  it('returns the documented alternate(s) for säga preteritum ("sade" alongside primary "sa")', () => {
+    expect(getAlternateForms('säga', 'preteritum')).toEqual(['sade']);
+  });
+
+  it('returns an empty array for a verb+form with no documented alternate (the common case)', () => {
+    expect(getAlternateForms('vara', 'presens')).toEqual([]);
+  });
+
+  it('returns an empty array for an unknown infinitive (lookup miss)', () => {
+    expect(getAlternateForms('this-infinitive-does-not-exist', 'preteritum')).toEqual([]);
+  });
+
+  it('returns an empty array for "infinitive" even for a verb that has alternates on other forms', () => {
+    // Alternates are not modeled for the dictionary form itself.
+    expect(getAlternateForms('lägga', 'infinitive')).toEqual([]);
+  });
+
+  it("does not leak lägga's preteritum alternate onto a different form of the same verb", () => {
+    expect(getAlternateForms('lägga', 'presens')).toEqual([]);
+    expect(getAlternateForms('lägga', 'supinum')).toEqual([]);
+  });
+});
+
+describe('isAcceptedAnswer', () => {
+  it('accepts the primary stored form', () => {
+    expect(isAcceptedAnswer('lägga', 'preteritum', 'la')).toBe(true);
+  });
+
+  it('accepts a documented alternate form even though it differs from the primary form', () => {
+    expect(isAcceptedAnswer('lägga', 'preteritum', 'lade')).toBe(true);
+    expect(isAcceptedAnswer('säga', 'preteritum', 'sade')).toBe(true);
+  });
+
+  it('normalizes the alternate match the same way as the primary match: case-insensitive and trimmed', () => {
+    expect(isAcceptedAnswer('lägga', 'preteritum', '  LADE  ')).toBe(true);
+    expect(isAcceptedAnswer('säga', 'preteritum', '  SaDe ')).toBe(true);
+  });
+
+  it('rejects an answer that matches neither the primary form nor any documented alternate', () => {
+    expect(isAcceptedAnswer('lägga', 'preteritum', 'lagg')).toBe(false);
+    expect(isAcceptedAnswer('säga', 'preteritum', 'sager')).toBe(false);
+  });
+
+  it('does not broaden acceptance for a verb+form with no documented alternates: only the primary form is accepted', () => {
+    expect(isAcceptedAnswer('vara', 'presens', 'är')).toBe(true);
+    expect(isAcceptedAnswer('vara', 'presens', 'var')).toBe(false);
+  });
+
+  it('does not accept an alternate documented for a different form of the same verb', () => {
+    // "lade" is only a documented alternate for lägga's preteritum, not its presens.
+    expect(isAcceptedAnswer('lägga', 'presens', 'lade')).toBe(false);
+  });
+});
+
+// Product policy P1 (docs/product/2026-08-08-alternate-answers-decision.md):
+// an ordered accepted-answer list per verb+form, primary always at index 0,
+// looked up from VERB_DATA itself rather than trusted from the caller.
+describe('getAcceptedAnswers', () => {
+  it('returns the primary first, alternates after, for a form with a documented alternate', () => {
+    expect(getAcceptedAnswers('lägga', 'preteritum')).toEqual(['la', 'lade']);
+    expect(getAcceptedAnswers('säga', 'preteritum')).toEqual(['sa', 'sade']);
+  });
+
+  it('returns a single-entry list (just the primary) for a form with no documented alternate', () => {
+    expect(getAcceptedAnswers('vara', 'presens')).toEqual(['är']);
+  });
+
+  it('falls back to the "(not available)" sentinel for an unknown infinitive, matching conjugateVerb', () => {
+    expect(getAcceptedAnswers('this-infinitive-does-not-exist', 'preteritum')).toEqual([
+      '(not available)',
+    ]);
+  });
+
+  it('falls back to the "(not available)" sentinel for a form with no primary value (e.g. imperativ stored as ""), never an empty list', () => {
+    expect(getAcceptedAnswers('kunna', 'imperativ')).toEqual(['(not available)']);
+  });
+
+  it('returns the infinitive itself for form "infinitive"', () => {
+    expect(getAcceptedAnswers('lägga', 'infinitive')).toEqual(['lägga']);
+  });
+});
+
+// Product policy P6: the feedback panel discloses the other accepted forms
+// when a card's accepted set has more than one entry.
+describe('getAlternatesDisclosure', () => {
+  it('returns null for a form with no documented alternate (the common case)', () => {
+    expect(getAlternatesDisclosure('vara', 'presens')).toBeNull();
+  });
+
+  it('names the alternate for a form that has one', () => {
+    expect(getAlternatesDisclosure('lägga', 'preteritum')).toContain('lade');
+    expect(getAlternatesDisclosure('säga', 'preteritum')).toContain('sade');
   });
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,8 +21,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Search, ArrowUpDown } from 'lucide-react';
-import { getAllConjugatedVerbs, ConjugatedVerb } from '@/lib/verbs';
+import { ArrowLeft, Search, ArrowUpDown, Trophy } from 'lucide-react';
+import { getAllConjugatedVerbs, getVerbGrupp, ConjugatedVerb, type Form } from '@/lib/verbs';
+import { conjugationItemId, particleItemId } from '@/lib/itemIds';
+import { getVerifiedParticleVerbs, hasRecallItem, renderLemma } from '@/lib/particleVerbs';
+import { getMasteryStageBadge, averageMasteryStage, MASTERED_STAGE_THRESHOLD } from '@/lib/srs';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { VerbDetailsModal } from '@/components/VerbDetailsModal';
@@ -54,31 +57,13 @@ export default function Progress() {
     loadVerbs();
   }, []);
 
-  const getSrsStage = (verbId: string): number => {
-    const forms = ['presens', 'preteritum', 'supinum', 'imperativ'];
-    let totalReps = 0;
-    let count = 0;
-
-    forms.forEach((form) => {
-      const itemId = `${verbId}-${form}`;
-      const state = srsStates[itemId];
-      if (state) {
-        totalReps += state.repetitions;
-        count++;
-      }
-    });
-
-    return count > 0 ? Math.floor(totalReps / count) : 0;
-  };
-
-  const getStageBadge = (stage: number) => {
-    if (stage === 0) return { label: 'New', variant: 'default' as const, color: 'bg-purple-500' };
-    if (stage <= 2)
-      return { label: 'Learning', variant: 'secondary' as const, color: 'bg-orange-500' };
-    if (stage <= 4)
-      return { label: 'Reviewing', variant: 'outline' as const, color: 'bg-yellow-500' };
-    return { label: 'Mastered', variant: 'default' as const, color: 'bg-green-500' };
-  };
+  const getSrsStage = useCallback(
+    (verbId: string): number => {
+      const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
+      return averageMasteryStage(forms.map((form) => srsStates[conjugationItemId(verbId, form)]));
+    },
+    [srsStates],
+  );
 
   const filteredAndSortedVerbs = useMemo(() => {
     let filtered = verbs;
@@ -99,7 +84,7 @@ export default function Progress() {
     if (srsFilter !== 'all') {
       filtered = filtered.filter((verb) => {
         const stage = getSrsStage(verb.id);
-        const badge = getStageBadge(stage);
+        const badge = getMasteryStageBadge(stage);
         return badge.label.toLowerCase() === srsFilter;
       });
     }
@@ -117,14 +102,71 @@ export default function Progress() {
     });
 
     return filtered;
-  }, [verbs, searchQuery, difficultyFilter, srsFilter, sortField, sortDirection, srsStates]);
+  }, [verbs, searchQuery, difficultyFilter, srsFilter, sortField, sortDirection, getSrsStage]);
 
   const progressStats = useMemo(() => {
     const total = verbs.length;
-    const mastered = verbs.filter((verb) => getSrsStage(verb.id) >= 5).length;
+    const mastered = verbs.filter(
+      (verb) => getSrsStage(verb.id) >= MASTERED_STAGE_THRESHOLD,
+    ).length;
     const percentage = total > 0 ? (mastered / total) * 100 : 0;
     return { total, mastered, percentage };
-  }, [verbs, srsStates]);
+  }, [verbs, getSrsStage]);
+
+  // Particle mode's own numbers. The page below is built entirely around the
+  // four conjugation forms and the verb table, so the particle view is a
+  // separate summary rather than extra columns that would be blank for every
+  // conjugation row.
+  //
+  // "Started" counts verbs whose cloze item exists at all, which is what
+  // lazy initialization makes meaningful: an untouched verb has no state, so
+  // the denominator is the corpus and the numerator is genuine contact.
+  const particleStats = useMemo(() => {
+    const entries = getVerifiedParticleVerbs();
+    let started = 0;
+    let clozeMastered = 0;
+    let recallUnlocked = 0;
+    const recallEligible = entries.filter(hasRecallItem).length;
+
+    for (const entry of entries) {
+      const cloze = srsStates[particleItemId(entry.id, 'cloze')];
+      if (!cloze) continue;
+      started += 1;
+      if (cloze.repetitions >= 5) clozeMastered += 1;
+      if (hasRecallItem(entry) && srsStates[particleItemId(entry.id, 'recall')]) {
+        recallUnlocked += 1;
+      }
+    }
+
+    return {
+      total: entries.length,
+      started,
+      clozeMastered,
+      recallUnlocked,
+      recallEligible,
+      startedPercent: entries.length > 0 ? (started / entries.length) * 100 : 0,
+    };
+  }, [srsStates]);
+
+  const particleVerbList = useMemo(() => {
+    return getVerifiedParticleVerbs().map((entry) => {
+      const cloze = srsStates[particleItemId(entry.id, 'cloze')];
+      const recall = hasRecallItem(entry)
+        ? srsStates[particleItemId(entry.id, 'recall')]
+        : undefined;
+      return {
+        id: entry.id,
+        lemma: renderLemma(entry),
+        particle: entry.particle,
+        gloss: entry.gloss.en,
+        cefr: entry.cefr,
+        clozeRepetitions: cloze?.repetitions ?? 0,
+        started: cloze !== undefined,
+        recallStarted: recall !== undefined,
+        recallEligible: hasRecallItem(entry),
+      };
+    });
+  }, [srsStates]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -148,11 +190,14 @@ export default function Progress() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
+          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 min-h-11">
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold text-primary">🇸🇪 Progress & Review</h1>
+          <h1 className="text-3xl font-bold text-primary flex items-center justify-center gap-2">
+            <Trophy className="w-7 h-7" />
+            Progress & Review
+          </h1>
           <div className="w-24" /> {/* Spacer for centering */}
         </div>
 
@@ -166,7 +211,75 @@ export default function Progress() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ProgressBar value={progressStats.percentage} className="h-4" />
+            <ProgressBar value={progressStats.percentage} className="h-4 bg-muted-foreground" />
+          </CardContent>
+        </Card>
+
+        {/* Particle verbs — its own mode, so its own summary rather than
+            columns that would be blank on every conjugation row. */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Particle verbs</CardTitle>
+            <CardDescription>
+              You've started {particleStats.started} / {particleStats.total} particle verbs
+              {particleStats.clozeMastered > 0 &&
+                `, ${particleStats.clozeMastered} well established`}
+              {particleStats.recallEligible > 0 &&
+                ` — ${particleStats.recallUnlocked} / ${particleStats.recallEligible} meaning prompts unlocked`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ProgressBar value={particleStats.startedPercent} className="h-4 bg-muted-foreground" />
+            {particleStats.started === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Particle verbs unlock once you know their base verb in both the present and the
+                past.
+              </p>
+            ) : (
+              <ScrollArea className="h-64">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background z-10">
+                    <TableRow>
+                      <TableHead>Phrase</TableHead>
+                      <TableHead>Meaning</TableHead>
+                      <TableHead>Level</TableHead>
+                      <TableHead>Stage</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {particleVerbList
+                      .filter((verb) => verb.started)
+                      .map((verb) => {
+                        const badge = getMasteryStageBadge(verb.clozeRepetitions);
+                        return (
+                          <TableRow key={verb.id}>
+                            <TableCell className="font-medium">
+                              <span lang="sv">{verb.lemma}</span>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{verb.gloss}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{verb.cefr}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {/* Issue #227: hardcode `outline` instead of badge.variant.
+                                  The default/secondary Badge variants each carry their own
+                                  hover-opacity background class, which conflicts with
+                                  badge.color's stage token and flips the badge back to
+                                  primary/secondary blue on hover (the #313 regression).
+                                  `outline` contributes no background or hover utility, so
+                                  badge.color's stage bg and foreground text classes are the
+                                  only source of color, on hover or otherwise. */}
+                              <Badge variant="outline" className={badge.color}>
+                                {badge.label}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            )}
           </CardContent>
         </Card>
 
@@ -222,26 +335,47 @@ export default function Progress() {
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
                   <TableHead
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => toggleSort('infinitive')}
+                    aria-sort={
+                      sortField === 'infinitive'
+                        ? sortDirection === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    className="hover:bg-muted/50"
                   >
-                    <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex min-h-11 items-center gap-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      onClick={() => toggleSort('infinitive')}
+                    >
                       Verb
                       <ArrowUpDown className="w-4 h-4" />
-                    </div>
+                    </button>
                   </TableHead>
                   <TableHead>Presens</TableHead>
                   <TableHead>Preteritum</TableHead>
                   <TableHead>Supinum</TableHead>
                   <TableHead>Imperativ</TableHead>
+                  <TableHead>Grupp</TableHead>
                   <TableHead
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => toggleSort('difficulty')}
+                    aria-sort={
+                      sortField === 'difficulty'
+                        ? sortDirection === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                    className="hover:bg-muted/50"
                   >
-                    <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex min-h-11 items-center gap-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      onClick={() => toggleSort('difficulty')}
+                    >
                       Difficulty
                       <ArrowUpDown className="w-4 h-4" />
-                    </div>
+                    </button>
                   </TableHead>
                   <TableHead>SRS Stage</TableHead>
                 </TableRow>
@@ -249,7 +383,11 @@ export default function Progress() {
               <TableBody>
                 {filteredAndSortedVerbs.map((verb, index) => {
                   const stage = getSrsStage(verb.id);
-                  const badge = getStageBadge(stage);
+                  const badge = getMasteryStageBadge(stage);
+                  // Reference-only surface (never rendered pre-answer on
+                  // the practice card); undefined stays absent, never
+                  // guessed (src/lib/verbs.ts:29-32).
+                  const grupp = getVerbGrupp(verb.infinitive);
                   return (
                     <TableRow
                       key={verb.id}
@@ -258,22 +396,74 @@ export default function Progress() {
                       }`}
                       onClick={() => setSelectedVerb(verb)}
                     >
-                      <TableCell className="font-medium">{verb.infinitive}</TableCell>
-                      <TableCell>{verb.presens}</TableCell>
-                      <TableCell>{verb.preteritum}</TableCell>
-                      <TableCell>{verb.supinum}</TableCell>
+                      <TableCell className="font-medium">
+                        {/* No aria-label here on purpose: a button's own
+                            aria-label becomes its enclosing cell's, and then
+                            the row's, accessible name (name-from-content),
+                            which would prefix every row's name with "View
+                            details for" and break row lookup by verb name
+                            (e2e/full-loop.spec.ts). The visible infinitive
+                            text is an adequate accessible name for a button
+                            inside the "Verb" column. */}
+                        <button
+                          type="button"
+                          className="inline-flex min-h-11 min-w-11 items-center justify-start text-left underline-offset-2 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedVerb(verb);
+                          }}
+                        >
+                          <span lang="sv">{verb.infinitive}</span>
+                        </button>
+                      </TableCell>
                       <TableCell>
-                        {verb.imperativ === '(not available)' ? (
-                          <span className="text-muted-foreground">—</span>
+                        <span lang="sv">{verb.presens}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span lang="sv">{verb.preteritum}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span lang="sv">{verb.supinum}</span>
+                      </TableCell>
+                      <TableCell>
+                        {/* imperativNotApplicable (#124) explicitly flags the
+                            common, confirmed case: modal verbs, which
+                            grammatically have no imperativ. The
+                            "(not available)" literal-string check stays as a
+                            fallback for a couple of verbs (e.g. "te sig",
+                            "anse" in verbData.ts) whose imperativ is
+                            intentionally empty pending human review and are
+                            deliberately not flagged imperativNotApplicable --
+                            that field means "confirmed absent," not
+                            "unconfirmed." This can go away once
+                            swedish-linguist fills those forms or adds a field
+                            for "known empty, not yet confirmed why." */}
+                        {verb.imperativNotApplicable || verb.imperativ === '(not available)' ? (
+                          <span className="text-muted-foreground">
+                            <span aria-hidden="true">—</span>
+                            <span className="sr-only">not applicable</span>
+                          </span>
                         ) : (
-                          verb.imperativ
+                          <span lang="sv">{verb.imperativ}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {grupp ? (
+                          <Badge variant="outline">grupp {grupp}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            <span aria-hidden="true">—</span>
+                            <span className="sr-only">not available</span>
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{verb.cefr}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={badge.variant} className={badge.color}>
+                        {/* Issue #227: outline hardcoded, not badge.variant — see the
+                            particle table's badge above for why. */}
+                        <Badge variant="outline" className={badge.color}>
                           {badge.label}
                         </Badge>
                       </TableCell>

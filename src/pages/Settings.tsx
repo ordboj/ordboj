@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -12,16 +13,50 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Upload, Trash2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
+import {
+  PARTICLE_DAILY_GOAL_MAX,
+  PARTICLE_DAILY_GOAL_MIN,
+  PARTICLE_ITEMS_PER_MINUTE,
+} from '@/lib/particleQueue';
 import { toast } from 'sonner';
 
 export default function Settings() {
   const navigate = useNavigate();
   const { settings, updateSettings } = useSettings();
   const { exportData, importData, resetProgress } = useSrsProgress();
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Held as a draft string so the field can be cleared and retyped. A
+  // controlled number input that clamped on every keystroke would make "12"
+  // unreachable: the "1" would snap to the minimum of 4 first.
+  const [particleGoalDraft, setParticleGoalDraft] = useState(String(settings.particleDailyGoal));
+  useEffect(() => {
+    setParticleGoalDraft(String(settings.particleDailyGoal));
+  }, [settings.particleDailyGoal]);
+
+  const commitParticleGoal = () => {
+    const parsed = Number.parseInt(particleGoalDraft, 10);
+    if (Number.isNaN(parsed)) {
+      setParticleGoalDraft(String(settings.particleDailyGoal));
+      return;
+    }
+    const clamped = Math.min(PARTICLE_DAILY_GOAL_MAX, Math.max(PARTICLE_DAILY_GOAL_MIN, parsed));
+    setParticleGoalDraft(String(clamped));
+    updateSettings({ particleDailyGoal: clamped });
+  };
 
   const handleExport = () => {
     const data = exportData();
@@ -56,15 +91,9 @@ export default function Settings() {
     input.click();
   };
 
-  const handleReset = () => {
-    if (showResetConfirm) {
-      resetProgress();
-      toast.success('All progress has been reset');
-      setShowResetConfirm(false);
-    } else {
-      setShowResetConfirm(true);
-      setTimeout(() => setShowResetConfirm(false), 5000);
-    }
+  const handleConfirmReset = () => {
+    resetProgress();
+    toast.success('All progress has been reset');
   };
 
   return (
@@ -134,6 +163,7 @@ export default function Settings() {
                         const newLevels = checked
                           ? [...settings.cefrLevels, level]
                           : settings.cefrLevels.filter((l) => l !== level);
+                        if (newLevels.length === 0) return; // Prevent unselecting all
                         updateSettings({ cefrLevels: newLevels });
                       }}
                     />
@@ -149,6 +179,48 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground">
                 Select which difficulty levels you want to practice. At least one level must be
                 selected.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Particle verbs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Particle verbs</CardTitle>
+            <CardDescription>A separate queue with its own daily budget</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="particle-daily-goal">Particle cards per day</Label>
+              <Input
+                id="particle-daily-goal"
+                type="number"
+                inputMode="numeric"
+                min={PARTICLE_DAILY_GOAL_MIN}
+                max={PARTICLE_DAILY_GOAL_MAX}
+                value={particleGoalDraft}
+                onChange={(e) => setParticleGoalDraft(e.target.value)}
+                onBlur={commitParticleGoal}
+                onKeyDown={(e) => e.key === 'Enter' && commitParticleGoal()}
+                className="max-w-32"
+              />
+              <p className="text-xs text-muted-foreground">
+                Between {PARTICLE_DAILY_GOAL_MIN} and {PARTICLE_DAILY_GOAL_MAX} cards — roughly{' '}
+                {Math.max(1, Math.round(settings.particleDailyGoal / PARTICLE_ITEMS_PER_MINUTE))}{' '}
+                minutes. This is extra time on top of your conjugation practice, and it does not
+                change what a day of practice requires.
+              </p>
+            </div>
+
+            {/* CC BY-NC-SA 4.0 requires attribution reasonable to the medium.
+                App users never see the repo, so the notice has to be in the
+                app itself, not only in docs/research/svalex/. */}
+            <div className="border-t pt-4 space-y-1">
+              <p className="text-xs text-muted-foreground">
+                Particle-verb difficulty levels are derived from SVALex and SweLLex (CEFRLex
+                project, UCLouvain and Språkbanken), used under CC BY-NC-SA 4.0. The levels are our
+                own reading of that data, not an official CEFR classification.
               </p>
             </div>
           </CardContent>
@@ -171,19 +243,46 @@ export default function Settings() {
               Import Progress
             </Button>
 
-            <Button
-              variant="destructive"
-              className="w-full justify-start gap-2"
-              onClick={handleReset}
-            >
-              <Trash2 className="w-4 h-4" />
-              {showResetConfirm ? 'Click again to confirm reset' : 'Reset All Progress'}
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full justify-start gap-2">
+                  <Trash2 className="w-4 h-4" />
+                  Reset All Progress
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset all progress?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This deletes all practice progress on this device, and it cannot be undone.
+                    Export a backup first if you want to keep it.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                  onClick={handleExport}
+                >
+                  <Download className="w-4 h-4" />
+                  Export Progress
+                </Button>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={handleConfirmReset}
+                  >
+                    Reset All Progress
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          All data is stored locally on your device
+          Progress lives only in this browser's storage — clearing site data, switching browsers, or
+          a new device loses it for good. Export regularly to keep a backup.
         </p>
       </div>
     </div>

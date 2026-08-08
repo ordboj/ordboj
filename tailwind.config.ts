@@ -2,7 +2,11 @@ import type { Config } from 'tailwindcss';
 import tailwindcssAnimate from 'tailwindcss-animate';
 
 export default {
-  darkMode: ['class'],
+  // Pinned to the class strategy: no dark palette ships (see
+  // docs/product/2026-08-08-dark-mode-decision.md). Deleting this line lets
+  // Tailwind fall back to the `media` default, which activates every
+  // `dark:` utility for OS-dark users with no palette behind it -- keep it.
+  darkMode: 'class',
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -40,6 +44,28 @@ export default {
         success: {
           DEFAULT: 'hsl(var(--success))',
           foreground: 'hsl(var(--success-foreground))',
+        },
+        // SRS mastery stage badge tokens (issue #227) — bg-stage-new/
+        // learning/reviewing/mastered + text-stage-*-foreground. Values and
+        // contrast ratios are documented at the --stage-* declarations in
+        // src/index.css.
+        stage: {
+          new: {
+            DEFAULT: 'hsl(var(--stage-new))',
+            foreground: 'hsl(var(--stage-new-foreground))',
+          },
+          learning: {
+            DEFAULT: 'hsl(var(--stage-learning))',
+            foreground: 'hsl(var(--stage-learning-foreground))',
+          },
+          reviewing: {
+            DEFAULT: 'hsl(var(--stage-reviewing))',
+            foreground: 'hsl(var(--stage-reviewing-foreground))',
+          },
+          mastered: {
+            DEFAULT: 'hsl(var(--stage-mastered))',
+            foreground: 'hsl(var(--stage-mastered-foreground))',
+          },
         },
         muted: {
           DEFAULT: 'hsl(var(--muted))',

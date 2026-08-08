@@ -30,9 +30,10 @@ test.describe('full loop: practice -> progress', () => {
     const answerInput = page.getByPlaceholder('Type your answer...');
     await expect(answerInput).toBeVisible();
 
-    // Typing the correct answer auto-submits (PracticeCard's own effect),
-    // so no explicit "Check Answer" click is needed here.
+    // Typed answers no longer auto-submit (#91): grading requires the
+    // explicit "Check Answer" click.
     await answerInput.pressSequentially(ANSWER);
+    await page.getByRole('button', { name: 'Check Answer' }).click();
     await expect(page.getByText('Correct!')).toBeVisible();
     await page.getByRole('button', { name: 'Next Card' }).click();
 

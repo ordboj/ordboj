@@ -1,10 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+  averageMasteryStage,
   calculateNextReview,
+  getMasteryStageBadge,
   initializeSrsState,
   isDue,
+  isEligibleForRequeue,
   isSrsState,
+  MASTERED_STAGE_THRESHOLD,
   MAX_INTERVAL_DAYS,
+  MAX_REQUEUES_PER_DAY,
+  REQUEUE_GAP_ITEMS,
   type SrsState,
   type Grade,
 } from '@/lib/srs';
@@ -185,7 +191,7 @@ describe('calculateNextReview - review-table regression (10+ reviews)', () => {
     let state = initializeSrsState('x');
     grades.forEach((grade, i) => {
       state = calculateNextReview(state, grade);
-      const row = expected[i];
+      const row = expected[i]!;
       expect({ repetitions: state.repetitions, intervalDays: state.intervalDays }).toEqual({
         repetitions: row.repetitions,
         intervalDays: row.intervalDays,
@@ -220,9 +226,13 @@ describe('isDue', () => {
     expect(isDue(state)).toBe(true);
   });
 
-  it('is not due when dueAt is one millisecond in the future', () => {
+  it('is due when dueAt is one millisecond in the future but still the same local calendar day', () => {
+    // Per docs/learning/new-vs-review-mix.md ("Interaction with the day
+    // boundary"): due-ness is decided at the end of the local calendar
+    // day, not by exact-millisecond comparison. dueAt one ms after `now`
+    // is still on today's local date, so the item is due today.
     const state: SrsState = { ...initializeSrsState('x'), dueAt: FIXED_NOW + 1 };
-    expect(isDue(state)).toBe(false);
+    expect(isDue(state)).toBe(true);
   });
 
   it('reacts to the clock advancing past dueAt', () => {
@@ -230,6 +240,140 @@ describe('isDue', () => {
     expect(isDue(state)).toBe(false);
     vi.setSystemTime(FIXED_NOW + DAY_MS);
     expect(isDue(state)).toBe(true);
+  });
+});
+
+// docs/learning/lapse-handling.md, "Decision": same-sitting re-queue gap of
+// >= 3 intervening items, capped at 2 re-queues per item per day. These
+// constants are the whole of that policy's numbers; pinning them here means
+// any change to the policy has to be deliberate, in this file, not a silent
+// edit of a magic number in Practice.tsx.
+describe('requeue policy constants (docs/learning/lapse-handling.md)', () => {
+  it('pins the documented gap and daily cap', () => {
+    expect(REQUEUE_GAP_ITEMS).toBe(3);
+    expect(MAX_REQUEUES_PER_DAY).toBe(2);
+  });
+});
+
+describe('isEligibleForRequeue', () => {
+  it('is not eligible before the gap is reached, even with no prior requeues', () => {
+    expect(isEligibleForRequeue(0, 0)).toBe(false);
+    expect(isEligibleForRequeue(1, 0)).toBe(false);
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS - 1, 0)).toBe(false);
+  });
+
+  it('becomes eligible exactly at the gap boundary, not one item early', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, 0)).toBe(true);
+  });
+
+  it('stays eligible for any gap at or beyond the threshold', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS + 5, 0)).toBe(true);
+    expect(isEligibleForRequeue(100, 1)).toBe(true);
+  });
+
+  it('is still eligible one requeue below the daily cap', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, MAX_REQUEUES_PER_DAY - 1)).toBe(true);
+  });
+
+  it('is not eligible once the daily requeue cap is reached, however large the gap', () => {
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, MAX_REQUEUES_PER_DAY)).toBe(false);
+    expect(isEligibleForRequeue(1000, MAX_REQUEUES_PER_DAY)).toBe(false);
+    expect(isEligibleForRequeue(1000, MAX_REQUEUES_PER_DAY + 3)).toBe(false);
+  });
+
+  it('requires both conditions: gap alone or cap-room alone is not enough', () => {
+    // Gap satisfied but cap already spent.
+    expect(isEligibleForRequeue(REQUEUE_GAP_ITEMS, MAX_REQUEUES_PER_DAY)).toBe(false);
+    // Cap room available but gap not yet reached.
+    expect(isEligibleForRequeue(0, 0)).toBe(false);
+  });
+});
+
+// These pin process.env.TZ to Europe/Stockholm so the calendar-day
+// boundary assertions are deterministic regardless of the host/CI
+// machine's default timezone (isDue's day boundary is computed from the
+// local Date, so the test needs a known local timezone to reason about
+// "same local day" and DST transitions).
+describe('isDue - month and DST boundaries (Europe/Stockholm)', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'Europe/Stockholm';
+  });
+
+  afterEach(() => {
+    // Assigning undefined would store the literal string "undefined" as
+    // the timezone; delete the key instead.
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
+  });
+
+  it('is not due when dueAt falls on the next local calendar day, even a few hours away', () => {
+    const now = new Date(2026, 0, 15, 20, 0, 0, 0).getTime(); // Jan 15, 2026 20:00 local
+    const dueAtSameDay = new Date(2026, 0, 15, 23, 59, 59, 999).getTime();
+    const dueAtNextDay = new Date(2026, 0, 16, 0, 0, 0, 0).getTime();
+
+    expect(isDue({ ...initializeSrsState('x'), dueAt: dueAtSameDay }, now)).toBe(true);
+    expect(isDue({ ...initializeSrsState('x'), dueAt: dueAtNextDay }, now)).toBe(false);
+  });
+
+  it('treats a month boundary the same as any other day boundary (Jan 31 -> Feb 1, 2026)', () => {
+    const now = new Date(2026, 0, 31, 22, 0, 0, 0).getTime(); // Jan 31, 2026 22:00 local
+    const dueAtEndOfJan = new Date(2026, 0, 31, 23, 59, 59, 999).getTime();
+    const dueAtStartOfFeb = new Date(2026, 1, 1, 0, 0, 0, 0).getTime();
+
+    expect(isDue({ ...initializeSrsState('x'), dueAt: dueAtEndOfJan }, now)).toBe(true);
+    expect(isDue({ ...initializeSrsState('x'), dueAt: dueAtStartOfFeb }, now)).toBe(false);
+
+    // Clock rolls into February: the Feb 1 item becomes due once its own
+    // calendar day starts.
+    expect(isDue({ ...initializeSrsState('x'), dueAt: dueAtStartOfFeb }, dueAtStartOfFeb)).toBe(
+      true,
+    );
+  });
+
+  it('a same-local-day item stays due across the spring DST transition (2026-03-29, 23-hour day)', () => {
+    // Sweden springs forward at 02:00 -> 03:00 local on 2026-03-29, so
+    // this calendar day is only 23 hours long. The day-boundary check
+    // must still treat 23:00 as "today" and 00:00 the next day as
+    // "tomorrow" despite the missing hour.
+    const beforeJump = new Date(2026, 2, 29, 1, 0, 0, 0).getTime(); // 01:00 CET, before the jump
+    const afterJumpSameDay = new Date(2026, 2, 29, 23, 0, 0, 0).getTime(); // 23:00 CEST, same date
+    const nextDay = new Date(2026, 2, 30, 0, 0, 0, 0).getTime(); // 00:00, next calendar day
+
+    expect(isDue({ ...initializeSrsState('x'), dueAt: afterJumpSameDay }, beforeJump)).toBe(true);
+    expect(isDue({ ...initializeSrsState('x'), dueAt: nextDay }, beforeJump)).toBe(false);
+  });
+
+  it('a same-local-day item stays due across the autumn DST transition (2026-10-25, 25-hour day)', () => {
+    // Sweden falls back at 03:00 -> 02:00 local on 2026-10-25 (02:00-02:59
+    // occurs twice), so this calendar day is 25 hours long.
+    const beforeFold = new Date(2026, 9, 25, 1, 0, 0, 0).getTime(); // 01:00, before the repeated hour
+    const afterFoldSameDay = new Date(2026, 9, 25, 23, 0, 0, 0).getTime(); // 23:00, same date
+    const nextDay = new Date(2026, 9, 26, 0, 0, 0, 0).getTime(); // 00:00, next calendar day
+
+    expect(isDue({ ...initializeSrsState('x'), dueAt: afterFoldSameDay }, beforeFold)).toBe(true);
+    expect(isDue({ ...initializeSrsState('x'), dueAt: nextDay }, beforeFold)).toBe(false);
+  });
+
+  it('a 1-day interval scheduled early on the 25-hour fall-back day is not due again that same local day', () => {
+    // The fall-back day is 25 hours long, so at 00:30 local, now + 24h is
+    // only 23:30 of the same local calendar day. If dueAt stored that raw
+    // sum, the end-of-day isDue boundary would serve the item again the
+    // same day it was answered and its interval would ratchet (1 -> 6 ->
+    // 6*EF) without any real day passing. calculateNextReview clamps
+    // dueAt to at least the start of the next local day.
+    const answerTime = new Date(2026, 9, 25, 0, 30, 0, 0).getTime(); // 00:30, before the fold
+    vi.setSystemTime(answerTime);
+
+    const next = calculateNextReview(initializeSrsState('x'), 5);
+    expect(next.intervalDays).toBe(1);
+
+    const laterSameDay = new Date(2026, 9, 25, 23, 0, 0, 0).getTime();
+    expect(isDue(next, laterSameDay)).toBe(false);
+
+    const startOfNextDay = new Date(2026, 9, 26, 0, 0, 0, 0).getTime();
+    expect(isDue(next, startOfNextDay)).toBe(true);
   });
 });
 
@@ -303,5 +447,79 @@ describe('isSrsState', () => {
 
   it('rejects a non-finite lastGrade when the field is present', () => {
     expect(isSrsState({ ...initializeSrsState('1-presens'), lastGrade: NaN })).toBe(false);
+  });
+});
+
+// getMasteryStageBadge buckets a repetitions count into the label shown on
+// the Progress page and in VerbDetailsModal (#108). The boundaries below are
+// the pedagogy decision documented in lib/srs.ts: 0 = New, 1-2 = Learning,
+// 3-4 = Reviewing, MASTERED_STAGE_THRESHOLD+ = Mastered.
+describe('getMasteryStageBadge', () => {
+  it('labels stage 0 as New', () => {
+    expect(getMasteryStageBadge(0).label).toBe('New');
+  });
+
+  it('labels stage 1 as Learning', () => {
+    expect(getMasteryStageBadge(1).label).toBe('Learning');
+  });
+
+  it('labels stage 2 as Learning, the top of the Learning range', () => {
+    expect(getMasteryStageBadge(2).label).toBe('Learning');
+  });
+
+  it('labels stage 3 as Reviewing, the start of the Reviewing range', () => {
+    expect(getMasteryStageBadge(3).label).toBe('Reviewing');
+  });
+
+  it('labels stage 4 as Reviewing, the top of the Reviewing range', () => {
+    expect(getMasteryStageBadge(4).label).toBe('Reviewing');
+  });
+
+  it('labels stage 5 as Mastered, exactly at MASTERED_STAGE_THRESHOLD', () => {
+    expect(MASTERED_STAGE_THRESHOLD).toBe(5);
+    expect(getMasteryStageBadge(5).label).toBe('Mastered');
+  });
+
+  it('labels stage 6 as Mastered, one above the threshold', () => {
+    expect(getMasteryStageBadge(6).label).toBe('Mastered');
+  });
+
+  it('treats a negative stage as 0 (New), not as a crash or a lower bucket leaking through', () => {
+    expect(getMasteryStageBadge(-1).label).toBe('New');
+  });
+
+  it('treats a non-finite stage (NaN) as 0 (New)', () => {
+    expect(getMasteryStageBadge(NaN).label).toBe('New');
+  });
+});
+
+// averageMasteryStage reduces the SRS states of a verb's several
+// conjugation forms to one stage number, floored, with never-studied forms
+// (undefined) excluded from both the sum and the count rather than treated
+// as 0 (#108 doc comment above the implementation).
+describe('averageMasteryStage', () => {
+  it('returns 0 for an empty array', () => {
+    expect(averageMasteryStage([])).toBe(0);
+  });
+
+  it('returns 0 when every entry is undefined (no form ever studied)', () => {
+    expect(averageMasteryStage([undefined, undefined, undefined])).toBe(0);
+  });
+
+  it('excludes undefined entries from both the sum and the count', () => {
+    // If undefined were counted as 0 the average would be (5 + 0 + 7) / 3 = 4.
+    // Excluding it, it is (5 + 7) / 2 = 6.
+    const result = averageMasteryStage([{ repetitions: 5 }, undefined, { repetitions: 7 }]);
+    expect(result).toBe(6);
+  });
+
+  it('floors a non-integer average rather than rounding', () => {
+    // (1 + 2 + 2) / 3 = 1.666..., which must floor to 1, not round to 2.
+    const result = averageMasteryStage([
+      { repetitions: 1 },
+      { repetitions: 2 },
+      { repetitions: 2 },
+    ]);
+    expect(result).toBe(1);
   });
 });

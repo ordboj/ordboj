@@ -21,7 +21,7 @@ function extractCspContent(markup: string): string {
   if (!match) {
     throw new Error('No CSP <meta http-equiv="Content-Security-Policy"> tag found in index.html');
   }
-  return match[1];
+  return match[1]!;
 }
 
 describe('index.html Content-Security-Policy meta tag', () => {
@@ -59,5 +59,27 @@ describe('index.html Content-Security-Policy meta tag', () => {
     expect(cspIndex).toBeGreaterThan(-1);
     expect(scriptIndex).toBeGreaterThan(-1);
     expect(cspIndex).toBeLessThan(scriptIndex);
+  });
+});
+
+describe('index.html noscript fallback', () => {
+  it('has a <noscript> block inside <body>', () => {
+    const bodyIndex = html.indexOf('<body>');
+    const noscriptIndex = html.indexOf('<noscript>');
+    expect(bodyIndex).toBeGreaterThan(-1);
+    expect(noscriptIndex).toBeGreaterThan(bodyIndex);
+    expect(html.indexOf('</noscript>')).toBeGreaterThan(noscriptIndex);
+  });
+
+  it('tells the user JavaScript is required', () => {
+    const noscript = html.match(/<noscript>([\s\S]*?)<\/noscript>/)?.[1] ?? '';
+    expect(noscript).toContain('JavaScript');
+  });
+
+  it('does not itself contain scripts or external references', () => {
+    const noscript = html.match(/<noscript>([\s\S]*?)<\/noscript>/)?.[1] ?? '';
+    expect(noscript).not.toContain('<script');
+    expect(noscript).not.toContain('src=');
+    expect(noscript).not.toContain('href=');
   });
 });

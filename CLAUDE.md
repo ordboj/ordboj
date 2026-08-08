@@ -108,9 +108,11 @@ Done.
   They have drifted and only the TS table ships.
 - Verb ids come from array index (`String(index + 1)`), so SRS items keyed on
   them break if the verb table is reordered or extended.
-- `dueAt` is `Date.now() + interval`, not a local day boundary, so "due
-  today" is ambiguous.
 - The manifest carries many Radix and utility packages the Lovable scaffold
   installed; several are likely unused.
-- Neither localStorage store (`swedish-verbs-settings`, SRS progress) is
-  versioned yet.
+- The settings store (`swedish-verbs-settings`) is still unversioned. The SRS
+  progress store is versioned (`STORAGE_VERSION = 2`, `{version, items}`
+  envelope with legacy migration in `useSrsProgress.ts`); new fields there
+  mean a v2→v3 bump, not greenfield versioning. `dueAt` is clamped to the
+  next local day and `isDue` uses an end-of-local-day boundary (`srs.ts`) —
+  the old "due today is ambiguous" issue is resolved.

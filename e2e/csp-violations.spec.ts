@@ -56,8 +56,10 @@ test.describe('production build: no CSP violations across the practice loop', ()
 
     // The correct-answer path specifically: this is what triggers
     // ConfettiEffect -> canvas-confetti's Worker-from-Blob-URL, the exact
-    // mechanism worker-src blob: exists for.
+    // mechanism worker-src blob: exists for. Typed answers no longer
+    // auto-submit (#91), so grading requires the explicit click.
     await answerInput.pressSequentially(ANSWER);
+    await page.getByRole('button', { name: 'Check Answer' }).click();
     await expect(page.getByText('Correct!')).toBeVisible();
 
     // Give the confetti worker a beat to actually spin up and (if the
