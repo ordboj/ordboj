@@ -124,6 +124,123 @@ describe('PracticeCard - typing mode', () => {
   });
 });
 
+describe("PracticeCard - wrong-answer feedback shows the learner's own input (#136)", () => {
+  // Regression: the feedback screen used to reveal only the correct
+  // conjugation on a wrong answer, never what the learner actually typed.
+  it("shows the learner's exact wrong input next to the correct form, not just the correct form alone", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'totallywrong');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    await screen.findByText('Not quite');
+    expect(screen.getByText('You wrote')).toBeInTheDocument();
+    // The learner's own submitted text is rendered, verbatim, alongside the
+    // correct answer — not merely a pattern with the correct form filled in.
+    expect(screen.getByText('totallywrong')).toBeInTheDocument();
+    expect(screen.getByText('Correct')).toBeInTheDocument();
+    expect(
+      screen.getByText(VARA_PRESENS_ANSWER, { selector: 'p.text-success' }),
+    ).toBeInTheDocument();
+  });
+
+  it('preserves the exact case the learner typed in the wrong-answer comparison (comparison is case-insensitive, display is not)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'TOTALLYWRONG');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    await screen.findByText('Not quite');
+    // If the display were silently lowercased/normalized it would teach the
+    // learner an inaccurate picture of what they actually wrote.
+    expect(screen.getByText('TOTALLYWRONG')).toBeInTheDocument();
+    expect(screen.queryByText('totallywrong')).not.toBeInTheDocument();
+  });
+
+  it('trims surrounding whitespace from the displayed submitted answer', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, '  totallywrong  ');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    await screen.findByText('Not quite');
+    expect(screen.getByText('totallywrong')).toBeInTheDocument();
+  });
+
+  // Regression: the "You wrote" label is only accurate in typing mode. In
+  // multiple-choice mode the learner tapped an option, they never wrote
+  // anything, so the feedback copy must say "You chose" instead.
+  it('shows the exact wrong multiple-choice option the learner clicked next to the correct form, labeled "You chose"', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button')).toHaveLength(4);
+    });
+
+    const wrongButton = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent && b.textContent !== VARA_PRESENS_ANSWER);
+    expect(wrongButton).toBeDefined();
+    const wrongText = (wrongButton as HTMLElement).textContent as string;
+    await user.click(wrongButton as HTMLElement);
+
+    await screen.findByText('Not quite');
+    expect(screen.getByText('You chose')).toBeInTheDocument();
+    expect(screen.queryByText('You wrote')).not.toBeInTheDocument();
+    expect(screen.getByText(wrongText)).toBeInTheDocument();
+    expect(
+      screen.getByText(VARA_PRESENS_ANSWER, { selector: 'p.text-success' }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe('PracticeCard - multiple-choice mode', () => {
   it('renders four options and grades a click on the correct one as correct', async () => {
     renderWithProviders(
