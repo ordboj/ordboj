@@ -8,10 +8,12 @@ follow-up questions.
 
 **Ship an optional cloud backup as a copy of the local data, never as the
 primary store.** One Cloudflare Worker plus one KV namespace. One blob per
-user. The KV key is the SHA-256 of a recovery phrase that the client
-generates once. The client encrypts the payload with AES-GCM before upload;
-the server stores ciphertext only. This is a backup, not multi-device sync:
-the last write wins, and no merge logic exists anywhere.
+user. The KV key and the encryption key are both derived from a recovery
+phrase that the client generates once, through one slow PBKDF2 master secret
+with HKDF domain separation (section 3). The client encrypts the payload
+with AES-GCM before upload; the server stores ciphertext only. This is a
+backup, not multi-device sync: the last write wins, and no merge logic
+exists anywhere.
 
 Nothing in this design starts before two open tickets close, in this order:
 
@@ -20,10 +22,10 @@ Nothing in this design starts before two open tickets close, in this order:
    an id remap is corrupted by that remap. No Worker deploys and no upload
    code merges while #8 is open.
 2. **#251 whole-app envelope with validated import.** The cloud blob's
-   plaintext is exactly the byte output of the #251 export path. #10
-   (import validation) landed on its own; #20 was closed as not planned and
-   #251 supersedes it; #7 (SRS envelope v2) already landed. Note that the
-   snapshot half of #20 is not carried by #251.
+   plaintext is the #251 export envelope, re-serialized compact — see
+   section 3. #10 (import validation) landed on its own; #20 was closed as
+   not planned and #251 supersedes it; #7 (SRS envelope v2) already landed.
+   Note that the snapshot half of #20 is not carried by #251.
 
 #24 (CSP) is closed. The CSP lives in `index.html:22` as a meta tag with
 `connect-src 'self'`. The Worker origin is added to that directive in the
@@ -110,8 +112,12 @@ Derivations from the normalized UTF-8 phrase:
   makes each offline guess expensive; without it the published SHA-256 key
   name would reduce the attacker's cost per guess to a single hash and make
   the iteration count meaningless.
-- **Plaintext** = the #251 export JSON (compact, not pretty-printed),
-  gzip-compressed with the native `CompressionStream('gzip')`. If
+- **Plaintext** = the #251 export envelope, built by the same export builder
+  the download path uses, but re-serialized with `JSON.stringify(envelope)`
+  (compact, no `null, 2`) instead of pretty-printed. The downloaded file a
+  user saves locally stays pretty-printed; only the cloud path's byte
+  output is compact. This is gzip-compressed with the native
+  `CompressionStream('gzip')`. If
   `CompressionStream` or `DecompressionStream` is undefined (pre-16.4
   Safari), the cloud backup section renders as "not supported in this
   browser" and local export remains. No uncompressed fallback path ships.
@@ -142,22 +148,27 @@ namespace binding `ORDBOJ_BACKUPS`.
   full future table (~1,537 verbs plus particle items, call it 2,000 SRS
   entries) is under 400 KB as compact JSON and under 50 KB after gzip —
   more than 20× margin.
-- **Rate limit:** Workers Rate Limiting binding, split by method to fit the
-  KV free tier's 1,000 writes/day. `GET`/`DELETE` `{limit: 10, period: 60}`
-  per client IP. `PUT` `{limit: 2, period: 3600}` per client IP — at most 48
-  writes/day from one IP, so roughly 20 hostile IPs are needed to reach the
-  free write quota instead of one. `PUT` to a key with no existing blob is
-  additionally limited to 1 per hour per IP, so creating new blobs is far
-  more expensive than refreshing an existing one. Residual risk: a
-  distributed attacker across many IPs can still exhaust the shared free
-  write quota; the failure mode is a failed upload, and the local copy is
-  untouched. The same per-IP budget also throttles benign users who share an
-  IP — a home router, an office NAT, or mobile carrier CGNAT. Two people on
-  one IP contend for 2 PUTs/hour, and because rotation (section 2) is itself
-  a new-key PUT, two rotations inside an hour are rejected. The failure
-  surfaces only as "Last attempt failed" in Settings. Accepted for hobby
-  scale; if real users hit it, move the PUT limiter key from raw IP to
-  `IP + KV-key-prefix` so distinct blobs on one IP do not contend.
+- **Rate limit:** the Workers Rate Limiting binding only accepts `period` of
+  10 or 60 seconds (https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/),
+  so it can only bound short bursts, not a daily write budget. Two
+  mechanisms, doing two different jobs:
+  - **Burst control via the binding**, per client IP: `PUT`
+    `{limit: 1, period: 60}`; `GET`/`DELETE` `{limit: 10, period: 60}`. This
+    caps how fast one IP can hammer the Worker; it is not the write-budget
+    control.
+  - **Hour-scale write budget via KV metadata, not the binding.** On `PUT`,
+    read the existing blob's KV metadata `{updatedAt}` (already stored per
+    below) before writing, and reject with 429 when
+    `now - updatedAt < MIN_WRITE_INTERVAL_MS`, `MIN_WRITE_INTERVAL_MS` =
+    30 minutes. This costs a KV read (100,000/day free tier), not a KV
+    write, and it throttles per blob rather than per IP, so it does not
+    contend across users sharing an IP.
+  - **New-blob creation** has no prior `updatedAt` to compare against, so
+    the 30-minute check does not apply; the `{limit: 1, period: 60}` PUT
+    burst limiter above is the only per-IP control on first upload. A
+    distributed attacker creating many new keys from many IPs remains a
+    residual risk: the failure mode is a failed upload, and the local copy
+    is untouched. Accepted for hobby scale.
 - **CORS:** allowlist from an `ALLOWED_ORIGINS` env var — the production
   site origin plus `http://localhost:8080` for dev. `devops` fills the
   production origin at deploy time. OPTIONS preflight allows
@@ -202,14 +213,21 @@ New module `src/lib/backup/` (wordlist, crypto, upload/restore client).
   …" / "Last attempt failed". No toast, no banner, no blocking UI anywhere
   in the practice flow. The settings store is versioned (#240). Adding
   `cloudBackupEnabled`, `lastCloudBackupAt` and `lastCloudBackupResult` is a
-  stored-data-shape change: it needs a settings-store version bump with a
-  forward migration that defaults the new fields, and the human's approval
-  before merge, per CLAUDE.md.
-- **Master key caching.** The master PBKDF2 derivation runs at most once per
-  browser session and its result is held in memory only. The auto-backup
-  timer must not trigger a fresh 600k derivation mid-session; if no cached
-  master exists when the timer fires, skip this session rather than burn
-  CPU during practice.
+  stored-data-shape change. `useSettings.ts` merges stored values over
+  `DEFAULT_SETTINGS`, so purely additive fields load correctly with no
+  migration (the #92 precedent). CLAUDE.md still requires an explicit
+  version bump, a forward migration and the human's approval for any
+  stored-shape change, so the client PR carries all three.
+- **Master key caching.** When `cloudBackupEnabled` is true and
+  `ordboj-recovery-phrase` is present, the master derivation is kicked off
+  once at app start, off the render path, and the promise is cached at
+  module level. The auto-backup timer awaits that cached promise; it never
+  starts a second derivation. This is the only place the master PBKDF2
+  derivation runs unprompted; "Back up now" and restore reuse the same
+  cached promise if one exists, or derive on demand otherwise. If
+  `cloudBackupEnabled` is false or no phrase exists, no derivation is
+  kicked off at app start and the auto-backup timer, guarded by the same
+  check, skips this session rather than burn CPU during practice.
 - **Restore is explicit only.** User types the phrase → GET → decrypt →
   gunzip → the #251 import path (validation, migration-on-read). Before
   applying, show a confirmation with the backup's `exportedAt` and item
@@ -221,13 +239,12 @@ New module `src/lib/backup/` (wordlist, crypto, upload/restore client).
 
 ## 6. Sequencing
 
-| Step | Gate                                                                             |
-| ---- | -------------------------------------------------------------------------------- |
-| 1    | #8 merged (stable ids) — hard gate for everything below                          |
-| 2    | #251 merged (whole-app envelope + validated import, phrase key excluded)         |
-| 3    | Worker PR: `workers/backup/**` + deploy (`devops`), reviewed by `staff-engineer` |
-| 4    | Client PR: `src/lib/backup/**`, Settings UI, CSP `connect-src` + csp-meta test   |
-| 5    | Settings-store version bump: forward migration defaulting the three new fields   |
+| Step | Gate                                                                                                                                                                                                                         |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | #8 merged (stable ids) — hard gate for everything below                                                                                                                                                                      |
+| 2    | #251 merged (whole-app envelope + validated import, phrase key excluded)                                                                                                                                                     |
+| 3    | Worker PR: `workers/backup/**` + deploy (`devops`), reviewed by `staff-engineer`                                                                                                                                             |
+| 4    | Client PR: `src/lib/backup/**`, Settings UI, CSP `connect-src` + csp-meta test, AND the settings-store version bump with a forward migration defaulting the three new fields (human approval required before this PR merges) |
 
 The CSP edit in step 4 appends the deployed Worker origin (the
 `https://ordboj-backup.<subdomain>.workers.dev` URL, or a custom domain if
@@ -245,12 +262,18 @@ not promise it.
 
 $0 at hobby scale: Workers free tier 100,000 requests/day and KV free tier
 1,000 writes/day, 100,000 reads/day, 1 GB storage against a workload of a
-few writes per day and one ~50 KB blob per user. The per-IP `PUT` ceiling in
-section 4 is 48 writes/day, which is below the shared 1,000/day quota with
-room for roughly 20 IPs at that ceiling simultaneously; a single hostile IP
-can no longer exhaust the quota alone. If the Cloudflare free plan ever
-ends, the feature is removed and local export/import remains the backup
-story — that fallback is the deepest reason localStorage stays primary.
+few writes per day and one ~50 KB blob per user. The write budget in
+section 4 is per-blob, not per-IP: the 30-minute minimum write interval
+caps any single blob at 48 writes/day, so exhausting the shared 1,000
+writes/day quota through one blob needs a sustained attack against that one
+key, not just one request. The per-IP burst limiter (`{limit: 1, period:
+60}`) bounds request rate, not the daily budget — worst case for one IP
+hammering many distinct new keys is 1,440 PUT attempts/day, each still
+subject to the per-blob interval once a blob exists. A single hostile IP
+can no longer exhaust the quota through one blob alone; a distributed
+attacker creating many new blobs remains the residual risk noted in section 4. If the Cloudflare free plan ever ends, the feature is removed and local
+export/import remains the backup story — that fallback is the deepest
+reason localStorage stays primary.
 
 ## 8. UI copy (exact strings, Settings only)
 
