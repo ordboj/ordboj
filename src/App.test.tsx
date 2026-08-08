@@ -3,23 +3,6 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '@/App';
 
-// The "sonner" toast library crashes when rendered in jsdom (it dereferences
-// the result of window.matchMedia() without the guards a real browser gives
-// it), independent of anything in App.tsx or the error-boundary work under
-// test here. Without this it would appear to the outer AppErrorBoundary as
-// an app-wide crash on every render, masking the actual behavior this suite
-// is verifying. Mocked as a jsdom-incompatible boundary, same rationale as
-// the canvas-confetti mock in src/test/setup.ts.
-vi.mock('sonner', () => ({
-  Toaster: () => null,
-  toast: Object.assign(vi.fn(), {
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    warning: vi.fn(),
-  }),
-}));
-
 // This suite exercises the acceptance criteria for issue #18 end-to-end
 // through the real App.tsx wiring (AppErrorBoundary + per-route
 // RouteErrorBoundary): a crash confined to one route must not take down the
