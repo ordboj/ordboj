@@ -11,7 +11,7 @@ import { Grade } from '@/lib/srs';
 export default function Practice() {
   const navigate = useNavigate();
   const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
-  const { getDueItems, recordAnswer, isLoading } = useSrsProgress(settings.cefrLevels);
+  const { getDueItems, recordAnswer, isLoading, srsStates } = useSrsProgress(settings.cefrLevels);
 
   const [dueItems, setDueItems] = useState<PracticeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -113,6 +113,7 @@ export default function Practice() {
           showExamples={settings.showExamples}
           autoplayAudio={settings.autoplayAudio}
           muteAudio={settings.muteAudio}
+          repetitions={srsStates[currentItem.itemId]?.repetitions ?? 0}
           onAnswer={handleAnswer}
         />
       </div>
