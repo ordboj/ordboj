@@ -32,6 +32,10 @@ export default function Practice() {
 
   const handleAnswer = (grade: Grade) => {
     const currentItem = dueItems[currentIndex];
+    if (!currentItem) {
+      setPracticeComplete(true);
+      return;
+    }
     recordAnswer(currentItem.itemId, grade);
 
     if (currentIndex < dueItems.length - 1) {

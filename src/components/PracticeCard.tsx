@@ -68,6 +68,7 @@ export function PracticeCard({
 
       while (opts.length < 4) {
         const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
+        if (!randomVerb) continue;
         const randomConjugation = await conjugateVerb(randomVerb);
         const conjugatedForm = randomConjugation[form];
         if (!opts.includes(conjugatedForm)) {
@@ -117,11 +118,13 @@ export function PracticeCard({
 
       // Pick a random unrevealed index
       const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+      if (randomIndex === undefined) return;
       setRevealedHints((prev) => [...prev, randomIndex]);
     }
   };
 
   const getPatternWithHints = () => {
+    if (!pattern) return '';
     return pattern.patternParts
       .map((part) => {
         if (part.isMissing) {
@@ -165,6 +168,7 @@ export function PracticeCard({
   }, [infinitive, form]);
 
   const handlePronounceForm = (formToPronounce: Form) => {
+    if (!conjugated) return;
     const text = conjugated[formToPronounce];
     if (text && text !== '(not available)') {
       speakSwedish(text, muteAudio);
