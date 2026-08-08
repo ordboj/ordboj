@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
+import { getVerbs, getAllConjugatedVerbs, conjugateVerb } from '@/lib/verbs';
 import type { ConjugatedVerb, Verb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
@@ -55,6 +56,11 @@ vi.mock('@/lib/verbs', async (importOriginal) => {
         }
       );
     }),
+    // getDueItems (src/hooks/useSrsProgress.ts) calls this bulk entry point
+    // instead of per-verb conjugateVerb (see #56); it must agree with
+    // FIXTURE_CONJUGATIONS or this mock silently falls through to the real
+    // ~50-verb VERB_DATA table and the fixture-based assertions below break.
+    getAllConjugatedVerbs: vi.fn(async () => Object.values(FIXTURE_CONJUGATIONS)),
   };
 });
 
@@ -321,6 +327,71 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
   });
 });
 
+// Integration-level proof (issue #11) that the hook's getDueItems - and
+// therefore Home.tsx's dueCount, which is just getDueItems().length - picks
+// up srs.ts's local-end-of-day isDue boundary rather than some independent
+// (and possibly stale) comparison. isDue is unit-tested in isolation in
+// srs.test.ts; this exercises the real load -> getDueItems path through
+// localStorage so a regression where the hook stopped calling isDue (or
+// wrapped it with its own now/boundary logic) would show up here too.
+describe('getDueItems - local day boundary (issue #11)', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'Europe/Stockholm';
+  });
+
+  afterEach(() => {
+    // Assigning undefined would store the literal string "undefined" as
+    // the timezone; delete the key instead.
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
+  });
+
+  it('includes an item due later the same local day and excludes one due at the start of the next local day', async () => {
+    const now = new Date(2026, 0, 15, 10, 0, 0, 0).getTime(); // Jan 15, 2026 10:00 local
+    vi.setSystemTime(now);
+
+    const dueLaterToday = new Date(2026, 0, 15, 22, 0, 0, 0).getTime(); // same local day, 12h ahead
+    const dueStartOfTomorrow = new Date(2026, 0, 16, 0, 0, 0, 0).getTime(); // next local day, 14h ahead
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        items: {
+          '1-presens': {
+            itemId: '1-presens',
+            repetitions: 1,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            dueAt: dueLaterToday,
+          },
+          '2-presens': {
+            itemId: '2-presens',
+            repetitions: 1,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            dueAt: dueStartOfTomorrow,
+          },
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const due = await result.current.getDueItems();
+    const dueIds = due.map((i) => i.itemId);
+
+    // Note the excluded item is *further* from `now` in raw ms (14h) than
+    // the included one (12h) - only the calendar-day boundary, not ms
+    // distance, explains why one is due and the other isn't.
+    expect(dueIds).toContain('1-presens');
+    expect(dueIds).not.toContain('2-presens');
+  });
+});
+
 describe('importData legacy rebase', () => {
   it('applies the one-time ease rebase when importing a legacy (unversioned) export', async () => {
     const { result } = renderHook(() => useSrsProgress());
@@ -376,6 +447,120 @@ describe('importData legacy rebase', () => {
 
     expect(result.current.srsStates['1-presens'].easeFactor).toBe(1.3);
   });
+});
+
+describe('getDueItems scaling (regression guard for #56: O(V^2) per-verb lookup)', () => {
+  // Before #56, getDueItems called conjugateVerb(infinitive) once per verb,
+  // and conjugateVerb's real implementation does an O(V) VERB_DATA.find()
+  // internally -> O(V) calls x O(V) search = O(V^2) total. The fix replaced
+  // that with a single getAllConjugatedVerbs() call (O(V)) indexed into a
+  // Map for O(1) per-verb lookups in the loop.
+  //
+  // To make that complexity difference observable without depending on
+  // real wall-clock noise at small V, both conjugateVerb and
+  // getAllConjugatedVerbs are given an artificial per-call cost
+  // proportional to the verb count N, mirroring the real functions' O(N)
+  // shape. getDueItems's current (fixed) implementation only ever calls
+  // getAllConjugatedVerbs once, so total cost stays O(N) regardless of how
+  // many verbs there are. If a future change reintroduces a per-verb
+  // conjugateVerb call in that loop, this test's large-N run pays for N
+  // calls at O(N) each and the assertion below fails loudly (or the test
+  // times out) instead of drifting unnoticed.
+  it(
+    'keeps getDueItems wall time close to linear as verb count grows 10x',
+    { timeout: 15000 },
+    async () => {
+      function busyWork(n: number) {
+        let acc = 0;
+        for (let i = 0; i < n * 2000; i++) acc += i % 7;
+        return acc;
+      }
+
+      function makeVerbs(n: number): Verb[] {
+        return Array.from({ length: n }, (_, i) => ({
+          id: String(i + 1),
+          infinitive: `verb${i}`,
+          cefr: 'A1',
+        }));
+      }
+
+      function makeConjugated(n: number): ConjugatedVerb[] {
+        return Array.from({ length: n }, (_, i) => ({
+          id: String(i + 1),
+          infinitive: `verb${i}`,
+          cefr: 'A1',
+          presens: 'x',
+          preteritum: 'x',
+          supinum: 'x',
+          imperativ: 'x',
+        }));
+      }
+
+      async function timeGetDueItems(n: number): Promise<number> {
+        const verbs = makeVerbs(n);
+        const conjugated = makeConjugated(n);
+
+        vi.mocked(getVerbs).mockImplementation(async () => verbs);
+        vi.mocked(getAllConjugatedVerbs).mockImplementation(async () => {
+          busyWork(n); // one O(n) pass, mirroring a real VERB_DATA.map()
+          return conjugated;
+        });
+        vi.mocked(conjugateVerb).mockImplementation(async (infinitive: string) => {
+          busyWork(n); // one O(n) scan, mirroring a real VERB_DATA.find()
+          return (
+            conjugated.find((c) => c.infinitive === infinitive) ?? {
+              id: 'unknown',
+              infinitive,
+              presens: '(not available)',
+              preteritum: '(not available)',
+              supinum: '(not available)',
+              imperativ: '(not available)',
+            }
+          );
+        });
+
+        const { result } = renderHook(() => useSrsProgress());
+        await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+        const start = performance.now();
+        await result.current.getDueItems();
+        return performance.now() - start;
+      }
+
+      try {
+        const small = await timeGetDueItems(100);
+        const large = await timeGetDueItems(1000); // 10x verb count
+
+        // O(V) work should land near ~10x; the pre-#56 O(V^2) bug would be
+        // ~100x. Generous slack (15x, plus a flat floor) keeps this stable
+        // under CI timer noise while still catching a real quadratic
+        // regression.
+        expect(large).toBeLessThan(Math.max(small * 15, small + 50));
+      } finally {
+        // These three are module-scoped vi.fn()s shared by every test in
+        // this file via the top-level vi.mock('@/lib/verbs', ...) factory;
+        // restore their fixture-backed behavior so later test runs (or a
+        // different execution order) don't inherit this test's synthetic
+        // large-N implementations.
+        vi.mocked(getVerbs).mockImplementation(async () => FIXTURE_VERBS);
+        vi.mocked(getAllConjugatedVerbs).mockImplementation(async () =>
+          Object.values(FIXTURE_CONJUGATIONS),
+        );
+        vi.mocked(conjugateVerb).mockImplementation(async (infinitive: string) => {
+          return (
+            FIXTURE_CONJUGATIONS[infinitive] ?? {
+              id: 'unknown',
+              infinitive,
+              presens: '(not available)',
+              preteritum: '(not available)',
+              supinum: '(not available)',
+              imperativ: '(not available)',
+            }
+          );
+        });
+      }
+    },
+  );
 });
 
 // Issue #135: "Import Progress accepts any JSON and overwrites the store

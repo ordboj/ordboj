@@ -114,12 +114,12 @@ describe('Practice page - one full session', () => {
 // `currentIndex` kept advancing into it -- skipping a card. This test walks
 // a full 3-card session and asserts every item is shown exactly once, in a
 // stable order, with the denominator never changing size mid-session.
-describe("Practice page - regression #103 (mid-session deck reshuffle)", () => {
-  it("keeps the deck fixed for the whole session: every item seen exactly once, none skipped or repeated", async () => {
+describe('Practice page - regression #103 (mid-session deck reshuffle)', () => {
+  it('keeps the deck fixed for the whole session: every item seen exactly once, none skipped or repeated', async () => {
     mocks.dueItems = [
-      { verbId: "1", infinitive: "vara", form: "presens", itemId: "1-presens" },
-      { verbId: "1", infinitive: "vara", form: "preteritum", itemId: "1-preteritum" },
-      { verbId: "1", infinitive: "vara", form: "supinum", itemId: "1-supinum" },
+      { verbId: '1', infinitive: 'vara', form: 'presens', itemId: '1-presens' },
+      { verbId: '1', infinitive: 'vara', form: 'preteritum', itemId: '1-preteritum' },
+      { verbId: '1', infinitive: 'vara', form: 'supinum', itemId: '1-supinum' },
     ];
 
     const answeredOrder: string[] = [];
@@ -131,12 +131,12 @@ describe("Practice page - regression #103 (mid-session deck reshuffle)", () => {
     });
 
     const user = userEvent.setup();
-    renderWithProviders(<Practice />, { route: "/practice" });
+    renderWithProviders(<Practice />, { route: '/practice' });
 
     const expectedAnswers = [
-      { itemId: "1-presens", answer: "är" },
-      { itemId: "1-preteritum", answer: "var" },
-      { itemId: "1-supinum", answer: "varit" },
+      { itemId: '1-presens', answer: 'är' },
+      { itemId: '1-preteritum', answer: 'var' },
+      { itemId: '1-supinum', answer: 'varit' },
     ];
 
     for (let i = 0; i < expectedAnswers.length; i++) {
@@ -144,10 +144,10 @@ describe("Practice page - regression #103 (mid-session deck reshuffle)", () => {
       // this is exactly what the reshuffle bug breaks.
       expect(await screen.findByText(`${i + 1} / 3`)).toBeInTheDocument();
 
-      const input = await screen.findByPlaceholderText("Type your answer...");
+      const input = await screen.findByPlaceholderText('Type your answer...');
       await user.type(input, expectedAnswers[i].answer);
-      expect(await screen.findByText("Correct!")).toBeInTheDocument();
-      await user.click(screen.getByRole("button", { name: /next card/i }));
+      expect(await screen.findByText('Correct!')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /next card/i }));
     }
 
     expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
