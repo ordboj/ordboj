@@ -37,6 +37,7 @@ export function PracticeCard({
   onAnswer,
 }: PracticeCardProps) {
   const [userAnswer, setUserAnswer] = useState('');
+  const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -85,6 +86,7 @@ export function PracticeCard({
 
   const handleSubmit = (answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+    setSubmittedAnswer(answer);
     setIsCorrect(correct);
     setShowFeedback(true);
 
@@ -157,6 +159,7 @@ export function PracticeCard({
 
   useEffect(() => {
     setUserAnswer('');
+    setSubmittedAnswer('');
     setShowFeedback(false);
     setIsCorrect(false);
     setShowConfetti(false);
@@ -296,6 +299,21 @@ export function PracticeCard({
                   </>
                 )}
               </div>
+
+              {!isCorrect && (
+                <div className="flex items-center justify-center gap-3 text-center text-sm">
+                  <div className="rounded-lg bg-destructive/10 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">You wrote</p>
+                    <p className="font-semibold text-destructive line-through">
+                      {submittedAnswer || '(empty)'}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-success/10 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Correct answer</p>
+                    <p className="font-semibold text-success">{correctAnswer}</p>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 {/* Show full pattern with pronunciation buttons */}
