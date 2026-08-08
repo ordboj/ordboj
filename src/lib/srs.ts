@@ -242,21 +242,25 @@ export interface MasteryStageBadge {
 // this constant instead of re-encoding the number 5.
 export const MASTERED_STAGE_THRESHOLD = 5;
 
-const NEW_BADGE: MasteryStageBadge = { label: 'New', variant: 'default', color: 'bg-primary' };
+const NEW_BADGE: MasteryStageBadge = {
+  label: 'New',
+  variant: 'default',
+  color: 'bg-stage-new text-stage-new-foreground border-transparent',
+};
 const LEARNING_BADGE: MasteryStageBadge = {
   label: 'Learning',
   variant: 'secondary',
-  color: 'bg-orange-500',
+  color: 'bg-stage-learning text-stage-learning-foreground border-transparent',
 };
 const REVIEWING_BADGE: MasteryStageBadge = {
   label: 'Reviewing',
   variant: 'outline',
-  color: 'bg-yellow-500',
+  color: 'bg-stage-reviewing text-stage-reviewing-foreground border-transparent',
 };
 const MASTERED_BADGE: MasteryStageBadge = {
   label: 'Mastered',
   variant: 'default',
-  color: 'bg-green-500',
+  color: 'bg-stage-mastered text-stage-mastered-foreground border-transparent',
 };
 
 // `stage` is expected to be a non-negative integer repetitions count.
