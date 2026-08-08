@@ -161,7 +161,7 @@ A1,att,erbjuda,,erbjuder,erbjöd,erbjudit
 A1,att,ingå,,ingår,ingick,ingått
 A1,att,bestå,,består,bestod,bestått
 A1,att,konstatera,,konstaterar,konstaterade,konstaterat
-A1,att,styra,,styrar,styrade,styrat
+A1,att,styra,,styr,styrde,styrt
 A1,att,förlora,,förlorar,förlorade,förlorat
 A1,att,påstå,,påstår,påstod,påstått
 A1,att,besluta,,besluter,beslöt,beslutit
@@ -183,7 +183,7 @@ A1,att,drabba,,drabbar,drabbade,drabbat
 A1,att,fara,,far,for,farit
 A1,att,tjäna,,tjänar,tjänade,tjänat
 A1,att,behandla,,behandlar,behandlade,behandlat
-A1,att,utföra,,utförar,utförade,utförat
+A1,att,utföra,,utför,utförde,utfört
 A1,att,räcka,,räcker,räckte,räckt
 A1,att,fundera,,funderar,funderade,funderat
 A1,att,uppstå,,uppstår,uppstod,uppstått
@@ -612,7 +612,7 @@ A2,att,kopiera,,kopierar,kopierade,kopierat
 A2,att,förhandla,,förhandlar,förhandlade,förhandlat
 A2,att,koncentrera,,koncentrerar,koncentrerade,koncentrerat
 B1,att,avgå,,avgår,avgick,avgått
-B1,att,inneha,,innehar,innehade,innehat
+B1,att,inneha,,innehar,innehade,innehaft
 B1,att,strunta,,struntar,struntade,struntat
 B1,att,instämma,,instämmer,instämde,instämt
 B1,att,debattera,,debatterar,debatterade,debatterat
@@ -705,7 +705,7 @@ B1,att,städa,,städar,städade,städat
 B1,att,uppvisa,,uppvisar,uppvisade,uppvisat
 B1,att,ansöka,,ansöker,ansökte,ansökt
 B1,att,beklaga,,beklagar,beklagade,beklagat
-B1,att,uppföra,,uppförar,uppförade,uppförat
+B1,att,uppföra,,uppför,uppförde,uppfört
 B1,att,fria,,friar,friade,friat
 B1,att,bevaka,,bevakar,bevakade,bevakat
 B1,att,integrera,,integrerar,integrerade,integrerat
@@ -726,7 +726,7 @@ B1,att,tröttna,,tröttnar,tröttnade,tröttnat
 B1,att,generera,,genererar,genererade,genererat
 B1,att,krypa,,kryper,kröp,krupit
 B1,att,underteckna,,undertecknar,undertecknade,undertecknat
-B1,att,förebygga,,förebyggar,förebyggade,förebyggat
+B1,att,förebygga,,förebygger,förebyggde,förebyggt
 B1,att,lukta,,luktar,luktade,luktat
 B1,att,ursäkta,,ursäktar,ursäktade,ursäktat
 B1,att,demonstrera,,demonstrerar,demonstrerade,demonstrerat
@@ -800,7 +800,7 @@ B1,att,fotografera (vardagl. fota),,fotograferar,fotograferade,fotograferat
 B1,att,påvisa,,påvisar,påvisade,påvisat
 B1,att,trampa,,trampar,trampade,trampat
 B1,att,torka,,torkar,torkade,torkat
-B1,att,spränga,,sprängar,sprängade,sprängat
+B1,att,spränga,,spränger,sprängde,sprängt
 B1,att,känneteckna,,kännetecknar,kännetecknade,kännetecknat
 B1,att,fördjupa,,fördjupar,fördjupade,fördjupat
 B1,att,vänja,,vänjer,vande,vant
@@ -817,7 +817,7 @@ B1,att,svära,,svär,svor,svurit
 B1,att,deklarera,,deklarerar,deklarerade,deklarerat
 B1,att,imponera,,imponerar,imponerade,imponerat
 B1,att,frigöra,,frigör,frigjorde,frigjort
-B1,att,upplysa,,upplysar,upplysade,upplysat
+B1,att,upplysa,,upplyser,upplyste,upplyst
 B1,att,färdas,,färdas,färdades,färdats
 B1,att,brista,,brister,brast,brustit
 B1,att,överlåta,,överlåter,överlät,överlåtit
@@ -838,9 +838,9 @@ B1,att,regera,,regerar,regerade,regerat
 B1,att,sortera,,sorterar,sorterade,sorterat
 B1,att,misshandla,,misshandlar,misshandlade,misshandlat
 B1,att,bliva,,blir,blev,blivit
-B1,att,anlägga,,anläggar,anläggade,anläggat
+B1,att,anlägga,,anlägger,anlade,anlagt
 B1,att,breda,,bredar,bredade,bredat
-B2,att,marknadsföra,,marknadsförar,marknadsförade,marknadsförat
+B2,att,marknadsföra,,marknadsför,marknadsförde,marknadsfört
 B2,att,anstränga,,anstränger,ansträngde,ansträngt
 B2,att,växla,,växlar,växlade,växlat
 B2,att,förvärva,,förvärvar,förvärvade,förvärvat
@@ -862,7 +862,7 @@ B2,att,läcka,,läcker,läckte,läckt
 B2,att,efterlysa,,efterlyser,efterlyste,efterlyst
 B2,att,samordna,,samordnar,samordnade,samordnat
 B2,att,mata,,matar,matade,matat
-B2,att,ålägga,,åläggar,åläggade,åläggat
+B2,att,ålägga,,ålägger,ålade,ålagt
 B2,att,framkalla,,framkallar,framkallade,framkallat
 B2,att,inbjuda,,inbjuder,inbjöd,inbjudit
 B2,att,utplåna,,utplånar,utplånade,utplånat
@@ -924,7 +924,7 @@ B2,att,avlägsna,,avlägsnar,avlägsnade,avlägsnat
 B2,att,infinna sig,,infinner sig,infann sig,infunnit sig
 B2,att,åtnjuta,,åtnjuter,åtnjöt,åtnjutit
 B2,att,förlita sig,,förlitar sig,förlitade sig,förlitat sig
-B2,att,förlägga,,förläggar,förläggade,förläggat
+B2,att,förlägga,,förlägger,förlade,förlagt
 B2,att,iaktta,,iakttar,iakttog,iakttagit
 B2,att,bekänna,,bekänner,bekände,bekänt
 B2,att,stava,,stavar,stavade,stavat
@@ -936,7 +936,7 @@ B2,att,återta,,återtar,återtog,återtagit
 B2,att,inträda,,inträder,inträdde,inträtt
 B2,att,inviga,,invigar,invigade,invigat
 B2,att,strömma,,strömmar,strömmade,strömmat
-B2,att,kartlägga,,kartläggar,kartläggade,kartläggat
+B2,att,kartlägga,,kartlägger,kartlade,kartlagt
 B2,att,övervinna,,övervinner,övervann,övervunnit
 B2,att,förtydliga,,förtydligar,förtydligade,förtydligat
 B2,att,skåda,,skådar,skådade,skådat
@@ -950,7 +950,7 @@ B2,att,operera,,opererar,opererade,opererat
 B2,att,bomba,,bombar,bombade,bombat
 B2,att,våldta,,våldtar,våldtog,våldtagit
 B2,att,skruva,,skruvar,skruvade,skruvat
-B2,att,slutföra,,slutförar,slutförade,slutförat
+B2,att,slutföra,,slutför,slutförde,slutfört
 B2,att,återspegla,,återspeglar,återspeglade,återspeglat
 B2,att,inkomma,,inkommer,inkom,inkommit
 B2,att,utlösa,,utlöser,utlöste,utlöst
@@ -1013,7 +1013,7 @@ B2,att,bestrida,,bestrider,bestred,bestridit
 B2,att,vifta,,viftar,viftade,viftat
 B2,att,hacka,,hackar,hackade,hackat
 B2,att,smälla,,smäller,smällde,smällt
-B2,att,hänföra,,hänförar,hänförade,hänförat
+B2,att,hänföra,,hänför,hänförde,hänfört
 B2,att,recensera,,recenserar,recenserade,recenserat
 B2,att,diskriminera,,diskriminerar,diskriminerade,diskriminerat
 B2,att,reformera,,reformerar,reformerade,reformerat
@@ -1038,7 +1038,7 @@ B2,att,avvakta,,avvaktar,avvaktade,avvaktat
 B2,att,praktisera,,praktiserar,praktiserade,praktiserat
 B2,att,rusta,,rustar,rustade,rustat
 B2,att,trilla,,trillar,trillade,trillat
-B2,att,handlägga,,handläggar,handläggade,handläggat
+B2,att,handlägga,,handlägger,handlade,handlagt
 B2,att,missförstå,,missförstår,missförstod,missförstått
 B2,att,korrigera,,korrigerar,korrigerade,korrigerat
 B2,att,försätta,,försätter,försatte,försatt
@@ -1119,7 +1119,7 @@ C1,att,intensifiera,,intensifierar,intensifierade,intensifierat
 C1,att,jubla,,jublar,jublade,jublat
 C1,att,effektivisera,,effektiviserar,effektiviserade,effektiviserat
 C1,att,beskåda,,beskådar,beskådade,beskådat
-C1,att,härröra,,härrörar,härrörade,härrörat
+C1,att,härröra,,härrör,härrörde,härrört
 C1,att,peta,,petar,petade,petat
 C1,att,tanka,,tankar,tankade,tankat
 C1,att,klappa,,klappar,klappade,klappat
@@ -1161,7 +1161,7 @@ C1,att,härleda,,härleder,härledde,härlett
 C1,att,utbyta,,utbyter,utbytte,utbytt
 C1,att,sponsra,,sponsrar,sponsrade,sponsrat
 C1,att,slakta,,slaktar,slaktade,slaktat
-C1,att,uppröra,,upprörar,upprörade,upprörat
+C1,att,uppröra,,upprör,upprörde,upprört
 C1,att,summera,,summerar,summerade,summerat
 C1,att,underminera,,underminerar,underminerade,underminerat
 C1,att,fullborda,,fullbordar,fullbordade,fullbordat
@@ -1183,12 +1183,12 @@ C1,att,implementera,,implementerar,implementerade,implementerat
 C1,att,uppbära,,uppbär,uppbar,uppburit
 C1,att,separera,,separerar,separerade,separerat
 C1,att,kidnappa,,kidnappar,kidnappade,kidnappat
-C1,att,framlägga,,framläggar,framläggade,framläggat
+C1,att,framlägga,,framlägger,framlade,framlagt
 C1,att,förorsaka,,förorsakar,förorsakade,förorsakat
 C1,att,tortera,,torterar,torterade,torterat
 C1,att,befalla,,befallar,befallade,befallat
 C1,att,vålla,,vållar,vållade,vållat
-C1,att,förutsäga,,förutsägar,förutsägade,förutsägat
+C1,att,förutsäga,,förutsäger,förutsade,förutsagt
 C1,att,begrunda,,begrundar,begrundade,begrundat
 C1,att,manifestera,,manifesterar,manifesterade,manifesterat
 C1,att,bekanta,,bekantar,bekantade,bekantat
@@ -1217,7 +1217,7 @@ C1,att,gagna,,gagnar,gagnade,gagnat
 C1,att,modifiera,,modifierar,modifierade,modifierat
 C1,att,realisera,,realiserar,realiserade,realiserat
 C1,att,skymta,,skymtar,skymtade,skymtat
-C1,att,avlägga,,avläggar,avläggade,avläggat
+C1,att,avlägga,,avlägger,avlade,avlagt
 C1,att,föreläsa,,föreläser,föreläste,föreläst
 C1,att,klassificera,,klassificerar,klassificerade,klassificerat
 C1,att,spruta,,sprutar,sprutade,sprutat
@@ -1369,7 +1369,7 @@ C2,att,sammanträda,,sammanträder,sammanträdde,sammanträtt
 C2,att,förplikta,,förpliktar,förpliktade,förpliktat
 C2,att,häkta,,häktar,häktade,häktat
 C2,att,omringa,,omringar,omringade,omringat
-C2,att,ödelägga,,ödeläggar,ödeläggade,ödeläggat
+C2,att,ödelägga,,ödelägger,ödelade,ödelagt
 C2,att,besvära,,besvärar,besvärade,besvärat
 C2,att,uppdra,,uppdrar,uppdrog,uppdragit
 C2,att,gunga,,gungar,gungade,gungat
@@ -1472,12 +1472,12 @@ C2,att,massera,,masserar,masserade,masserat
 C2,att,förvarna,,förvarnar,förvarnade,förvarnat
 C2,att,ledsaga,,ledsagar,ledsagade,ledsagat
 C2,att,chockera,,chockerar,chockerade,chockerat
-C2,att,vidröra,,vidrörar,vidrörade,vidrörat
+C2,att,vidröra,,vidrör,vidrörde,vidrört
 C2,att,snarka,,snarkar,snarkade,snarkat
 C2,att,tunna,,tunnar,tunnade,tunnat
 C2,att,fela,,felar,felade,felat
 C2,att,ånga,,ångar,ångade,ångat
-C2,att,planlägga,,planläggar,planläggade,planläggat
+C2,att,planlägga,,planlägger,planlade,planlagt
 C2,att,kodifiera,,kodifierar,kodifierade,kodifierat
 C2,att,betyg(s)sätta,,betygsätter,betygsatte,betygsatt
 C2,att,gnida,,gnider,gned,gnidit
@@ -1507,7 +1507,7 @@ C2,att,kurera,,kurerar,kurerade,kurerat
 C2,att,avvara,,avvarar,avvarade,avvarat
 C2,att,brådska,,brådskar,brådskade,brådskat
 C2,att,anträffa,,anträffar,anträffade,anträffat
-C2,att,överräcka,,överräckar,överräckade,överräckat
+C2,att,överräcka,,överräcker,överräckte,överräckt
 C2,att,artikulera,,artikulerar,artikulerade,artikulerat
 C2,att,reklamera,,reklamerar,reklamerade,reklamerat
 C2,att,överse,,överser,översåg,översett

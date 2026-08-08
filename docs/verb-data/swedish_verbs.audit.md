@@ -2,6 +2,11 @@
 
 Owner: swedish-linguist. Scope: GitHub issue #125.
 
+Lives in `docs/`, not `public/`: anything under `public/` is copied verbatim
+into the production bundle by Vite, and this is an internal working note.
+Line numbers below refer to `public/data/swedish_verbs.csv` as of this
+commit (1-based, header is line 1).
+
 ## Why
 
 `swedish_verbs.csv` was generated in a way that applied a naive grupp-1
@@ -53,19 +58,43 @@ a correct grupp-1 conjugation by shape alone, only by knowing the verb.
 6. Ran a mojibake/typo scan (non-ASCII/non-Swedish-letter characters,
    stray uppercase mid-word) over the whole file: clean except the two
    rows above. The dotless-i typos fixed in PR #85 remain fixed.
+7. **Second pass (review follow-up).** Code review of the first pass found
+   that the sweep in step 4 was organised by infinitive _ending_
+   (`-va/-pa/-ka/…`) and therefore skipped whole compound families whose
+   ending was not on that list. A second detector was run: for a curated
+   list of ~70 base verbs known not to be grupp 1, flag every still-naive
+   row whose infinitive is that base or a prefixed compound of it. This
+   found 24 more wrong rows, all corrected in this pass — the `-lägga`
+   family (9), `-föra` (5), `-röra` (3), plus `styra`, `spränga`,
+   `upplysa`, `överräcka`, `förebygga`, `förutsäga` and `inneha`
+   (supinum only: `innehat` → `innehaft`). Every one was checked against
+   the base verb's own row already present in the CSV
+   (`lägga,,lägger,la,lagt`; `föra,,för,förde,fört`;
+   `röra,,rör,rörde,rört`; `räcka,,räcker,räckte,räckt`;
+   `lysa,,lyser,lyste,lyst`; `bygga,,bygger,byggde,byggt`;
+   `säga,,säger,sa/sade,sagt`; `ha,ha,har,hade,haft`), so the corrections
+   are consistent with data already in the file rather than derived from
+   memory alone. Compounds of `lägga` take `-lade` in preteritum
+   (`anlade`, `kartlade`), not the base's colloquial `la`.
+   Three rows the detector flagged were rejected as false positives and
+   left alone: `matcha`, `duscha` and `ledsaga` are genuine grupp 1 and
+   only matched because they happen to end in `-ha`/`-saga`.
 
 ## Result
 
-- 292 rows corrected (163 initial dictionary matches + 129 found in the
-  follow-up `-va/-pa/-ka/-ta/-da/-ja/-ma/-na/-la/-sa` sweep), plus the 2
-  unrelated corruption fixes (`svara`, `sova`) = 294 changed lines total.
+- 316 rows corrected (163 initial dictionary matches, 129 from the
+  ending-based sweep in step 4, 24 from the family-based sweep in step 7),
+  plus the 2 unrelated corruption fixes (`svara`, `sova`) = 318 changed
+  lines total.
 - Every corrected row: `presens`, `preteritum`, `supinum` replaced with the
   verb's real conjugation. `cefr`, `grammar`, `infinitive`, `imperativ`
-  columns untouched (imperativ was already blank on every touched row
-  except one, so it was left as-is rather than guessed in this pass).
-- ~963 remaining naive-template-shaped rows reviewed and confirmed as
-  genuine grupp 1 (no change) — these are the "hitta, titta, kalla"-type
-  true positives the issue warned about.
+  columns untouched. `imperativ` was blank on all 318 touched rows and was
+  left blank — filling it is issue #124's job, not this audit's, and
+  guessing it here would have been out of scope.
+- ~940 remaining naive-template-shaped rows were left unchanged as
+  presumed-genuine grupp 1 — these are the "hitta, titta, kalla"-type
+  true positives the issue warned about. See the honesty note under
+  "For #21" for what that presumption is and is not worth.
 - 13 rows deliberately **not** corrected — flagged below for human
   confirmation because I do not have high confidence in the standard
   modern form. Their naive-template forms are almost certainly still
@@ -91,11 +120,29 @@ a correct grupp-1 conjugation by shape alone, only by knowing the verb.
 
 ## For #21 (bulk CSV → VERB_DATA import)
 
-The naive-template class of error is now closed: every row that matched
-the detector has been individually audited (corrected or confirmed). The
-13 rows above are the only known-uncertain rows left in the file; #21
-should either exclude them from a bulk import or route them through a
-second linguist review first. Everything else in the CSV was not touched
-by this audit and should not be assumed correct by association — this
-ticket only covers the naive-template failure mode described in #125, not
-a full line-by-line audit of all 1537 rows.
+**The naive-template class of error is not closed, and this document does
+not claim it is.** An earlier revision of this note did claim it; that
+claim was wrong and the step-7 second pass is the proof — it found 24
+more bad rows in families the first pass never looked at.
+
+What is actually true:
+
+- 316 rows were positively identified as non-grupp-1 and corrected.
+- 13 rows are known-uncertain and are listed below, untouched.
+- The remaining ~940 naive-template-shaped rows were **not** individually
+  verified against a reference. They were left unchanged because nothing
+  flagged them, which is a much weaker statement than "confirmed correct".
+  The detector is shape-based, and a naive grupp-1 template is
+  indistinguishable by shape from a correct grupp-1 conjugation — that is
+  the whole difficulty of #125. A row survives only if no curated base
+  verb or suffix rule matched it, so any non-grupp-1 verb missing from
+  the curated list is still wrong in the file today.
+- Expected residual error rate is therefore low but not zero, and it is
+  concentrated in low-frequency B2/C1/C2 verbs, since the curated list
+  was built from common vocabulary first.
+
+Recommended handling in #21: bulk-import A1/A2/B1 rows, exclude the 13
+below, and route B2–C2 rows through a reference check (SAOL/Svenska.se or
+a native speaker) before they reach learners. Everything else in the CSV
+outside the naive-template failure mode was not examined at all by this
+audit — this ticket is not a full line-by-line audit of all 1537 rows.
