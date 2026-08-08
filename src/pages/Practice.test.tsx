@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import Practice from '@/pages/Practice';
+import { MAX_REQUEUES_PER_DAY } from '@/lib/srs';
 
 // Practice.tsx composes useSrsProgress (srs-engine) and useSettings
 // (srs-engine) with PracticeCard (ui-craft). Those two hooks are mocked here
@@ -187,22 +188,17 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(7, 'v1-presens', 5);
   });
 
-  // BUG (found by this test, not yet fixed -- see report to frontend-expert):
-  // Practice.tsx's re-queue bookkeeping (handleAnswer) keeps advancing a
-  // pending item's `itemsSinceLapse` every time *any other* item is
-  // answered, even while a previously-spliced, not-yet-retried copy of that
-  // same item is already sitting later in the queue. With enough filler
-  // items available (a realistic 15-item sitting easily has this many), the
-  // gap threshold is cleared a second time before the first retry is ever
-  // shown, so `isEligibleForRequeue` fires again and a *second* copy of the
-  // same item is spliced in -- silently burning the MAX_REQUEUES_PER_DAY cap
-  // without the learner ever having attempted the first retry. Because
-  // `<PracticeCard key={currentItem.itemId}>` in Practice.tsx keys only on
-  // itemId, when two copies of the same item end up back-to-back in the
-  // queue, React does not remount the card for the second copy, so it never
-  // resets `showFeedback`/`isCorrect` -- the UI freezes on the first
-  // attempt's "Not quite" feedback screen with no input box and no way for
-  // the learner to proceed except abandoning the sitting.
+  // History: this test originally caught a real stuck-session bug, fixed by
+  // the duplicate-splice guard in Practice.tsx's handleAnswer (39a1a00). A
+  // pending item's `itemsSinceLapse` kept advancing while a previously
+  // spliced, not-yet-retried copy of it already sat later in the queue, so
+  // with enough filler items the gap threshold cleared a second time before
+  // the first retry was shown and a *second* copy was spliced in -- burning
+  // the MAX_REQUEUES_PER_DAY cap unseen, and (because PracticeCard is keyed
+  // on itemId) freezing the UI on the previous attempt's feedback panel when
+  // the two copies ended up back-to-back. The guard now blocks a splice for
+  // any item that already has a copy beyond the currently-shown card; this
+  // test and the "double gap clearance" test below pin that invariant.
   it('caps a same-day lapsing item at MAX_REQUEUES_PER_DAY re-queues, then lets the sitting end without it looping forever', async () => {
     // A generous, always-answered-correctly filler supply so the 3-item gap
     // is never starved -- "vara" is the one item this learner always gets
@@ -291,6 +287,203 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     expect(lapsingCalls.length).toBe(lapsingItemAppearances);
     for (const [, grade] of lapsingCalls) {
       expect(grade).toBe(0);
+    }
+  });
+
+  // The duplicate-splice guard at scale: with 8 always-correct fillers the
+  // lapser's 3-item gap clears at filler 3 (splice) and clears AGAIN at
+  // filler 6 while the first retry copy is still waiting at the tail.
+  // Without the guard that second clearing spliced a second copy and burned
+  // the daily cap unseen; with it, exactly one retry is served. Also pins
+  // the mid-session counter: a lapse never ticks the numerator, and the
+  // retry card shows resolved-count, not queue position.
+  it('splices only one retry copy even when the gap threshold clears twice before the retry is shown', async () => {
+    const fillers: Array<[string, string]> = [
+      ['ha', 'har'],
+      ['kunna', 'kan'],
+      ['få', 'får'],
+      ['bli', 'blir'],
+      ['komma', 'kommer'],
+      ['vilja', 'vill'],
+      ['göra', 'gör'],
+      ['finna', 'finner'],
+    ];
+    mocks.dueItems = [
+      { verbId: 'lapser', infinitive: 'vara', form: 'presens', itemId: 'lapser-presens' },
+      ...fillers.map(([infinitive], i) => ({
+        verbId: `filler${i}`,
+        infinitive,
+        form: 'presens',
+        itemId: `filler${i}-presens`,
+      })),
+    ];
+
+    const user = userEvent.setup();
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    // Card 1: the lapser, wrong.
+    expect(await screen.findByText('1 / 9')).toBeInTheDocument();
+    let input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'wrongwrongwrong');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Not quite');
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    // Mid-session counter: the lapse did not tick the numerator, so the
+    // next card still reads 1 / 9 (0 resolved + the card being shown).
+    expect(await screen.findByText('1 / 9')).toBeInTheDocument();
+
+    for (const [, answer] of fillers) {
+      input = await screen.findByPlaceholderText('Type your answer...');
+      await user.type(input, answer);
+      await screen.findByText('Correct!');
+      await user.click(screen.getByRole('button', { name: /next card/i }));
+    }
+
+    // The single retry copy. Counter shows the 8 resolved fillers, not a
+    // ninth position for the re-shown card.
+    expect(await screen.findByText('8 / 9')).toBeInTheDocument();
+    input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'är');
+    await screen.findByText('Correct!');
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
+
+    // Exactly one retry happened: 9 first passes + 1 retry, lapser graded
+    // wrong then correct.
+    expect(mocks.recordAnswer).toHaveBeenCalledTimes(10);
+    const lapsingCalls = mocks.recordAnswer.mock.calls.filter(([id]) => id === 'lapser-presens');
+    expect(lapsingCalls.map(([, grade]) => grade)).toEqual([0, 5]);
+  });
+
+  // Wrong answer on the requeued copy itself: the lapse -> retry(wrong) ->
+  // second retry(wrong) chain must consume the cap one shown retry at a
+  // time and still terminate. Three late-lapsing fillers supply the 3-item
+  // gap after the first failed retry (their own retries are the intervening
+  // answers), so the lapser earns its second and final requeue.
+  it('a wrong retry re-queues again until the cap is spent, then the item drops to tomorrow', async () => {
+    const script: Array<{ infinitive: string; answer: string | null }> = [
+      { infinitive: 'vara', answer: null }, // lapse
+      { infinitive: 'ha', answer: 'har' },
+      { infinitive: 'kunna', answer: 'kan' },
+      { infinitive: 'få', answer: 'får' }, // gap cleared -> retry 1 spliced
+      { infinitive: 'bli', answer: 'blir' },
+      { infinitive: 'komma', answer: 'kommer' },
+      { infinitive: 'vilja', answer: 'vill' },
+      { infinitive: 'göra', answer: null }, // late lapses...
+      { infinitive: 'finna', answer: null },
+      { infinitive: 'ta', answer: null },
+      { infinitive: 'vara', answer: null }, // retry 1, wrong (cap 1 of 2 spent)
+      { infinitive: 'göra', answer: 'gör' }, // the late lapsers' retries...
+      { infinitive: 'finna', answer: 'finner' },
+      { infinitive: 'ta', answer: 'tar' }, // ...clear the lapser's gap again
+      { infinitive: 'vara', answer: null }, // retry 2, wrong (cap spent)
+    ];
+    const fillerInfinitives = ['ha', 'kunna', 'få', 'bli', 'komma', 'vilja', 'göra', 'finna', 'ta'];
+    mocks.dueItems = [
+      { verbId: 'lapser', infinitive: 'vara', form: 'presens', itemId: 'lapser-presens' },
+      ...fillerInfinitives.map((infinitive, i) => ({
+        verbId: `filler${i}`,
+        infinitive,
+        form: 'presens',
+        itemId: `filler${i}-presens`,
+      })),
+    ];
+
+    const user = userEvent.setup();
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    for (const step of script) {
+      const input = await screen.findByPlaceholderText('Type your answer...');
+      if (step.answer === null) {
+        await user.type(input, 'wrongwrongwrong');
+        await user.click(screen.getByRole('button', { name: /check answer/i }));
+        await screen.findByText('Not quite');
+      } else {
+        await user.type(input, step.answer);
+        await screen.findByText('Correct!');
+      }
+      await user.click(screen.getByRole('button', { name: /next card/i }));
+    }
+
+    // The cap-spending third failure ends the sitting: no fourth showing.
+    expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
+    expect(mocks.recordAnswer).toHaveBeenCalledTimes(script.length);
+
+    // 1 initial lapse + MAX_REQUEUES_PER_DAY shown retries, all wrong.
+    const lapsingCalls = mocks.recordAnswer.mock.calls.filter(([id]) => id === 'lapser-presens');
+    expect(lapsingCalls.map(([, grade]) => grade)).toEqual([0, 0, 0]);
+    expect(lapsingCalls.length).toBe(1 + MAX_REQUEUES_PER_DAY);
+
+    // The late lapsers each resolved on their single retry.
+    for (const verb of ['göra', 'finna', 'ta']) {
+      const i = fillerInfinitives.indexOf(verb);
+      const calls = mocks.recordAnswer.mock.calls.filter(([id]) => id === `filler${i}-presens`);
+      expect(calls.map(([, grade]) => grade)).toEqual([0, 5]);
+    }
+  });
+
+  // docs/learning/lapse-handling.md: "If the day ends with a re-queue still
+  // pending, it is simply due tomorrow with the lapse already applied --
+  // nothing is lost." The in-memory bookkeeping implements that by wiping
+  // itself on the first answer of a new local day (baseMap = {}), so a
+  // pending retry is dropped rather than served: the item's dueAt, set at
+  // the lapse, already falls on the new day. This pins that reset.
+  it('drops a pending re-queue when the local day flips mid-sitting', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(2026, 0, 15, 23, 50, 0));
+      const fillers: Array<[string, string]> = [
+        ['ha', 'har'],
+        ['kunna', 'kan'],
+        ['få', 'får'],
+        ['bli', 'blir'],
+      ];
+      mocks.dueItems = [
+        { verbId: 'lapser', infinitive: 'vara', form: 'presens', itemId: 'lapser-presens' },
+        ...fillers.map(([infinitive], i) => ({
+          verbId: `filler${i}`,
+          infinitive,
+          form: 'presens',
+          itemId: `filler${i}-presens`,
+        })),
+      ];
+
+      const user = userEvent.setup();
+      renderWithProviders(<Practice />, { route: '/practice' });
+
+      // 23:50, Jan 15: the lapser goes wrong and starts waiting for its gap.
+      let input = await screen.findByPlaceholderText('Type your answer...');
+      await user.type(input, 'wrongwrongwrong');
+      await user.click(screen.getByRole('button', { name: /check answer/i }));
+      await screen.findByText('Not quite');
+      await user.click(screen.getByRole('button', { name: /next card/i }));
+
+      // Still Jan 15 for one filler...
+      input = await screen.findByPlaceholderText('Type your answer...');
+      await user.type(input, fillers[0][1]);
+      await screen.findByText('Correct!');
+      await user.click(screen.getByRole('button', { name: /next card/i }));
+
+      // ...then midnight passes mid-sitting.
+      vi.setSystemTime(new Date(2026, 0, 16, 0, 5, 0));
+
+      for (const [, answer] of fillers.slice(1)) {
+        input = await screen.findByPlaceholderText('Type your answer...');
+        await user.type(input, answer);
+        await screen.findByText('Correct!');
+        await user.click(screen.getByRole('button', { name: /next card/i }));
+      }
+
+      // The sitting ends without serving the retry: the pending entry was
+      // dropped at the day flip, and the item is simply due on the new day.
+      expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
+      expect(mocks.recordAnswer).toHaveBeenCalledTimes(5);
+      const lapsingCalls = mocks.recordAnswer.mock.calls.filter(([id]) => id === 'lapser-presens');
+      expect(lapsingCalls.map(([, grade]) => grade)).toEqual([0]);
+    } finally {
+      vi.useRealTimers();
     }
   });
 });
