@@ -10,21 +10,20 @@ F6) and on the qa-owned dataset-integrity test
 **`baseInfinitive` stays a required field. VERB_DATA membership stops being a
 validity constraint on it.** A particle-verb entry is valid when its
 `baseInfinitive` passes three format assertions (section 2). Whether that
-string also appears in the 51-row `VERB_DATA` table is a coverage fact, not a
+string also appears in the 56-row `VERB_DATA` table is a coverage fact, not a
 data defect. The F6 membership assertions are deleted and replaced by the
-format assertions. The runtime eligibility gate is unchanged: a verb whose
-base is absent from `VERB_DATA` is valid, shippable data that waits — the
-queue never introduces it until the base verb is appended.
+format assertions. Issue #315 already removed the base-verb introduction
+gate from the particle queue on main, so a base absent from `VERB_DATA` has
+no runtime effect at all: the entry is introduced normally, on its own SRS
+schedule (section 3).
 
 **Runner-up: keep MUST-resolve and force every new base into `VERB_DATA`
 before its particle verb can merge.** It lost because it inverts the
 dependency. The linguist's judgment about a particle verb is not wrong
-because the conjugation table is small. `VERB_DATA` holds ~51 of ~1537 CSV
+because the conjugation table is small. `VERB_DATA` holds ~56 of ~1537 CSV
 verbs; membership is an accident of which rows were hand-ported. Coupling
 `verified: true` to that accident forced #262 to exist as a blocking ticket,
-and would force one for every future base outside the table. The safe
-property the old rule bought — "no dead content" — survives without it,
-because absence now has a defined, visible runtime meaning (section 3).
+and would force one for every future base outside the table.
 
 ## 1. What the code does today
 
@@ -35,11 +34,10 @@ because absence now has a defined, visible runtime meaning (section 3).
   an unresolvable base must be `verified: false`.
 - `src/data/particleVerbData.test.ts:294` — embedded-forms drift check: an
   absent base is reported as drift, so it also fails on absence.
-- `src/lib/particleQueue.ts:121-131` — `isBaseVerbReady` returns `false` when
-  the base does not resolve, so the verb is never introduced.
-- `src/lib/particleQueue.ts:143-154` — the 7-day interference rule joins
-  particle entries **to each other** on the `baseInfinitive` string. It never
-  touches `VERB_DATA`. This is why the field stays required.
+- `src/lib/particleQueue.ts:120` (`isBaseRecentlyUsed`, called at line 216) —
+  the 7-day interference rule joins particle entries **to each other** on the
+  `baseInfinitive` string. It never touches `VERB_DATA`. This is why the
+  field stays required.
 - Since #318 (PR #324), the feedback reference line renders from `forms`
   embedded on the entry, never from a `VERB_DATA` join. The render path has
   no membership dependency left.
@@ -80,15 +78,23 @@ Other tests in the file:
 Acceptance: the suite passes on a dataset that contains a `verified: true`
 entry whose base is absent from `VERB_DATA`.
 
+The comment at `src/data/particleVerbData.ts:65` ("MUST resolve in VERB_DATA
+for any entry that ships: the introduction gate joins on it...") is now
+stale — the introduction gate it describes no longer exists (#315).
+`swedish-linguist` owns that file; the lead routes the comment fix to them
+once this decision lands.
+
 ## 3. Runtime meaning of an absent base (unchanged code, defined semantics)
 
-`isBaseVerbReady` keeps returning `false` for an unresolvable base. The
-entry's cards are never introduced. That is the intended behavior, not a
-bug: the pedagogy rule "base verb known first" (introduction prerequisite,
-`docs/learning/particle-verb-practice.md`, prerequisite table) stands, and a
-learner cannot know a base verb the app cannot drill.
+Issue #315 removed the base-verb introduction gate from the particle queue.
+An entry whose base is absent from `VERB_DATA` is introduced normally, on
+its own SRS schedule, exactly like any other entry. It renders correctly:
+since #318 the feedback reference line comes from the entry's own embedded
+`forms`, not from a `VERB_DATA` join, so there is no dependency left for an
+absent base to break. `docs/learning/particle-verb-practice.md` line 54
+records this: "introduction prerequisite | none — removed by issue #315".
 
-To keep "waits" from decaying into "silently dead forever":
+To keep the field meaningful going forward:
 
 - **Authoring rule for `swedish-linguist`:** when a new entry uses a base
   outside `VERB_DATA`, append the base verb to `VERB_DATA` in the same PR
@@ -96,10 +102,6 @@ To keep "waits" from decaying into "silently dead forever":
   post-#53 ids are infinitive-keyed, so appending is safe). If the base
   cannot be verified yet, ship the entry anyway and report the missing base
   to the lead, who files a base-append ticket — the #262 pattern.
-- The stale comment at `src/lib/particleQueue.ts:117-120` ("the dataset test
-  refuses to let a verified entry have one") is srs-engine's to rewrite on
-  the next touch of that file: an unresolvable base now means "not yet
-  eligible", not "impossible by test". No behavior change, comment only.
 
 ## 4. The five re-evaluations (AC4) — already done
 
@@ -117,8 +119,7 @@ enforced by name.
 - `baseInfinitive` remains required on every entry.
 - The verified gate is untouched: `verified: false` entries never render, and
   every one still states its reason.
-- The introduction prerequisite (base `repetitions >= 2` on presens and
-  preteritum) and the 7-day same-base rule are untouched.
+- The 7-day same-base rule is untouched.
 - `VERB_DATA` stays append-only under the order-pin test; this decision adds
   no pressure to edit it.
 - No storage shape changes. No migration. No human approval needed beyond
