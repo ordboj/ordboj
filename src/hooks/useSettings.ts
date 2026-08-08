@@ -124,8 +124,8 @@ function parseStoredSettings(raw: string): Settings {
   }
 
   // The empty-cefrLevels coercion of #137 now lives in the schema's
-  // `z.minLength(1)`: an empty selection fails validation and the field falls back
-  // to every level, which is what that guard did.
+  // `z.minLength(1)`: an empty selection fails validation and the
+  // field falls back to every level, which is what that guard did.
   return validateSettings({ ...DEFAULT_SETTINGS, ...(stored as Record<string, unknown>) });
 }
 
