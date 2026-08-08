@@ -4,22 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress as ProgressBar } from '@/components/ui/progress';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Search, ArrowUpDown } from 'lucide-react';
 import { getAllConjugatedVerbs, ConjugatedVerb } from '@/lib/verbs';
@@ -34,7 +21,7 @@ export default function Progress() {
   const navigate = useNavigate();
   const { settings } = useSettings();
   const { srsStates } = useSrsProgress(settings.cefrLevels);
-
+  
   const [verbs, setVerbs] = useState<ConjugatedVerb[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,8 +45,8 @@ export default function Progress() {
     const forms = ['presens', 'preteritum', 'supinum', 'imperativ'];
     let totalReps = 0;
     let count = 0;
-
-    forms.forEach((form) => {
+    
+    forms.forEach(form => {
       const itemId = `${verbId}-${form}`;
       const state = srsStates[itemId];
       if (state) {
@@ -67,16 +54,14 @@ export default function Progress() {
         count++;
       }
     });
-
+    
     return count > 0 ? Math.floor(totalReps / count) : 0;
   };
 
   const getStageBadge = (stage: number) => {
     if (stage === 0) return { label: 'New', variant: 'default' as const, color: 'bg-purple-500' };
-    if (stage <= 2)
-      return { label: 'Learning', variant: 'secondary' as const, color: 'bg-orange-500' };
-    if (stage <= 4)
-      return { label: 'Reviewing', variant: 'outline' as const, color: 'bg-yellow-500' };
+    if (stage <= 2) return { label: 'Learning', variant: 'secondary' as const, color: 'bg-orange-500' };
+    if (stage <= 4) return { label: 'Reviewing', variant: 'outline' as const, color: 'bg-yellow-500' };
     return { label: 'Mastered', variant: 'default' as const, color: 'bg-green-500' };
   };
 
@@ -85,19 +70,19 @@ export default function Progress() {
 
     // Search filter
     if (searchQuery) {
-      filtered = filtered.filter((verb) =>
-        verb.infinitive.toLowerCase().includes(searchQuery.toLowerCase()),
+      filtered = filtered.filter(verb =>
+        verb.infinitive.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     // Difficulty filter
     if (difficultyFilter !== 'all') {
-      filtered = filtered.filter((verb) => verb.cefr === difficultyFilter);
+      filtered = filtered.filter(verb => verb.cefr === difficultyFilter);
     }
 
     // SRS filter
     if (srsFilter !== 'all') {
-      filtered = filtered.filter((verb) => {
+      filtered = filtered.filter(verb => {
         const stage = getSrsStage(verb.id);
         const badge = getStageBadge(stage);
         return badge.label.toLowerCase() === srsFilter;
@@ -121,7 +106,7 @@ export default function Progress() {
 
   const progressStats = useMemo(() => {
     const total = verbs.length;
-    const mastered = verbs.filter((verb) => getSrsStage(verb.id) >= 5).length;
+    const mastered = verbs.filter(verb => getSrsStage(verb.id) >= 5).length;
     const percentage = total > 0 ? (mastered / total) * 100 : 0;
     return { total, mastered, percentage };
   }, [verbs, srsStates]);
@@ -148,7 +133,11 @@ export default function Progress() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
+            className="gap-2"
+          >
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
@@ -161,8 +150,7 @@ export default function Progress() {
           <CardHeader>
             <CardTitle>Your Progress</CardTitle>
             <CardDescription>
-              You've mastered {progressStats.mastered} / {progressStats.total} verbs (
-              {progressStats.percentage.toFixed(1)}%)
+              You've mastered {progressStats.mastered} / {progressStats.total} verbs ({progressStats.percentage.toFixed(1)}%)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -221,7 +209,7 @@ export default function Progress() {
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
-                  <TableHead
+                  <TableHead 
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => toggleSort('infinitive')}
                   >
@@ -251,7 +239,7 @@ export default function Progress() {
                   const stage = getSrsStage(verb.id);
                   const badge = getStageBadge(stage);
                   return (
-                    <TableRow
+                    <TableRow 
                       key={verb.id}
                       className={`cursor-pointer hover:bg-muted/50 transition-colors ${
                         index % 2 === 0 ? 'bg-muted/20' : ''
