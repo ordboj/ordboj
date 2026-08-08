@@ -10,6 +10,8 @@ import {
   generateVerbPattern,
   getFormLabel,
   getFormHint,
+  getAllConjugatedVerbs,
+  getVerbGrupp,
   type ConjugatedVerb,
   type VerbPattern,
 } from '@/lib/verbs';
@@ -59,29 +61,60 @@ export function PracticeCard({
   const correctAnswer = conjugated?.[form] || '';
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
 
-  // Generate multiple choice options
-
+  // Generate multiple choice options. Distractors are drawn from the full
+  // verb pool, preferring the same CEFR level and conjugation group first
+  // (most plausible confusions), falling back to the same level, then to
+  // any level, so the loop below is bounded by the finite candidate lists
+  // rather than an open-ended random-sample retry.
   useEffect(() => {
-    const generateOptions = async () => {
-      const opts = [correctAnswer];
-      const allVerbs = ['vara', 'ha', 'gå', 'komma', 'skriva', 'läsa', 'säga', 'få'];
+    const isValidForm = (value: string | undefined): value is string =>
+      !!value && value.trim() !== '' && value !== '(not available)';
 
-      while (opts.length < 4) {
-        const randomVerb = allVerbs[Math.floor(Math.random() * allVerbs.length)];
-        const randomConjugation = await conjugateVerb(randomVerb);
-        const conjugatedForm = randomConjugation[form];
-        if (!opts.includes(conjugatedForm)) {
-          opts.push(conjugatedForm);
+    const shuffle = <T,>(list: T[]) => [...list].sort(() => Math.random() - 0.5);
+
+    const generateOptions = async () => {
+      if (!conjugated || !isValidForm(correctAnswer)) return;
+
+      const allVerbs = await getAllConjugatedVerbs();
+      const currentGrupp = getVerbGrupp(infinitive);
+
+      const candidates = allVerbs.filter((v) => {
+        if (v.infinitive === infinitive) return false;
+        const value = v[form];
+        return isValidForm(value) && value !== correctAnswer;
+      });
+
+      const sameLevelSameGroup = shuffle(
+        candidates.filter(
+          (v) =>
+            v.cefr === conjugated.cefr &&
+            currentGrupp !== undefined &&
+            getVerbGrupp(v.infinitive) === currentGrupp,
+        ),
+      );
+      const sameLevel = shuffle(candidates.filter((v) => v.cefr === conjugated.cefr));
+      const anyLevel = shuffle(candidates);
+
+      const opts: string[] = [correctAnswer];
+      const seen = new Set(opts);
+
+      for (const pool of [sameLevelSameGroup, sameLevel, anyLevel]) {
+        for (const candidate of pool) {
+          if (opts.length >= 4) break;
+          const value = candidate[form];
+          if (!seen.has(value)) {
+            seen.add(value);
+            opts.push(value);
+          }
         }
+        if (opts.length >= 4) break;
       }
 
-      setOptions(opts.sort(() => Math.random() - 0.5));
+      setOptions(shuffle(opts));
     };
 
-    if (correctAnswer) {
-      generateOptions();
-    }
-  }, [correctAnswer, form]);
+    generateOptions();
+  }, [correctAnswer, form, infinitive, conjugated]);
 
   const handleSubmit = (answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
