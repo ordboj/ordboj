@@ -78,7 +78,7 @@ export default function Home() {
             )}
           </Button>
           <h1 className="text-5xl font-bold text-primary mb-2">
-            Svenska Verb
+            Ordböj
           </h1>
           <p className="text-xl text-muted-foreground">
             Master Swedish verbs with spaced repetition
