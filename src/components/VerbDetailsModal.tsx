@@ -28,14 +28,19 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
 
   const badge = getStageBadge(srsStage);
 
+  // Deliberate clock read for a display-only "overdue" badge; re-evaluating
+  // per render keeps it fresh and never touches SRS scheduling state. Hoisted
+  // above the per-form loop so a render only reads it once, not once per form.
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
+
   const getFormSrsInfo = (form: Form) => {
     const itemId = `${verb.id}-${form}`;
     const state = srsStates[itemId];
     if (!state) return null;
 
     const nextReview = new Date(state.dueAt);
-    // eslint-disable-next-line react-hooks/purity -- deliberate clock read for a display-only "overdue" badge; re-evaluating per render keeps it fresh and never touches SRS scheduling state
-    const isOverdue = nextReview.getTime() <= Date.now();
+    const isOverdue = nextReview.getTime() <= now;
 
     return {
       repetitions: state.repetitions,
