@@ -57,10 +57,6 @@ Rules:
   citation form (`höra av sig`) that is ungrammatical in 1st/2nd person.
 - The two items of one verb never appear in the same sitting (cloze feedback
   reveals the recall answer).
-- A verb is eligible for introduction only when its base verb has
-  `repetitions >= 2` on presens and preteritum in the conjugation store. A
-  base absent from VERB_DATA can never satisfy this, so such a verb waits,
-  un-introduced, until the base verb is appended (#317).
 - Never introduce two particle verbs sharing a base verb within the same week
   (semantic-set interference: bygga upp / bygga ut).
 - Introduction card (unscheduled, untested) appears at the top of the sitting;
@@ -129,10 +125,11 @@ Key constraints:
   equals the first token of `lemma`, and entries sharing a base use the
   identical NFC string (the 7-day interference rule joins on it). A base
   absent from VERB_DATA is a coverage gap, not a data defect: the entry is
-  valid and shippable, and the eligibility gate simply never introduces it
-  until the base verb is appended (the linguist appends the base in the same
-  PR where possible; otherwise the lead files a base-append ticket, per the
-  #262 pattern).
+  valid. The entry ships and is introduced on its own SRS schedule; the
+  feedback reference line renders from the embedded `forms` (#318), so no
+  VERB_DATA join exists at render time (the linguist appends the base in the
+  same PR where possible; otherwise the lead files a base-append ticket, per
+  the #262 pattern).
 - **CEFR bands come from SVALex** (CEFRLex project, UCLouvain/Språkbanken —
   graded lexicon derived from 12 CEFR-graded Swedish coursebooks incl.
   Rivstart; 429 verb+particle combinations, A1: 25 / A2: 70 / B1: 122 /
