@@ -22,7 +22,7 @@ jobs:
         id: metadata
         uses: dependabot/fetch-metadata@v3
         with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
 
       # For grouped PRs, fetch-metadata reports the highest-severity update
       # type across every dependency bundled into the PR, so a group that

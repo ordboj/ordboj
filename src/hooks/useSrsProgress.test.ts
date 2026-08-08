@@ -377,3 +377,190 @@ describe('importData legacy rebase', () => {
     expect(result.current.srsStates['1-presens'].easeFactor).toBe(1.3);
   });
 });
+
+// Issue #135: "Import Progress accepts any JSON and overwrites the store
+// unvalidated". These pin the three acceptance-criteria cases directly:
+// a structurally valid backup is applied, and anything that isn't —
+// non-JSON garbage or valid JSON with the wrong shape — is rejected without
+// touching either the in-memory state or the persisted localStorage entry.
+describe('importData shape validation (issue #135)', () => {
+  it('accepts a structurally valid versioned backup and applies it verbatim', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const validExport = JSON.stringify({
+      version: 2,
+      items: {
+        '1-presens': {
+          itemId: '1-presens',
+          repetitions: 7,
+          intervalDays: 40,
+          easeFactor: 2.1,
+          dueAt: FIXED_NOW,
+          lastGrade: 5,
+        },
+      },
+    });
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(validExport);
+    });
+
+    expect(importResult).toBe(true);
+    expect(result.current.srsStates).toEqual({
+      '1-presens': {
+        itemId: '1-presens',
+        repetitions: 7,
+        intervalDays: 40,
+        easeFactor: 2.1,
+        dueAt: FIXED_NOW,
+        lastGrade: 5,
+      },
+    });
+  });
+
+  it('rejects a valid-JSON payload shaped like a settings export, without mutating in-memory state or localStorage', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+
+    const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
+    const storageSnapshot = localStorage.getItem(STORAGE_KEY);
+
+    // Well-formed JSON, but it is a settings export, not a progress backup:
+    // none of its values are SrsState-shaped.
+    const settingsExport = JSON.stringify({
+      theme: 'dark',
+      dailyGoal: 20,
+      soundEnabled: true,
+    });
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(settingsExport);
+    });
+
+    expect(importResult).toBe(false);
+    expect(result.current.srsStates).toEqual(stateSnapshot);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+  });
+
+  it('rejects a versioned envelope where one item is missing required SrsState fields (all-or-nothing), without mutating the store', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+
+    const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
+    const storageSnapshot = localStorage.getItem(STORAGE_KEY);
+
+    const partiallyBrokenExport = JSON.stringify({
+      version: 2,
+      items: {
+        '1-presens': {
+          itemId: '1-presens',
+          repetitions: 3,
+          intervalDays: 16,
+          easeFactor: 2.0,
+          dueAt: FIXED_NOW,
+        },
+        // Missing dueAt entirely: not a valid SrsState.
+        '1-preteritum': {
+          itemId: '1-preteritum',
+          repetitions: 1,
+          intervalDays: 1,
+          easeFactor: 2.0,
+        },
+      },
+    });
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(partiallyBrokenExport);
+    });
+
+    expect(importResult).toBe(false);
+    expect(result.current.srsStates).toEqual(stateSnapshot);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+  });
+
+  it('rejects a version number newer than this build understands, without mutating the store', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+
+    const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
+    const storageSnapshot = localStorage.getItem(STORAGE_KEY);
+
+    const futureVersionExport = JSON.stringify({
+      version: 99,
+      items: {
+        '1-presens': {
+          itemId: '1-presens',
+          repetitions: 3,
+          intervalDays: 16,
+          easeFactor: 2.0,
+          dueAt: FIXED_NOW,
+        },
+      },
+    });
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(futureVersionExport);
+    });
+
+    expect(importResult).toBe(false);
+    expect(result.current.srsStates).toEqual(stateSnapshot);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+  });
+
+  it('rejects a top-level JSON array, without mutating the store', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
+    const storageSnapshot = localStorage.getItem(STORAGE_KEY);
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData('[1, 2, 3]');
+    });
+
+    expect(importResult).toBe(false);
+    expect(result.current.srsStates).toEqual(stateSnapshot);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+  });
+
+  it('rejects malformed (non-JSON) input without touching the persisted localStorage entry', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+
+    const storageSnapshot = localStorage.getItem(STORAGE_KEY);
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData('{this is not json');
+    });
+
+    expect(importResult).toBe(false);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+  });
+});

@@ -175,3 +175,216 @@ describe('swedish_verbs.csv - mojibake guard', () => {
     expect([...offenders]).toEqual([]);
   });
 });
+
+describe('swedish_verbs.csv - issue #125 naive-template conjugation audit (PR #158)', () => {
+  // The generator that produced swedish_verbs.csv applied a naive grupp-1
+  // template (presens = infinitiv+"r", preteritum = infinitiv+"de",
+  // supinum = infinitiv+"t") to every "-a"-infinitive row, correct for real
+  // grupp-1 verbs but wrong for the ~256 grupp 2/3/4 verbs the issue
+  // flagged. #125 audited and corrected those rows. These tests pin the
+  // corrected forms at the text level (the CSV is data, not imported code,
+  // so there is nothing else to assert against) so a future edit can't
+  // silently regress a fixed row back to the naive template.
+  type CsvRow = {
+    cefr: string;
+    grammar: string;
+    infinitive: string;
+    imperativ: string;
+    presens: string;
+    preteritum: string;
+    supinum: string;
+  };
+
+  function parseCsv(): CsvRow[] {
+    const csvPath = join(here, '..', '..', 'public', 'data', 'swedish_verbs.csv');
+    const csv = readFileSync(csvPath, 'utf-8');
+    const lines = csv.split(/\r?\n/).filter(Boolean);
+    return lines.slice(1).map((line) => {
+      const [cefr, grammar, infinitive, imperativ, presens, preteritum, supinum] = line.split(',');
+      return { cefr, grammar, infinitive, imperativ, presens, preteritum, supinum };
+    });
+  }
+
+  function rowFor(rows: CsvRow[], infinitive: string): CsvRow {
+    const row = rows.find((r) => r.infinitive === infinitive);
+    if (!row) throw new Error(`No CSV row found for infinitive "${infinitive}"`);
+    return row;
+  }
+
+  // Naive-template shape: presens = infinitiv+"r", preteritum = infinitiv+"de",
+  // supinum = infinitiv+"t" — the exact auto-generated pattern #125 flagged.
+  function isNaiveTemplate(row: CsvRow): boolean {
+    const inf = row.infinitive.replace(/\s*\(.*\)/, '').trim();
+    return row.presens === `${inf}r` && row.preteritum === `${inf}de` && row.supinum === `${inf}t`;
+  }
+
+  // A representative sample spanning A1/A2/B1 and grupp 2a/2b/3/4, pulled
+  // from the ~292 rows the audit corrected. Each of these previously had
+  // the naive template (e.g. "ställa,,ställar,ställade,ställat") and now
+  // has its real conjugation.
+  it.each([
+    ['innebära', { presens: 'innebär', preteritum: 'innebar', supinum: 'inneburit' }],
+    ['ställa', { presens: 'ställer', preteritum: 'ställde', supinum: 'ställt' }],
+    ['kräva', { presens: 'kräver', preteritum: 'krävde', supinum: 'krävt' }],
+    ['byta', { presens: 'byter', preteritum: 'bytte', supinum: 'bytt' }],
+    ['möta', { presens: 'möter', preteritum: 'mötte', supinum: 'mött' }],
+    ['beskriva', { presens: 'beskriver', preteritum: 'beskrev', supinum: 'beskrivit' }],
+    ['anta', { presens: 'antar', preteritum: 'antog', supinum: 'antagit' }],
+    ['bidra', { presens: 'bidrar', preteritum: 'bidrog', supinum: 'bidragit' }],
+    ['dyka', { presens: 'dyker', preteritum: 'dök', supinum: 'dykit' }],
+    ['sköta', { presens: 'sköter', preteritum: 'skötte', supinum: 'skött' }],
+    ['föredra', { presens: 'föredrar', preteritum: 'föredrog', supinum: 'föredragit' }],
+    ['tillägga', { presens: 'tillägger', preteritum: 'tillade', supinum: 'tillagt' }],
+    ['gifta', { presens: 'gifter', preteritum: 'gifte', supinum: 'gift' }],
+    ['träda', { presens: 'träder', preteritum: 'trädde', supinum: 'trätt' }],
+    ['svära', { presens: 'svär', preteritum: 'svor', supinum: 'svurit' }],
+    ['besitta', { presens: 'besitter', preteritum: 'besatt', supinum: 'besuttit' }],
+    ['angripa', { presens: 'angriper', preteritum: 'angrep', supinum: 'angripit' }],
+    ['skita', { presens: 'skiter', preteritum: 'sket', supinum: 'skitit' }],
+  ] as const)(
+    'corrects the naive grupp-1 template for "%s" (issue #125)',
+    (infinitive, expected) => {
+      const row = rowFor(parseCsv(), infinitive);
+      expect(row.presens).toBe(expected.presens);
+      expect(row.preteritum).toBe(expected.preteritum);
+      expect(row.supinum).toBe(expected.supinum);
+      expect(isNaiveTemplate(row)).toBe(false);
+    },
+  );
+
+  // Regression: "svara" (A1, a genuine grupp-1 verb) had "svära"'s strong
+  // forms pasted in, with a stray uppercase preteritum ("svär,SVor,svurit")
+  // instead of its own real conjugation.
+  it('regression: svara is not contaminated with svära\'s forms ("svär,SVor,svurit")', () => {
+    const row = rowFor(parseCsv(), 'svara');
+    expect(row.presens).toBe('svarar');
+    expect(row.preteritum).toBe('svarade');
+    expect(row.supinum).toBe('svarat');
+  });
+
+  // Regression: "sova"'s preteritum was the stray-uppercase "SOV" instead
+  // of "sov" (presens/supinum were already correct, so this row never
+  // matched the naive-template detector — it's a separate corruption
+  // fixed in the same PR).
+  it('regression: sova preteritum is lowercase "sov", not "SOV"', () => {
+    const row = rowFor(parseCsv(), 'sova');
+    expect(row.presens).toBe('sover');
+    expect(row.preteritum).toBe('sov');
+    expect(row.supinum).toBe('sovit');
+  });
+
+  // General invariant (not just the two known instances above): every verb
+  // form in the CSV is lowercase Swedish. A stray uppercase letter — like
+  // "SVor" or "SOV" — is exactly the class of copy/paste corruption that
+  // teaches a learner a Swedish word that doesn't exist. This catches any
+  // recurrence of that bug class, not only the two rows already found.
+  it('no infinitive/imperativ/presens/preteritum/supinum field contains an uppercase letter', () => {
+    const offenders: string[] = [];
+    for (const row of parseCsv()) {
+      for (const field of [
+        'infinitive',
+        'imperativ',
+        'presens',
+        'preteritum',
+        'supinum',
+      ] as const) {
+        const value = row[field];
+        if (value && /[A-ZÅÄÖ]/.test(value)) {
+          offenders.push(`${row.infinitive}.${field}="${value}"`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // Family-consistency: per the audit method (docs/... swedish_verbs.audit.md
+  // step 2), a prefixed compound verb always inherits its base verb's
+  // conjugation class in Swedish — this is a hard morphological rule, not a
+  // guess. Pin that every compound of "sätta", "komma", "göra" and "hålla"
+  // present in the CSV follows its base verb's pattern, so a future edit
+  // can't silently reintroduce the naive template for one family member
+  // while leaving its siblings correct.
+  it.each([
+    'fortsätta',
+    'ersätta',
+    'utsätta',
+    'ifrågasätta',
+    'förutsätta',
+    'översätta',
+    'tillsätta',
+    'avsätta',
+    'omsätta',
+    'försätta',
+    'motsätta',
+    'bosätta',
+    'värdesätta',
+    'besätta',
+    'sjösätta',
+    'pantsätta',
+  ])('"%s" inherits sätta\'s sätter/xsatte/xsatt conjugation', (infinitive) => {
+    const row = rowFor(parseCsv(), infinitive);
+    const prefix = infinitive.slice(0, -'sätta'.length);
+    expect(row.presens).toBe(`${prefix}sätter`);
+    expect(row.preteritum).toBe(`${prefix}satte`);
+    expect(row.supinum).toBe(`${prefix}satt`);
+  });
+
+  it.each([
+    'förekomma',
+    'återkomma',
+    'åstadkomma',
+    'uppkomma',
+    'tillkomma',
+    'framkomma',
+    'inkomma',
+    'utkomma',
+    'ankomma',
+    'omkomma',
+    'undkomma',
+  ])('"%s" inherits komma\'s kommer/xkom/xkommit conjugation', (infinitive) => {
+    const row = rowFor(parseCsv(), infinitive);
+    const prefix = infinitive.slice(0, -'komma'.length);
+    expect(row.presens).toBe(`${prefix}kommer`);
+    expect(row.preteritum).toBe(`${prefix}kom`);
+    expect(row.supinum).toBe(`${prefix}kommit`);
+  });
+
+  it.each([
+    'utgöra',
+    'avgöra',
+    'möjliggöra',
+    'klargöra',
+    'redogöra',
+    'offentliggöra',
+    'frigöra',
+    'fullgöra',
+    'tjänstgöra',
+    'tydliggöra',
+    'rengöra',
+  ])('"%s" inherits göra\'s gör/xgjorde/xgjort conjugation', (infinitive) => {
+    const row = rowFor(parseCsv(), infinitive);
+    const prefix = infinitive.slice(0, -'göra'.length);
+    expect(row.presens).toBe(`${prefix}gör`);
+    expect(row.preteritum).toBe(`${prefix}gjorde`);
+    expect(row.supinum).toBe(`${prefix}gjort`);
+  });
+
+  it.each([
+    'innehålla',
+    'behålla',
+    'framhålla',
+    'erhålla',
+    'upprätthålla',
+    'tillhandahålla',
+    'bibehålla',
+    'underhålla',
+    'uppehålla',
+    'förhålla',
+  ])('"%s" inherits hålla\'s håller/xhöll/xhållit conjugation', (infinitive) => {
+    const row = rowFor(parseCsv(), infinitive);
+    const prefix = infinitive.slice(0, -'hålla'.length);
+    expect(row.presens).toBe(`${prefix}håller`);
+    expect(row.preteritum).toBe(`${prefix}höll`);
+    expect(row.supinum).toBe(`${prefix}hållit`);
+  });
+});
