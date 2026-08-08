@@ -96,7 +96,22 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
                 const formValue = verb[form];
                 const srsInfo = getFormSrsInfo(form);
 
-                if (formValue === '(not available)' || !formValue) return null;
+                // imperativNotApplicable (#124) explicitly flags the common,
+                // confirmed case: modal verbs, which grammatically have no
+                // imperativ. The "(not available)" literal-string check
+                // stays as a fallback for a couple of verbs (e.g. "te sig",
+                // "anse" in verbData.ts) whose imperativ is intentionally
+                // empty pending human review and are deliberately not
+                // flagged imperativNotApplicable -- that field means
+                // "confirmed absent," not "unconfirmed." This can go away
+                // once swedish-linguist fills those forms or adds a field
+                // for "known empty, not yet confirmed why."
+                if (
+                  (form === 'imperativ' && verb.imperativNotApplicable) ||
+                  formValue === '(not available)' ||
+                  !formValue
+                )
+                  return null;
 
                 return (
                   <div key={form} className="border rounded-lg p-4 space-y-2">
