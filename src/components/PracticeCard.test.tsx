@@ -182,7 +182,12 @@ describe('PracticeCard - mobile input attributes (#113)', () => {
     // ("a" U+0061 + combining ring above U+030A) instead. Before the NFC
     // normalization fix, a strict === comparison treats these as different
     // strings and marks a linguistically correct answer wrong.
-    const nfdGar = 'g' + 'å' + 'r'; // NFD equivalent of "går"
+    // Built from explicit code points ('a' + combining ring above, U+030A)
+    // rather than a literal 'å' in this source file: any NFC-normalizing
+    // tool that touches this file (editor, formatter, git filter) would
+    // silently collapse a literal decomposed character back to the
+    // precomposed form and defeat the point of this test.
+    const nfdGar = 'g' + 'a' + '\u030A' + 'r'; // NFD equivalent of "går"
     expect(nfdGar.normalize('NFC')).toBe('går');
     expect(nfdGar).not.toBe('går'); // sanity: the raw strings really do differ
 
