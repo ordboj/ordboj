@@ -7,20 +7,28 @@ export interface SrsState {
   lastGrade?: number;
 }
 
-// The UI (PracticeCard.tsx) only ever emits a binary correct/incorrect
-// signal: `isCorrect ? 5 : 0`. The old 0-5 type implied a self-rated
-// six-point grader that never existed in this app; narrowed here to the
-// two literal values actually produced. See
+// The UI (PracticeCard.tsx) emits one of three outcomes for an answer:
+// wrong, correct-with-a-hint-used, or correct unaided. The old 0-5 type
+// implied a self-rated six-point grader that never existed in this app;
+// narrowed here to the literal values actually produced. See
 // docs/learning/lapse-handling.md for the decision and rationale
-// (learning-designer). A third value for hinted answers is proposed there
-// but requires a frontend-owned change to the onAnswer payload and is
-// tracked as a separate piece of work.
-export type Grade = 0 | 5; // 0 = wrong, 5 = correct
+// (learning-designer): a hint-assisted correct answer is partial credit,
+// not a full pass and not a lapse. Wiring PracticeCard to emit 3 when a
+// hint was used is a frontend-owned change to the onAnswer payload and is
+// tracked as a separate piece of work (#133); this file is ready to
+// receive it.
+export type Grade = 0 | 3 | 5; // 0 = wrong, 3 = hinted correct, 5 = correct unaided
 
 const EASE_CEILING = 2.8;
 const EASE_FLOOR = 1.3;
 const EASE_DELTA_CORRECT = 0.05;
 const EASE_DELTA_WRONG = -0.2;
+// Hinted correct: smaller ease penalty than a lapse (it wasn't a failed
+// retrieval) but still a penalty (it wasn't a clean recall either).
+const EASE_DELTA_HINTED = -0.05;
+// Hinted correct halves the next interval rather than resetting it or
+// growing it: "this was partial, come back sooner, but you did not fail."
+const HINTED_INTERVAL_MULTIPLIER = 0.5;
 
 // Hard ceiling on any single interval. Even at the 2.8 ease ceiling an
 // item's schedule cannot leave the app's one-year horizon.
@@ -38,20 +46,28 @@ export const MAX_INTERVAL_DAYS = 365;
 export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
   let { repetitions, intervalDays, easeFactor } = state;
 
-  // Exact match, not >= 3: Grade is 0 | 5 today, and a future hinted
-  // grade must force an explicit branch here rather than silently
-  // counting as correct.
-  const isCorrect = grade === 5;
-
-  if (!isCorrect) {
+  // Exact match on each literal, not a >=/< threshold: Grade is 0 | 3 | 5
+  // and each value has its own branch below rather than being folded into
+  // a binary correct/wrong split.
+  if (grade === 0) {
     // Lapse: flat penalty, reset progress. No longer runs the SM-2 formula
     // before resetting, so the penalty is bounded and predictable.
     easeFactor = Math.max(EASE_FLOOR, easeFactor + EASE_DELTA_WRONG);
     repetitions = 0;
     intervalDays = 1;
+  } else if (grade === 3) {
+    // Hinted correct: partial credit, not a lapse and not a full pass.
+    // Repetitions do not advance (this was not a clean unaided recall, so
+    // it should not count toward graduating the item to a longer
+    // interval), but the item is not reset either. Ease takes a small
+    // penalty and the existing interval is halved so the item comes back
+    // sooner than it otherwise would have.
+    easeFactor = Math.max(EASE_FLOOR, easeFactor + EASE_DELTA_HINTED);
+    intervalDays = Math.max(1, Math.round(intervalDays * HINTED_INTERVAL_MULTIPLIER));
   } else {
-    // Success: small capped reward. The ceiling is what stops runaway ease
-    // growth on a long correct streak (previously uncapped).
+    // grade === 5: full success, small capped reward. The ceiling is what
+    // stops runaway ease growth on a long correct streak (previously
+    // uncapped).
     easeFactor = Math.min(EASE_CEILING, easeFactor + EASE_DELTA_CORRECT);
     repetitions += 1;
     if (repetitions === 1) {

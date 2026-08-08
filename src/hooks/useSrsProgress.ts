@@ -61,9 +61,34 @@ export interface PracticeItem {
   itemId: string;
 }
 
+// In-session relearning queue (docs/learning/lapse-handling.md). A wrong
+// answer (grade 0) must not just get the SM-2 dueAt+1day penalty; it must
+// be re-asked before the sitting ends, so the learner gets a genuine
+// second retrieval attempt instead of seeing the correct form once and
+// moving on. REQUEUE_GAP intervening items is enough to clear working
+// memory without pushing the item so far out that a short queue never
+// re-shows it. Counters are session-scoped (plain hook state, reset on
+// remount) rather than persisted: the note's "per item per day" cap
+// depends on a sitting/day boundary the app does not implement yet
+// (see docs/learning/session-shape-and-daily-goal.md); until that lands,
+// "per sitting" is the closest honest approximation and does not require
+// a localStorage schema change.
+const REQUEUE_GAP = 3;
+const MAX_REQUEUES_PER_ITEM = 2;
+
+// Where in the queue a lapsed item should reappear: at least REQUEUE_GAP
+// items after its current position, clamped to the end of the queue so it
+// is never inserted past items that don't exist yet.
+export function getRequeueInsertIndex(currentIndex: number, queueLength: number): number {
+  return Math.min(currentIndex + 1 + REQUEUE_GAP, queueLength);
+}
+
 export function useSrsProgress(cefrLevels?: string[]) {
   const [srsStates, setSrsStates] = useState<Record<string, SrsState>>({});
   const [isLoading, setIsLoading] = useState(true);
+  // Per-item requeue count for the current sitting only; see the
+  // in-session relearning queue comment above. Never persisted.
+  const [requeueCounts, setRequeueCounts] = useState<Record<string, number>>({});
 
   // Load from localStorage and initialize
   useEffect(() => {
@@ -179,6 +204,38 @@ export function useSrsProgress(cefrLevels?: string[]) {
     }));
   };
 
+  // Records the answer (scheduling is unaffected: calculateNextReview
+  // already sets dueAt to tomorrow-or-later on a lapse) and, for a wrong
+  // answer, returns an updated copy of `queue` with `item` re-inserted
+  // `REQUEUE_GAP` items ahead so it is re-asked before the sitting ends,
+  // up to `MAX_REQUEUES_PER_ITEM` times per item per sitting. Callers that
+  // don't need in-session relearning can keep using `recordAnswer`
+  // directly; this is additive and does not change its behavior.
+  const recordAnswerWithRequeue = (
+    item: PracticeItem,
+    grade: Grade,
+    queue: PracticeItem[],
+    currentIndex: number,
+  ): PracticeItem[] => {
+    recordAnswer(item.itemId, grade);
+
+    if (grade !== 0) {
+      return queue;
+    }
+
+    const priorRequeues = requeueCounts[item.itemId] ?? 0;
+    if (priorRequeues >= MAX_REQUEUES_PER_ITEM) {
+      return queue;
+    }
+
+    setRequeueCounts((prev) => ({ ...prev, [item.itemId]: priorRequeues + 1 }));
+
+    const insertAt = getRequeueInsertIndex(currentIndex, queue.length);
+    const requeued = [...queue];
+    requeued.splice(insertAt, 0, item);
+    return requeued;
+  };
+
   // Export/Import for backup
   const exportData = () => {
     return JSON.stringify({ version: STORAGE_VERSION, items: srsStates }, null, 2);
@@ -208,6 +265,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
     initializeAllItems,
     getDueItems,
     recordAnswer,
+    recordAnswerWithRequeue,
     exportData,
     importData,
     resetProgress,
