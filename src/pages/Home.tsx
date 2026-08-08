@@ -39,8 +39,8 @@ export default function Home() {
   useEffect(() => {
     const loadVerbCount = async () => {
       const allVerbs = await getVerbs();
-      const filteredVerbs = allVerbs.filter(verb => 
-        verb.cefr && selectedLevels.includes(verb.cefr)
+      const filteredVerbs = allVerbs.filter(
+        (verb) => verb.cefr && selectedLevels.includes(verb.cefr),
       );
       setTotalVerbs(filteredVerbs.length);
     };
@@ -50,10 +50,10 @@ export default function Home() {
   const handleLevelToggle = (level: string, checked: boolean) => {
     const newLevels = checked
       ? [...selectedLevels, level]
-      : selectedLevels.filter(l => l !== level);
-    
+      : selectedLevels.filter((l) => l !== level);
+
     if (newLevels.length === 0) return; // Prevent unselecting all
-    
+
     setSelectedLevels(newLevels);
     updateSettings({ cefrLevels: newLevels });
   };
@@ -71,15 +71,9 @@ export default function Home() {
             className="absolute right-0 top-0"
             onClick={() => updateSettings({ muteAudio: !settings.muteAudio })}
           >
-            {settings.muteAudio ? (
-              <VolumeX className="h-5 w-5" />
-            ) : (
-              <Volume2 className="h-5 w-5" />
-            )}
+            {settings.muteAudio ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
           </Button>
-          <h1 className="text-5xl font-bold text-primary mb-2">
-            Ordböj
-          </h1>
+          <h1 className="text-5xl font-bold text-primary mb-2">Ordböj</h1>
           <p className="text-xl text-muted-foreground">
             Master Swedish verbs with spaced repetition
           </p>
@@ -92,7 +86,7 @@ export default function Home() {
               <BookOpen className="w-8 h-8 text-primary" />
               Ready to Practice?
             </CardTitle>
-            <CardDescription className="text-lg space-y-1">
+            <div className="text-muted-foreground text-lg space-y-1">
               {dueCount > 0 ? (
                 <>
                   <div className="text-primary font-semibold">
@@ -105,7 +99,7 @@ export default function Home() {
               ) : (
                 <span>All caught up! Great work! 🎉</span>
               )}
-            </CardDescription>
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* CEFR Level Selector */}
@@ -132,8 +126,8 @@ export default function Home() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                {selectedLevels.length === allLevels.length 
-                  ? 'All levels selected' 
+                {selectedLevels.length === allLevels.length
+                  ? 'All levels selected'
                   : `Selected: ${selectedLevels.sort().join(', ')}`}
               </p>
             </div>
@@ -144,7 +138,11 @@ export default function Home() {
               size="lg"
               disabled={isLoading || settingsLoading || dueCount === 0}
             >
-              {isLoading || settingsLoading ? 'Loading...' : dueCount > 0 ? 'Start Practice' : 'No Cards Due'}
+              {isLoading || settingsLoading
+                ? 'Loading...'
+                : dueCount > 0
+                  ? 'Start Practice'
+                  : 'No Cards Due'}
             </Button>
 
             {dueCount === 0 && (
@@ -157,16 +155,14 @@ export default function Home() {
 
         {/* Stats & Settings */}
         <div className="grid grid-cols-2 gap-4">
-          <Card 
+          <Card
             className="cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/progress')}
           >
             <CardHeader className="text-center">
               <Trophy className="w-8 h-8 mx-auto text-accent mb-2" />
               <CardTitle className="text-lg">Progress</CardTitle>
-              <CardDescription>
-                Track your learning
-              </CardDescription>
+              <CardDescription>Track your learning</CardDescription>
             </CardHeader>
           </Card>
 
@@ -177,9 +173,7 @@ export default function Home() {
             <CardHeader className="text-center">
               <Settings className="w-8 h-8 mx-auto text-primary mb-2" />
               <CardTitle className="text-lg">Settings</CardTitle>
-              <CardDescription>
-                Customize your practice
-              </CardDescription>
+              <CardDescription>Customize your practice</CardDescription>
             </CardHeader>
           </Card>
         </div>

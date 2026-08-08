@@ -196,7 +196,7 @@ export function PracticeCard({
           <div className="text-center space-y-3">
             <p className="text-muted-foreground text-sm font-medium">Fill in the missing form</p>
             <div className="bg-muted/30 rounded-lg p-6 space-y-2">
-              <h2 className="text-3xl font-bold text-primary tracking-wide">
+              <h2 className="text-3xl font-bold text-primary tracking-wide" lang="sv">
                 {getPatternWithHints()}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -229,7 +229,7 @@ export function PracticeCard({
                         variant="outline"
                         className="w-12 h-12 text-xl font-semibold"
                       >
-                        {letter}
+                        <span lang="sv">{letter}</span>
                       </Button>
                     ))}
                     <Button
@@ -268,7 +268,7 @@ export function PracticeCard({
                       variant="outline"
                       className="py-6 text-xl"
                     >
-                      {option}
+                      <span lang="sv">{option}</span>
                     </Button>
                   ))}
                 </div>
@@ -313,7 +313,12 @@ export function PracticeCard({
                               : 'bg-background'
                           }`}
                         >
-                          <span className="text-lg">
+                          <span
+                            className="text-lg"
+                            lang={
+                              part.isMissing || part.text !== '(not available)' ? 'sv' : undefined
+                            }
+                          >
                             {part.isMissing ? correctAnswer : part.text}
                           </span>
                           {!part.isMissing && conjugated[part.form] !== '(not available)' && (
@@ -347,7 +352,12 @@ export function PracticeCard({
                 {showExamples && exampleSentence && (
                   <div className="bg-accent/10 rounded-lg p-4">
                     <p className="text-sm text-muted-foreground mb-1">Example:</p>
-                    <p className="text-base italic">{exampleSentence}</p>
+                    <p
+                      className="text-base italic"
+                      lang={exampleSentence.startsWith('[') ? undefined : 'sv'}
+                    >
+                      {exampleSentence}
+                    </p>
                   </div>
                 )}
               </div>
