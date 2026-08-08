@@ -22,7 +22,6 @@ export default function Home() {
     loadVoices();
   }, []);
 
-  useEffect(() => {
   // getDueItems is recreated whenever srsStates changes, which happens
   // continuously while a practice session elsewhere updates progress. Keep
   // the latest reference in a ref so this effect only recomputes the due
