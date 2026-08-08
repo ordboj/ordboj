@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Volume2 } from 'lucide-react';
 import { ConjugatedVerb, Form, getExampleSentence, getFormLabel } from '@/lib/verbs';
+import { conjugationItemId } from '@/lib/itemIds';
 import { isDue, SrsState } from '@/lib/srs';
 import { speakSwedish } from '@/lib/speech';
 import { useSettings } from '@/hooks/useSettings';
@@ -29,7 +30,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
   const badge = getStageBadge(srsStage);
 
   const getFormSrsInfo = (form: Form) => {
-    const itemId = `${verb.id}-${form}`;
+    const itemId = conjugationItemId(verb.id, form);
     const state = srsStates[itemId];
     if (!state) return null;
 

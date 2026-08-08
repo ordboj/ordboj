@@ -51,6 +51,16 @@ vi.mock('@/hooks/useSrsProgress', () => ({
         itemId: `item-${i}`,
       }));
     },
+    // Particle mode's half of the boundary. Empty: this suite asserts the
+    // conjugation due count and its DOM nesting, and the particle entry point
+    // Home now also renders must not disturb either.
+    getParticleSitting: () => ({
+      cards: [],
+      reviewsDue: 0,
+      newAllowedToday: 0,
+      deferredFirstClozes: [],
+    }),
+    particleReviewsDue: 0,
     recordAnswer: vi.fn(),
     exportData: () => '{}',
     importData: () => true,
