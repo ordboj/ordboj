@@ -348,7 +348,8 @@ describe('CSV row classification (review file)', () => {
     run();
     const verbDataText = readFileSync(verbDataPath(), 'utf8');
     // None of the fail/needs-check infinitives from this fixture's CSV were
-    // promoted (NEW_PROMOTIONS is empty in this ticket, but this pins the
+    // promoted (this fixture never passes any of them to --promote, so
+    // resolvePromotions() returns its default empty list; this pins the
     // *observable* guarantee: bad rows never reach the shipped file).
     for (const bad of ['bakva', 'väka', 'hoppa', 'vimla', 'ringa bort']) {
       expect(verbDataText).not.toContain(`infinitive: "${bad}"`);
@@ -491,6 +492,32 @@ describe('shipped verbData.ts validation gate', () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('empty imperativ on non-modal verb');
   });
+
+  // Regression test: the missing-grupp gate previously ran AFTER the
+  // explained-empty-imperativ early-continue, so a shipped row that was
+  // BOTH grupp-less AND had an explained empty imperativ (noNaturalImperativ)
+  // skipped the missing-grupp check entirely and exited 0. Confirmed via
+  // fixture: exit 0 before the build-verb-data.mjs gate-reorder fix, exit 1
+  // after.
+  it('fails a grupp-omitted shipped row even when its empty imperativ is separately explained by noNaturalImperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        verbRow({
+          infinitive: 'vimla',
+          imperativ: '',
+          presens: 'vimlar',
+          preteritum: 'vimlade',
+          supinum: 'vimlat',
+          // no grupp, no NEEDS HUMAN REVIEW comment
+          noNaturalImperativ: true,
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('grupp omitted without a NEEDS HUMAN REVIEW comment');
+  });
 });
 
 // ---------------------------------------------------------------------
@@ -618,6 +645,44 @@ describe('promotion input surface', () => {
     const proposed = readFileSync(proposedRowsPath(), 'utf8');
     expect(proposed).not.toContain('kalla');
     expect(readFileSync(verbDataPath(), 'utf8')).toBe(original);
+  });
+
+  // A passing deponens candidate must NOT be pasted with `grupp: "deponens"`
+  // — src/data/verbData.ts's Grupp type has no 'deponens' member, so that
+  // would break typecheck the moment a human pasted it in. Instead the
+  // proposed row omits `grupp` entirely and carries a NEEDS HUMAN REVIEW
+  // comment (the same marker the shipped-table gate already accepts as the
+  // missing-grupp escape hatch). The review CSV (step 1, independent of
+  // promotion) still reports the classifier's real verdict, 'deponens', for
+  // the same candidate — that file is a human-review report, not a paste
+  // target, so it is not subject to the Grupp-type constraint.
+  it('writes a passing deponens --promote candidate without a grupp field, flagged NEEDS HUMAN REVIEW, while the review CSV still reports its grupp as deponens', () => {
+    const deponensCsv = buildCsv([
+      {
+        infinitive: 'hoppas',
+        imperativ: 'hoppas',
+        presens: 'hoppas',
+        preteritum: 'hoppades',
+        supinum: 'hoppats',
+      },
+    ]);
+    const original = buildVerbDataTs([VALID_SHIPPED_ROW]);
+    setupFixture(deponensCsv, original);
+    const result = run(['--promote=hoppas']);
+    expect(result.status).toBe(0);
+
+    const proposed = readFileSync(proposedRowsPath(), 'utf8');
+    const hoppasLine = proposed.split('\n').find((l) => l.includes('infinitive: "hoppas"'));
+    expect(hoppasLine).toBeDefined();
+    expect(hoppasLine).not.toContain('grupp: "deponens"');
+    expect(hoppasLine).toContain('NEEDS HUMAN REVIEW');
+    expect(hoppasLine).toBe(
+      '  { cefr: "A1", infinitive: "hoppas", imperativ: "hoppas", presens: "hoppas", preteritum: "hoppades", supinum: "hoppats" }, // NEEDS HUMAN REVIEW: deponens verb — Grupp has no \'deponens\' member; a human must pick the underlying conjugation grupp before pasting',
+    );
+
+    const reviewCsv = readFileSync(reviewPath(), 'utf8');
+    const reviewRow = findReviewRow(reviewCsv, 'hoppas');
+    expect(reviewRow.grupp).toBe('deponens');
   });
 });
 
