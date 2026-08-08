@@ -62,9 +62,13 @@ export interface ParticleVerbData {
   id: string;
   cefr: ParticleVerbCefr;
   cefrEvidence: CefrEvidence;
-  // MUST resolve in VERB_DATA for any entry that ships: the introduction
-  // gate joins on it, so an unresolvable base is content that can never be
-  // reached. Enforced in particleVerbData.test.ts.
+  // Required on every entry: the 7-day same-base interference rule
+  // (isBaseRecentlyUsed) and the introduction-order tiebreak (isBaseStarted)
+  // both join particle entries on this string. VERB_DATA membership is not
+  // required — issue #315 removed the introduction gate that used to need
+  // it — so a base absent from VERB_DATA never blocks an entry. Format
+  // assertions (non-empty, matches lemma's first token, one spelling per
+  // base) are enforced in particleVerbData.test.ts.
   baseInfinitive: string;
   // The cloze answer.
   particle: string;
@@ -96,11 +100,11 @@ export interface ParticleVerbData {
   // human-verified form (VERB_DATA) with the invariant particle appended —
   // particle verbs conjugate the verb only, per the project's particle-verb
   // rule — checked against SO/SAOL like every other shipped form. Required
-  // for a verified:true entry to render its reference line at all. Every
-  // verified entry's base still resolves in VERB_DATA — the dataset test
-  // enforces that — so these values duplicate VERB_DATA on purpose; the
-  // lookup moved from render time to authoring time, and a dataset test
-  // pins the copies against VERB_DATA.
+  // for a verified:true entry to render its reference line at all. A base
+  // absent from VERB_DATA is not an error (#317) — these values duplicate
+  // VERB_DATA on purpose only where a base row exists; the lookup moved
+  // from render time to authoring time, and a dataset test cross-checks the
+  // copies against VERB_DATA for entries whose base is present.
   forms?: {
     presens: string;
     preteritum: string;
