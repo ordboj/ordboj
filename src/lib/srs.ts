@@ -1,5 +1,11 @@
 export interface SrsState {
-  itemId: string;
+  // Legacy, and redundant: the item id is already the key this state is
+  // stored under. Storage version 3 stops writing it (issue #53: ~25 B of
+  // every ~130 B item). Still produced by initializeSrsState and still
+  // present in every v1/v2 payload, so it stays declared — optional — rather
+  // than being deleted out from under stored data this build must keep
+  // reading.
+  itemId?: string;
   repetitions: number;
   intervalDays: number;
   easeFactor: number;
@@ -21,6 +27,19 @@ const EASE_CEILING = 2.8;
 const EASE_FLOOR = 1.3;
 const EASE_DELTA_CORRECT = 0.05;
 const EASE_DELTA_WRONG = -0.2;
+
+// The ease every new item starts at.
+export const INITIAL_EASE_FACTOR = 2.5;
+
+// Both ease deltas are exact multiples of 0.01, so two decimals is the full
+// precision this scheduler can ever produce; anything beyond it is binary
+// floating-point residue. Rounding at the point of computation (rather than
+// at the storage boundary) keeps the in-memory value and the persisted value
+// identical, and turns "2.1799999999999997" (19 bytes in JSON) into "2.18"
+// (4 bytes) for every item in the store.
+function roundEase(easeFactor: number): number {
+  return Math.round(easeFactor * 100) / 100;
+}
 
 // Hard ceiling on any single interval. Even at the 2.8 ease ceiling an
 // item's schedule cannot leave the app's one-year horizon.
@@ -46,13 +65,13 @@ export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
   if (!isCorrect) {
     // Lapse: flat penalty, reset progress. No longer runs the SM-2 formula
     // before resetting, so the penalty is bounded and predictable.
-    easeFactor = Math.max(EASE_FLOOR, easeFactor + EASE_DELTA_WRONG);
+    easeFactor = roundEase(Math.max(EASE_FLOOR, easeFactor + EASE_DELTA_WRONG));
     repetitions = 0;
     intervalDays = 1;
   } else {
     // Success: small capped reward. The ceiling is what stops runaway ease
     // growth on a long correct streak (previously uncapped).
-    easeFactor = Math.min(EASE_CEILING, easeFactor + EASE_DELTA_CORRECT);
+    easeFactor = roundEase(Math.min(EASE_CEILING, easeFactor + EASE_DELTA_CORRECT));
     repetitions += 1;
     if (repetitions === 1) {
       intervalDays = 1;
@@ -96,9 +115,41 @@ export function initializeSrsState(itemId: string): SrsState {
     itemId,
     repetitions: 0,
     intervalDays: 0,
-    easeFactor: 2.5,
+    easeFactor: INITIAL_EASE_FACTOR,
     dueAt: Date.now(),
   };
+}
+
+// True when this state carries no learning history *and* discarding it is
+// provably lossless: re-creating it from scratch at `now` yields an
+// equivalent item. That is the whole justification for storage version 3 not
+// persisting untouched items (issue #53) — at 1537 verbs the eager map is
+// ~800 KB of state the app can derive.
+//
+// `dueAt` is part of the test, not an exception to it. An untouched item can
+// still carry a *schedule* (the e2e seed writes exactly that: repetitions 0,
+// dueAt ten years out), and pruning that item would silently reset it to
+// "due now". Only an item already due at `now` round-trips unchanged, since
+// re-initialization sets dueAt to the load instant, which is also due now.
+//
+// Unknown fields are history this build cannot judge, so their presence
+// alone makes the item non-pristine and therefore persisted verbatim.
+const KNOWN_SRS_FIELDS = new Set([
+  'itemId',
+  'repetitions',
+  'intervalDays',
+  'easeFactor',
+  'dueAt',
+  'lastGrade',
+]);
+
+export function isPristineSrsState(state: SrsState, now: number): boolean {
+  if (state.repetitions !== 0) return false;
+  if (state.intervalDays !== 0) return false;
+  if (state.easeFactor !== INITIAL_EASE_FACTOR) return false;
+  if (state.lastGrade !== undefined) return false;
+  if (!Number.isFinite(state.dueAt) || state.dueAt > now) return false;
+  return Object.keys(state).every((field) => KNOWN_SRS_FIELDS.has(field));
 }
 
 // "Due today" is decided at a local calendar-day boundary, not by exact
@@ -191,21 +242,25 @@ export interface MasteryStageBadge {
 // this constant instead of re-encoding the number 5.
 export const MASTERED_STAGE_THRESHOLD = 5;
 
-const NEW_BADGE: MasteryStageBadge = { label: 'New', variant: 'default', color: 'bg-primary' };
+const NEW_BADGE: MasteryStageBadge = {
+  label: 'New',
+  variant: 'default',
+  color: 'bg-stage-new text-stage-new-foreground border-transparent',
+};
 const LEARNING_BADGE: MasteryStageBadge = {
   label: 'Learning',
   variant: 'secondary',
-  color: 'bg-orange-500',
+  color: 'bg-stage-learning text-stage-learning-foreground border-transparent',
 };
 const REVIEWING_BADGE: MasteryStageBadge = {
   label: 'Reviewing',
   variant: 'outline',
-  color: 'bg-yellow-500',
+  color: 'bg-stage-reviewing text-stage-reviewing-foreground border-transparent',
 };
 const MASTERED_BADGE: MasteryStageBadge = {
   label: 'Mastered',
   variant: 'default',
-  color: 'bg-green-500',
+  color: 'bg-stage-mastered text-stage-mastered-foreground border-transparent',
 };
 
 // `stage` is expected to be a non-negative integer repetitions count.
@@ -259,6 +314,42 @@ export function isSrsState(value: unknown): value is SrsState {
   if (!isFiniteNumber(state.intervalDays) || state.intervalDays < 0) return false;
   if (!isFiniteNumber(state.easeFactor) || state.easeFactor <= 0) return false;
   if (!isFiniteNumber(state.dueAt)) return false;
+  if (state.lastGrade !== undefined && !isFiniteNumber(state.lastGrade)) return false;
+  return true;
+}
+
+// Latest instant a stored dueAt may name and still be believable: any real
+// schedule this scheduler writes is at most MAX_INTERVAL_DAYS ahead of the
+// answer, so a dueAt in the 22nd century is corruption or a unit mix-up
+// (seconds read as milliseconds lands in 1970; milliseconds read as
+// microseconds lands here), not a schedule.
+const MAX_PLAUSIBLE_DUE_AT = Date.UTC(2200, 0, 1);
+
+// Version-3 flavour of isSrsState. Two differences, both deliberate:
+//
+//  - `itemId` is no longer required. v3 stores the id once, as the map key,
+//    so a v3 export legitimately has no itemId field; requiring it would
+//    make the app reject its own backups. When the field *is* present (a
+//    v1/v2 backup re-exported, or a hand-edited file) it must still be a
+//    non-empty string.
+//  - `dueAt` is range-checked, not merely finite. This is the "dueAt
+//    plausible" clause of issue #53.
+//
+// isSrsState above is left exactly as it was and still guards v1/v2
+// payloads, which really do always carry an itemId.
+export function isStoredSrsState(value: unknown): value is SrsState {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const state = value as Record<string, unknown>;
+  if (state.itemId !== undefined) {
+    if (typeof state.itemId !== 'string' || state.itemId.length === 0) return false;
+  }
+  if (!isFiniteNumber(state.repetitions) || !Number.isInteger(state.repetitions)) return false;
+  if (state.repetitions < 0) return false;
+  if (!isFiniteNumber(state.intervalDays) || state.intervalDays < 0) return false;
+  if (!isFiniteNumber(state.easeFactor) || state.easeFactor <= 0) return false;
+  if (!isFiniteNumber(state.dueAt) || state.dueAt < 0 || state.dueAt > MAX_PLAUSIBLE_DUE_AT) {
+    return false;
+  }
   if (state.lastGrade !== undefined && !isFiniteNumber(state.lastGrade)) return false;
   return true;
 }

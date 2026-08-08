@@ -4,9 +4,12 @@ import {
   calculateNextReview,
   getMasteryStageBadge,
   initializeSrsState,
+  INITIAL_EASE_FACTOR,
   isDue,
   isEligibleForRequeue,
+  isPristineSrsState,
   isSrsState,
+  isStoredSrsState,
   MASTERED_STAGE_THRESHOLD,
   MAX_INTERVAL_DAYS,
   MAX_REQUEUES_PER_DAY,
@@ -152,7 +155,7 @@ describe('calculateNextReview - review-table regression (10+ reviews)', () => {
       { repetitions: 3, intervalDays: 16, easeFactor: 2.65 },
       { repetitions: 4, intervalDays: 43, easeFactor: 2.7 },
       { repetitions: 5, intervalDays: 118, easeFactor: 2.75 },
-      { repetitions: 6, intervalDays: 330, easeFactor: 2.8 }, // just under 2.8 by fp, still shows as 2.8 at this precision
+      { repetitions: 6, intervalDays: 330, easeFactor: 2.8 },
       { repetitions: 7, intervalDays: 365, easeFactor: 2.8 }, // ceiling reached; round(330*2.8)=924 clamped to MAX_INTERVAL_DAYS
       { repetitions: 8, intervalDays: 365, easeFactor: 2.8 }, // pinned at the interval ceiling
       { repetitions: 9, intervalDays: 365, easeFactor: 2.8 },
@@ -166,7 +169,11 @@ describe('calculateNextReview - review-table regression (10+ reviews)', () => {
         repetitions: row.repetitions,
         intervalDays: row.intervalDays,
       });
-      expect(state.easeFactor).toBeCloseTo(row.easeFactor, 5);
+      // Exact, not toBeCloseTo: roundEase rounds every stored ease to two
+      // decimals, so the persisted value is either exactly 2.6 or exactly
+      // 2.5999999999999996 (unrounded fp residue) - toBeCloseTo(...,5) can't
+      // tell those apart, which would let a broken roundEase pass silently.
+      expect(state.easeFactor).toBe(row.easeFactor);
       if (i >= 6) {
         expect(state.easeFactor).toBe(2.8);
       }
@@ -447,6 +454,100 @@ describe('isSrsState', () => {
 
   it('rejects a non-finite lastGrade when the field is present', () => {
     expect(isSrsState({ ...initializeSrsState('1-presens'), lastGrade: NaN })).toBe(false);
+  });
+});
+
+// isPristineSrsState is the #189 data-loss guard: storage version 3 only
+// persists items that fail this check (see the doc comment above the
+// implementation in lib/srs.ts). A false positive here silently drops a
+// learner's real schedule on the next save; a false negative bloats the
+// store with items that carry no history at all. Both directions are
+// pinned below field by field.
+describe('isPristineSrsState', () => {
+  const baseline = {
+    repetitions: 0,
+    intervalDays: 0,
+    easeFactor: INITIAL_EASE_FACTOR,
+    lastGrade: undefined,
+  };
+
+  it('is false for an untouched item scheduled ten years out - a real, non-derivable schedule', () => {
+    // This is the concrete case #189 exists to prevent: a state with no
+    // learning history can still carry a schedule (e.g. a deliberately
+    // deferred item), and re-deriving it from scratch would silently reset
+    // that schedule to "due now".
+    const tenYearsOut = FIXED_NOW + 10 * 365 * DAY_MS;
+    expect(isPristineSrsState({ ...baseline, dueAt: tenYearsOut }, FIXED_NOW)).toBe(false);
+  });
+
+  it('is true for the same untouched state once dueAt is at or before now', () => {
+    expect(isPristineSrsState({ ...baseline, dueAt: FIXED_NOW }, FIXED_NOW)).toBe(true);
+    expect(isPristineSrsState({ ...baseline, dueAt: FIXED_NOW - 1 }, FIXED_NOW)).toBe(true);
+  });
+
+  it('is false when repetitions is non-zero, all else pristine', () => {
+    expect(isPristineSrsState({ ...baseline, repetitions: 1, dueAt: FIXED_NOW }, FIXED_NOW)).toBe(
+      false,
+    );
+  });
+
+  it('is false when intervalDays is non-zero, all else pristine', () => {
+    expect(isPristineSrsState({ ...baseline, intervalDays: 1, dueAt: FIXED_NOW }, FIXED_NOW)).toBe(
+      false,
+    );
+  });
+
+  it('is false when easeFactor has moved off the initial value, all else pristine', () => {
+    expect(isPristineSrsState({ ...baseline, easeFactor: 2.4, dueAt: FIXED_NOW }, FIXED_NOW)).toBe(
+      false,
+    );
+  });
+
+  it('is false when lastGrade is present, all else pristine', () => {
+    expect(isPristineSrsState({ ...baseline, lastGrade: 0, dueAt: FIXED_NOW }, FIXED_NOW)).toBe(
+      false,
+    );
+  });
+
+  it('is false when the state carries an unknown extra field - unjudged history must not be pruned', () => {
+    expect(
+      isPristineSrsState(
+        { ...baseline, dueAt: FIXED_NOW, somethingUnrecognized: true } as unknown as SrsState,
+        FIXED_NOW,
+      ),
+    ).toBe(false);
+  });
+});
+
+// isStoredSrsState is the v3 flavour of isSrsState (see the doc comment
+// above the implementation): itemId is optional since v3 stores it only as
+// the map key, and dueAt is range-checked against a plausible-schedule
+// ceiling instead of merely required to be finite.
+describe('isStoredSrsState', () => {
+  const wellFormed = { repetitions: 0, intervalDays: 0, easeFactor: 2.5, dueAt: FIXED_NOW };
+
+  it('accepts a well-formed v3 item with no itemId field at all', () => {
+    expect(isStoredSrsState(wellFormed)).toBe(true);
+  });
+
+  it('rejects an empty-string itemId when the field is present', () => {
+    expect(isStoredSrsState({ ...wellFormed, itemId: '' })).toBe(false);
+  });
+
+  it('rejects a dueAt one millisecond past the plausible-schedule ceiling (year 2200)', () => {
+    expect(isStoredSrsState({ ...wellFormed, dueAt: Date.UTC(2200, 0, 1) + 1 })).toBe(false);
+  });
+
+  it('rejects a negative dueAt', () => {
+    expect(isStoredSrsState({ ...wellFormed, dueAt: -1 })).toBe(false);
+  });
+
+  it('rejects a non-integer repetitions value', () => {
+    expect(isStoredSrsState({ ...wellFormed, repetitions: 1.5 })).toBe(false);
+  });
+
+  it('accepts a well-formed v3 item that does carry a non-empty itemId (a re-exported v1/v2 backup)', () => {
+    expect(isStoredSrsState({ ...wellFormed, itemId: '1-presens' })).toBe(true);
   });
 });
 
