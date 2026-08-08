@@ -219,9 +219,13 @@ describe('isDue', () => {
     expect(isDue(state)).toBe(true);
   });
 
-  it('is not due when dueAt is one millisecond in the future', () => {
+  it('is due when dueAt is one millisecond in the future but still the same local calendar day', () => {
+    // Per docs/learning/new-vs-review-mix.md ("Interaction with the day
+    // boundary"): due-ness is decided at the end of the local calendar
+    // day, not by exact-millisecond comparison. dueAt one ms after `now`
+    // is still on today's local date, so the item is due today.
     const state: SrsState = { ...initializeSrsState('x'), dueAt: FIXED_NOW + 1 };
-    expect(isDue(state)).toBe(false);
+    expect(isDue(state)).toBe(true);
   });
 
   it('reacts to the clock advancing past dueAt', () => {
@@ -229,5 +233,70 @@ describe('isDue', () => {
     expect(isDue(state)).toBe(false);
     vi.setSystemTime(FIXED_NOW + DAY_MS);
     expect(isDue(state)).toBe(true);
+  });
+});
+
+// These pin process.env.TZ to Europe/Stockholm so the calendar-day
+// boundary assertions are deterministic regardless of the host/CI
+// machine's default timezone (isDue's day boundary is computed from the
+// local Date, so the test needs a known local timezone to reason about
+// "same local day" and DST transitions).
+describe('isDue - month and DST boundaries (Europe/Stockholm)', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'Europe/Stockholm';
+  });
+
+  afterEach(() => {
+    process.env.TZ = originalTz;
+  });
+
+  it('is not due when dueAt falls on the next local calendar day, even a few hours away', () => {
+    const now = new Date(2026, 0, 15, 20, 0, 0, 0).getTime(); // Jan 15, 2026 20:00 local
+    const dueAtSameDay = new Date(2026, 0, 15, 23, 59, 59, 999).getTime();
+    const dueAtNextDay = new Date(2026, 0, 16, 0, 0, 0, 0).getTime();
+
+    expect(isDue({ ...initializeSrsState('x'), dueAt: dueAtSameDay }, now)).toBe(true);
+    expect(isDue({ ...initializeSrsState('x'), dueAt: dueAtNextDay }, now)).toBe(false);
+  });
+
+  it('treats a month boundary the same as any other day boundary (Jan 31 -> Feb 1, 2026)', () => {
+    const now = new Date(2026, 0, 31, 22, 0, 0, 0).getTime(); // Jan 31, 2026 22:00 local
+    const dueAtEndOfJan = new Date(2026, 0, 31, 23, 59, 59, 999).getTime();
+    const dueAtStartOfFeb = new Date(2026, 1, 1, 0, 0, 0, 0).getTime();
+
+    expect(isDue({ ...initializeSrsState('x'), dueAt: dueAtEndOfJan }, now)).toBe(true);
+    expect(isDue({ ...initializeSrsState('x'), dueAt: dueAtStartOfFeb }, now)).toBe(false);
+
+    // Clock rolls into February: the Feb 1 item becomes due once its own
+    // calendar day starts.
+    expect(isDue({ ...initializeSrsState('x'), dueAt: dueAtStartOfFeb }, dueAtStartOfFeb)).toBe(
+      true,
+    );
+  });
+
+  it('a same-local-day item stays due across the spring DST transition (2026-03-29, 23-hour day)', () => {
+    // Sweden springs forward at 02:00 -> 03:00 local on 2026-03-29, so
+    // this calendar day is only 23 hours long. The day-boundary check
+    // must still treat 23:00 as "today" and 00:00 the next day as
+    // "tomorrow" despite the missing hour.
+    const beforeJump = new Date(2026, 2, 29, 1, 0, 0, 0).getTime(); // 01:00 CET, before the jump
+    const afterJumpSameDay = new Date(2026, 2, 29, 23, 0, 0, 0).getTime(); // 23:00 CEST, same date
+    const nextDay = new Date(2026, 2, 30, 0, 0, 0, 0).getTime(); // 00:00, next calendar day
+
+    expect(isDue({ ...initializeSrsState('x'), dueAt: afterJumpSameDay }, beforeJump)).toBe(true);
+    expect(isDue({ ...initializeSrsState('x'), dueAt: nextDay }, beforeJump)).toBe(false);
+  });
+
+  it('a same-local-day item stays due across the autumn DST transition (2026-10-25, 25-hour day)', () => {
+    // Sweden falls back at 03:00 -> 02:00 local on 2026-10-25 (02:00-02:59
+    // occurs twice), so this calendar day is 25 hours long.
+    const beforeFold = new Date(2026, 9, 25, 1, 0, 0, 0).getTime(); // 01:00, before the repeated hour
+    const afterFoldSameDay = new Date(2026, 9, 25, 23, 0, 0, 0).getTime(); // 23:00, same date
+    const nextDay = new Date(2026, 9, 26, 0, 0, 0, 0).getTime(); // 00:00, next calendar day
+
+    expect(isDue({ ...initializeSrsState('x'), dueAt: afterFoldSameDay }, beforeFold)).toBe(true);
+    expect(isDue({ ...initializeSrsState('x'), dueAt: nextDay }, beforeFold)).toBe(false);
   });
 });
