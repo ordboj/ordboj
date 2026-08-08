@@ -43,6 +43,15 @@ export interface ParticleVerbExample {
   // preposition elsewhere in the sentence.
   blankIndex: number;
   en?: string;
+  // Particles the linguist has actively confirmed cannot fill this exact
+  // blank — grammatically broken or nonsensical in this sentence, not
+  // merely "not the intended answer". Groundwork for a future discrimination
+  // exercise and a record that a candidate was considered and rejected,
+  // rather than never considered. Never overlaps acceptedParticles (#318;
+  // qa asserts this in the dataset-integrity test). Left unset when no
+  // substitution has been individually verified — an empty guess would be
+  // worse than no claim at all, per "never guess Swedish".
+  excludedParticles?: string[];
 }
 
 export interface ParticleVerbData {
@@ -82,6 +91,19 @@ export interface ParticleVerbData {
   verified: boolean;
   // Required whenever verified is false, so "not shipped" always says why.
   unverifiedReason?: string;
+  // The phrase's presens/preteritum/supinum, embedded rather than joined
+  // from VERB_DATA at render time (#318). Each value is the base verb's
+  // human-verified form (VERB_DATA) with the invariant particle appended —
+  // particle verbs conjugate the verb only, per the project's particle-verb
+  // rule — checked against SO/SAOL like every other shipped form. Required
+  // for a verified:true entry to render its reference line at all; a
+  // missing base in VERB_DATA is why some entries above are still
+  // verified:false rather than a reason to derive this by rule.
+  forms?: {
+    presens: string;
+    preteritum: string;
+    supinum: string;
+  };
 }
 
 export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
@@ -103,6 +125,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'På lördagar går de ut med sina vänner.', blankIndex: 4 },
     ],
     verified: true,
+    forms: { presens: 'går ut', preteritum: 'gick ut', supinum: 'gått ut' },
   },
   {
     id: 'pv:ga-in',
@@ -121,6 +144,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi går in genom den stora dörren.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'går in', preteritum: 'gick in', supinum: 'gått in' },
   },
   {
     id: 'pv:ga-upp',
@@ -139,6 +163,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Temperaturen går upp några grader varje eftermiddag.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'går upp', preteritum: 'gick upp', supinum: 'gått upp' },
   },
   {
     id: 'pv:ga-ner',
@@ -159,6 +184,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon går ner för trappan med sin väska.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'går ner', preteritum: 'gick ner', supinum: 'gått ner' },
   },
   {
     id: 'pv:se-ut',
@@ -179,6 +205,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Det ser ut som om det ska regna snart.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'ser ut', preteritum: 'såg ut', supinum: 'sett ut' },
   },
   {
     id: 'pv:komma-in',
@@ -197,6 +224,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon kommer in på universitetet nästa höst.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'kommer in', preteritum: 'kom in', supinum: 'kommit in' },
   },
   {
     id: 'pv:komma-fram',
@@ -215,6 +243,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Brevet kommer fram efter tre dagar med posten.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'kommer fram', preteritum: 'kom fram', supinum: 'kommit fram' },
   },
   {
     id: 'pv:komma-ihag',
@@ -227,12 +256,29 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to retain in memory; to recall' },
     transparency: 'idiomatic',
     acceptedParticles: ['ihåg'],
+    // "in"/"fram" excluded in every frame below: both require a following
+    // preposition before a noun ("komma in i/på X", "komma fram till X"),
+    // and each frame's blank is followed by a bare noun phrase with no
+    // preposition, so either substitution is ungrammatical, not just wrong.
     examples: [
-      { sv: 'Jag kommer ihåg hennes namn från förra året.', blankIndex: 2 },
-      { sv: 'Han kommer ihåg alla telefonnummer utan att skriva.', blankIndex: 2 },
-      { sv: 'Vi kommer ihåg den dagen mycket tydligt.', blankIndex: 2 },
+      {
+        sv: 'Jag kommer ihåg hennes namn från förra året.',
+        blankIndex: 2,
+        excludedParticles: ['in', 'fram'],
+      },
+      {
+        sv: 'Han kommer ihåg alla telefonnummer utan att skriva.',
+        blankIndex: 2,
+        excludedParticles: ['in', 'fram'],
+      },
+      {
+        sv: 'Vi kommer ihåg den dagen mycket tydligt.',
+        blankIndex: 2,
+        excludedParticles: ['in', 'fram'],
+      },
     ],
     verified: true,
+    forms: { presens: 'kommer ihåg', preteritum: 'kom ihåg', supinum: 'kommit ihåg' },
   },
   {
     id: 'pv:komma-tillbaka',
@@ -251,6 +297,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Han kommer tillbaka till jobbet efter sin semester.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'kommer tillbaka', preteritum: 'kom tillbaka', supinum: 'kommit tillbaka' },
   },
   {
     id: 'pv:ta-med',
@@ -269,6 +316,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon tar med barnen till parken varje lördag.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'tar med', preteritum: 'tog med', supinum: 'tagit med' },
   },
   {
     id: 'pv:ta-ut',
@@ -287,6 +335,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon tar ut tallrikarna ur skåpet före middagen.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'tar ut', preteritum: 'tog ut', supinum: 'tagit ut' },
   },
   {
     id: 'pv:tala-om',
@@ -303,12 +352,28 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     // allows, so the card never sits on the ambiguous reading.
     contrast: 'tala om något (stress on tala) — to discuss a topic',
     acceptedParticles: ['om'],
+    // "till" excluded: every frame is "talar ___ för NP", and "tala till"
+    // (address someone) never takes a "för" complement — the two do not
+    // combine in Swedish, so the substitution is ungrammatical here.
     examples: [
-      { sv: 'Han talar om för mig var nyckeln finns.', blankIndex: 2 },
-      { sv: 'Hon talar om för oss vad som har hänt.', blankIndex: 2 },
-      { sv: 'Jag talar om för honom att mötet börjar sent.', blankIndex: 2 },
+      {
+        sv: 'Han talar om för mig var nyckeln finns.',
+        blankIndex: 2,
+        excludedParticles: ['till'],
+      },
+      {
+        sv: 'Hon talar om för oss vad som har hänt.',
+        blankIndex: 2,
+        excludedParticles: ['till'],
+      },
+      {
+        sv: 'Jag talar om för honom att mötet börjar sent.',
+        blankIndex: 2,
+        excludedParticles: ['till'],
+      },
     ],
     verified: true,
+    forms: { presens: 'talar om', preteritum: 'talade om', supinum: 'talat om' },
   },
   {
     id: 'pv:vara-med',
@@ -327,6 +392,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Alla barnen är med i den nya filmen.', blankIndex: 3 },
     ],
     verified: true,
+    forms: { presens: 'är med', preteritum: 'var med', supinum: 'varit med' },
   },
 
   // ---- A2 ----
@@ -347,6 +413,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Barnen tycker om den nya läraren i skolan.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'tycker om', preteritum: 'tyckte om', supinum: 'tyckt om' },
   },
   {
     id: 'pv:ge-upp',
@@ -366,6 +433,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon ger upp sin plats i tävlingen.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'ger upp', preteritum: 'gav upp', supinum: 'gett upp' },
   },
   {
     id: 'pv:komma-ut',
@@ -387,6 +455,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Tidningen kommer ut varje onsdag i hela landet.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'kommer ut', preteritum: 'kom ut', supinum: 'kommit ut' },
   },
   {
     id: 'pv:kanna-igen',
@@ -405,6 +474,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi känner igen melodin men minns inte titeln.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'känner igen', preteritum: 'kände igen', supinum: 'känt igen' },
   },
   {
     id: 'pv:halla-pa',
@@ -423,6 +493,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Han håller på med sitt projekt varje helg.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'håller på', preteritum: 'höll på', supinum: 'hållit på' },
   },
   {
     id: 'pv:halla-med',
@@ -441,6 +512,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon håller inte med sin bror om politik.', blankIndex: 3 },
     ],
     verified: true,
+    forms: { presens: 'håller med', preteritum: 'höll med', supinum: 'hållit med' },
   },
   {
     id: 'pv:ta-upp',
@@ -459,6 +531,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon tar upp ämnet varje gång vi träffas.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'tar upp', preteritum: 'tog upp', supinum: 'tagit upp' },
   },
   {
     id: 'pv:ta-bort',
@@ -477,6 +550,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi tar bort de gamla möblerna ur rummet.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'tar bort', preteritum: 'tog bort', supinum: 'tagit bort' },
   },
   {
     id: 'pv:ta-emot',
@@ -495,6 +569,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi tar emot paketet på posten i morgon.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'tar emot', preteritum: 'tog emot', supinum: 'tagit emot' },
   },
   {
     id: 'pv:ta-fram',
@@ -513,6 +588,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi tar fram kartan när vi kör vilse.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'tar fram', preteritum: 'tog fram', supinum: 'tagit fram' },
   },
   {
     id: 'pv:gora-om',
@@ -531,6 +607,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon gör om frisyren varje gång hon går ut.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'gör om', preteritum: 'gjorde om', supinum: 'gjort om' },
   },
   {
     id: 'pv:ga-over',
@@ -549,6 +626,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Förkylningen går över på ungefär en vecka.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'går över', preteritum: 'gick över', supinum: 'gått över' },
   },
   {
     id: 'pv:skriva-ner',
@@ -571,6 +649,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Han skriver ner vad läraren säger på lektionen.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'skriver ner', preteritum: 'skrev ner', supinum: 'skrivit ner' },
   },
   {
     id: 'pv:skriva-ut',
@@ -589,6 +668,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon skriver ut rapporten i tre exemplar.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'skriver ut', preteritum: 'skrev ut', supinum: 'skrivit ut' },
   },
   {
     id: 'pv:tanka-om',
@@ -607,6 +687,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon tänker om efter samtalet med sin chef.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'tänker om', preteritum: 'tänkte om', supinum: 'tänkt om' },
   },
   {
     id: 'pv:ha-kvar',
@@ -625,6 +706,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi har kvar lite mat från gårdagens middag.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'har kvar', preteritum: 'hade kvar', supinum: 'haft kvar' },
   },
   {
     id: 'pv:bli-over',
@@ -643,6 +725,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Det blir över pengar i budgeten varje månad.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'blir över', preteritum: 'blev över', supinum: 'blivit över' },
   },
 
   // ---- B1 ----
@@ -663,6 +746,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Cykeln går sönder varje gång han lånar den.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'går sönder', preteritum: 'gick sönder', supinum: 'gått sönder' },
   },
   {
     id: 'pv:ge-ut',
@@ -681,6 +765,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Banken ger ut nya kort till alla kunder.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'ger ut', preteritum: 'gav ut', supinum: 'gett ut' },
   },
   {
     id: 'pv:sta-ut',
@@ -699,6 +784,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi står ut med situationen tills den blir bättre.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'står ut', preteritum: 'stod ut', supinum: 'stått ut' },
   },
   {
     id: 'pv:saga-till',
@@ -717,6 +803,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon säger till chefen att hon kommer sent.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'säger till', preteritum: 'sa till', supinum: 'sagt till' },
   },
   {
     id: 'pv:tanka-efter',
@@ -735,6 +822,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon tänker efter noga innan hon bestämmer sig.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'tänker efter', preteritum: 'tänkte efter', supinum: 'tänkt efter' },
   },
   {
     id: 'pv:kanna-till',
@@ -753,6 +841,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi känner till problemet sedan flera år tillbaka.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'känner till', preteritum: 'kände till', supinum: 'känt till' },
   },
   {
     id: 'pv:ta-slut',
@@ -765,12 +854,29 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to run out; to come to an end' },
     transparency: 'idiomatic',
     acceptedParticles: ['slut'],
+    // "bort" excluded in every frame below: "ta bort" is transitive (remove
+    // something) and needs a direct object right after it, but each blank
+    // here is followed by a conjunction or preposition phrase, not an
+    // object, so the substitution leaves "ta bort" with nothing to remove.
     examples: [
-      { sv: 'Mjölken tar slut innan veckan är över.', blankIndex: 2 },
-      { sv: 'Pengarna tar slut i mitten av månaden.', blankIndex: 2 },
-      { sv: 'Filmen tar slut efter ungefär två timmar.', blankIndex: 2 },
+      {
+        sv: 'Mjölken tar slut innan veckan är över.',
+        blankIndex: 2,
+        excludedParticles: ['bort'],
+      },
+      {
+        sv: 'Pengarna tar slut i mitten av månaden.',
+        blankIndex: 2,
+        excludedParticles: ['bort'],
+      },
+      {
+        sv: 'Filmen tar slut efter ungefär två timmar.',
+        blankIndex: 2,
+        excludedParticles: ['bort'],
+      },
     ],
     verified: true,
+    forms: { presens: 'tar slut', preteritum: 'tog slut', supinum: 'tagit slut' },
   },
   {
     id: 'pv:borja-om',
@@ -789,6 +895,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Han börjar om sin utbildning i en annan stad.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'börjar om', preteritum: 'började om', supinum: 'börjat om' },
   },
   {
     id: 'pv:visa-upp',
@@ -807,6 +914,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi visar upp våra bilder för hela familjen.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'visar upp', preteritum: 'visade upp', supinum: 'visat upp' },
   },
   {
     id: 'pv:vanda-om',
@@ -825,6 +933,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'De vänder om efter halva sträckan.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'vänder om', preteritum: 'vände om', supinum: 'vänt om' },
   },
   {
     id: 'pv:ga-igenom',
@@ -845,6 +954,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Han går igenom sina anteckningar före mötet.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'går igenom', preteritum: 'gick igenom', supinum: 'gått igenom' },
   },
   {
     id: 'pv:komma-pa',
@@ -864,6 +974,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Han kommer på namnet efter en lång stund.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'kommer på', preteritum: 'kom på', supinum: 'kommit på' },
   },
 
   // ---- Reflexives: cloze only, no recall item (see the pedagogy note). A
@@ -887,6 +998,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon hör av sig varje söndag till sin mamma.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'hör av sig', preteritum: 'hörde av sig', supinum: 'hört av sig' },
   },
   {
     id: 'pv:ge-sig-av',
@@ -905,6 +1017,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'De ger sig av mot fjällen på fredag.', blankIndex: 3 },
     ],
     verified: true,
+    forms: { presens: 'ger sig av', preteritum: 'gav sig av', supinum: 'gett sig av' },
   },
 
   // ---- Base verbs added to VERB_DATA in #262 ----
@@ -928,6 +1041,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Jag stänger av mobilen efter klockan tio.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'stänger av', preteritum: 'stängde av', supinum: 'stängt av' },
   },
   {
     id: 'pv:satta-pa',
@@ -945,6 +1059,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Han sätter på kaffebryggaren varje morgon.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'sätter på', preteritum: 'satte på', supinum: 'satt på' },
   },
   {
     id: 'pv:stiga-upp',
@@ -962,6 +1077,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi stiger upp tidigt på lördagar.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'stiger upp', preteritum: 'steg upp', supinum: 'stigit upp' },
   },
   {
     id: 'pv:halsa-pa',
@@ -983,6 +1099,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Jag hälsar på farmor efter skolan idag.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'hälsar på', preteritum: 'hälsade på', supinum: 'hälsat på' },
   },
   {
     id: 'pv:bygga-ut',
@@ -1000,6 +1117,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'De bygger ut huset i sommar.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'bygger ut', preteritum: 'byggde ut', supinum: 'byggt ut' },
   },
   {
     id: 'pv:stalla-in',
@@ -1017,5 +1135,6 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi ställer in resan på grund av snön.', blankIndex: 2 },
     ],
     verified: true,
+    forms: { presens: 'ställer in', preteritum: 'ställde in', supinum: 'ställt in' },
   },
 ];
