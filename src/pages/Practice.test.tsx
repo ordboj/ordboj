@@ -182,6 +182,8 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
   });
 
   it('re-queues a lapsed item after the 3-item gap, does not inflate the progress denominator, and requires a correct retry before the sitting ends', async () => {
+    // Six explicit Check-Answer round trips (ticket #91 dropped auto-submit)
+    // push this comfortably past Vitest's 5s default.
     const user = userEvent.setup();
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -238,7 +240,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(5, 'v5-presens', 5);
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(6, 'v6-presens', 5);
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(7, 'v1-presens', 5);
-  });
+  }, 20000);
 
   // History: this test originally caught a real stuck-session bug, fixed by
   // the duplicate-splice guard in Practice.tsx's handleAnswer (39a1a00). A
@@ -341,7 +343,9 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     for (const [, grade] of lapsingCalls) {
       expect(grade).toBe(0);
     }
-  });
+    // Up to ~60 real Check-Answer round trips (ticket #91 dropped
+    // auto-submit): comfortably past Vitest's 5s default.
+  }, 30000);
 
   // The duplicate-splice guard at scale: with 8 always-correct fillers the
   // lapser's 3-item gap clears at filler 3 (splice) and clears AGAIN at
@@ -410,7 +414,9 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(10);
     const lapsingCalls = mocks.recordAnswer.mock.calls.filter(([id]) => id === 'lapser-presens');
     expect(lapsingCalls.map(([, grade]) => grade)).toEqual([0, 5]);
-  });
+    // Ten explicit Check-Answer round trips (ticket #91 dropped
+    // auto-submit): comfortably past Vitest's 5s default.
+  }, 20000);
 
   // Wrong answer on the requeued copy itself: the lapse -> retry(wrong) ->
   // second retry(wrong) chain must consume the cap one shown retry at a
@@ -478,7 +484,7 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
       const calls = mocks.recordAnswer.mock.calls.filter(([id]) => id === `filler${i}-presens`);
       expect(calls.map(([, grade]) => grade)).toEqual([0, 5]);
     }
-  });
+  }, 15000);
 
   // docs/learning/lapse-handling.md: "If the day ends with a re-queue still
   // pending, it is simply due tomorrow with the lapse already applied --
