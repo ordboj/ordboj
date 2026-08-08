@@ -1619,3 +1619,85 @@ describe('PracticeCard - pronounce button touch target (issue #110 AC)', () => {
     }
   });
 });
+
+// Issue #100 / PR #202: pronounce buttons need accessible names (screen
+// readers announce icon-only <Volume2> buttons as unlabeled otherwise) and
+// a >=44x44px touch target (via box size; the glyph itself stays small).
+describe('PracticeCard - pronounce button accessibility', () => {
+  it('gives every per-form pronounce button a descriptive, form-specific aria-label', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'är');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    // Infinitiv ("vara"), Preteritum ("var") and Supinum ("varit") are the
+    // non-missing pattern parts for infinitive="vara"/form="presens" — each
+    // gets its own pronounce button labeled by its grammatical form name
+    // (getFormLabel, owned by swedish-linguist), not a generic "Pronounce"
+    // label that would be indistinguishable to a screen reader.
+    expect(screen.getByRole('button', { name: 'Pronounce Infinitiv' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pronounce Preteritum' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pronounce Supinum' })).toBeInTheDocument();
+  });
+
+  it('gives per-form pronounce buttons and the full pronounce-answer button a >=44px touch target', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'är');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    // Tailwind's default spacing scale: h-11/w-11 = 2.75rem = 44px. jsdom
+    // doesn't compute real CSS (vitest.config.ts sets css: false), so this
+    // pins the utility classes that deliver the 44px box per Tailwind's
+    // documented scale, not a computed pixel value.
+    const formButton = screen.getByRole('button', { name: 'Pronounce Infinitiv' });
+    expect(formButton.className).toMatch(/\bh-11\b/);
+    expect(formButton.className).toMatch(/\bw-11\b/);
+
+    const pronounceAnswerButton = screen.getByRole('button', { name: /pronounce answer/i });
+    expect(pronounceAnswerButton.className).toMatch(/\bh-11\b/);
+  });
+
+  it('gives the backspace key an accessible name', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await screen.findByPlaceholderText('Type your answer...');
+    expect(screen.getByRole('button', { name: /backspace/i })).toBeInTheDocument();
+  });
+});
