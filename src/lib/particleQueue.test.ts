@@ -5,7 +5,6 @@ import {
   countParticleReviewsDue,
   isBaseRecentlyUsed,
   isBaseStarted,
-  isBaseVerbReady,
   orderForIntroduction,
   particleNewAllowedToday,
   particleNewCardsPerDay,
@@ -97,40 +96,47 @@ describe('new-card arithmetic', () => {
   });
 });
 
-describe('base verb eligibility gate', () => {
-  const target = entry({ id: 'pv:test-ut' });
-
-  it('rejects a base verb with no conjugation progress', () => {
-    expect(isBaseVerbReady(target, {})).toBe(false);
-  });
-
-  it('rejects a base verb known in presens only', () => {
-    const verbId = verbs.find((verb) => verb.infinitive === 'gå')!.id;
-    const presens = conjugationItemId(verbId, 'presens');
-    expect(isBaseVerbReady(target, { [presens]: state({ itemId: presens, repetitions: 5 }) })).toBe(
-      false,
-    );
-  });
-
-  it('accepts a base verb at repetitions 2 on both forms', () => {
-    expect(isBaseVerbReady(target, readyBase('gå'))).toBe(true);
-  });
-
-  it('rejects a base verb that is not in VERB_DATA at all', () => {
-    // This is the dead-content case the dataset test refuses to let ship.
-    const orphan = entry({ id: 'pv:orphan', baseInfinitive: 'stänga' });
-    expect(isBaseVerbReady(orphan, readyBase('gå'))).toBe(false);
-  });
-
-  it('keeps an ineligible verb out of the sitting entirely', () => {
+// Issue #315: buildParticleSitting used to filter every entry through
+// isBaseVerbReady before it ever looked at due dates, so a review that was
+// genuinely overdue silently vanished from the sitting whenever the base
+// verb's conjugation progress lapsed or was never recorded. That is a
+// schedule drifting wrong with no error and no visible symptom — exactly
+// the silent-failure shape this suite exists to catch. isBaseVerbReady and
+// the base-verb gate are deleted; a due pv: item now depends only on its
+// own SRS schedule.
+describe('issue #315: a due review is never hidden by the conjugation store', () => {
+  it('serves a due cloze whose base verb has no conjugation progress at all', () => {
+    const target = entry({ id: 'pv:test-ut' });
+    const clozeId = particleItemId(target.id, 'cloze');
     const sitting = buildParticleSitting({
-      srsStates: {},
+      srsStates: {
+        [clozeId]: state({ itemId: clozeId, repetitions: 3, dueAt: NOW - DAY }),
+      },
       particleDailyGoal: 12,
       now: NOW,
       shuffle: noShuffle,
       entries: [target],
     });
-    expect(sitting.cards).toEqual([]);
+    expect(sitting.cards.map((card) => card.itemId)).toContain(clozeId);
+  });
+
+  it('serves a due cloze whose base verb just lapsed (repetitions 0)', () => {
+    const target = entry({ id: 'pv:test-ut' });
+    const clozeId = particleItemId(target.id, 'cloze');
+    const verbId = verbs.find((verb) => verb.infinitive === 'gå')!.id;
+    const presensId = conjugationItemId(verbId, 'presens');
+    const sitting = buildParticleSitting({
+      srsStates: {
+        // A lapse: the base verb was known and just got answered wrong.
+        [presensId]: state({ itemId: presensId, repetitions: 0, dueAt: NOW }),
+        [clozeId]: state({ itemId: clozeId, repetitions: 3, dueAt: NOW - DAY }),
+      },
+      particleDailyGoal: 12,
+      now: NOW,
+      shuffle: noShuffle,
+      entries: [target],
+    });
+    expect(sitting.cards.map((card) => card.itemId)).toContain(clozeId);
   });
 });
 

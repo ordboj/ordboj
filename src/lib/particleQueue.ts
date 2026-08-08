@@ -22,10 +22,6 @@ export const REVIEWS_PER_NEW_CARD = 4;
 // and degrades into a reveal.
 export const RECALL_UNLOCK_REPETITIONS = 2;
 
-// A particle verb is only introduced once its base verb is genuinely known:
-// this many correct answers on presens *and* preteritum.
-export const BASE_VERB_GATE_REPETITIONS = 2;
-
 // Items that must fall between a verb's introduction card and its first
 // cloze. Six is the preference; two is the floor, below which the pair is an
 // adjacent reveal-then-ask — a familiarity check that reports a success to
@@ -114,26 +110,9 @@ function fisherYates<T>(items: T[]): T[] {
 
 const verbIdByInfinitive = new Map(verbs.map((verb) => [verb.infinitive, verb.id]));
 
-// The base verb must be known before its particle verb is introduced:
-// repetitions >= 2 on both presens and preteritum. A base that does not
-// resolve in VERB_DATA can never pass, which is why the dataset test refuses
-// to let a verified entry have one.
-export function isBaseVerbReady(
-  entry: ParticleVerbData,
-  srsStates: Record<string, SrsState>,
-): boolean {
-  const verbId = verbIdByInfinitive.get(entry.baseInfinitive);
-  if (!verbId) return false;
-  return (['presens', 'preteritum'] as const).every((form) => {
-    const state = srsStates[conjugationItemId(verbId, form)];
-    return (state?.repetitions ?? 0) >= BASE_VERB_GATE_REPETITIONS;
-  });
-}
-
-// Issue #316: soft introduction ordering, on top of whatever candidate pool
-// isBaseVerbReady already lets through. This never gates — it only decides
-// what order today's introductions come in — so it stays correct however
-// that upstream gate evolves, including the day it goes away.
+// Issue #316: soft introduction ordering. The hard base-verb gate was
+// removed by issue #315 — this never gates, it only decides what order
+// today's introductions come in.
 const CONJUGATION_FORMS_FOR_PRIORITY: readonly Form[] = [
   'presens',
   'preteritum',
@@ -152,8 +131,9 @@ const CEFR_BAND_ORDER: Record<ParticleVerbData['cefr'], number> = {
   C1: 4,
 };
 
-// Soft signal, deliberately weaker than isBaseVerbReady's repetitions >= 2 on
-// two forms: "has the learner started this base at all" — any one
+// Soft signal, deliberately weaker than the hard gate #315 removed
+// (repetitions >= 2 on two forms): "has the learner started this base at
+// all" — any one
 // conjugation item at repetitions >= 1. An unresolvable baseInfinitive (or a
 // base nothing has been answered on yet) reads as "not started", never as an
 // error; the caller only ever uses this to order, not to exclude.
@@ -244,8 +224,10 @@ export function buildParticleSitting({
   shuffle = fisherYates,
   entries = getVerifiedParticleVerbs(),
 }: BuildOptions): ParticleSitting {
-  const eligible = entries.filter((entry) => isBaseVerbReady(entry, srsStates));
-
+  // Due reviews are never gated on the conjugation store: once an item has
+  // been introduced, its schedule is the only thing that decides whether it
+  // is due. See docs/superpowers/specs/2026-08-08-partikelverb-design.md.
+  //
   // --- due reviews -------------------------------------------------------
   // The two items of one verb never share a sitting: the cloze feedback
   // screen shows the phrase in full, so a recall card later in the same
@@ -253,7 +235,7 @@ export function buildParticleSitting({
   // learner did not earn. When both are due, the cloze wins and the recall
   // waits for the next sitting.
   const dueCards: Array<{ card: ParticleSittingCard; dueAt: number }> = [];
-  for (const entry of eligible) {
+  for (const entry of entries) {
     const clozeId = particleItemId(entry.id, 'cloze');
     const clozeState = srsStates[clozeId];
     if (clozeState && isDue(clozeState, now)) {
@@ -290,7 +272,7 @@ export function buildParticleSitting({
   let remaining = newAllowedToday;
 
   const recallUnlocks: ParticleSittingCard[] = [];
-  for (const entry of eligible) {
+  for (const entry of entries) {
     if (remaining <= 0) break;
     if (!hasRecallItem(entry)) continue;
     const recallId = particleItemId(entry.id, 'recall');
@@ -307,8 +289,8 @@ export function buildParticleSitting({
   const introductions: ParticleSittingCard[] = [];
   const newPerParticle = new Map<string, number>();
   // Issue #316: introduction order only. Due reviews and recall unlocks
-  // above still iterate `eligible` in its own (corpus) order, untouched.
-  for (const entry of orderForIntroduction(eligible, srsStates)) {
+  // above still iterate `entries` in its own (corpus) order, untouched.
+  for (const entry of orderForIntroduction(entries, srsStates)) {
     if (remaining <= 0) break;
     if (srsStates[particleItemId(entry.id, 'cloze')]) continue;
     if (isBaseRecentlyUsed(entry, srsStates, entries)) continue;
