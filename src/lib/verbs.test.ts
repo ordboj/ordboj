@@ -4,6 +4,7 @@ import {
   generateVerbPattern,
   getFormLabel,
   getFormHint,
+  getExampleSentence,
   getVerbs,
   getVerbGrupp,
   getAlternateForms,
@@ -230,6 +231,54 @@ describe('getFormLabel / getFormHint', () => {
   it('gives each form a distinct label (no accidental duplicate mapping)', () => {
     const labels = ALL_FORMS.map(getFormLabel);
     expect(new Set(labels).size).toBe(ALL_FORMS.length);
+  });
+
+  // Tickets #229/#44: labels are the Swedish grammar terms a learner meets in
+  // class, not the old English words ("Infinitive", "Present", "Past",
+  // "Supine", "Imperative"). Pinned exactly so a future change to the label
+  // set is loud, not a silent drift back to English or to "Imperfekt" (the
+  // older, no-longer-taught name for the simple past).
+  it('returns the exact Swedish term for every form', () => {
+    expect(getFormLabel('infinitive')).toBe('Infinitiv');
+    expect(getFormLabel('presens')).toBe('Presens');
+    expect(getFormLabel('preteritum')).toBe('Preteritum');
+    expect(getFormLabel('supinum')).toBe('Supinum');
+    expect(getFormLabel('imperativ')).toBe('Imperativ');
+  });
+
+  it('never labels preteritum (or any other form) "Imperfekt"', () => {
+    for (const form of ALL_FORMS) {
+      expect(getFormLabel(form)).not.toBe('Imperfekt');
+    }
+  });
+
+  // The Swedish term must lead the hint (not just appear somewhere in it),
+  // with the English gloss trailing in parentheses for a learner who doesn't
+  // know the term yet.
+  it('leads each hint with its Swedish term', () => {
+    expect(getFormHint('infinitive').startsWith('Infinitiv:')).toBe(true);
+    expect(getFormHint('presens').startsWith('Presens:')).toBe(true);
+    expect(getFormHint('preteritum').startsWith('Preteritum:')).toBe(true);
+    expect(getFormHint('supinum').startsWith('Supinum:')).toBe(true);
+    expect(getFormHint('imperativ').startsWith('Imperativ:')).toBe(true);
+  });
+});
+
+// Tickets #229/#44: only vara, ha and gå have hand-written example sentences.
+// Every other verb+form must return null (never a "[Example with ...]"
+// placeholder, which taught nothing and read as a bug).
+describe('getExampleSentence', () => {
+  it('returns null for a verb with no hand-written examples', () => {
+    expect(getExampleSentence('tala', 'presens')).toBeNull();
+    expect(getExampleSentence('tala', 'preteritum')).toBeNull();
+  });
+
+  it('returns null for an unknown infinitive', () => {
+    expect(getExampleSentence('this-infinitive-does-not-exist', 'presens')).toBeNull();
+  });
+
+  it('returns the real Swedish sentence for a fixture verb + form that has one', () => {
+    expect(getExampleSentence('vara', 'presens')).toBe('Jag är glad');
   });
 });
 
