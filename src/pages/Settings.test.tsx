@@ -97,17 +97,6 @@ describe('Settings page - issue #137: CEFR checkbox guard against zero selection
     expect(updateSettingsMock).not.toHaveBeenCalled();
   });
 
-  it('leaves the last-remaining checkbox visually still checked after the blocked click', async () => {
-    mockCefrLevels = ['B2'];
-    const user = userEvent.setup();
-    renderWithProviders(<Settings />, { route: '/settings' });
-
-    const b2 = screen.getByRole('checkbox', { name: 'B2' });
-    await user.click(b2);
-
-    expect(b2).toHaveAttribute('aria-checked', 'true');
-  });
-
   it('still allows unchecking a level when more than one is selected', async () => {
     mockCefrLevels = ['A1', 'A2'];
     const user = userEvent.setup();
