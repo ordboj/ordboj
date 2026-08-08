@@ -151,6 +151,89 @@ describe('VERB_DATA - grupp field contract', () => {
   });
 });
 
+describe('VERB_DATA - imperativ audit contract (issue #132)', () => {
+  // The audit (PR resolving #132) fills in the imperativ for every verb
+  // that can take one, and leaves it blank only where that is linguistically
+  // correct (modal/auxiliary verbs) or genuinely uncertain (flagged for a
+  // human, never guessed). Blank-without-explanation was the original bug:
+  // it silently taught nothing rather than something wrong, but it also
+  // produced the raw "(not available)" leak in the Progress table. Pin the
+  // post-audit shape so a future edit can't silently reintroduce an
+  // unexplained gap.
+  const rowsByInfinitive = new Map(parsedRows.map((r) => [r.infinitive, r]));
+
+  it('has an imperativ for every verb except the known modal/uncertain exceptions', () => {
+    const blankImperativ = VERB_DATA.filter((v) => v.imperativ === '').map((v) => v.infinitive);
+    expect(blankImperativ.sort()).toEqual(['få', 'kunna', 'te sig', 'vilja'].sort());
+  });
+
+  it('explains every blank imperativ with a preceding comment (no silent gap survives the audit)', () => {
+    const unexplained = VERB_DATA.filter((v) => v.imperativ === '')
+      .map((v) => v.infinitive)
+      .filter((infinitive) => {
+        const row = rowsByInfinitive.get(infinitive);
+        return !row || row.commentBlock.trim().length === 0;
+      });
+    expect(unexplained).toEqual([]);
+  });
+
+  it.each(['kunna', 'få', 'vilja'])(
+    'flags "%s" as a modal verb with no imperativ mood, not an unexplained gap',
+    (infinitive) => {
+      const row = rowsByInfinitive.get(infinitive);
+      expect(row?.commentBlock.toLowerCase()).toContain('modal');
+      expect(row?.commentBlock.toLowerCase()).toContain('no imperativ');
+    },
+  );
+
+  it('flags "te sig" as uncertain for human review rather than guessing a form', () => {
+    const row = rowsByInfinitive.get('te sig');
+    // Distinguishes this row from the modal-verb exceptions above: the
+    // comment must signal uncertainty requiring a human, not just "no
+    // imperativ exists".
+    expect(row?.commentBlock.toLowerCase()).toMatch(/human|review|uncertain/);
+  });
+
+  // Pins the exact forms called out as examples in issue #132's acceptance
+  // criteria, so a future edit can't silently reintroduce the missing data
+  // or swap in a wrong form.
+  it.each([
+    ['använda', 'använd'],
+    ['börja', 'börja'],
+    ['behöva', 'behöv'],
+  ] as const)('fills in the audited imperativ for "%s" -> "%s"', (infinitive, imperativ) => {
+    const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+    expect(row?.imperativ).toBe(imperativ);
+  });
+
+  // Regression: before the audit, every row below "ha" except the modal
+  // verbs and "te sig" had an unexplained empty imperativ. Spot-check a
+  // broad sample so a partial revert (e.g. only fixing the first few rows)
+  // is still caught.
+  it.each([
+    ['ta', 'ta'],
+    ['se', 'se'],
+    ['gå', 'gå'],
+    ['säga', 'säg'],
+    ['skriva', 'skriv'],
+    ['veta', 'vet'],
+    ['försöka', 'försök'],
+    ['läsa', 'läs'],
+    ['stå', 'stå'],
+    ['hålla', 'håll'],
+    ['tänka', 'tänk'],
+    ['söka', 'sök'],
+    ['ligga', 'ligg'],
+    ['lägga', 'lägg'],
+    ['tala', 'tala'],
+    ['bära', 'bär'],
+    ['höra', 'hör'],
+  ] as const)('fills in the audited imperativ for "%s" -> "%s"', (infinitive, imperativ) => {
+    const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+    expect(row?.imperativ).toBe(imperativ);
+  });
+});
+
 describe('swedish_verbs.csv - mojibake guard', () => {
   // The source CSV legitimately contains parentheses, slashes and periods
   // for alternate forms and abbreviations (e.g. "ta (el. taga)",
