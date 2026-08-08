@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   SrsState,
   initializeSrsState,
@@ -7,8 +7,7 @@ import {
   isSrsState,
   Grade,
 } from '@/lib/srs';
-import { getVerbs, getAllConjugatedVerbs, Form, Verb } from '@/lib/verbs';
-import { conjugationItemId } from '@/lib/itemIds';
+import { createConjugationProvider, type ConjugationItem } from '@/lib/srsProviders';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -44,22 +43,34 @@ function rebaseLegacyEase(items: Record<string, SrsState>): Record<string, SrsSt
   return rebased;
 }
 
+interface ParsedProgress {
+  items: Record<string, SrsState>;
+  // The version marker found in storage. `undefined` means the legacy bare
+  // map, which predates versioning. Reported back so the caller can tell a
+  // store written by a *newer* build apart from one this build understands —
+  // see the read-only guard in the hook.
+  storedVersion?: number;
+}
+
 // Accepts either the version-2 envelope or the legacy bare map (from
 // storage or an old export file) and returns the item map, applying the
 // one-time ease rebase to legacy data. Unknown fields on individual items
 // survive via spread; nothing is discarded.
-function parseStoredProgress(raw: string): Record<string, SrsState> {
+function parseStoredProgress(raw: string): ParsedProgress {
   const parsed = JSON.parse(raw);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return {};
+    return { items: {} };
   }
   if (typeof parsed.version === 'number') {
     // Versioned envelope (this version or newer): take the items as-is.
     const items = parsed.items;
-    return items && typeof items === 'object' && !Array.isArray(items) ? items : {};
+    return {
+      items: items && typeof items === 'object' && !Array.isArray(items) ? items : {},
+      storedVersion: parsed.version,
+    };
   }
   // Legacy unversioned blob: the bare state map itself.
-  return rebaseLegacyEase(parsed as Record<string, SrsState>);
+  return { items: rebaseLegacyEase(parsed as Record<string, SrsState>) };
 }
 
 // Import is the only untrusted entry point into the store. Storage reads
@@ -133,60 +144,79 @@ function parseImportedProgress(raw: string): Record<string, SrsState> | null {
   return needsEaseRebase ? rebaseLegacyEase(validated) : validated;
 }
 
-export interface PracticeItem {
-  verbId: string;
-  infinitive: string;
-  form: Form;
-  itemId: string;
-}
+// One conjugation item: a (verb, form) pair. Kept as the hook's public item
+// type; the shape now lives with the conjugation provider.
+export type PracticeItem = ConjugationItem;
 
-// `cefrLevels` filter semantics (see getDueItems below): `undefined` means
-// "no filter, all verbs in scope"; any array - including `[]` - is an
+// `cefrLevels` filter semantics (see createConjugationProvider): `undefined`
+// means "no filter, all verbs in scope"; any array - including `[]` - is an
 // explicit selection and is honored exactly, so an empty selection matches
 // zero verbs rather than silently falling back to "all verbs".
 export function useSrsProgress(cefrLevels?: string[]) {
   const [srsStates, setSrsStates] = useState<Record<string, SrsState>>({});
   const [isLoading, setIsLoading] = useState(true);
+  // Set when the store on disk was written by a build newer than this one.
+  // While true nothing is persisted: see the save effect.
+  const [isReadOnly, setIsReadOnly] = useState(false);
+
+  // The hook owns the store; a provider owns what there is to schedule.
+  // Rebuilt only when the level selection changes, so getDueItems' identity
+  // churns no more than it did before.
+  const conjugationProvider = useMemo(() => createConjugationProvider(cefrLevels), [cefrLevels]);
 
   // Load from localStorage and initialize
   useEffect(() => {
     const initializeStates = async () => {
       const stored = localStorage.getItem(STORAGE_KEY);
-      let loadedStates: Record<string, SrsState> = {};
+      let loaded: ParsedProgress = { items: {} };
 
       if (stored) {
         try {
-          loadedStates = parseStoredProgress(stored);
+          loaded = parseStoredProgress(stored);
         } catch (e) {
           console.error('Failed to parse SRS data', e);
         }
       }
 
-      // Initialize all verb+form combinations
-      const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
-      const newStates: Record<string, SrsState> = { ...loadedStates };
+      // Forward-compat guard. A store stamped with a version this build does
+      // not know was written by a newer one, and its items may carry meaning
+      // this code cannot see. Persisting over it would rewrite that newer
+      // envelope as version 2 and silently discard whatever the newer build
+      // recorded — the destructive half of a downgrade, on data that has no
+      // backup. So the session runs read-only instead: the learner can
+      // practise, nothing is written, and their real progress survives the
+      // downgrade intact.
+      const fromNewerBuild =
+        loaded.storedVersion !== undefined && loaded.storedVersion > STORAGE_VERSION;
+      if (fromNewerBuild) {
+        console.error(
+          `SRS store is version ${loaded.storedVersion}, newer than this build understands (${STORAGE_VERSION}). ` +
+            'Running read-only: progress from this session will not be saved.',
+        );
+      }
 
-      const verbs = await getVerbs();
-
-      for (const verb of verbs) {
-        for (const form of forms) {
-          const itemId = conjugationItemId(verb.id, form);
-          if (!newStates[itemId]) {
-            newStates[itemId] = initializeSrsState(itemId);
-          }
+      const newStates: Record<string, SrsState> = { ...loaded.items };
+      for (const itemId of await conjugationProvider.listEagerInitIds()) {
+        if (!newStates[itemId]) {
+          newStates[itemId] = initializeSrsState(itemId);
         }
       }
 
+      setIsReadOnly(fromNewerBuild);
       setSrsStates(newStates);
       setIsLoading(false);
     };
 
     initializeStates();
+    // Deliberately once per mount: re-running would re-read storage over
+    // in-memory answers. The provider's eager id list does not depend on the
+    // level filter (see createConjugationProvider).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save to localStorage
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && !isReadOnly) {
       try {
         localStorage.setItem(
           STORAGE_KEY,
@@ -198,7 +228,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
         console.error('Failed to save SRS data', e);
       }
     }
-  }, [srsStates, isLoading]);
+  }, [srsStates, isLoading, isReadOnly]);
 
   // Force refresh all items (useful for debugging)
   const initializeAllItems = () => {
@@ -207,55 +237,15 @@ export function useSrsProgress(cefrLevels?: string[]) {
     return;
   };
 
-  // Get due items (randomized and filtered by CEFR level)
+  // Get due items (randomized; scope and level filtering are the provider's)
   const getDueItems = useCallback(async (): Promise<PracticeItem[]> => {
-    const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
-    const dueItems: PracticeItem[] = [];
-
-    const allVerbs = await getVerbs();
-
-    // CEFR filter semantics: `cefrLevels === undefined` means the caller did
-    // not opt into filtering at all, so every verb is in scope. Any array
-    // value, including an empty one, is the caller stating an explicit
-    // selection, and the result must respect exactly that selection - an
-    // empty array must yield zero verbs, never "no filter". Silently
-    // widening an empty selection back to "all verbs" is the bug this
-    // guards against (see issue #137): it would let a UI state that looks
-    // like "nothing selected" quietly practice the entire deck.
-    const verbs =
-      cefrLevels === undefined
-        ? allVerbs
-        : allVerbs.filter((verb) => verb.cefr && cefrLevels.includes(verb.cefr));
-
-    // Conjugate every verb once (O(V) total, no per-item scan of VERB_DATA
-    // by infinitive) and index the results by id, so the loop below is
-    // O(1) per verb instead of re-searching VERB_DATA for each one.
-    const allConjugated = await getAllConjugatedVerbs();
-    const conjugatedById = new Map(allConjugated.map((c) => [c.id, c]));
-
-    // Check each verb's forms for availability
-    for (const verb of verbs) {
-      const conjugated = conjugatedById.get(verb.id);
-      if (!conjugated) continue;
-
-      for (const form of forms) {
-        // Skip forms that are not available
-        if (conjugated[form] === '(not available)' || !conjugated[form]) {
-          continue;
-        }
-
-        const itemId = conjugationItemId(verb.id, form);
-        const state = srsStates[itemId];
-        if (state && isDue(state)) {
-          dueItems.push({
-            verbId: verb.id,
-            infinitive: verb.infinitive,
-            form,
-            itemId,
-          });
-        }
-      }
-    }
+    const available = await conjugationProvider.listAvailableItems();
+    // An item with no stored state has not been initialized yet and is not
+    // served — the same rule as before the provider split.
+    const dueItems = available.filter((item) => {
+      const state = srsStates[item.itemId];
+      return state !== undefined && isDue(state);
+    });
 
     // Shuffle the items using Fisher-Yates algorithm
     for (let i = dueItems.length - 1; i > 0; i--) {
@@ -264,7 +254,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
     }
 
     return dueItems;
-  }, [srsStates, cefrLevels]);
+  }, [srsStates, conjugationProvider]);
 
   // Record answer
   const recordAnswer = (itemId: string, grade: Grade) => {
@@ -304,6 +294,10 @@ export function useSrsProgress(cefrLevels?: string[]) {
   return {
     srsStates,
     isLoading,
+    // True when the stored schedule was written by a newer build, so this
+    // session is not being persisted. Exposed so a surface can tell the
+    // learner rather than letting them practise into a void.
+    isReadOnly,
     initializeAllItems,
     getDueItems,
     recordAnswer,

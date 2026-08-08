@@ -776,3 +776,100 @@ describe('importData shape validation (issue #135)', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
   });
 });
+
+describe('#241: forward-compat guard against a newer store', () => {
+  // A build older than the store it finds must not write to it. The store
+  // holds the only copy of a learner's schedule, so rewriting a version-3
+  // envelope as version 2 would discard whatever the newer build recorded
+  // with no backup and no error. The session runs read-only instead.
+  const futureStore = JSON.stringify({
+    version: 99,
+    items: {
+      '1-presens': {
+        itemId: '1-presens',
+        repetitions: 7,
+        intervalDays: 30,
+        easeFactor: 2.5,
+        dueAt: FIXED_NOW - 1000,
+        somethingNewerBuildsTrack: 'do not lose me',
+      },
+    },
+  });
+
+  it('reports the store as read-only', async () => {
+    localStorage.setItem(STORAGE_KEY, futureStore);
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.isReadOnly).toBe(true);
+  });
+
+  it('leaves the stored bytes exactly as found, even after an answer', async () => {
+    localStorage.setItem(STORAGE_KEY, futureStore);
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(futureStore);
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(8));
+
+    // In-memory the session advances, so the learner can still practise.
+    // On disk nothing moved — including the field this build cannot read.
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(futureStore);
+  });
+
+  it('still persists normally for a store this build understands', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        items: {
+          '1-presens': {
+            itemId: '1-presens',
+            repetitions: 1,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            dueAt: FIXED_NOW - 1000,
+          },
+        },
+      }),
+    );
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.isReadOnly).toBe(false);
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(2));
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored.version).toBe(2);
+    expect(stored.items['1-presens'].repetitions).toBe(2);
+  });
+
+  it('treats a legacy unversioned store as writable, not as newer', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        '1-presens': {
+          itemId: '1-presens',
+          repetitions: 3,
+          intervalDays: 6,
+          easeFactor: 1.3,
+          dueAt: FIXED_NOW - 1000,
+        },
+      }),
+    );
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.isReadOnly).toBe(false);
+    // And the legacy ease rebase still ran on the way in.
+    expect(result.current.srsStates['1-presens'].easeFactor).toBe(1.8);
+  });
+});
