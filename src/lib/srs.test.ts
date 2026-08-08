@@ -3,7 +3,10 @@ import {
   calculateNextReview,
   initializeSrsState,
   isDue,
+  needsRelearningRequeue,
   MAX_INTERVAL_DAYS,
+  RELEARNING_MIN_GAP,
+  RELEARNING_MAX_PER_DAY,
   type SrsState,
   type Grade,
 } from '@/lib/srs';
@@ -92,6 +95,65 @@ describe('calculateNextReview - lapse behavior (grade 0)', () => {
     const lapsed = calculateNextReview(state, 0);
     expect(lapsed.repetitions).toBe(0);
     expect(lapsed.intervalDays).toBe(1);
+  });
+});
+
+describe('calculateNextReview - hinted correct behavior (grade 3)', () => {
+  it('is not a lapse: repetitions are left unchanged, unlike grade 0', () => {
+    let state = initializeSrsState('x');
+    state = calculateNextReview(state, 5); // rep 1
+    state = calculateNextReview(state, 5); // rep 2
+    const before = state.repetitions;
+    const hinted = calculateNextReview(state, 3);
+    expect(hinted.repetitions).toBe(before);
+  });
+
+  it('nudges ease down by the same 0.05 magnitude as a correct answer nudges it up, opposite sign', () => {
+    const state = initializeSrsState('x'); // easeFactor 2.5
+    const hinted = calculateNextReview(state, 3);
+    expect(hinted.easeFactor).toBeCloseTo(2.45, 5);
+  });
+
+  it('halves the interval (rounded, floored at 1 day) instead of applying the grade-5 growth formula', () => {
+    let state = initializeSrsState('x');
+    state = calculateNextReview(state, 5); // rep 1, interval 1
+    state = calculateNextReview(state, 5); // rep 2, interval 6
+    const hinted = calculateNextReview(state, 3);
+    expect(hinted.intervalDays).toBe(3); // round(6 * 0.5)
+  });
+
+  it('floors a halved interval of less than 1 day at 1 day, never 0', () => {
+    const state = initializeSrsState('x'); // intervalDays 0
+    const hinted = calculateNextReview(state, 3);
+    expect(hinted.intervalDays).toBe(1); // round(0 * 0.5) = 0, floored to 1
+  });
+
+  it('never lets ease drop below the 1.3 floor on a long run of hinted answers', () => {
+    // Delta is -0.05/step; (2.5 - 1.3) / 0.05 = 24 steps to reach the floor.
+    // Run well past that to prove it pins rather than overshoots.
+    let state = initializeSrsState('x');
+    for (let i = 0; i < 40; i++) {
+      state = calculateNextReview(state, 3);
+      expect(state.easeFactor).toBeGreaterThanOrEqual(1.3);
+    }
+    expect(state.easeFactor).toBe(1.3);
+  });
+
+  it('records grade 3 as lastGrade and stamps dueAt using the halved interval', () => {
+    const state = calculateNextReview(initializeSrsState('x'), 3);
+    expect(state.lastGrade).toBe(3);
+    expect(state.dueAt).toBe(FIXED_NOW + state.intervalDays * DAY_MS);
+  });
+
+  it('does not fall into the grade-5 growth branch: a hinted answer after two successes does not jump to 6+ days', () => {
+    let state = initializeSrsState('x');
+    state = calculateNextReview(state, 5); // rep 1, interval 1
+    const hinted = calculateNextReview(state, 3);
+    // If grade 3 were mis-routed into the >=3 success branch, repetitions
+    // would become 2 and intervalDays would jump to 6. It must not.
+    expect(hinted.repetitions).toBe(1);
+    expect(hinted.intervalDays).not.toBe(6);
+    expect(hinted.intervalDays).toBe(1); // round(1 * 0.5) = 1 (floored)
   });
 });
 
@@ -229,5 +291,33 @@ describe('isDue', () => {
     expect(isDue(state)).toBe(false);
     vi.setSystemTime(FIXED_NOW + DAY_MS);
     expect(isDue(state)).toBe(true);
+  });
+});
+
+describe('needsRelearningRequeue', () => {
+  it('is true only for a genuine lapse (grade 0)', () => {
+    expect(needsRelearningRequeue(0)).toBe(true);
+  });
+
+  it('is false for a hinted correct answer (grade 3): it already got a successful retrieval', () => {
+    expect(needsRelearningRequeue(3)).toBe(false);
+  });
+
+  it('is false for an unaided correct answer (grade 5)', () => {
+    expect(needsRelearningRequeue(5)).toBe(false);
+  });
+});
+
+describe('relearning queue constants - pin the current contract', () => {
+  // Practice.tsx (frontend-expert) reads these to place a lapsed item back
+  // into the session queue. Pinned here so a change to either value is a
+  // deliberate, reviewed edit, not a silent drift that Practice.test.tsx
+  // would then fail to explain.
+  it('RELEARNING_MIN_GAP is 3 items', () => {
+    expect(RELEARNING_MIN_GAP).toBe(3);
+  });
+
+  it('RELEARNING_MAX_PER_DAY is 2 requeues', () => {
+    expect(RELEARNING_MAX_PER_DAY).toBe(2);
   });
 });
