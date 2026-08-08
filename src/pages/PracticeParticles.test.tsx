@@ -97,7 +97,9 @@ describe('particle practice flow', () => {
     await user.type(screen.getByRole('textbox'), 'om');
 
     // Auto-submit on an exact match: "om" is a prefix of nothing else here.
-    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    // Real-time slack: fake timers with shouldAdvanceTime tie this wait to
+    // the host clock, and parallel workers starve the default 1000ms budget.
+    expect(await screen.findByText('Correct!', {}, { timeout: 3000 })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Next Card' }));
 
@@ -116,7 +118,9 @@ describe('particle practice flow', () => {
     await user.type(screen.getByRole('textbox'), 'upp');
     await user.click(screen.getByRole('button', { name: 'Check Answer' }));
 
-    expect(await screen.findByText('Not quite')).toBeInTheDocument();
+    // Real-time slack: fake timers with shouldAdvanceTime tie this wait to
+    // the host clock, and parallel workers starve the default 1000ms budget.
+    expect(await screen.findByText('Not quite', {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByText('upp')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Next Card' }));
@@ -146,7 +150,9 @@ describe('particle practice flow', () => {
     // other one, so no button press is needed.
     await user.type(screen.getByRole('textbox'), 'upp');
 
-    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    // Real-time slack: fake timers with shouldAdvanceTime tie this wait to
+    // the host clock, and parallel workers starve the default 1000ms budget.
+    expect(await screen.findByText('Correct!', {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByText('ner, ned and upp are all correct here.')).toBeInTheDocument();
   });
 
@@ -169,7 +175,9 @@ describe('particle practice flow', () => {
     await user.type(screen.getByRole('textbox'), 'att tycka om');
     await user.click(screen.getByRole('button', { name: 'Check Answer' }));
 
-    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    // Real-time slack: fake timers with shouldAdvanceTime tie this wait to
+    // the host clock, and parallel workers starve the default 1000ms budget.
+    expect(await screen.findByText('Correct!', {}, { timeout: 3000 })).toBeInTheDocument();
   });
 
   it('shows the four conjugated forms as reference on the feedback screen', async () => {
@@ -181,7 +189,9 @@ describe('particle practice flow', () => {
     await screen.findByText('Fill in the missing particle');
 
     await user.type(screen.getByRole('textbox'), 'om');
-    await screen.findByText('Correct!');
+    // Real-time slack: fake timers with shouldAdvanceTime tie this wait to
+    // the host clock, and parallel workers starve the default 1000ms budget.
+    await screen.findByText('Correct!', {}, { timeout: 3000 });
 
     // Exposure only — labelled as untested, so lexical-unit-first holds.
     expect(screen.getByText('For reference — not tested')).toBeInTheDocument();
@@ -200,7 +210,9 @@ describe('particle practice flow', () => {
     expect(screen.queryByRole('button', { name: /pronounce/i })).not.toBeInTheDocument();
 
     await user.type(screen.getByRole('textbox'), 'om');
-    await screen.findByText('Correct!');
+    // Real-time slack: fake timers with shouldAdvanceTime tie this wait to
+    // the host clock, and parallel workers starve the default 1000ms budget.
+    await screen.findByText('Correct!', {}, { timeout: 3000 });
     expect(screen.queryByRole('button', { name: /pronounce/i })).not.toBeInTheDocument();
   });
 
@@ -215,7 +227,9 @@ describe('particle practice flow', () => {
     await screen.findByText('Fill in the missing particle');
 
     await user.type(screen.getByRole('textbox'), 'om');
-    await screen.findByText('Correct!');
+    // Real-time slack: fake timers with shouldAdvanceTime tie this wait to
+    // the host clock, and parallel workers starve the default 1000ms budget.
+    await screen.findByText('Correct!', {}, { timeout: 3000 });
 
     expect(screen.getByText(talaOm.contrast as string)).toBeInTheDocument();
   });
@@ -243,7 +257,9 @@ describe('particle practice flow', () => {
 
     expect(await screen.findByText(/Free practice/)).toBeInTheDocument();
     await user.type(screen.getByRole('textbox'), 'om');
-    await screen.findByText('Correct!');
+    // Real-time slack: fake timers with shouldAdvanceTime tie this wait to
+    // the host clock, and parallel workers starve the default 1000ms budget.
+    await screen.findByText('Correct!', {}, { timeout: 3000 });
     await user.click(screen.getByRole('button', { name: 'Next Card' }));
 
     await waitFor(() =>

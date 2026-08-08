@@ -21,5 +21,11 @@ export default defineConfig({
     // @playwright/test's own test()/expect(), which vitest's global
     // injection collides with if it tries to collect those files too.
     exclude: ['**/node_modules/**', '**/e2e/**'],
+    // Vitest 4 removed `poolOptions` (moved to top-level options); this is
+    // the replacement knob. Real-time waitFor budgets in fake-timer tests
+    // get starved when worker count matches high local core counts (e.g.
+    // 20 logical cores on a Windows dev box) — CI runners have 2-4 cores,
+    // so this cap only bites on big local machines.
+    maxWorkers: 8,
   },
 });

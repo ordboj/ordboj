@@ -12,6 +12,12 @@ vi.mock('react-dom/client', () => ({
   createRoot: createRootMock,
 }));
 
+// App pulls in the full module graph (routing, providers, pages). Stubbing
+// it keeps this test focused on the mount boundary (StrictMode wiring) and
+// prevents the entry-point import below from dragging the whole app into
+// the run, which starves parallel test workers.
+vi.mock('./App', () => ({ default: () => null }));
+
 beforeEach(() => {
   document.body.innerHTML = '<div id="root"></div>';
 });
