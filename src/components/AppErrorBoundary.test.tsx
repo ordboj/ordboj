@@ -343,7 +343,23 @@ describe('RouteChunk chunk-load retry and recovery (#220)', () => {
       await vi.advanceTimersByTimeAsync(600);
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(screen.getByText('page loaded')).toBeInTheDocument();
+      // Root cause of the #335 CI flake: retryImport()'s *promise chain*
+      // settling (guaranteed by the timer advances above) is not the same
+      // event as React committing the resulting DOM update. Error-boundary
+      // and Suspense/lazy re-renders are ordinarily synchronous here, which
+      // is why a plain assertion right after the advances above passes
+      // every time locally - but react-dom's Scheduler can still defer a
+      // render slice through a real (not fake-timer-controlled) callback
+      // under load, which is exactly the kind of variance a CI runner has
+      // and a idle local machine does not. `vi.waitFor` (unlike
+      // `screen.findByText`, which vitest's fake timers make hang - it only
+      // recognizes Jest's fake timers) polls with vitest's own
+      // pre-captured *real* timers, so it tolerates that deferred case
+      // without weakening the assertion: it still fails loudly if the text
+      // never appears within the timeout.
+      await vi.waitFor(() => {
+        expect(screen.getByText('page loaded')).toBeInTheDocument();
+      });
       expect(screen.queryByText('loading...')).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'retry' })).not.toBeInTheDocument();
     } finally {
@@ -384,7 +400,13 @@ describe('RouteChunk chunk-load retry and recovery (#220)', () => {
       await vi.advanceTimersByTimeAsync(600);
       await vi.advanceTimersByTimeAsync(0);
 
-      const retryButton = screen.getByRole('button', { name: 'retry' });
+      // See the matching comment in the "recovers automatically" test above
+      // for the root cause of the #335 CI flake this test was reported
+      // against (CI runs 31280020229, 31280581936): the "retry" button's
+      // commit can occasionally land a beat after the timer advances above,
+      // under CI's timing only. `vi.waitFor` tolerates that without
+      // weakening what is asserted.
+      const retryButton = await vi.waitFor(() => screen.getByRole('button', { name: 'retry' }));
       fireEvent.click(retryButton);
 
       expect(reloadSpy).toHaveBeenCalledTimes(1);
