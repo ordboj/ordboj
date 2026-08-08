@@ -4,7 +4,9 @@ import {
   buildParticleSitting,
   countParticleReviewsDue,
   isBaseRecentlyUsed,
+  isBaseStarted,
   isBaseVerbReady,
+  orderForIntroduction,
   particleNewAllowedToday,
   particleNewCardsPerDay,
   MAX_NEW_PER_PARTICLE_PER_SITTING,
@@ -244,6 +246,194 @@ describe('introductions', () => {
     expect(sitting.cards.filter((card) => card.kind === 'introduction')).toHaveLength(
       MAX_NEW_PER_PARTICLE_PER_SITTING,
     );
+  });
+});
+
+describe('introduction ordering (issue #316)', () => {
+  describe('isBaseStarted', () => {
+    it('is false when the base has no conjugation progress at all', () => {
+      const target = entry({ id: 'pv:test-ut', baseInfinitive: 'gå' });
+      expect(isBaseStarted(target, {})).toBe(false);
+    });
+
+    it('is false when the base verb does not resolve in VERB_DATA', () => {
+      const orphan = entry({ id: 'pv:orphan', baseInfinitive: 'zzz-not-a-verb' });
+      expect(isBaseStarted(orphan, readyBase('gå'))).toBe(false);
+    });
+
+    it('is true from repetitions 1, weaker than the repetitions-2 hard gate', () => {
+      const target = entry({ id: 'pv:test-ut', baseInfinitive: 'gå' });
+      const presensId = conjugationItemId('gå', 'presens');
+      const states = { [presensId]: state({ itemId: presensId, repetitions: 1 }) };
+      expect(isBaseStarted(target, states)).toBe(true);
+    });
+
+    it('counts supinum or imperativ progress, not only presens/preteritum', () => {
+      const target = entry({ id: 'pv:test-ut', baseInfinitive: 'ta' });
+      const supinumId = conjugationItemId('ta', 'supinum');
+      expect(
+        isBaseStarted(target, { [supinumId]: state({ itemId: supinumId, repetitions: 1 }) }),
+      ).toBe(true);
+
+      const imperativId = conjugationItemId('ta', 'imperativ');
+      expect(
+        isBaseStarted(target, { [imperativId]: state({ itemId: imperativId, repetitions: 3 }) }),
+      ).toBe(true);
+    });
+  });
+
+  describe('orderForIntroduction', () => {
+    it('never lets a band-B verb precede a band-A verb, regardless of tiebreaks', () => {
+      // bandB gets every tiebreak advantage (started base, literal); bandA
+      // gets every tiebreak disadvantage (unresolvable base, idiomatic). The
+      // band term must still dominate.
+      const bandB = entry({
+        id: 'pv:band-b',
+        cefr: 'B1',
+        baseInfinitive: 'ta',
+        transparency: 'literal',
+      });
+      const bandA = entry({
+        id: 'pv:band-a',
+        cefr: 'A2',
+        baseInfinitive: 'zzz-not-a-verb',
+        transparency: 'idiomatic',
+      });
+      const ordered = orderForIntroduction([bandB, bandA], readyBase('ta'));
+      expect(ordered.map((e) => e.id)).toEqual(['pv:band-a', 'pv:band-b']);
+    });
+
+    it('orders a started base ahead of an unstarted one within the same band', () => {
+      const started = entry({ id: 'pv:started', baseInfinitive: 'gå' });
+      const notStarted = entry({ id: 'pv:not-started', baseInfinitive: 'ta' });
+      const imperativId = conjugationItemId('gå', 'imperativ');
+      const states = { [imperativId]: state({ itemId: imperativId, repetitions: 1 }) };
+      const ordered = orderForIntroduction([notStarted, started], states);
+      expect(ordered.map((e) => e.id)).toEqual(['pv:started', 'pv:not-started']);
+    });
+
+    it('orders literal ahead of idiomatic within the same band and started tier', () => {
+      const idiomatic = entry({
+        id: 'pv:idiomatic',
+        transparency: 'idiomatic',
+        baseInfinitive: 'gå',
+      });
+      const literal = entry({ id: 'pv:literal', transparency: 'literal', baseInfinitive: 'ta' });
+      const ordered = orderForIntroduction([idiomatic, literal], {});
+      expect(ordered.map((e) => e.id)).toEqual(['pv:literal', 'pv:idiomatic']);
+    });
+
+    it('preserves corpus order for entries tied on every rule (stable sort)', () => {
+      const entries = [
+        entry({ id: 'pv:tie-1', baseInfinitive: 'gå' }),
+        entry({ id: 'pv:tie-2', baseInfinitive: 'ta' }),
+        entry({ id: 'pv:tie-3', baseInfinitive: 'se' }),
+        entry({ id: 'pv:tie-4', baseInfinitive: 'ge' }),
+      ];
+      const ordered = orderForIntroduction(entries, {});
+      expect(ordered.map((e) => e.id)).toEqual(['pv:tie-1', 'pv:tie-2', 'pv:tie-3', 'pv:tie-4']);
+    });
+
+    it('never drops a verb whose base is unresolvable — worst case is last in its band', () => {
+      const orphan = entry({ id: 'pv:orphan', baseInfinitive: 'zzz-not-a-verb', cefr: 'A1' });
+      const known = entry({ id: 'pv:known', baseInfinitive: 'gå', cefr: 'A1' });
+      const imperativId = conjugationItemId('gå', 'imperativ');
+      const states = { [imperativId]: state({ itemId: imperativId, repetitions: 1 }) };
+      const ordered = orderForIntroduction([orphan, known], states);
+      expect(ordered).toHaveLength(2);
+      expect(ordered.map((e) => e.id)).toEqual(['pv:known', 'pv:orphan']);
+    });
+
+    it('gives identical output for identical input across repeated calls (determinism)', () => {
+      const entries = [
+        entry({ id: 'pv:a', cefr: 'B1', baseInfinitive: 'gå' }),
+        entry({ id: 'pv:b', cefr: 'A1', baseInfinitive: 'ta', transparency: 'idiomatic' }),
+        entry({ id: 'pv:c', cefr: 'A1', baseInfinitive: 'se', transparency: 'literal' }),
+        entry({ id: 'pv:d', cefr: 'A2', baseInfinitive: 'ge' }),
+      ];
+      const states = readyBase('se');
+      const first = orderForIntroduction(entries, states).map((e) => e.id);
+      const second = orderForIntroduction(entries, states).map((e) => e.id);
+      expect(second).toEqual(first);
+    });
+
+    it('does not mutate its input array', () => {
+      const entries = [entry({ id: 'pv:b', cefr: 'B1' }), entry({ id: 'pv:a', cefr: 'A1' })];
+      const before = entries.map((e) => e.id);
+      orderForIntroduction(entries, {});
+      expect(entries.map((e) => e.id)).toEqual(before);
+    });
+  });
+
+  describe('applied inside buildParticleSitting', () => {
+    it('serves introductions in band order even when the corpus order is scrambled', () => {
+      const bandB = entry({
+        id: 'pv:band-b',
+        cefr: 'B1',
+        baseInfinitive: 'se',
+        particle: 'igen',
+        acceptedParticles: ['igen'],
+      });
+      const bandA1 = entry({ id: 'pv:band-a1', cefr: 'A1', baseInfinitive: 'gå' });
+      const bandA2 = entry({
+        id: 'pv:band-a2',
+        cefr: 'A2',
+        baseInfinitive: 'ta',
+        particle: 'med',
+        acceptedParticles: ['med'],
+      });
+      const states = { ...readyBase('gå'), ...readyBase('ta'), ...readyBase('se') };
+      const sitting = buildParticleSitting({
+        srsStates: states,
+        particleDailyGoal: 60,
+        now: NOW,
+        shuffle: noShuffle,
+        // Fed in reverse-band order on purpose.
+        entries: [bandB, bandA2, bandA1],
+      });
+      expect(
+        sitting.cards.filter((card) => card.kind === 'introduction').map((card) => card.entry.id),
+      ).toEqual(['pv:band-a1', 'pv:band-a2', 'pv:band-b']);
+    });
+
+    it('leaves due-review order untouched by the new ordering signal (no regression on #315)', () => {
+      // Reviews are selected and ordered by dueAt alone, never by
+      // orderForIntroduction. moreOverdue is band B1 and corpus-order-last;
+      // lessOverdue is band A1 and corpus-order-first. If review selection
+      // were ever routed through the introduction ordering, band or corpus
+      // order would win and flip this result; only dueAt is allowed to.
+      const moreOverdue = entry({ id: 'pv:review-more-overdue', cefr: 'B1', baseInfinitive: 'ta' });
+      const lessOverdue = entry({ id: 'pv:review-less-overdue', cefr: 'A1', baseInfinitive: 'gå' });
+      const moreOverdueClozeId = particleItemId(moreOverdue.id, 'cloze');
+      const lessOverdueClozeId = particleItemId(lessOverdue.id, 'cloze');
+      const states = {
+        ...readyBase('gå'),
+        ...readyBase('ta'),
+        [moreOverdueClozeId]: state({
+          itemId: moreOverdueClozeId,
+          repetitions: 3,
+          dueAt: NOW - 2 * DAY,
+        }),
+        [lessOverdueClozeId]: state({
+          itemId: lessOverdueClozeId,
+          repetitions: 3,
+          dueAt: NOW - DAY,
+        }),
+      };
+      const sitting = buildParticleSitting({
+        srsStates: states,
+        particleDailyGoal: 12,
+        now: NOW,
+        shuffle: noShuffle,
+        // Corpus order puts the A1/less-overdue entry first; dueAt says the
+        // opposite must win.
+        entries: [lessOverdue, moreOverdue],
+      });
+      expect(sitting.cards.map((card) => card.entry.id)).toEqual([
+        'pv:review-more-overdue',
+        'pv:review-less-overdue',
+      ]);
+    });
   });
 });
 
