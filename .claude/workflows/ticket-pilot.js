@@ -84,6 +84,15 @@ function withLock(key, fn) {
 
 // ---------------------------------------------------------------- rules
 
+// ASD-STE100 style for every human-visible GitHub text (PR bodies, comments).
+const STYLE = `
+PR-body and comment style (mandatory):
+- Keep the PR body very short: "Closes #<n>", then at most 4 lines (what changed, why), then the evidence block. No feature lists. No section headers.
+- Keep every PR or issue comment very short: at most 3 sentences.
+- Write in ASD-STE100 style: active voice, simple tenses, one fact per sentence, at most 20 words per sentence, one meaning per word, no noun clusters.
+- Do not add filler, praise, or restated diff content.
+`;
+
 const RULES = `
 Hard rules (non-negotiable):
 - Do not weaken tests. Do not delete tests. All existing tests must stay green.
@@ -97,7 +106,7 @@ Hard rules (non-negotiable):
   npm run lint && npm run typecheck && npm test && npm run build
   If a command fails, fix the cause or return blocked. Do not claim completion without evidence.
 - Evidence must state the commit SHA of the branch head (git rev-parse HEAD). Evidence from an older commit is stale and not valid.
-`;
+${STYLE}`;
 
 // A worktree may not be able to `git checkout <branch>` directly because
 // another active worktree already holds that branch. The standard procedure
@@ -374,7 +383,8 @@ Reason: ${reason}
 Record the parked state on GitHub. Use the Bash tool:
 1. Make sure the label exists. This command creates or updates it and never errors:
    gh label create needs-human --repo ${REPO} --color D93F0B --description "agent parked, human decision needed" --force
-2. Comment the reason on the issue in one short paragraph: gh issue comment ${n} --repo ${REPO} --body "..."
+2. Comment the reason on the issue: gh issue comment ${n} --repo ${REPO} --body "..."
+   Keep the comment at most 3 sentences. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.
 3. Add the label to the issue: gh issue edit ${n} --repo ${REPO} --add-label needs-human
 Return status 'parked' with a one-line detail.`,
     {
@@ -400,6 +410,7 @@ Reason: ${reason}
 Record the parked state on GitHub. Use the Bash tool:
 1. Run: gh label create needs-human --repo ${REPO} --color D93F0B --description "agent parked, human decision needed" --force
 2. Comment the reason on the PR. Include any question for the human verbatim: gh pr comment ${r.prNumber} --repo ${REPO} --body "..."
+   Keep the comment at most 3 sentences plus the question. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.
 3. Add the label to both the PR and the issue: gh pr edit ${r.prNumber} --repo ${REPO} --add-label needs-human ; gh issue edit ${n} --repo ${REPO} --add-label needs-human
 Return status 'parked' with a one-line detail.`,
     {
@@ -481,7 +492,8 @@ You are in an isolated git worktree. Steps:
 7. Commit with message "docs: ... (#${n})". Push: git push -u origin HEAD. Open the PR: gh pr create --repo ${REPO} --title "docs: <title> (#${n})" --body "Closes #${n}" plus a three-line summary of the ruling and the lint evidence with the SHA.
 8. Return status 'pr-opened' with branch, prNumber, prUrl, and evidence.
 Push every commit before you return. A commit that stays only in the worktree is lost.
-Do not guess Swedish. If the ruling depends on a Swedish form that you cannot check, return blocked with the precise question.`,
+Do not guess Swedish. If the ruling depends on a Swedish form that you cannot check, return blocked with the precise question.
+${STYLE}`,
     {
       label: `decide:#${n}`,
       phase: 'Implement',
@@ -514,7 +526,7 @@ Check each point:
 - Does the diff change a Swedish string that can be wrong (conjugation, spelling)?
 - Diff hygiene: does the diff reformat lines that are not part of the fix? Is the PR body stale, or does it describe the code incorrectly? Is the branch CONFLICTING or BEHIND against main? Is CI red on the head commit?
 
-Report every finding. Then classify the overall result:
+Report every finding. Write each finding as one short sentence in ASD-STE100 style: active voice, simple tense, one fact per sentence, at most 20 words. Then classify the overall result:
 - approved=true: nothing material is wrong with the code. List description-only imperfections as findings.
 - approved=false and remediable=true: one follow-up commit on this branch can fix all findings. Examples: stale or incorrect PR body, unrelated formatting churn, missing tests, CI red on head, CONFLICTING or BEHIND branch, stale evidence. A remediation stage runs next, and a re-review follows it.
 - approved=false and remediable=false: at least one finding invalidates the approach itself. Examples: acceptance criteria not met, wrong behavior, data loss, weakened tests, wrong Swedish, ownership violations.
@@ -614,7 +626,8 @@ gh label create needs-human --repo ${REPO} --color D93F0B --description "agent p
    - Move the project item to Done. Find the item id with gh project item-list 1 --owner ordboj --format json. Use the item whose content.number is ${n}. Then run:
      gh project item-edit --project-id PVT_kwDOEr3qds4BfuEP --id <item-id> --field-id PVTSSF_lADOEr3qds4BfuEPzhZ--ms --single-select-option-id 98236657
 7. Return 'merged' with a one-line detail.
-Do not edit application source. Do not weaken tests.`,
+Do not edit application source. Do not weaken tests.
+When you comment on a PR or issue: keep the comment at most 3 sentences. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.`,
     {
       label: `ship:#${n}${attempt > 1 ? ':retry' : ''}`,
       phase: 'Ship',
