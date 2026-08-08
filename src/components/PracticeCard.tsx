@@ -39,6 +39,7 @@ export function PracticeCard({
   const [userAnswer, setUserAnswer] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
   const [conjugated, setConjugated] = useState<ConjugatedVerb | null>(null);
@@ -86,6 +87,7 @@ export function PracticeCard({
   const handleSubmit = (answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
     setIsCorrect(correct);
+    setSubmittedAnswer(answer);
     setShowFeedback(true);
 
     if (correct) {
@@ -159,6 +161,7 @@ export function PracticeCard({
     setUserAnswer('');
     setShowFeedback(false);
     setIsCorrect(false);
+    setSubmittedAnswer('');
     setShowConfetti(false);
     setRevealedHints([]);
     setOptions([]);
@@ -296,6 +299,26 @@ export function PracticeCard({
                   </>
                 )}
               </div>
+
+              {!isCorrect && (
+                <div className="flex items-center justify-center gap-4 text-center">
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                      You wrote
+                    </p>
+                    <p className="text-lg font-semibold text-destructive break-words">
+                      {submittedAnswer.trim() || '(nothing)'}
+                    </p>
+                  </div>
+                  <span className="text-muted-foreground text-xl shrink-0">→</span>
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Correct</p>
+                    <p className="text-lg font-semibold text-success break-words">
+                      {correctAnswer}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 {/* Show full pattern with pronunciation buttons */}
