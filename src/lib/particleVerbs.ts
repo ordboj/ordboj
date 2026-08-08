@@ -144,7 +144,12 @@ export function renderCloze(example: ParticleVerbExample): ClozeRendering {
 // the item has been answered correctly. Deterministic rather than random so
 // a learner meets the frames in a stable order and a test can assert it.
 export function selectExample(entry: ParticleVerbData, repetitions: number): ParticleVerbExample {
-  return entry.examples[repetitions % entry.examples.length];
+  const example = entry.examples[repetitions % entry.examples.length];
+  if (example !== undefined) return example;
+  // An entry with zero examples is a data defect the dataset test rejects,
+  // so this cannot fire on shipped data; failing loudly on malformed data
+  // beats rendering an empty card.
+  throw new Error(`Particle verb entry "${entry.id}" has no examples`);
 }
 
 // The phrase's four conjugated forms, for the static reference line on the

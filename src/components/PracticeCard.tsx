@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Volume2, CheckCircle2, XCircle } from 'lucide-react';
 import {
   conjugateVerb,
@@ -27,6 +28,29 @@ import { Grade } from '@/lib/srs';
 // order, on every card regardless of the answer. Never derived from the
 // correct answer — see docs/learning/2026-08-08-ux-pedagogy-red-lines.md (P4, P11).
 const SWEDISH_SPECIAL_CHARS = ['å', 'ä', 'ö'];
+
+// verbs.ts (swedish-linguist, #124) falls back to this literal string when a
+// form has no value. ConjugatedVerb.imperativNotApplicable now flags the
+// common, semantically-typed case (modal verbs, which grammatically lack an
+// imperativ) explicitly, and is checked first below. The string comparison
+// stays as a fallback: a couple of verbs (e.g. "te sig", "anse" in
+// verbData.ts) have an intentionally empty imperativ pending human review
+// and are deliberately NOT flagged imperativNotApplicable -- that field
+// means "grammatically confirmed absent," not "unconfirmed," so relying on
+// it alone would let their raw placeholder leak into the UI (as a
+// multiple-choice distractor, a pronounce button, etc). This fallback can
+// go away once swedish-linguist fills those forms or adds a field for
+// "known empty, not yet confirmed why."
+const UNAVAILABLE_FORM_SENTINEL = '(not available)';
+
+function isFormUnavailable(
+  form: Form,
+  value: string | undefined,
+  imperativNotApplicable: boolean | undefined,
+): boolean {
+  if (form === 'imperativ' && imperativNotApplicable) return true;
+  return !value || value === UNAVAILABLE_FORM_SENTINEL;
+}
 
 interface PracticeCardProps {
   infinitive: string;
@@ -80,16 +104,26 @@ export function PracticeCard({
 
   const correctAnswer = conjugated?.[form] || '';
   // A verb's conjugated form is only ever '' before data loads, or the
-  // literal placeholder for a form that verb doesn't have (modal verbs have
-  // no imperativ, etc). Neither is a real answer, so neither may be offered
-  // as the correct multiple-choice button.
-  const isAnswerAvailable = correctAnswer !== '' && correctAnswer !== '(not available)';
+  // imperativ of a verb that grammatically doesn't have one (modal verbs,
+  // per ConjugatedVerb.imperativNotApplicable, #124) or hasn't been
+  // confirmed yet (see isFormUnavailable above). Neither is a real answer,
+  // so neither may be offered as the correct multiple-choice button.
+  const isAnswerAvailable = !isFormUnavailable(
+    form,
+    correctAnswer,
+    conjugated?.imperativNotApplicable,
+  );
   // Multiple choice with no valid correct answer has nothing to test; fall
   // back to typing mode rather than render a card whose "correct" button is
   // the unavailable-form placeholder.
   const effectiveMode = mode === 'multiple-choice' && !isAnswerAvailable ? 'typing' : mode;
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
   const alternatesDisclosure = getAlternatesDisclosure(infinitive, form);
+  // Only ever read here for the post-answer feedback chip below — grupp
+  // predicts the answer's ending pattern, so it must never be rendered
+  // before the learner has submitted (RED LINE, see issue #228). undefined
+  // renders as absent, never guessed (src/lib/verbs.ts:29-32).
+  const grupp = getVerbGrupp(infinitive);
 
   // Generate multiple choice options.
   //
@@ -98,8 +132,9 @@ export function PracticeCard({
   // must come from the target verb's conjugation group or an adjacent group
   // (never cross-group, no exceptions) and, where known, match its CEFR
   // level; they must be the same form as the target; they must never be a
-  // correct form of the target verb in a different slot; and an empty or
-  // "(not available)" conjugated form is never a valid option. Candidates
+  // correct form of the target verb in a different slot; and an empty
+  // conjugated form, or an imperativ a verb grammatically doesn't have
+  // (ConjugatedVerb.imperativNotApplicable, #124), is never a valid option. Candidates
   // that don't satisfy the group constraint are excluded before ranking, so
   // if fewer than three qualify the option list degrades to fewer
   // distractors rather than fill the remaining slots cross-group. Candidates
@@ -121,8 +156,9 @@ export function PracticeCard({
 
       const targetOwnForms = new Set(
         (['infinitive', 'presens', 'preteritum', 'supinum', 'imperativ'] as Form[])
+          .filter((f) => !isFormUnavailable(f, conjugated?.[f], conjugated?.imperativNotApplicable))
           .map((f) => conjugated?.[f])
-          .filter((value): value is string => !!value && value !== '(not available)'),
+          .filter((value): value is string => !!value),
       );
       const acceptedForCard = new Set(
         getAcceptedAnswers(infinitive, form).map((accepted) => accepted.trim().toLowerCase()),
@@ -133,7 +169,7 @@ export function PracticeCard({
         .filter((v) => v.infinitive !== infinitive)
         .reduce<{ value: string; score: number }[]>((acc, v) => {
           const value = v[form];
-          if (!value || value === '(not available)') return acc;
+          if (isFormUnavailable(form, value, v.imperativNotApplicable)) return acc;
           if (seen.has(value) || targetOwnForms.has(value)) return acc;
           if (acceptedForCard.has(value.trim().toLowerCase())) return acc;
 
@@ -203,6 +239,7 @@ export function PracticeCard({
 
       // Pick a random unrevealed index
       const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+      if (randomIndex === undefined) return;
       setRevealedHints((prev) => [...prev, randomIndex]);
     }
   };
@@ -232,8 +269,9 @@ export function PracticeCard({
   }, [infinitive, form]);
 
   const handlePronounceForm = (formToPronounce: Form) => {
+    if (!conjugated) return;
     const text = conjugated[formToPronounce];
-    if (text && text !== '(not available)') {
+    if (!isFormUnavailable(formToPronounce, text, conjugated.imperativNotApplicable)) {
       speakSwedish(text, muteAudio);
     }
   };
@@ -370,6 +408,12 @@ export function PracticeCard({
                 )}
               </div>
 
+              {grupp && (
+                <div className="flex justify-center">
+                  <Badge variant="outline">grupp {grupp}</Badge>
+                </div>
+              )}
+
               {alternatesDisclosure && (
                 <p className="text-sm text-muted-foreground text-center">{alternatesDisclosure}</p>
               )}
@@ -390,6 +434,11 @@ export function PracticeCard({
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     {pattern.patternParts.map((part, index) => {
                       const displayText = part.isMissing ? correctAnswer : part.text;
+                      const isPartUnavailable = isFormUnavailable(
+                        part.form,
+                        conjugated[part.form],
+                        conjugated.imperativNotApplicable,
+                      );
                       return (
                         <div key={index} className="flex items-center gap-1">
                           <div
@@ -399,13 +448,10 @@ export function PracticeCard({
                                 : 'bg-background'
                             }`}
                           >
-                            <span
-                              className="text-lg"
-                              lang={displayText !== '(not available)' ? 'sv' : undefined}
-                            >
+                            <span className="text-lg" lang={isPartUnavailable ? undefined : 'sv'}>
                               {displayText}
                             </span>
-                            {!part.isMissing && conjugated[part.form] !== '(not available)' && (
+                            {!part.isMissing && !isPartUnavailable && (
                               <Button
                                 variant="ghost"
                                 size="icon"

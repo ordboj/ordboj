@@ -101,7 +101,7 @@ function ExportProgressButton({ className }: { className?: string }) {
       type="button"
       className={
         className ??
-        'inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground'
+        'inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground'
       }
       onClick={() => downloadProgressBackup()}
     >
@@ -125,10 +125,10 @@ export function AppCrashFallback({ reset }: { reset: () => void }) {
           mind.
         </p>
         <div className="flex flex-col gap-2 items-center">
-          <ExportProgressButton className="w-full inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground" />
+          <ExportProgressButton className="w-full inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground" />
           <button
             type="button"
-            className="w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+            className="w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90"
             onClick={reset}
           >
             Try again
@@ -161,10 +161,10 @@ export function RouteCrashFallback({ reset }: { reset: () => void }) {
           still works.
         </p>
         <div className="flex flex-col gap-2 items-center">
-          <ExportProgressButton className="w-full inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground" />
+          <ExportProgressButton className="w-full inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground" />
           <button
             type="button"
-            className="w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+            className="w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90"
             onClick={reset}
           >
             Try again

@@ -27,9 +27,9 @@ describe('vite.config.ts build.target (issue #148)', () => {
   });
 
   it('pins the exact pre-Vite-8 baseline array', () => {
-    const match = source.match(/target:\s*\[([^\]]*)\]/);
-    expect(match, 'build.target array must be present').toBeDefined();
-    const targets = match![1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, ''));
+    const inner = source.match(/target:\s*\[([^\]]*)\]/)?.[1];
+    expect(inner, 'build.target array must be present').toBeDefined();
+    const targets = (inner ?? '').split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, ''));
     expect(targets).toEqual(['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14']);
   });
 });
