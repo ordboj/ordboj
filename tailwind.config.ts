@@ -2,7 +2,11 @@ import type { Config } from 'tailwindcss';
 import tailwindcssAnimate from 'tailwindcss-animate';
 
 export default {
-  darkMode: ['class'],
+  // Pinned to the class strategy: no dark palette ships (see
+  // docs/product/2026-08-08-dark-mode-decision.md). Deleting this line lets
+  // Tailwind fall back to the `media` default, which activates every
+  // `dark:` utility for OS-dark users with no palette behind it -- keep it.
+  darkMode: 'class',
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',

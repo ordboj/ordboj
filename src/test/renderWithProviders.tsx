@@ -26,12 +26,7 @@ export function renderWithProviders(ui: ReactElement, options: RenderWithProvide
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <TooltipProvider>
-        <MemoryRouter
-          initialEntries={[route]}
-          future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-        >
-          {children}
-        </MemoryRouter>
+        <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
       </TooltipProvider>
     );
   }
