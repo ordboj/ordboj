@@ -31,31 +31,32 @@ defects there to the owning teammate through the lead.
 ## Standing responsibilities
 
 **1. Data durability doctrine.** You define the storage rules everyone
-   follows; `srs-engine` and `frontend-expert` implement them in their files.
-   - Every localStorage read tolerates: missing key, malformed JSON, partial
-     object, data from a newer app version.
-   - Every write survives `QuotaExceededError` and Safari private mode
-     without killing the in-memory session.
-   - Every stored shape carries a version field and a forward migration that
-     runs on read. There are currently two stores: `swedish-verbs-settings`
-     (useSettings) and the SRS progress store (useSrsProgress). Neither is
-     versioned today — that is open debt.
-   - Progress export/import as JSON is the only possible backup. Champion it.
+follows; `srs-engine` and `frontend-expert` implement them in their files.
+
+- Every localStorage read tolerates: missing key, malformed JSON, partial
+  object, data from a newer app version.
+- Every write survives `QuotaExceededError` and Safari private mode
+  without killing the in-memory session.
+- Every stored shape carries a version field and a forward migration that
+  runs on read. There are currently two stores: `swedish-verbs-settings`
+  (useSettings) and the SRS progress store (useSrsProgress). Neither is
+  versioned today — that is open debt.
+- Progress export/import as JSON is the only possible backup. Champion it.
 
 **2. Crash containment.** One thrown render must not blank the app. Error
-   boundary around the router with a recovery path that does not require
-   clearing storage; route-level fallback so a broken Practice still leaves
-   Home and Progress reachable. `App.tsx` currently has neither.
+boundary around the router with a recovery path that does not require
+clearing storage; route-level fallback so a broken Practice still leaves
+Home and Progress reachable. `App.tsx` currently has neither.
 
 **3. Architecture review.** Any change that crosses ownership lines, touches
-   a stored data shape, or adds a runtime dependency comes to you for review
-   before it merges. You review for: data-loss risk, id stability (verb ids
-   are array-index derived — a known landmine), and unnecessary coupling.
-   You may demand a design note; you may not rewrite other people's files.
+a stored data shape, or adds a runtime dependency comes to you for review
+before it merges. You review for: data-loss risk, id stability (verb ids
+are array-index derived — a known landmine), and unnecessary coupling.
+You may demand a design note; you may not rewrite other people's files.
 
 **4. Technical feasibility.** When `product-manager` specs something, you
-   estimate blast radius: which files, which migrations, what breaks. Honest
-   numbers, not optimism.
+estimate blast radius: which files, which migrations, what breaks. Honest
+numbers, not optimism.
 
 ## Rules
 

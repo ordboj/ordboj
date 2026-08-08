@@ -2,7 +2,7 @@ import { VERB_DATA, type Grupp } from '@/data/verbData';
 
 export type { Grupp };
 
-export type Form = "infinitive" | "presens" | "preteritum" | "supinum" | "imperativ";
+export type Form = 'infinitive' | 'presens' | 'preteritum' | 'supinum' | 'imperativ';
 
 export interface Verb {
   id: string;
@@ -22,7 +22,7 @@ export async function getVerbs(): Promise<Verb[]> {
   return VERB_DATA.map((verb, index) => ({
     id: String(index + 1),
     infinitive: verb.infinitive,
-    cefr: verb.cefr
+    cefr: verb.cefr,
   }));
 }
 
@@ -31,7 +31,7 @@ export async function getVerbs(): Promise<Verb[]> {
 // where the group is flagged as needing human review — callers must treat
 // both cases the same way (i.e. "unknown", never guessed).
 export function getVerbGrupp(infinitive: string): Grupp | undefined {
-  return VERB_DATA.find(v => v.infinitive === infinitive)?.grupp;
+  return VERB_DATA.find((v) => v.infinitive === infinitive)?.grupp;
 }
 
 // Get all conjugated verbs efficiently (no file reads needed!)
@@ -39,39 +39,39 @@ export async function getAllConjugatedVerbs(): Promise<ConjugatedVerb[]> {
   return VERB_DATA.map((verb, index) => ({
     id: String(index + 1),
     infinitive: verb.infinitive,
-    presens: verb.presens || "(not available)",
-    preteritum: verb.preteritum || "(not available)",
-    supinum: verb.supinum || "(not available)",
-    imperativ: verb.imperativ || "(not available)",
-    cefr: verb.cefr
+    presens: verb.presens || '(not available)',
+    preteritum: verb.preteritum || '(not available)',
+    supinum: verb.supinum || '(not available)',
+    imperativ: verb.imperativ || '(not available)',
+    cefr: verb.cefr,
   }));
 }
 
 // Conjugate verb from hardcoded data
 export async function conjugateVerb(infinitive: string): Promise<ConjugatedVerb> {
-  const verb = VERB_DATA.find(v => v.infinitive === infinitive);
-  
+  const verb = VERB_DATA.find((v) => v.infinitive === infinitive);
+
   if (verb) {
     const index = VERB_DATA.indexOf(verb);
     return {
       id: String(index + 1),
       infinitive: verb.infinitive,
-      presens: verb.presens || "(not available)",
-      preteritum: verb.preteritum || "(not available)",
-      supinum: verb.supinum || "(not available)",
-      imperativ: verb.imperativ || "(not available)",
-      cefr: verb.cefr
+      presens: verb.presens || '(not available)',
+      preteritum: verb.preteritum || '(not available)',
+      supinum: verb.supinum || '(not available)',
+      imperativ: verb.imperativ || '(not available)',
+      cefr: verb.cefr,
     };
   }
-  
+
   // Fallback for unknown verbs
   return {
-    id: "unknown",
+    id: 'unknown',
     infinitive,
-    presens: "(not available)",
-    preteritum: "(not available)",
-    supinum: "(not available)",
-    imperativ: "(not available)"
+    presens: '(not available)',
+    preteritum: '(not available)',
+    supinum: '(not available)',
+    imperativ: '(not available)',
   };
 }
 
@@ -82,9 +82,12 @@ export interface VerbPattern {
   patternParts: Array<{ form: Form; text: string; isMissing: boolean }>;
 }
 
-export async function generateVerbPattern(infinitive: string, targetForm: Form): Promise<VerbPattern> {
+export async function generateVerbPattern(
+  infinitive: string,
+  targetForm: Form,
+): Promise<VerbPattern> {
   const conjugated = await conjugateVerb(infinitive);
-  
+
   // For imperativ, use a simpler pattern
   if (targetForm === 'imperativ') {
     return {
@@ -92,25 +95,25 @@ export async function generateVerbPattern(infinitive: string, targetForm: Form):
       missingForm: targetForm,
       patternParts: [
         { form: 'infinitive', text: infinitive, isMissing: false },
-        { form: 'imperativ', text: '_____', isMissing: true }
-      ]
+        { form: 'imperativ', text: '_____', isMissing: true },
+      ],
     };
   }
-  
+
   // For other forms, use the standard pattern: infinitive – presens – preteritum – supinum
   const forms: Form[] = ['infinitive', 'presens', 'preteritum', 'supinum'];
-  const parts = forms.map(form => ({
+  const parts = forms.map((form) => ({
     form,
-    text: form === targetForm ? '_____' : (form === 'infinitive' ? infinitive : conjugated[form]),
-    isMissing: form === targetForm
+    text: form === targetForm ? '_____' : form === 'infinitive' ? infinitive : conjugated[form],
+    isMissing: form === targetForm,
   }));
-  
-  const display = parts.map(p => p.text).join(' – ');
-  
+
+  const display = parts.map((p) => p.text).join(' – ');
+
   return {
     display,
     missingForm: targetForm,
-    patternParts: parts
+    patternParts: parts,
   };
 }
 
@@ -141,26 +144,26 @@ export function getFormHint(form: Form): string {
 // Example sentences
 export function getExampleSentence(infinitive: string, form: Form): string {
   const examples: Record<string, Record<Form, string>> = {
-    "vara": {
-      infinitive: "Att vara eller inte vara",
-      presens: "Jag är glad",
-      preteritum: "Jag var hemma",
-      supinum: "Jag har varit där",
-      imperativ: "Var snäll!"
+    vara: {
+      infinitive: 'Att vara eller inte vara',
+      presens: 'Jag är glad',
+      preteritum: 'Jag var hemma',
+      supinum: 'Jag har varit där',
+      imperativ: 'Var snäll!',
     },
-    "ha": {
-      infinitive: "Att ha en katt",
-      presens: "Jag har en bil",
-      preteritum: "Jag hade tid",
-      supinum: "Jag har haft tur",
-      imperativ: "Ha tålamod!"
+    ha: {
+      infinitive: 'Att ha en katt',
+      presens: 'Jag har en bil',
+      preteritum: 'Jag hade tid',
+      supinum: 'Jag har haft tur',
+      imperativ: 'Ha tålamod!',
     },
-    "gå": {
-      infinitive: "Att gå hem",
-      presens: "Jag går till skolan",
-      preteritum: "Jag gick ut",
-      supinum: "Jag har gått mycket",
-      imperativ: "Gå nu!"
+    gå: {
+      infinitive: 'Att gå hem',
+      presens: 'Jag går till skolan',
+      preteritum: 'Jag gick ut',
+      supinum: 'Jag har gått mycket',
+      imperativ: 'Gå nu!',
     },
   };
 
@@ -171,5 +174,5 @@ export function getExampleSentence(infinitive: string, form: Form): string {
 export const verbs: Verb[] = VERB_DATA.map((verb, index) => ({
   id: String(index + 1),
   infinitive: verb.infinitive,
-  cefr: verb.cefr
+  cefr: verb.cefr,
 }));
