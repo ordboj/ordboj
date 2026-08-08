@@ -131,11 +131,16 @@ export function useSrsProgress(cefrLevels?: string[]) {
 
     const allVerbs = await getVerbs();
 
-    // Filter verbs by CEFR level if specified
+    // CEFR filter semantics (issue #137): `cefrLevels === undefined` means the
+    // caller opted out of filtering entirely, so every verb is in scope. Any
+    // array value — including an empty one — is an explicit selection and is
+    // honored exactly as given: an empty array matches zero verbs. Previously
+    // an empty array fell through to "all verbs", which silently expanded
+    // "nothing selected" into "everything selected"; that fallback is gone.
     const verbs =
-      cefrLevels && cefrLevels.length > 0
-        ? allVerbs.filter((verb) => verb.cefr && cefrLevels.includes(verb.cefr))
-        : allVerbs;
+      cefrLevels === undefined
+        ? allVerbs
+        : allVerbs.filter((verb) => verb.cefr && cefrLevels.includes(verb.cefr));
 
     // Check each verb's forms for availability
     for (const verb of verbs) {
