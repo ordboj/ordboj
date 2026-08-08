@@ -92,7 +92,7 @@ export default function PracticeParticles() {
 
   if (isLoading || settingsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
+      <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <p className="text-xl text-muted-foreground">Loading particle verbs...</p>
       </div>
     );
@@ -100,7 +100,7 @@ export default function PracticeParticles() {
 
   if (sessionComplete) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
+      <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <div className="w-full max-w-2xl text-center space-y-6">
           {isReadOnly && <ReadOnlyBanner />}
           <h1 className="text-5xl font-bold text-primary">Great work! 🎉</h1>
@@ -146,7 +146,7 @@ export default function PracticeParticles() {
   const progressPercent = countedTotal > 0 ? (countedDone / countedTotal) * 100 : 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
+    <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
       <div className="max-w-2xl mx-auto mb-6 space-y-4">
         {isReadOnly && <ReadOnlyBanner />}
         <div className="flex items-center justify-between">

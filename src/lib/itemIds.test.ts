@@ -41,7 +41,14 @@ describe('conjugationItemId', () => {
     // id scheme in a page component". The id is a storage primary key, and a
     // divergent copy fails by silently reading zero progress rather than by
     // throwing, so the duplication has to be caught at review time.
-    const inlineIdTemplate = /`\$\{[\w.]+\}-\$\{[\w.]+\}`/;
+    //
+    // The second interpolated segment must look like the `form: Form`
+    // parameter conjugationItemId() actually takes (a standalone "form"
+    // token, e.g. `${form}` or `${item.form}`) - otherwise this false-flags
+    // any unrelated `${a}-${b}` template literal, such as Progress.tsx's
+    // sort-Select value (`${sortField}-${sortDirection}`), which has nothing
+    // to do with the SRS item id scheme.
+    const inlineIdTemplate = /`\$\{[\w.]+\}-\$\{[\w.]*\bform\b[\w.]*\}`/;
     const offenders = sourceFiles(srcRoot)
       .filter((file) => relative(srcRoot, file) !== join('lib', 'itemIds.ts'))
       .filter((file) => inlineIdTemplate.test(readFileSync(file, 'utf-8')))

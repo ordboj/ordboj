@@ -76,11 +76,18 @@ describe('Progress page - Grupp column (issue #228)', () => {
   it('shows a "grupp 2a" badge for a verb with a known grupp, and an em-dash (never a literal "undefined") for a verb whose grupp is unknown', async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
 
-    const knownCell = await screen.findByText(KNOWN_FIXTURE_VERB);
+    // #113: scoped to the desktop table's span, since the mobile card list
+    // (below sm, still present in the DOM) renders the same infinitive
+    // concurrently, in its own identically-texted, font-semibold span.
+    const knownCell = await screen.findByText(KNOWN_FIXTURE_VERB, {
+      selector: 'span:not(.font-semibold)',
+    });
     const knownRow = knownCell.closest('tr') as HTMLElement;
     expect(within(knownRow).getByText('grupp 2a')).toBeInTheDocument();
 
-    const unknownCell = await screen.findByText(UNKNOWN_FIXTURE_VERB);
+    const unknownCell = await screen.findByText(UNKNOWN_FIXTURE_VERB, {
+      selector: 'span:not(.font-semibold)',
+    });
     const unknownRow = unknownCell.closest('tr') as HTMLElement;
     expect(within(unknownRow).queryByText(/grupp/i)).not.toBeInTheDocument();
     expect(within(unknownRow).getByText('—')).toBeInTheDocument();

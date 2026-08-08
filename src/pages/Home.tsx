@@ -81,7 +81,7 @@ export default function Home() {
   const allLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
+    <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2 relative">
