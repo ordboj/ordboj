@@ -7,7 +7,6 @@ import {
   AppErrorBoundary,
   AppCrashFallback,
   RouteCrashFallback,
-  RouteErrorBoundary,
   RouteChunk,
   downloadProgressBackup,
 } from '@/components/AppErrorBoundary';
@@ -226,9 +225,9 @@ describe('RouteCrashFallback keeps the rest of the app navigable', () => {
   it('offers links to Home, Progress and Settings from the crashed route', () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
-        <RouteErrorBoundary>
+        <AppErrorBoundary fallback={(reset) => <RouteCrashFallback reset={reset} />}>
           <Boom />
-        </RouteErrorBoundary>
+        </AppErrorBoundary>
       </MemoryRouter>,
     );
 
@@ -247,9 +246,9 @@ describe('RouteCrashFallback keeps the rest of the app navigable', () => {
   it('offers a plain-anchor "Reload from the start" hard-navigation escape hatch to "/"', () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
-        <RouteErrorBoundary>
+        <AppErrorBoundary fallback={(reset) => <RouteCrashFallback reset={reset} />}>
           <Boom />
-        </RouteErrorBoundary>
+        </AppErrorBoundary>
       </MemoryRouter>,
     );
 
@@ -270,9 +269,9 @@ describe('RouteCrashFallback keeps the rest of the app navigable', () => {
     render(
       <MemoryRouter initialEntries={['/practice']}>
         <LocationDisplay />
-        <RouteErrorBoundary>
+        <AppErrorBoundary fallback={(reset) => <RouteCrashFallback reset={reset} />}>
           <Boom />
-        </RouteErrorBoundary>
+        </AppErrorBoundary>
       </MemoryRouter>,
     );
 
