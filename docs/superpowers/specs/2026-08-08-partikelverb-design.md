@@ -192,6 +192,9 @@ floor((particleDailyGoal - min(particleReviewsDue, particleDailyGoal)) / 4))`.
   gains a version field. (Planning constant: ~3 particle cards/minute.)
 - Particle cards always show their sentence — the sentence is the card; the
   `showExamples` setting does not apply to them (deliberate, documented here).
+- **In-app SVALex attribution line** (Settings or about surface, ~3 lines):
+  CC BY-NC-SA requires attribution reasonable to the medium, and app users
+  never see the repo. Ships with F5.
 
 ## Build order
 

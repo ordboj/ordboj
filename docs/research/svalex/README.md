@@ -2,7 +2,9 @@
 
 `partikelverb_cefr_draft.csv` — 457 Swedish verb+particle combinations with
 CEFR level evidence, extracted 2026-08-08 from SVALex and SweLLex (CEFRLex
-project, UCLouvain / Språkbanken).
+project, UCLouvain / Språkbanken). 429 rows carry a SVALex level
+(A1: 25 / A2: 70 / B1: 122 / B2: 143 / C1: 69); the remaining 28 are
+SweLLex-only (empty svalex columns, e.g. `arbeta bort`).
 
 Columns: `verb, particle, svalex_first_level, svalex_total_freq,
 swellex_first_level`.
