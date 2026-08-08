@@ -5,8 +5,10 @@ import { VerbDetailsModal } from '@/components/VerbDetailsModal';
 import { getFormLabel, type ConjugatedVerb } from '@/lib/verbs';
 
 // PR #199 (issue #112, AC #4): the "New" stage badge used an off-palette
-// bg-purple-500 utility that doesn't map to a design token. It must use an
-// existing token color (bg-primary) instead.
+// bg-purple-500 utility that doesn't map to a design token. It must use a
+// design-token color instead. Issue #227 moved that color from the
+// generic bg-primary token to the dedicated bg-stage-new token, so the
+// off-palette-purple guard now pins bg-stage-new.
 const VERB: ConjugatedVerb = {
   id: '1',
   infinitive: 'vara',
@@ -18,14 +20,42 @@ const VERB: ConjugatedVerb = {
 };
 
 describe('VerbDetailsModal - stage badge color token', () => {
-  it('renders the New badge (stage 0) with the bg-primary token, not the off-palette purple', () => {
+  it('renders the New badge (stage 0) with the bg-stage-new token, not the off-palette purple', () => {
     renderWithProviders(
       <VerbDetailsModal verb={VERB} srsStage={0} srsStates={{}} onClose={vi.fn()} />,
     );
 
     const badge = screen.getByText('New');
-    expect(badge).toHaveClass('bg-primary');
+    expect(badge).toHaveClass('bg-stage-new');
     expect(badge).not.toHaveClass('bg-purple-500');
+  });
+});
+
+// Regression guard for issue #313: the stage badge's own MasteryStageBadge
+// object still carries a `variant` field ('default' | 'secondary' |
+// 'outline'), but every render site now hardcodes <Badge variant="outline">
+// and ignores it. That matters because the shadcn Badge's "default" and
+// "secondary" variants each add a hover:bg-*/80 utility meant for a
+// clickable chip; this stage badge is static status text, not a control,
+// so any hover fade is a bug, not a feature. If a render site ever went
+// back to `variant={badge.variant}`, the New/Mastered badges ('default')
+// and Learning badge ('secondary') would regain that hover fade silently.
+describe('VerbDetailsModal - stage badge never carries a hover fade utility (issue #313)', () => {
+  it.each([
+    [0, 'New'],
+    [1, 'Learning'],
+    [3, 'Reviewing'],
+    [5, 'Mastered'],
+  ])('stage %i (%s) has no hover:bg-primary/80 or hover:bg-secondary/80 class', (stage, label) => {
+    const { unmount } = renderWithProviders(
+      <VerbDetailsModal verb={VERB} srsStage={stage} srsStates={{}} onClose={vi.fn()} />,
+    );
+
+    const badge = screen.getByText(label);
+    expect(badge).not.toHaveClass('hover:bg-primary/80');
+    expect(badge).not.toHaveClass('hover:bg-secondary/80');
+
+    unmount();
   });
 });
 
