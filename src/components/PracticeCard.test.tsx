@@ -34,6 +34,28 @@ describe('PracticeCard - typing mode', () => {
     expect(screen.getByText(/Missing:/)).toHaveTextContent('Present');
   });
 
+  it('marks the answer input as Swedish and disables phone autocorrect/autocapitalize (issue #134)', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    // Without these, the phone's English autocorrect silently mangles å/ä/ö
+    // input before the learner even sees what they typed.
+    expect(input).toHaveAttribute('lang', 'sv');
+    expect(input).toHaveAttribute('autocapitalize', 'off');
+    expect(input).toHaveAttribute('autocorrect', 'off');
+    expect(input).toHaveAttribute('spellcheck', 'false');
+  });
+
   it('accepts the correct answer (auto-submits), ignoring case and surrounding whitespace', async () => {
     const user = userEvent.setup();
     renderWithProviders(
@@ -290,6 +312,78 @@ describe('PracticeCard - multiple-choice mode', () => {
     await userEvent.setup().click(wrongButton as HTMLElement);
 
     expect(await screen.findByText('Not quite')).toBeInTheDocument();
+  });
+});
+
+describe('PracticeCard - on-screen special-character keys (issue #134: no answer leak)', () => {
+  // Only single Swedish/Latin letter buttons qualify — excludes "Hint",
+  // "Check Answer", "⌫" and multi-char option buttons.
+  const getSpecialCharButtons = () =>
+    screen.getAllByRole('button').filter((b) => /^[a-zA-ZåäöÅÄÖ]$/.test(b.textContent ?? ''));
+
+  it("shows exactly å, ä, ö (in that order) even though the correct answer's own unique letters differ", async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await screen.findByPlaceholderText('Type your answer...');
+    // Correct answer is "är" (unique letters {ä, r}). Pre-fix, the on-screen
+    // row was exactly this answer's unique letters (shuffled) — "ä" and "r",
+    // never "å" or "ö", and never exactly 3 keys. The row must now be fixed
+    // to å/ä/ö regardless of the answer, so it can no longer be
+    // anagram-solved down to the answer's letter multiset.
+    expect(getSpecialCharButtons().map((b) => b.textContent)).toEqual(['å', 'ä', 'ö']);
+  });
+
+  it('shows the identical å, ä, ö row for a different verb/form/answer, proving the keys are not derived from the current answer', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="gå"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await screen.findByPlaceholderText('Type your answer...');
+    // Correct answer is "går" — unique letters {g, å, r}, coincidentally
+    // also 3 letters pre-fix, so a bare "3 buttons" assertion would not
+    // catch the leak. The *identity* of the keys, not just the count, must
+    // match the fixed å/ä/ö row.
+    expect(getSpecialCharButtons().map((b) => b.textContent)).toEqual(['å', 'ä', 'ö']);
+  });
+
+  it("shows the same fixed å, ä, ö row even when the answer is the long fallback string '(not available)'", async () => {
+    // "kunna" has no imperativ form in VERB_DATA, so conjugateVerb() falls
+    // back to "(not available)" as the target answer (see the "empty
+    // imperativ" describe block below). Pre-fix, this fallback string's own
+    // unique letters ((,n,o,t,a,v,i,l,b,e,),space) would flood the
+    // on-screen row instead of a fixed 3-key row.
+    renderWithProviders(
+      <PracticeCard
+        infinitive="kunna"
+        form="imperativ"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await screen.findByPlaceholderText('Type your answer...');
+    expect(getSpecialCharButtons().map((b) => b.textContent)).toEqual(['å', 'ä', 'ö']);
   });
 });
 
