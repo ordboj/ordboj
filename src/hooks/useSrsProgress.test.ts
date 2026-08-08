@@ -926,10 +926,36 @@ describe('#53: getDueItems treats a missing key as new/due-now', () => {
   });
 });
 
-// Issue #53's explicit reject list ([], {"x":1}, a settings export) is
-// already exercised above: 'rejects a top-level JSON array' (array shape),
-// 'rejects a valid-JSON payload shaped like a settings export' (object with
-// no SrsState-shaped values, which {"x":1} also is). That rejection logic
-// predates this PR and is unchanged by it - a dedicated test restating the
-// same three literal payloads would pass identically against the pre-#53
-// code, proving nothing about this change, so it is not duplicated here.
+describe('#53: explicit reject list ([], {"x":1}, settings export)', () => {
+  it('rejects each of the three literal non-progress payloads without mutating in-memory state or localStorage', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+
+    const settingsExport = JSON.stringify({
+      theme: 'dark',
+      dailyGoal: 20,
+      soundEnabled: true,
+    });
+
+    const rejectedPayloads = ['[]', '{"x":1}', settingsExport];
+
+    for (const payload of rejectedPayloads) {
+      const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
+      const storageSnapshot = localStorage.getItem(STORAGE_KEY);
+
+      let importResult: boolean | undefined;
+      act(() => {
+        importResult = result.current.importData(payload);
+      });
+
+      expect(importResult).toBe(false);
+      expect(result.current.srsStates).toEqual(stateSnapshot);
+      expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+    }
+  });
+});

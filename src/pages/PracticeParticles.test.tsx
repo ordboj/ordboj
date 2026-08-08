@@ -6,6 +6,7 @@ import PracticeParticles from '@/pages/PracticeParticles';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
 import { findParticleVerb } from '@/lib/particleVerbs';
 import { verbs } from '@/lib/verbs';
+import { STORAGE_VERSION } from '@/hooks/useSrsProgress';
 import type { SrsState } from '@/lib/srs';
 
 // Drives the real page against the real dataset, the real queue rules and the
@@ -293,7 +294,10 @@ describe('particle practice flow', () => {
 
     it('shows the read-only banner above an active card when the stored version is newer than this build', async () => {
       const clozeId = particleItemId('pv:tycka-om', 'cloze');
-      seed({ ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) }, 99);
+      seed(
+        { ...readyBase('tycka'), [clozeId]: state(clozeId, { repetitions: 3 }) },
+        STORAGE_VERSION + 1,
+      );
 
       renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
@@ -302,7 +306,7 @@ describe('particle practice flow', () => {
     });
 
     it('shows the read-only banner on the session-complete screen when the stored version is newer than this build', async () => {
-      seed({}, 99);
+      seed({}, STORAGE_VERSION + 1);
 
       renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
 
