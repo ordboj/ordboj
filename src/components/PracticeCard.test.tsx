@@ -776,14 +776,61 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
 // feedback panel shows the `alternatesNote` override instead of the generic
 // "Both ... are correct." line.
 describe('PracticeCard - #43 alternate grading and alternatesNote disclosure', () => {
-  // A standalone "typing 'lade' for lägga grades 5" test is deliberately
-  // not repeated here: that exact grading path is the pre-existing #123
-  // mechanism (unchanged by #43) and is already exercised by the
-  // "#123" describe block above (both the "Correct!" text and, via the
-  // "vara"/"är" case, the onAnswer(5) contract). The test below instead
-  // pins AC5 against the one thing #43 actually adds -- a *sense-
-  // conditioned* alternate pair -- using the same fixture as the AC6
-  // disclosure test.
+  // AC5, real shipped data: typing the documented alternate for a real
+  // VERB_DATA row must grade full credit (onAnswer(5)), not just show
+  // "Correct!". The "#123" describe block above only asserts the
+  // onAnswer(5) contract for vara/presens (line 163), which has no
+  // alternates at all, so it does not cover this.
+  it('grades onAnswer(5) after typing the alternate "lade" for lägga preteritum (AC5)', async () => {
+    const user = userEvent.setup();
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="lägga"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={onAnswer}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'lade');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(5);
+  });
+
+  it('grades onAnswer(5) after typing the alternate "sade" for säga preteritum (AC5)', async () => {
+    const user = userEvent.setup();
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="säga"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={onAnswer}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'sade');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(5);
+  });
+
   describe('sense-conditioned alternatesNote (fixture verb, AC6)', () => {
     // VERB_DATA ships no row with alternatesNote yet (the sense-conditioned
     // rows the decision doc names -- lyda, svälta -- are CSV-only per

@@ -771,13 +771,11 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
       expect(offenders.map((r) => r.infinitive)).toEqual([]);
     });
 
-    // Note: a table-wide "no VERB_DATA.infinitive contains paren/slash"
-    // check is deliberately not included here. Every VERB_DATA row except
-    // "ta" and "ge" was already clean before #43 (only those two carried an
-    // annotated lemma, per the decision doc's "already stripped two of them
-    // silently" note) -- a table-wide version of this check would pass
-    // identically against the pre-#43 code, proving nothing about this fix.
-    // The two rows that actually had the defect are pinned by name below.
+    it('no VERB_DATA.infinitive cell contains "(", ")" or "/"', () => {
+      expect(VERB_DATA.filter((v) => /[()/]/.test(v.infinitive)).map((v) => v.infinitive)).toEqual(
+        [],
+      );
+    });
 
     // Regression: CSV line 1482 used to store the lemma as "betyg(s)sätta".
     // C2b resolves this to a single clean spelling with the rejected
@@ -910,6 +908,25 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
         expect(tokens.slice(1)).toEqual(verb.alternates![form]);
       },
     );
+
+    // The other direction of the same sync contract: walk every CSV row
+    // with a "/" cell, and where that lemma also has a shipped VERB_DATA
+    // row, assert the TS field is token 0 and its alternates are the
+    // remaining tokens. Most CSV rows have no VERB_DATA match at all (only
+    // 56 verbs ship); those are skipped rather than asserted against.
+    it('every CSV "/" cell with a matching VERB_DATA row keeps that field and its alternates in sync with the CSV tokens', () => {
+      for (const row of parseFullCsv()) {
+        const verb = VERB_DATA.find((v) => v.infinitive === row.infinitive);
+        if (!verb) continue;
+        for (const field of ['imperativ', 'presens', 'preteritum', 'supinum'] as const) {
+          const value = row[field];
+          if (!value.includes('/')) continue;
+          const tokens = value.split('/');
+          expect(verb[field]).toBe(tokens[0]);
+          expect(verb.alternates?.[field]).toEqual(tokens.slice(1));
+        }
+      }
+    });
   });
 
   // AC4: for each of the 9 rows + mala, a note names the classification
@@ -937,10 +954,10 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
     });
 
     it.each(NINE_ROWS_PLUS_MALA)(
-      '"%s" note names a recognized #43 category (C5 free variant, C6a sense-conditioned, or an explicit archaic/unverified-drop marker)',
+      '"%s" note names a recognized #43 category (free variant, sense-conditioned, verified-alternates marker, or archaic) -- a bare "C5:" prefix alone is not enough',
       (name) => {
         const row = csvRowFor(name);
-        expect(row.note).toMatch(/C5|C6a|fri variant|betydelsebetingat|verifierad/i);
+        expect(row.note).toMatch(/fri variant|betydelsebetingat|verifierade|ålderdomlig/i);
       },
     );
 
