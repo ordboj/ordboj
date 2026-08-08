@@ -3,6 +3,16 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import type { ConjugatedVerb, Verb } from '@/lib/verbs';
 
+// '@/hooks/use-toast' is a frontend-expert-owned boundary this suite does
+// not own (issue #138 acceptance criteria: a failed write must surface a
+// visible toast). Mocking it here pins the contract this hook has with the
+// toast system - what it calls and with what payload - without coupling
+// this srs-engine-owned suite to the Radix Toast DOM/portal machinery that
+// actually renders it (that's covered where Toaster itself is exercised).
+vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
+
+import { toast } from '@/hooks/use-toast';
+
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
 // This suite mocks the swedish-linguist-owned '@/lib/verbs' boundary so the
@@ -72,6 +82,12 @@ const ALL_ITEM_IDS = [
 
 beforeEach(() => {
   localStorage.clear();
+  // vi.mock's `toast: vi.fn()` is a bare mock, not a vi.spyOn spy, so the
+  // harness's `restoreMocks: true` (which only restores spies) does not
+  // clear its call history between tests. Clear it explicitly so a toast
+  // fired by an earlier test can never be mistaken for one fired by this
+  // test.
+  vi.mocked(toast).mockClear();
   // Only fake Date: RTL's waitFor polls with real setTimeout/MutationObserver
   // internally, so faking timers wholesale would freeze that polling too.
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -238,6 +254,32 @@ describe('quota exceeded on write', () => {
         result.current.recordAnswer('1-presens', 5);
       });
     }).not.toThrow();
+  });
+
+  // Issue #138: a write failure must not fail silently. Pins the acceptance
+  // criteria that a visible "progress not saved" toast fires on the same
+  // path exercised above, not just that the tree survives.
+  it('shows a destructive "Progress not saved" toast when localStorage.setItem throws (issue #138)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    });
+
+    expect(toast).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Progress not saved',
+        variant: 'destructive',
+      }),
+    );
   });
 });
 
