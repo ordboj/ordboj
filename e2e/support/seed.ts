@@ -1,5 +1,6 @@
 import { getVerbs, conjugateVerb, type Form } from '../../src/lib/verbs';
 import { initializeSrsState, type SrsState } from '../../src/lib/srs';
+import { conjugationItemId } from '../../src/lib/itemIds';
 
 // Mirrors the STORAGE_KEY constants that useSrsProgress.ts / useSettings.ts
 // keep private to themselves (src/hooks owned by srs-engine). Duplicated
@@ -34,7 +35,7 @@ export async function buildFullSeed(
       const value = conjugated[form];
       if (!value || value === '(not available)') continue;
 
-      const itemId = `${verb.id}-${form}`;
+      const itemId = conjugationItemId(verb.id, form);
       states[itemId] = {
         ...initializeSrsState(itemId),
         dueAt: FAR_FUTURE_DUE_AT,

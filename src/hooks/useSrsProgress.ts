@@ -66,7 +66,11 @@ function rebaseLegacyEase(items: Record<string, SrsState>): Record<string, SrsSt
 // store. Indexes beyond this list cannot have been written by any released
 // build; if one appears anyway its key is left untouched rather than guessed
 // at (see migrateLegacyItemIds).
-const LEGACY_VERB_INFINITIVES: readonly string[] = [
+// Exported only so a qa drift test can assert this snapshot stays
+// byte-identical to PINNED_INFINITIVES in
+// src/data/verbData.orderPin.test.ts, the pin it was copied from. Nothing in
+// production code outside this file should import it.
+export const LEGACY_VERB_INFINITIVES: readonly string[] = [
   'vara', // 1
   'ha', // 2
   'kunna', // 3

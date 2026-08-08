@@ -19,7 +19,7 @@ import { buildFullSeed, SRS_STORAGE_KEY } from './support/seed';
 // mid-session. This test asserts the fixed behavior: answering the first
 // of two due cards must reveal the second card, and finishing both must
 // reach the completion screen.
-const DUE_ITEMS = ['1-presens', '7-imperativ']; // vara/är, göra/gör
+const DUE_ITEMS = ['vara-presens', 'komma-imperativ']; // vara/är, komma/kom
 
 test.describe('regression #103: queue no longer desyncs after answering', () => {
   test('answering the first of two due cards shows the second card, then completion', async ({
