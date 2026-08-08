@@ -137,6 +137,7 @@ export default function Settings() {
                         const newLevels = checked
                           ? [...settings.cefrLevels, level]
                           : settings.cefrLevels.filter((l) => l !== level);
+                        if (newLevels.length === 0) return; // Prevent unselecting all
                         updateSettings({ cefrLevels: newLevels });
                       }}
                     />

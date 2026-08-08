@@ -20,6 +20,17 @@ import { speakSwedish } from '@/lib/speech';
 import { ConfettiEffect } from './ConfettiEffect';
 import { Grade } from '@/lib/srs';
 
+// Once an item has been answered correctly this many times, the learner no
+// longer needs the full paradigm as a cue — showing every conjugated form
+// (e.g. "skriva - skriver - skrev - ___") lets the missing form be derived
+// from the pattern rather than recalled. See issue #32.
+const MATURE_REPETITIONS_THRESHOLD = 3;
+
+// Fixed Swedish special-character row: always these three keys, in this
+// order, on every card regardless of the answer. Never derived from the
+// correct answer — see docs/learning/2026-08-08-ux-pedagogy-red-lines.md (P4, P11).
+const SWEDISH_SPECIAL_CHARS = ['å', 'ä', 'ö'];
+
 interface PracticeCardProps {
   infinitive: string;
   form: Form;
@@ -27,6 +38,7 @@ interface PracticeCardProps {
   showExamples: boolean;
   autoplayAudio: boolean;
   muteAudio: boolean;
+  repetitions?: number;
   onAnswer: (grade: Grade) => void;
 }
 
@@ -37,25 +49,22 @@ export function PracticeCard({
   showExamples,
   autoplayAudio,
   muteAudio,
+  repetitions = 0,
   onAnswer,
 }: PracticeCardProps) {
   const [userAnswer, setUserAnswer] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
   const [conjugated, setConjugated] = useState<ConjugatedVerb | null>(null);
   const [pattern, setPattern] = useState<VerbPattern | null>(null);
-  const [shuffledLetters, setShuffledLetters] = useState<string[]>([]);
   const [options, setOptions] = useState<string[]>([]);
 
   // Load verb data
   useEffect(() => {
-    conjugateVerb(infinitive).then((result) => {
-      setConjugated(result);
-      const uniqueLetters = [...new Set(result[form].split(''))];
-      setShuffledLetters(uniqueLetters.sort(() => Math.random() - 0.5));
-    });
+    conjugateVerb(infinitive).then(setConjugated);
     generateVerbPattern(infinitive, form).then(setPattern);
   }, [infinitive, form]);
 
@@ -143,6 +152,7 @@ export function PracticeCard({
   const handleSubmit = useCallback((answer: string) => {
     const correct = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
     setIsCorrect(correct);
+    setSubmittedAnswer(answer);
     setShowFeedback(true);
 
     if (correct) {
@@ -179,7 +189,14 @@ export function PracticeCard({
   };
 
   const getPatternWithHints = () => {
-    return pattern.patternParts
+    // Mature items drop the other paradigm forms from the cue, leaving just
+    // the infinitive and the blank, so the label below is the only cue.
+    const isMature = repetitions >= MATURE_REPETITIONS_THRESHOLD;
+    const visibleParts = isMature
+      ? pattern.patternParts.filter((part) => part.form === 'infinitive' || part.isMissing)
+      : pattern.patternParts;
+
+    return visibleParts
       .map((part) => {
         if (part.isMissing) {
           // Show the blank with revealed hints
@@ -216,6 +233,7 @@ export function PracticeCard({
     setUserAnswer('');
     setShowFeedback(false);
     setIsCorrect(false);
+    setSubmittedAnswer('');
     setShowConfetti(false);
     setRevealedHints([]);
     setOptions([]);
@@ -228,9 +246,9 @@ export function PracticeCard({
     }
   };
 
-  const handleLetterClick = (letter: string) => {
+  const handleSpecialCharClick = (char: string) => {
     if (!showFeedback) {
-      setUserAnswer((prev) => prev + letter);
+      setUserAnswer((prev) => prev + char);
     }
   };
 
@@ -276,17 +294,22 @@ export function PracticeCard({
                     }
                     placeholder="Type your answer..."
                     className="text-2xl text-center py-6 caret-transparent"
+                    maxLength={60}
                     autoFocus
+                    lang="sv"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                   />
                   <div className="flex flex-wrap justify-center gap-2">
-                    {shuffledLetters.map((letter, index) => (
+                    {SWEDISH_SPECIAL_CHARS.map((char) => (
                       <Button
-                        key={index}
-                        onClick={() => handleLetterClick(letter)}
+                        key={char}
+                        onClick={() => handleSpecialCharClick(char)}
                         variant="outline"
                         className="w-12 h-12 text-xl font-semibold"
                       >
-                        {letter}
+                        {char}
                       </Button>
                     ))}
                     <Button
@@ -353,6 +376,26 @@ export function PracticeCard({
                   </>
                 )}
               </div>
+
+              {!isCorrect && (
+                <div className="flex flex-wrap items-center justify-center gap-4 text-center">
+                  <div className="space-y-1 min-w-0 max-w-full">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                      {mode === 'typing' ? 'You wrote' : 'You chose'}
+                    </p>
+                    <p className="text-lg font-semibold text-destructive break-words">
+                      {submittedAnswer.trim() || '(nothing)'}
+                    </p>
+                  </div>
+                  <span className="text-muted-foreground text-xl shrink-0">→</span>
+                  <div className="space-y-1 min-w-0 max-w-full">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Correct</p>
+                    <p className="text-lg font-semibold text-success break-words">
+                      {correctAnswer}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 {/* Show full pattern with pronunciation buttons */}
