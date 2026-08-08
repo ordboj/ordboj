@@ -41,7 +41,6 @@ vi.mock("@/hooks/useSettings", () => ({
       showExamples: false,
       autoplayAudio: false,
       muteAudio: true,
-      interfaceLanguage: "en",
       dailyGoal: 20,
       cefrLevels: ["A1"],
     },

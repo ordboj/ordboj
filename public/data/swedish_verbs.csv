@@ -9,9 +9,9 @@ A1,att,komma,kom,kommer,kom,kommit
 A1,att,vilja,,vill,ville,velat
 A1,att,göra,gör,gör,gjorde,gjort
 A1,att,finna,finn,finner,fann,funnit
-A1,att,ta (el. taga),,tar,tade,tat
+A1,att,ta (el. taga),,tar,tog,tagit
 A1,att,se,,ser,såg,sett
-A1,att,gå,,går,gick,gắtt
+A1,att,gå,,går,gick,gått
 A1,att,säga,,säger,sa/sade,sagt
 A1,att,äga,,äger,ägde,ägt
 A1,att,betyda,,betyder,betydde,betytt
@@ -28,16 +28,16 @@ A1,att,behöva,,behöver,behövde,behövt
 A1,att,känna,,känner,kände,känt
 A1,att,läsa,,läser,läste,läst
 A1,att,ro,,ror,rodde,rott
-A1,att,låta,,låter,lat,låtit
+A1,att,låta,,låter,lät,låtit
 A1,att,stå,,står,stod,stått
 A1,att,visa,,visar,visade,visat
 A1,att,använda,,använder,använde,använt
-A1,att,vända,,vändar,vändade,vändat
+A1,att,vända,,vänder,vände,vänt
 A1,att,hålla,,håller,höll,hållit
 A1,att,tänka,,tänker,tänkte,tänkt
-A1,att,söka,,sökar,sökade,sökat
+A1,att,söka,,söker,sökte,sökt
 A1,att,ligga,,ligger,låg,legat
-A1,att,lägga,,läggar,läggade,läggat
+A1,att,lägga,,lägger,la,lagt
 A1,att,anse,,anser,ansåg,ansett
 A1,att,öva,,övar,övade,övat
 A1,att,handla,,handlar,handlade,handlat
@@ -542,7 +542,7 @@ A2,att,bemöta,,bemötar,bemötade,bemötat
 A2,att,tränga,,trängar,trängade,trängat
 A2,att,överföra,,överförar,överförade,överförat
 A2,att,brinna,,brinner,brann,brunnit
-A2,att,rinna,,rınner,rann,runnit
+A2,att,rinna,,rinner,rann,runnit
 A2,att,rymma,,rymmar,rymmade,rymmat
 A2,att,sammanfatta,,sammanfattar,sammanfattade,sammanfattat
 A2,att,dröja,,dröjar,dröjade,dröjat
@@ -562,7 +562,7 @@ A2,att,ansvara,,ansvarar,ansvarade,ansvarat
 A2,att,trivas,,trivs,trivdes,trivts
 A2,att,le,,ler,log,lett
 A2,att,oroa,,oroar,oroade,oroat
-A2,att,knyta,,knyter,knöt,knutıt
+A2,att,knyta,,knyter,knöt,knutit
 A2,att,förhålla sig,,förhåller sig,förhöll sig,förhållit sig
 A2,att,tipsa,,tipsar,tipsade,tipsat
 A2,att,boka,,bokar,bokade,bokat
@@ -781,7 +781,7 @@ B1,att,rusa,,rusar,rusade,rusat
 B1,att,plugga,,pluggar,pluggade,pluggat
 B1,att,avveckla,,avvecklar,avvecklade,avvecklat
 B1,att,bibehålla,,bibehållar,bibehållade,bibehållat
-B1,att,smyga,,smyger,smög,smugıt
+B1,att,smyga,,smyger,smög,smugit
 B1,att,vårda,,vårdar,vårdade,vårdat
 B1,att,lista,,listar,listade,listat
 B1,att,lugna,,lugnar,lugnade,lugnat
@@ -1417,7 +1417,7 @@ C2,att,glänsa,,glänsar,glänsade,glänsat
 C2,att,deponera,,deponerar,deponerade,deponerat
 C2,att,medfölja,,medföljar,medföljade,medföljat
 C2,att,koordinera,,koordinerar,koordinerade,koordinerat
-C2,att,pipa,,pıper,pep,pipit
+C2,att,pipa,,piper,pep,pipit
 C2,att,gräla,,grälar,grälade,grälat
 C2,att,ljuda,,ljudar,ljudade,ljudat
 C2,att,debitera,,debiterar,debiterade,debiterat
