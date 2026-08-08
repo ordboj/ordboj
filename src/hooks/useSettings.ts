@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 export interface Settings {
   practiceMode: 'typing' | 'multiple-choice';
@@ -37,9 +38,22 @@ export function useSettings() {
   }, []);
 
   const updateSettings = (newSettings: Partial<Settings>) => {
-    setSettings(prev => {
+    setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        // Quota or storage failure: keep the in-memory session alive so the
+        // app doesn't degrade further; surface it so the user knows the
+        // change may not survive closing the tab.
+        console.error('Failed to save settings', e);
+        toast({
+          title: 'Progress not saved',
+          description:
+            'Your browser storage is full or unavailable. Recent settings changes may be lost if you close this tab.',
+          variant: 'destructive',
+        });
+      }
       return updated;
     });
   };
