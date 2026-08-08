@@ -55,14 +55,24 @@ export default tseslint.config(
       // TODO(#120): 3 pre-existing hits live in files owned by other roles
       // (csp-violations.spec.ts, src/hooks/use-toast.ts,
       // src/hooks/useSrsProgress.ts). Promote to 'error' once those are
-      // cleaned up so CI enforces it the way exhaustive-deps will below.
-      '@typescript-eslint/no-unused-vars': 'warn',
-      // TODO(#120): enabling react.configs.flat.recommended surfaces 2
+      // cleaned up. The '^_' patterns exempt deliberate discards (e.g.
+      // `_itemId` in src/lib/srs.test.ts): an underscore prefix is the
+      // author saying "unused on purpose", which is not debt worth warning
+      // about.
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      // TODO(#120): enabling react.configs.flat.recommended surfaces 3
       // pre-existing hits (unescaped apostrophe in copy) in
-      // frontend-expert-owned src/pages/Practice.tsx and Progress.tsx.
-      // 'warn' makes the debt visible without breaking CI or requiring
-      // this role to edit files it doesn't own. Promote to 'error' once
-      // those two are fixed.
+      // frontend-expert-owned src/pages/Practice.tsx, Progress.tsx and
+      // Settings.tsx. 'warn' makes the debt visible without breaking CI or
+      // requiring this role to edit files it doesn't own. Promote to
+      // 'error' once those are fixed.
       'react/no-unescaped-entities': 'warn',
       // TODO(#120): jsxA11y.flatConfigs.recommended surfaces 1 pre-existing
       // hit (autoFocus) in frontend-expert-owned src/components/PracticeCard.tsx.
@@ -73,13 +83,25 @@ export default tseslint.config(
   },
   {
     // Root-level Node config files (commitlint, eslint itself, postcss,
-    // ...). Previously outside lint scope entirely, so syntax and dead
-    // code here were invisible to tooling.
+    // ...) and repo scripts. Previously outside lint scope entirely, so
+    // syntax and dead code here were invisible to tooling. The .mjs/.cjs
+    // extensions matter: `*.js` alone would silently drop any config or
+    // script that picks an explicit module flavor, reopening the gap this
+    // block exists to close (scripts/validate-verb-forms.mjs already does).
     extends: [js.configs.recommended],
-    files: ['*.js'],
+    files: ['*.{js,mjs,cjs}', 'scripts/**/*.{js,mjs,cjs}'],
     languageOptions: {
-      ecmaVersion: 2020,
+      ecmaVersion: 2022,
       globals: globals.node,
+    },
+    rules: {
+      // TODO(#120): bringing scripts/ into scope surfaces 1 pre-existing
+      // hit: an unnecessary `\/` escape in a regex character class in
+      // swedish-linguist-owned scripts/validate-verb-forms.mjs:35. 'warn'
+      // instead of the recommended-config 'error' so widening lint scope
+      // does not break CI on a file this role must not edit. Restore to
+      // 'error' once that escape is removed.
+      'no-useless-escape': 'warn',
     },
   },
   prettierConfig,
