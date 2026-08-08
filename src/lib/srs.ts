@@ -63,14 +63,31 @@ export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
     }
   }
 
+  // intervalDays is always >= 1 here, so the item must never come due on
+  // the calendar day it was just answered. Plain now + N*24h breaks that
+  // on the 25-hour fall-back day: answered at 00:30 local, now + 24h is
+  // 23:30 of the *same* local day, which the end-of-day isDue boundary
+  // would serve again immediately, ratcheting the interval without a real
+  // day passing. Clamp to at least the start of the next local day.
+  const now = Date.now();
+  const dueAt = Math.max(now + intervalDays * 24 * 60 * 60 * 1000, startOfNextLocalDay(now));
+
   return {
     ...state,
     repetitions,
     intervalDays,
     easeFactor,
-    dueAt: Date.now() + intervalDays * 24 * 60 * 60 * 1000,
+    dueAt,
     lastGrade: grade,
   };
+}
+
+function startOfNextLocalDay(timestamp: number): number {
+  const d = new Date(timestamp);
+  // setHours(24, ...) rolls over to 00:00.000 of the next local calendar
+  // day; Date handles DST, so this is correct on 23- and 25-hour days.
+  d.setHours(24, 0, 0, 0);
+  return d.getTime();
 }
 
 // Initialize new SRS item

@@ -336,7 +336,10 @@ describe('getDueItems - local day boundary (issue #11)', () => {
   });
 
   afterEach(() => {
-    process.env.TZ = originalTz;
+    // Assigning undefined would store the literal string "undefined" as
+    // the timezone; delete the key instead.
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
   });
 
   it('includes an item due later the same local day and excludes one due at the start of the next local day', async () => {

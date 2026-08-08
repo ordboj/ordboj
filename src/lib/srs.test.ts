@@ -249,7 +249,10 @@ describe('isDue - month and DST boundaries (Europe/Stockholm)', () => {
   });
 
   afterEach(() => {
-    process.env.TZ = originalTz;
+    // Assigning undefined would store the literal string "undefined" as
+    // the timezone; delete the key instead.
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
   });
 
   it('is not due when dueAt falls on the next local calendar day, even a few hours away', () => {
@@ -298,5 +301,25 @@ describe('isDue - month and DST boundaries (Europe/Stockholm)', () => {
 
     expect(isDue({ ...initializeSrsState('x'), dueAt: afterFoldSameDay }, beforeFold)).toBe(true);
     expect(isDue({ ...initializeSrsState('x'), dueAt: nextDay }, beforeFold)).toBe(false);
+  });
+
+  it('a 1-day interval scheduled early on the 25-hour fall-back day is not due again that same local day', () => {
+    // The fall-back day is 25 hours long, so at 00:30 local, now + 24h is
+    // only 23:30 of the same local calendar day. If dueAt stored that raw
+    // sum, the end-of-day isDue boundary would serve the item again the
+    // same day it was answered and its interval would ratchet (1 -> 6 ->
+    // 6*EF) without any real day passing. calculateNextReview clamps
+    // dueAt to at least the start of the next local day.
+    const answerTime = new Date(2026, 9, 25, 0, 30, 0, 0).getTime(); // 00:30, before the fold
+    vi.setSystemTime(answerTime);
+
+    const next = calculateNextReview(initializeSrsState('x'), 5);
+    expect(next.intervalDays).toBe(1);
+
+    const laterSameDay = new Date(2026, 9, 25, 23, 0, 0, 0).getTime();
+    expect(isDue(next, laterSameDay)).toBe(false);
+
+    const startOfNextDay = new Date(2026, 9, 26, 0, 0, 0, 0).getTime();
+    expect(isDue(next, startOfNextDay)).toBe(true);
   });
 });
