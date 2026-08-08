@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useSrsProgress } from '@/hooks/useSrsProgress';
+import { useSrsProgress, getRequeueInsertIndex, type PracticeItem } from '@/hooks/useSrsProgress';
 import type { ConjugatedVerb, Verb } from '@/lib/verbs';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
@@ -318,6 +318,151 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     const second = renderHook(() => useSrsProgress());
     await waitFor(() => expect(second.result.current.isLoading).toBe(false));
     expect(second.result.current.srsStates['1-presens'].easeFactor).toBe(1.3);
+  });
+});
+
+describe('getRequeueInsertIndex - pure requeue-position function', () => {
+  it('places the item REQUEUE_GAP (3) items past its current position', () => {
+    expect(getRequeueInsertIndex(0, 10)).toBe(4);
+    expect(getRequeueInsertIndex(2, 10)).toBe(6);
+  });
+
+  it('clamps to the end of the queue when the gap would run past it', () => {
+    expect(getRequeueInsertIndex(5, 6)).toBe(6);
+    expect(getRequeueInsertIndex(0, 2)).toBe(2);
+    expect(getRequeueInsertIndex(0, 0)).toBe(0);
+  });
+});
+
+describe('recordAnswerWithRequeue - in-session relearning queue (docs/learning/lapse-handling.md)', () => {
+  it('re-inserts a wrongly-answered item 3 items ahead of its current position', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const queue: PracticeItem[] = [
+      { verbId: '1', infinitive: 'testa', form: 'presens', itemId: '1-presens' },
+      { verbId: '1', infinitive: 'testa', form: 'preteritum', itemId: '1-preteritum' },
+      { verbId: '1', infinitive: 'testa', form: 'supinum', itemId: '1-supinum' },
+      { verbId: '1', infinitive: 'testa', form: 'imperativ', itemId: '1-imperativ' },
+      { verbId: '2', infinitive: 'prova', form: 'presens', itemId: '2-presens' },
+      { verbId: '2', infinitive: 'prova', form: 'preteritum', itemId: '2-preteritum' },
+    ];
+
+    let newQueue: PracticeItem[] = [];
+    act(() => {
+      newQueue = result.current.recordAnswerWithRequeue(queue[0], 0, queue, 0);
+    });
+
+    // insertAt = min(0 + 1 + 3, 6) = 4
+    expect(newQueue.map((i) => i.itemId)).toEqual([
+      '1-presens',
+      '1-preteritum',
+      '1-supinum',
+      '1-imperativ',
+      '1-presens',
+      '2-presens',
+      '2-preteritum',
+    ]);
+  });
+
+  it('clamps the insertion point to the end of a short queue instead of indexing past it', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const queue: PracticeItem[] = [
+      { verbId: '1', infinitive: 'testa', form: 'presens', itemId: '1-presens' },
+      { verbId: '1', infinitive: 'testa', form: 'preteritum', itemId: '1-preteritum' },
+    ];
+
+    let newQueue: PracticeItem[] = [];
+    act(() => {
+      newQueue = result.current.recordAnswerWithRequeue(queue[0], 0, queue, 0);
+    });
+
+    expect(newQueue.map((i) => i.itemId)).toEqual(['1-presens', '1-preteritum', '1-presens']);
+  });
+
+  it('still applies the SM-2 lapse penalty to srsStates - requeueing does not change scheduling', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const item: PracticeItem = {
+      verbId: '1',
+      infinitive: 'testa',
+      form: 'presens',
+      itemId: '1-presens',
+    };
+    act(() => {
+      result.current.recordAnswerWithRequeue(item, 0, [item], 0);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens'].intervalDays).toBe(1));
+    expect(result.current.srsStates['1-presens'].repetitions).toBe(0);
+  });
+
+  it('does not requeue a correct answer (grade 5): the queue comes back unchanged', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const queue: PracticeItem[] = [
+      { verbId: '1', infinitive: 'testa', form: 'presens', itemId: '1-presens' },
+      { verbId: '1', infinitive: 'testa', form: 'preteritum', itemId: '1-preteritum' },
+    ];
+
+    let newQueue: PracticeItem[] = [];
+    act(() => {
+      newQueue = result.current.recordAnswerWithRequeue(queue[0], 5, queue, 0);
+    });
+
+    expect(newQueue.map((i) => i.itemId)).toEqual(['1-presens', '1-preteritum']);
+  });
+
+  it('does not requeue a hinted-correct answer (grade 3) either', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const queue: PracticeItem[] = [
+      { verbId: '1', infinitive: 'testa', form: 'presens', itemId: '1-presens' },
+      { verbId: '1', infinitive: 'testa', form: 'preteritum', itemId: '1-preteritum' },
+    ];
+
+    let newQueue: PracticeItem[] = [];
+    act(() => {
+      newQueue = result.current.recordAnswerWithRequeue(queue[0], 3, queue, 0);
+    });
+
+    expect(newQueue.map((i) => i.itemId)).toEqual(['1-presens', '1-preteritum']);
+  });
+
+  it('caps at 2 requeues per item per sitting: a third consecutive wrong answer no longer grows the queue', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const item: PracticeItem = {
+      verbId: '1',
+      infinitive: 'testa',
+      form: 'presens',
+      itemId: '1-presens',
+    };
+    let queue: PracticeItem[] = [
+      item,
+      { verbId: '1', infinitive: 'testa', form: 'preteritum', itemId: '1-preteritum' },
+    ];
+
+    act(() => {
+      queue = result.current.recordAnswerWithRequeue(item, 0, queue, 0); // 1st requeue: allowed
+    });
+    expect(queue).toHaveLength(3);
+
+    act(() => {
+      queue = result.current.recordAnswerWithRequeue(item, 0, queue, 0); // 2nd requeue: allowed
+    });
+    expect(queue).toHaveLength(4);
+
+    const lengthBeforeThird = queue.length;
+    act(() => {
+      queue = result.current.recordAnswerWithRequeue(item, 0, queue, 0); // 3rd: cap reached, no requeue
+    });
+    expect(queue).toHaveLength(lengthBeforeThird);
   });
 });
 

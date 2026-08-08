@@ -194,6 +194,79 @@ describe('calculateNextReview - review-table regression (10+ reviews)', () => {
   });
 });
 
+describe('calculateNextReview - hinted correct (grade 3)', () => {
+  it('applies the -0.05 ease delta, not the -0.20 lapse penalty or the +0.05 clean-success reward', () => {
+    const state = calculateNextReview(initializeSrsState('x'), 3);
+    expect(state.easeFactor).toBeCloseTo(2.45, 5);
+  });
+
+  it('does not advance repetitions - a hinted answer is not a clean unaided recall', () => {
+    let state = initializeSrsState('x');
+    state = calculateNextReview(state, 5); // rep 1
+    state = calculateNextReview(state, 5); // rep 2
+    const before = state.repetitions;
+    state = calculateNextReview(state, 3);
+    expect(state.repetitions).toBe(before);
+  });
+
+  it('does not reset repetitions to 0 like a lapse would', () => {
+    let state = initializeSrsState('x');
+    state = calculateNextReview(state, 5);
+    state = calculateNextReview(state, 5);
+    expect(state.repetitions).toBe(2);
+    state = calculateNextReview(state, 3);
+    expect(state.repetitions).not.toBe(0);
+  });
+
+  it('halves the existing interval, rounded', () => {
+    let state = initializeSrsState('x');
+    state = calculateNextReview(state, 5); // interval 1
+    state = calculateNextReview(state, 5); // interval 6
+    state = calculateNextReview(state, 5); // interval round(6*ease)
+    const priorInterval = state.intervalDays;
+    state = calculateNextReview(state, 3);
+    expect(state.intervalDays).toBe(Math.round(priorInterval * 0.5));
+  });
+
+  it('floors the halved interval at 1 day from a fresh item, never 0 - and takes the hinted branch to get there, not the lapse branch', () => {
+    // A fresh item has intervalDays 0, so round(0 * 0.5) = 0 would floor to
+    // 1 exactly the way a grade-0 lapse also would - intervalDays alone
+    // can't tell the two branches apart here. The easeFactor can: a lapse
+    // costs -0.20 (-> 2.3), a hinted answer costs -0.05 (-> 2.45).
+    const state = calculateNextReview(initializeSrsState('x'), 3);
+    expect(state.intervalDays).toBe(1);
+    expect(state.easeFactor).toBeCloseTo(2.45, 5);
+  });
+
+  it('floors ease at 1.3 eventually, but only after ~24 hinted answers - not after ~6 the way the -0.20 lapse delta would', () => {
+    // Distinguishes the -0.05 hinted delta from the -0.20 lapse delta by
+    // the exact ease after 6 applications: -0.20*6 would already be at the
+    // 1.3 floor (2.5 - 1.2 = 1.3); -0.05*6 is still well above it (2.2).
+    let state = initializeSrsState('x');
+    for (let i = 0; i < 6; i++) {
+      state = calculateNextReview(state, 3);
+    }
+    expect(state.easeFactor).toBeCloseTo(2.2, 5);
+
+    // Run well past the ~24 applications the -0.05 delta needs to floor,
+    // proving it pins at 1.3 rather than overshooting below it.
+    for (let i = 0; i < 30; i++) {
+      state = calculateNextReview(state, 3);
+      expect(state.easeFactor).toBeGreaterThanOrEqual(1.3);
+    }
+    expect(state.easeFactor).toBe(1.3);
+  });
+
+  it('stamps dueAt using the halved interval, on the faked clock', () => {
+    let state = initializeSrsState('x');
+    state = calculateNextReview(state, 5); // rep1, interval 1
+    state = calculateNextReview(state, 5); // rep2, interval 6
+    state = calculateNextReview(state, 3); // interval round(6*0.5)=3
+    expect(state.intervalDays).toBe(3);
+    expect(state.dueAt).toBe(FIXED_NOW + 3 * DAY_MS);
+  });
+});
+
 describe('calculateNextReview - MAX_INTERVAL_DAYS clamp', () => {
   it('clamps a would-be-924-day interval (330 * 2.8 ease) to the 365-day ceiling', () => {
     const state: SrsState = {
