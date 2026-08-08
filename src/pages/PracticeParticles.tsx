@@ -106,7 +106,7 @@ export default function PracticeParticles() {
           <h1 className="text-5xl font-bold text-primary">Great work! 🎉</h1>
           <p className="text-xl text-muted-foreground">
             {cards.length === 0
-              ? 'No particle verbs are ready for you yet — keep practising conjugation and they will unlock.'
+              ? 'Nothing is due right now, and you have already met every particle verb.'
               : sessionKind === 'free'
                 ? "You've finished this free-practice round — nothing here was saved to your progress."
                 : "You've finished today's particle verbs."}
