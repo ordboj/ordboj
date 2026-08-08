@@ -290,6 +290,28 @@ describe('particle verb dataset - embedded reference forms (#318)', () => {
     );
     expect(missing.map((entry) => entry.id)).toEqual([]);
   });
+
+  it('keeps every embedded form in step with its VERB_DATA base', () => {
+    // Guards against a future VERB_DATA correction silently diverging from
+    // the embedded presens/preteritum/supinum copies in particleVerbData.ts.
+    const drift: string[] = [];
+    for (const entry of VERIFIED) {
+      const base = VERB_DATA.find((verb) => verb.infinitive === entry.baseInfinitive);
+      if (!base || !entry.forms) continue;
+      const tail = renderLemma(entry).slice(entry.baseInfinitive.length);
+      const expected = {
+        presens: base.presens + tail,
+        preteritum: base.preteritum + tail,
+        supinum: base.supinum + tail,
+      };
+      for (const key of ['presens', 'preteritum', 'supinum'] as const) {
+        if (entry.forms[key] !== expected[key]) {
+          drift.push(`${entry.id} ${key}: "${entry.forms[key]}" vs VERB_DATA "${expected[key]}"`);
+        }
+      }
+    }
+    expect(drift).toEqual([]);
+  });
 });
 
 describe('particle verb dataset - excludedParticles (#318)', () => {
