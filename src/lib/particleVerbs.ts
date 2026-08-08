@@ -186,7 +186,7 @@ export function getPhraseForms(entry: ParticleVerbData): PhraseForms | null {
 
 // One line per particle for the feedback screen, per the learning note: the
 // benefit Boers found was in the explanation, not in batching a "upp week",
-// so this is fifteen-odd strings rather than a curriculum. Hedged with
+// so this is thirty-odd strings rather than a curriculum. Hedged with
 // "often" throughout because these are tendencies, not rules, and a particle
 // verb's meaning is not reliably compositional. Particles with no confident
 // line return null rather than an invented one.
@@ -213,6 +213,21 @@ const PARTICLE_CORE_SENSE: Record<string, string> = {
   slut: 'reaching an end',
   ihåg: 'into memory',
   igenom: 'through, from one end to the other',
+  // Added for #342, to unblock the #336 entries built on these particles.
+  // "hem" and "hemma" are the directional/locative pair Swedish keeps apart
+  // and English collapses into one word, so they get separate lines rather
+  // than one shared string.
+  hem: 'movement home — towards where one lives or belongs',
+  hemma: 'position at home — where something already belongs',
+  igång: 'into motion — something starting to run',
+  ihop: 'together, into one whole',
+  samman: 'together, in a more formal register than ihop',
+  fast: 'often fixed in place, or caught and held',
+  undan: 'often out of the way, or kept at a distance',
+  åt: 'often using something up, or acting on a problem',
+  // "an" is the honest exception: it survives in a handful of fixed phrases
+  // and carries no productive sense to teach. Saying so beats inventing one.
+  an: 'mostly fossilised, surviving in a few fixed phrases',
 };
 
 export function getParticleCoreSense(particle: string): string | null {
