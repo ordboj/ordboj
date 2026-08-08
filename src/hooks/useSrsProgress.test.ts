@@ -109,7 +109,7 @@ describe('persistence - the irreplaceable-progress invariant', () => {
     act(() => {
       first.result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(first.result.current.srsStates['1-presens'].repetitions).toBe(1));
+    await waitFor(() => expect(first.result.current.srsStates['1-presens']!.repetitions).toBe(1));
 
     const stored = localStorage.getItem(STORAGE_KEY);
     expect(stored).not.toBeNull();
@@ -142,7 +142,7 @@ describe('recordAnswer', () => {
     act(() => {
       result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(1));
 
     const after = await result.current.getDueItems();
     expect(after.map((i) => i.itemId)).not.toContain('1-presens');
@@ -204,7 +204,7 @@ describe('importData', () => {
     act(() => {
       result.current.recordAnswer('1-presens', 5);
     });
-    await waitFor(() => expect(result.current.srsStates['1-presens'].repetitions).toBe(1));
+    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(1));
 
     const snapshot = JSON.parse(JSON.stringify(result.current.srsStates));
 
@@ -264,9 +264,9 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.srsStates['1-presens'].easeFactor).toBe(1.8);
-    expect(result.current.srsStates['1-presens'].repetitions).toBe(3); // other fields carried through unchanged
-    expect(result.current.srsStates['1-preteritum'].easeFactor).toBe(1.3); // repetitions < 2: not rebased
+    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
+    expect(result.current.srsStates['1-presens']!.repetitions).toBe(3); // other fields carried through unchanged
+    expect(result.current.srsStates['1-preteritum']!.easeFactor).toBe(1.3); // repetitions < 2: not rebased
   });
 
   it('does not lower an already-higher easeFactor when rebasing', async () => {
@@ -284,7 +284,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.srsStates['1-presens'].easeFactor).toBe(2.4);
+    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(2.4);
   });
 
   it('persists the migration as a version 2 envelope and does not re-rebase an already-versioned payload on remount (one-shot)', async () => {
@@ -301,7 +301,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
 
     const first = renderHook(() => useSrsProgress());
     await waitFor(() => expect(first.result.current.isLoading).toBe(false));
-    expect(first.result.current.srsStates['1-presens'].easeFactor).toBe(1.8);
+    expect(first.result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
     first.unmount();
 
     const storedAfterFirst = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
@@ -317,7 +317,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
 
     const second = renderHook(() => useSrsProgress());
     await waitFor(() => expect(second.result.current.isLoading).toBe(false));
-    expect(second.result.current.srsStates['1-presens'].easeFactor).toBe(1.3);
+    expect(second.result.current.srsStates['1-presens']!.easeFactor).toBe(1.3);
   });
 });
 
@@ -349,8 +349,8 @@ describe('importData legacy rebase', () => {
     });
 
     expect(importResult).toBe(true);
-    expect(result.current.srsStates['1-presens'].easeFactor).toBe(1.8);
-    expect(result.current.srsStates['1-preteritum'].easeFactor).toBe(1.3);
+    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
+    expect(result.current.srsStates['1-preteritum']!.easeFactor).toBe(1.3);
   });
 
   it('does not rebase a versioned (v2) import even when its easeFactor is below the legacy threshold', async () => {
@@ -374,6 +374,6 @@ describe('importData legacy rebase', () => {
       result.current.importData(versionedExport);
     });
 
-    expect(result.current.srsStates['1-presens'].easeFactor).toBe(1.3);
+    expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.3);
   });
 });

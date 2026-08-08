@@ -37,7 +37,7 @@ function rowsWithPrecedingComments(
     const rowMatch = trimmed.match(/infinitive:\s*"([^"]+)"/);
     if (rowMatch) {
       rows.push({
-        infinitive: rowMatch[1],
+        infinitive: rowMatch[1]!,
         commentBlock: pendingComment.join('\n'),
         hasGrupp: /\bgrupp:\s*"/.test(trimmed),
       });

@@ -184,7 +184,7 @@ describe('calculateNextReview - review-table regression (10+ reviews)', () => {
     let state = initializeSrsState('x');
     grades.forEach((grade, i) => {
       state = calculateNextReview(state, grade);
-      const row = expected[i];
+      const row = expected[i]!;
       expect({ repetitions: state.repetitions, intervalDays: state.intervalDays }).toEqual({
         repetitions: row.repetitions,
         intervalDays: row.intervalDays,
