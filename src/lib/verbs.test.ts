@@ -139,6 +139,23 @@ describe('getVerbs - id scheme', () => {
     expect(verbs[verbs.length - 1]!.id).toBe(String(VERB_DATA.length));
   });
 
+  it('assigns String(index + 1) to every row, not just the first/last/one in the middle', async () => {
+    // The spot checks above only sample three positions. itemIds.ts resolves
+    // a legacy positional ref (a bare digit-string Verb.id) to an infinitive
+    // through a map built as exactly `String(index + 1) -> infinitive`
+    // (INFINITIVE_BY_LEGACY_VERB_ID). If Verb.id's shape ever slipped for
+    // even one row -- an off-by-one, a skipped index, anything other than
+    // this exact contract -- conjugationItemId's legacy-resolution branch
+    // would resolve that row's ref to the wrong verb (a collision with
+    // whichever real id happens to match) or fall through to its
+    // `?? verbRef` fallback and build an unmigratable `<digits>-<form>` key.
+    // Either way a learner's stored progress would silently reattach to a
+    // different verb, with no error. Checked across the whole table so a
+    // single mismatched row cannot hide between the sampled positions.
+    const verbs = await getVerbs();
+    expect(verbs.map((v) => v.id)).toEqual(VERB_DATA.map((_, i) => String(i + 1)));
+  });
+
   // KNOWN ISSUE (see CLAUDE.md "Known issues"): ids are positional, not
   // content-derived. Any reorder or insertion in VERB_DATA silently
   // reassigns every id after the change point, and therefore reassigns

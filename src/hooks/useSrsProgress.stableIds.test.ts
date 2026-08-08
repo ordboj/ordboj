@@ -61,6 +61,10 @@ describe('#8: a stored item stays attached to its verb across a VERB_DATA reorde
     // reversed table instead of the one this file's top-level import
     // already resolved.
     const { useSrsProgress: useSrsProgressReversed } = await import('@/hooks/useSrsProgress');
+    // Same reversed module graph as the hook above, so this resolves ids
+    // against the exact table the hook is reading from.
+    const { getVerbs } = await import('@/lib/verbs');
+    const { conjugationItemId } = await import('@/lib/itemIds');
 
     const { result } = renderHook(() => useSrsProgressReversed());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -81,6 +85,37 @@ describe('#8: a stored item stays attached to its verb across a VERB_DATA reorde
     // verb this store has no history for.
     expect(result.current.srsStates['skapa-presens']).toMatchObject({ repetitions: 0 });
     expect(result.current.srsStates['skapa-presens']).not.toMatchObject({
+      repetitions: 4,
+      intervalDays: 41,
+      easeFactor: 2.7,
+    });
+
+    // The two assertions above look up the bare literal 'gå-presens'. That
+    // alone is not proof of anything id-scheme related: the hook spreads
+    // whatever is stored under STORAGE_KEY straight into srsStates, so those
+    // two checks would pass identically even if the app had regressed all
+    // the way back to position-derived ids -- they never exercise how a
+    // real screen would *compute* the key it looks up. Resolve it the way
+    // the app actually does instead: read gå's and skapa's freshly
+    // recomputed positional Verb.id out of the reversed table (13 and 44
+    // swap places under a full reversal of a 56-row table) and build the
+    // storage key through conjugationItemId, the one function every call
+    // site uses.
+    const reversedVerbs = await getVerbs();
+    const gaPositionalId = reversedVerbs.find((v) => v.infinitive === 'gå')?.id;
+    const skapaPositionalId = reversedVerbs.find((v) => v.infinitive === 'skapa')?.id;
+    expect(gaPositionalId).toBe('44');
+    expect(skapaPositionalId).toBe('13');
+
+    const gaKeyViaApp = conjugationItemId(gaPositionalId!, 'presens');
+    const skapaKeyViaApp = conjugationItemId(skapaPositionalId!, 'presens');
+    expect(gaKeyViaApp).toBe('gå-presens');
+    expect(skapaKeyViaApp).toBe('skapa-presens');
+
+    // The real proof: the stored schedule is reachable through the id the
+    // app's own addressing path produces today, not merely through a
+    // literal that happens to still read the right thing.
+    expect(result.current.srsStates[gaKeyViaApp]).toMatchObject({
       repetitions: 4,
       intervalDays: 41,
       easeFactor: 2.7,

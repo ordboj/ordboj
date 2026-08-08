@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { VERB_DATA } from '@/data/verbData';
+import { LEGACY_VERB_INFINITIVES } from '@/hooks/useSrsProgress';
 
 // SRS item ids are infinitive-based as of issue #8
 // (src/lib/itemIds.ts, `conjugationItemId`): a verb's identity in every
@@ -13,12 +14,18 @@ import { VERB_DATA } from '@/data/verbData';
 // or reordered -- not even to fix a typo -- regardless of how VERB_DATA
 // itself changes from here on.
 //
-// What the tests below protect now: nothing pinned here was ever removed
-// from VERB_DATA (a migration source row disappearing would silently orphan
-// that verb's legacy progress), and every live infinitive is unique (two
-// verbs sharing an infinitive would make conjugationItemId ambiguous).
-// Reordering or inserting into VERB_DATA is safe for the current (v3)
-// scheme; it only ever mattered for the position-derived v2 one.
+// One rule, stated once: PINNED_INFINITIVES is a frozen historical record
+// for the v2 -> v3 migration and is never edited. VERB_DATA may grow,
+// reorder or insert freely -- that is safe under the v3 (infinitive-keyed)
+// scheme and only ever mattered for the position-derived v2 one. The only
+// change to VERB_DATA this file forbids is deleting a row PINNED_INFINITIVES
+// names, because that would silently orphan that verb's legacy progress at
+// migration time. The tests below protect exactly that (the superset check),
+// that no live infinitive collides with another (conjugationItemId would
+// become ambiguous), that PINNED_INFINITIVES itself has no internal
+// duplicate, and that the production copy of this list
+// (`LEGACY_VERB_INFINITIVES` in src/hooks/useSrsProgress.ts) has not drifted
+// from it.
 const PINNED_INFINITIVES: readonly string[] = [
   'vara', // 1
   'ha', // 2
@@ -79,25 +86,6 @@ const PINNED_INFINITIVES: readonly string[] = [
 ];
 
 describe('VERB_DATA order pin', () => {
-  it('has exactly the pinned number of rows', () => {
-    // Deletion or insertion anywhere fails here first, with a count that
-    // says which happened.
-    expect(VERB_DATA.length).toBe(PINNED_INFINITIVES.length);
-  });
-
-  it('maps every index to the pinned infinitive', () => {
-    // Compared as whole arrays so a reorder reports the full before/after
-    // rather than only the first row that moved.
-    expect(VERB_DATA.map((verb) => verb.infinitive)).toEqual([...PINNED_INFINITIVES]);
-  });
-
-  it.each(PINNED_INFINITIVES.map((infinitive, index) => ({ index, infinitive })))(
-    'index $index is still $infinitive',
-    ({ index, infinitive }) => {
-      expect(VERB_DATA[index]?.infinitive).toBe(infinitive);
-    },
-  );
-
   it('never drops a verb the migration snapshot depends on (VERB_DATA is a superset of PINNED_INFINITIVES)', () => {
     // A pre-#8 store's positional keys can only be migrated correctly if
     // every infinitive the snapshot names still exists in VERB_DATA today.
@@ -117,5 +105,17 @@ describe('VERB_DATA order pin', () => {
 
   it('pins no infinitive twice, so an id is never ambiguous', () => {
     expect(new Set(PINNED_INFINITIVES).size).toBe(PINNED_INFINITIVES.length);
+  });
+
+  it('keeps LEGACY_VERB_INFINITIVES (src/hooks/useSrsProgress.ts) byte-identical to PINNED_INFINITIVES', () => {
+    // LEGACY_VERB_INFINITIVES is a copy of this exact list, kept inside
+    // useSrsProgress.ts because production code must not import a qa-owned
+    // test file. The v2 -> v3 migration reads that copy, not this one, to
+    // translate a pre-#8 store's positional keys. The two are supposed to
+    // be the same historical snapshot by construction; this test is the
+    // only thing that would catch them drifting apart if either were ever
+    // hand-edited (or one updated and the other forgotten) without the
+    // other changing too.
+    expect([...LEGACY_VERB_INFINITIVES]).toEqual([...PINNED_INFINITIVES]);
   });
 });
