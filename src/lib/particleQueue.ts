@@ -1,5 +1,6 @@
 import { isDue, type SrsState } from '@/lib/srs';
-import { particleItemId } from '@/lib/itemIds';
+import { conjugationItemId, particleItemId } from '@/lib/itemIds';
+import { verbs, type Form } from '@/lib/verbs';
 import { getVerifiedParticleVerbs, hasRecallItem } from '@/lib/particleVerbs';
 import type { ParticleVerbData } from '@/data/particleVerbData';
 
@@ -107,6 +108,83 @@ function fisherYates<T>(items: T[]): T[] {
   return copy;
 }
 
+const verbIdByInfinitive = new Map(verbs.map((verb) => [verb.infinitive, verb.id]));
+
+// Issue #316: soft introduction ordering. The hard base-verb gate was
+// removed by issue #315 — this never gates, it only decides what order
+// today's introductions come in.
+const CONJUGATION_FORMS_FOR_PRIORITY: readonly Form[] = [
+  'presens',
+  'preteritum',
+  'supinum',
+  'imperativ',
+];
+
+// CEFR band, ascending. The only thing the ordering rule is allowed to touch
+// first: nothing below can ever move an entry out of the position its own
+// band gives it.
+const CEFR_BAND_ORDER: Record<ParticleVerbData['cefr'], number> = {
+  A1: 0,
+  A2: 1,
+  B1: 2,
+  B2: 3,
+  C1: 4,
+};
+
+// Soft signal, deliberately weaker than the hard gate #315 removed
+// (repetitions >= 2 on two forms): "has the learner started this base at
+// all" — any one
+// conjugation item at repetitions >= 1. An unresolvable baseInfinitive (or a
+// base nothing has been answered on yet) reads as "not started", never as an
+// error; the caller only ever uses this to order, not to exclude.
+export function isBaseStarted(
+  entry: ParticleVerbData,
+  srsStates: Record<string, SrsState>,
+): boolean {
+  const verbId = verbIdByInfinitive.get(entry.baseInfinitive);
+  if (!verbId) return false;
+  return CONJUGATION_FORMS_FOR_PRIORITY.some(
+    (form) => (srsStates[conjugationItemId(verbId, form)]?.repetitions ?? 0) >= 1,
+  );
+}
+
+// docs/learning/particle-verb-practice.md, "Progression, and what CEFR can
+// and cannot do": CEFR band ascending; within a band, a base the learner has
+// started before one they have not; then transparency, literal before
+// idiomatic; then corpus frequency. The fourth key is never compared
+// explicitly — PARTICLE_VERB_DATA is already frequency-ordered within a band
+// by the linguist, and Array.prototype.sort is a stable sort in every engine
+// this project targets, so two entries tied on every rule above simply keep
+// the relative order they arrived in.
+//
+// Each comparison returns as soon as it finds a difference, so a
+// lower-priority key (started, transparency) can never reach far enough to
+// move an entry across a band boundary — the band term dominates.
+function compareForIntroduction(
+  a: ParticleVerbData,
+  b: ParticleVerbData,
+  srsStates: Record<string, SrsState>,
+): number {
+  const bandDiff = CEFR_BAND_ORDER[a.cefr] - CEFR_BAND_ORDER[b.cefr];
+  if (bandDiff !== 0) return bandDiff;
+
+  const startedDiff = Number(isBaseStarted(b, srsStates)) - Number(isBaseStarted(a, srsStates));
+  if (startedDiff !== 0) return startedDiff;
+
+  return Number(a.transparency === 'idiomatic') - Number(b.transparency === 'idiomatic');
+}
+
+// Reorders introduction candidates only. Never called for due reviews or
+// recall unlocks — see buildParticleSitting, where only the introductions
+// loop reads from this. A verb with an unknown or unstarted base is never
+// dropped here, only sorted later within its own band.
+export function orderForIntroduction(
+  entries: ParticleVerbData[],
+  srsStates: Record<string, SrsState>,
+): ParticleVerbData[] {
+  return [...entries].sort((a, b) => compareForIntroduction(a, b, srsStates));
+}
+
 // "Never introduce two particle verbs sharing a base verb within a week"
 // (semantic-set interference; bygga upp / bygga ut is the case it guards).
 //
@@ -210,7 +288,9 @@ export function buildParticleSitting({
 
   const introductions: ParticleSittingCard[] = [];
   const newPerParticle = new Map<string, number>();
-  for (const entry of entries) {
+  // Issue #316: introduction order only. Due reviews and recall unlocks
+  // above still iterate `entries` in its own (corpus) order, untouched.
+  for (const entry of orderForIntroduction(entries, srsStates)) {
     if (remaining <= 0) break;
     if (srsStates[particleItemId(entry.id, 'cloze')]) continue;
     if (isBaseRecentlyUsed(entry, srsStates, entries)) continue;
