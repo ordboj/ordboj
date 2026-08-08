@@ -88,3 +88,27 @@ export function initializeSrsState(itemId: string): SrsState {
 export function isDue(state: SrsState): boolean {
   return state.dueAt <= Date.now();
 }
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+// Structural validator for one stored/imported item. Used by the import
+// path, which is the only place untrusted data enters the store: the file
+// comes off the user's disk and can be any JSON at all. Deliberately
+// permissive about *values* (any positive finite easeFactor, any finite
+// lastGrade) so that genuine older backups written by earlier versions of
+// the scheduler are not rejected, and strict about *shape* so that a
+// settings export or an unrelated JSON file cannot pass as progress.
+export function isSrsState(value: unknown): value is SrsState {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const state = value as Record<string, unknown>;
+  if (typeof state.itemId !== 'string' || state.itemId.length === 0) return false;
+  if (!isFiniteNumber(state.repetitions) || !Number.isInteger(state.repetitions)) return false;
+  if (state.repetitions < 0) return false;
+  if (!isFiniteNumber(state.intervalDays) || state.intervalDays < 0) return false;
+  if (!isFiniteNumber(state.easeFactor) || state.easeFactor <= 0) return false;
+  if (!isFiniteNumber(state.dueAt)) return false;
+  if (state.lastGrade !== undefined && !isFiniteNumber(state.lastGrade)) return false;
+  return true;
+}
