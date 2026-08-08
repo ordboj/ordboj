@@ -297,7 +297,11 @@ describe('particle verb dataset - embedded reference forms (#318)', () => {
     const drift: string[] = [];
     for (const entry of VERIFIED) {
       const base = VERB_DATA.find((verb) => verb.infinitive === entry.baseInfinitive);
-      if (!base || !entry.forms) continue;
+      if (!entry.forms) continue;
+      if (!base) {
+        drift.push(`${entry.id}: base "${entry.baseInfinitive}" is absent from VERB_DATA`);
+        continue;
+      }
       const tail = renderLemma(entry).slice(entry.baseInfinitive.length);
       const expected = {
         presens: base.presens + tail,
@@ -322,6 +326,8 @@ describe('particle verb dataset - excludedParticles (#318)', () => {
     // least one annotated frame makes the "no overlap" half meaningful.
     const annotatedIds: string[] = [];
     const overlaps: string[] = [];
+    const unknownParticles: string[] = [];
+    const knownParticles = new Set(PARTICLE_VERB_DATA.map((entry) => entry.particle.toLowerCase()));
     for (const entry of PARTICLE_VERB_DATA) {
       const accepted = new Set(entry.acceptedParticles.map((particle) => particle.toLowerCase()));
       for (const example of entry.examples) {
@@ -331,10 +337,14 @@ describe('particle verb dataset - excludedParticles (#318)', () => {
           if (accepted.has(excluded.toLowerCase())) {
             overlaps.push(`${entry.id}: "${excluded}" is both accepted and excluded`);
           }
+          if (!knownParticles.has(excluded.toLowerCase())) {
+            unknownParticles.push(`${entry.id}: "${excluded}" is not any entry's particle`);
+          }
         }
       }
     }
     expect(annotatedIds.length).toBeGreaterThan(0);
+    expect(unknownParticles).toEqual([]);
     expect(overlaps).toEqual([]);
   });
 

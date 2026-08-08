@@ -275,14 +275,11 @@ describe('the four-form reference line', () => {
     });
   });
 
-  it('returns null rather than a guess when the base verb is not in VERB_DATA', () => {
-    // Regression fixture for #262: previously this asserted against a real
-    // verified:false PARTICLE_VERB_DATA entry (its base was missing from
-    // VERB_DATA). #262 appended all six such bases to VERB_DATA and flipped
-    // their entries to verified:true, so no orphan remains in the shipped
-    // data. The contract getPhraseForms must uphold — never guess a form for
-    // an unresolvable base — still needs a fixture, so this constructs one
-    // directly with a baseInfinitive guaranteed absent from VERB_DATA.
+  it('returns null rather than a guess when the entry carries no embedded forms (#318 replaced the VERB_DATA lookup)', () => {
+    // #318 removed the VERB_DATA join from getPhraseForms: it now reads
+    // presens/preteritum/supinum from entry.forms only. The null path this
+    // fixture exercises therefore depends solely on entry.forms being
+    // absent, not on whether baseInfinitive resolves in VERB_DATA.
     const orphan = entry({ id: 'pv:test-orphan', baseInfinitive: 'zzznotarealverb' });
     expect(getPhraseForms(orphan)).toBeNull();
   });
