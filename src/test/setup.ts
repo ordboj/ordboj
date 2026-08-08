@@ -44,3 +44,29 @@ if (!window.matchMedia) {
 vi.mock('canvas-confetti', () => ({
   default: vi.fn(),
 }));
+
+// jsdom does not implement URL.createObjectURL/revokeObjectURL. Export flows
+// (Settings "Export Progress") build a Blob and call this to produce a
+// download link; without a stub, exercising that click throws
+// "URL.createObjectURL is not a function" for reasons unrelated to the
+// behavior under test.
+//
+// configurable: true matches the deliberately-configurable local stub
+// pattern in AppErrorBoundary.test.tsx (which vi.spyOn()s these same
+// properties per-test): a non-configurable global stub here would silently
+// pre-empt that file's own `if (!('createObjectURL' in URL))` guard and
+// leave the property unable to be cleanly reconfigured/restored.
+if (!window.URL.createObjectURL) {
+  Object.defineProperty(window.URL, 'createObjectURL', {
+    writable: true,
+    configurable: true,
+    value: vi.fn(() => 'blob:mock-url'),
+  });
+}
+if (!window.URL.revokeObjectURL) {
+  Object.defineProperty(window.URL, 'revokeObjectURL', {
+    writable: true,
+    configurable: true,
+    value: vi.fn(),
+  });
+}
