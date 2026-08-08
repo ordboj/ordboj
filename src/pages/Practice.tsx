@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -13,6 +13,8 @@ export default function Practice() {
   const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
   const { getDueItems, recordAnswer, isLoading } = useSrsProgress(settings.cefrLevels);
 
+  // Full due queue, uncapped — set once per load so identity stays stable
+  // across renders (avoids re-triggering the effect via a fresh array).
   const [dueItems, setDueItems] = useState<PracticeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [practiceComplete, setPracticeComplete] = useState(false);
@@ -30,18 +32,29 @@ export default function Practice() {
     loadDueItems();
   }, [isLoading, settingsLoading, getDueItems]);
 
+  // dailyGoal caps the sitting: it governs how many cards one session
+  // presents, not the review schedule itself. Without this cap the session
+  // is the entire due backlog (docs/learning/session-shape-and-daily-goal.md).
+  // Derived via useMemo rather than stored in state so it never becomes an
+  // extra state-update source of truth to keep in sync with `dueItems`.
+  const sessionItems = useMemo(() => {
+    const sessionCap = Math.max(1, settings.dailyGoal);
+    return dueItems.slice(0, sessionCap);
+  }, [dueItems, settings.dailyGoal]);
+
   const handleAnswer = (grade: Grade) => {
-    const currentItem = dueItems[currentIndex];
+    const currentItem = sessionItems[currentIndex];
     recordAnswer(currentItem.itemId, grade);
 
-    if (currentIndex < dueItems.length - 1) {
+    if (currentIndex < sessionItems.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       setPracticeComplete(true);
     }
   };
 
-  const progressPercent = dueItems.length > 0 ? ((currentIndex + 1) / dueItems.length) * 100 : 100;
+  const progressPercent =
+    sessionItems.length > 0 ? ((currentIndex + 1) / sessionItems.length) * 100 : 100;
 
   if (isLoading || settingsLoading) {
     return (
@@ -58,7 +71,11 @@ export default function Practice() {
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex items-center justify-center">
         <div className="w-full max-w-2xl text-center space-y-6">
           <h1 className="text-5xl font-bold text-primary">Great Work! 🎉</h1>
-          <p className="text-xl text-muted-foreground">You've completed all due cards for today</p>
+          <p className="text-xl text-muted-foreground">
+            {dueItems.length > sessionItems.length
+              ? `You've completed today's session (${sessionItems.length} cards). More are due — come back later or keep practising.`
+              : "You've completed all due cards for today"}
+          </p>
           <Button onClick={() => navigate('/')} size="lg" className="text-lg px-8 py-6">
             Back to Home
           </Button>
@@ -67,11 +84,11 @@ export default function Practice() {
     );
   }
 
-  if (dueItems.length === 0 || !dueItems[currentIndex]) {
+  if (sessionItems.length === 0 || !sessionItems[currentIndex]) {
     return null;
   }
 
-  const currentItem = dueItems[currentIndex];
+  const currentItem = sessionItems[currentIndex];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
@@ -84,7 +101,7 @@ export default function Practice() {
           </Button>
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-muted-foreground">
-              {currentIndex + 1} / {dueItems.length}
+              {currentIndex + 1} / {sessionItems.length}
             </span>
             <Button
               variant="outline"
