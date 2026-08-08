@@ -37,7 +37,7 @@ no new stored state, no storage version bump.
 | distractor source      | the frame's `excludedParticles`, certified per frame by `swedish-linguist`                              |
 | distractor construal   | same-base different-particle: every option completes `<base> ___`                                       |
 | distractor eligibility | particle already introduced (see below)                                                                 |
-| distractor pick        | eligible list in authored order; window start `repetitions % n` when n > 3                              |
+| distractor pick        | eligible list in authored order; take 3 cyclically from index `repetitions % n` when n > 3              |
 | option order           | sort alphabetically (`localeCompare('sv')`), then rotate by `repetitions % 4`                           |
 | variant trigger        | eligible AND `repetitions % 3 === 0` — one review in three                                              |
 | eligibility            | target cloze `repetitions >= 3` AND at least 3 eligible distractors                                     |
@@ -111,6 +111,12 @@ reasons is corpus work of a different order. It goes in a later revision with
 its own certification pass. Nothing in this ruling precludes it; the option
 model just gains a reason string per distractor when it comes.
 
+Against the red lines: red line 7 forbids multiple choice as the default or as
+an easier tier that schedules identically. Neither applies. The app picks the
+variant for one review in three, the learner gets no switch, and the credit path
+is strictly weaker. P15's "accessibility fallback" framing also does not apply,
+because there is no learner-facing mode to fall back to.
+
 ## Credit: the weaker path, and the srs-engine handoff
 
 Choice answers take exactly the weaker-credit path the particle-verb note
@@ -122,6 +128,9 @@ choice correct : easeFactor unchanged,              repetitions += 1,
                  intervalDays = max(1, round(intervalDays * min(easeFactor, 1.6)))
 choice wrong   : full lapse, identical to typed wrong
 ```
+
+Both paths still clamp to `MAX_INTERVAL_DAYS = 365` (`srs.ts:27`); the 1.6 cap
+does not remove the existing hard interval ceiling.
 
 Recognition success is weaker evidence than production success, so it advances
 the interval at a capped multiplier and earns no ease. A wrong choice is a
@@ -145,16 +154,27 @@ least 5 distinct verbs**, counted after the F2 additions land. A certified
 frame is an example sentence on a `verified: true` entry whose
 `excludedParticles` list has at least 3 particles, both certification halves
 confirmed by `swedish-linguist`. The distinct-verb floor exists so the variant
-is a feature of the mode, not of one verb. The count is computable by the F6
-dataset-integrity test; no judgment call is involved in opening the gate.
+is a feature of the mode, not of one verb. The F6 dataset-integrity test
+counts the frames mechanically (`verified: true` and
+`excludedParticles.length >= 3`). It cannot confirm either certification
+half; `swedish-linguist` still certifies attestedness and impossibility by
+hand, and the gate opens only after that pass.
 
 Below 8, the feature has too little surface to measure the falsifiers against,
 and the certification cost per frame is better spent widening the corpus.
 
 ## How we would know this was wrong
 
-Both thresholds are computable from the per-answer log with modality that
-[[2026-08-08-latency-and-attempt-signals]] establishes.
+These thresholds are not measurable today. [[2026-08-08-latency-and-attempt-signals]]
+establishes only a disposable latency ring buffer (`swedish-verbs-stats`,
+`version: 1`, 100 samples, safe to drop) and records "attempts persisted: no";
+it rejected a per-answer review log as the runner-up. `SrsState` keeps no answer
+history at all. A per-answer record — item id, modality, correct, timestamp — is
+therefore a hard prerequisite of every falsifier below. That record needs its own
+decision and a store change; the lead cuts it to `product-manager` and
+`srs-engine` when the build gate opens, and it lands before the variant ships.
+Until it exists, the thresholds are checked by hand from a manual sample and
+bind nothing automatically.
 
 - **Pooled discrimination accuracy above ~90%** over the trailing 30 choice
   answers: the lures are not competitive and the card is a scheduled gift that
@@ -186,3 +206,5 @@ first-tap commit, standard feedback panel.
 count in the dataset-integrity test, credit-path tests.
 `product-manager` — sequencing of the cross-verb near-synonym revision if ever
 wanted.
+`product-manager` + `srs-engine` — the per-answer log (item id, modality,
+correct) that every falsifier needs; prerequisite, not an assumption.

@@ -185,9 +185,9 @@ floor((particleDailyGoal - min(particleReviewsDue, particleDailyGoal)) / 4))`.
   changes" stays literally true. **Amendment #319:** when the discrimination
   variant ships, `modality` stops being plumb-and-ignore — the scheduler
   branches on it. srs-engine is notified before any related provider work
-  starts; the modality branch lands before or with the first UI work. Typed-answer normalization (case, whitespace,
-  optional leading "att") follows
-  `docs/product/2026-08-08-alternate-answers-decision.md`.
+  starts; the modality branch lands before or with the first UI work.
+  Typed-answer normalization (case, whitespace, optional leading "att")
+  follows `docs/product/2026-08-08-alternate-answers-decision.md`.
 
 ## UI surface (owner: frontend-expert)
 
@@ -336,9 +336,12 @@ proposed the format). Full ruling:
   plumb-and-ignore; srs-engine is notified before any related provider work.
 - Lifecycle trigger: target cloze `repetitions >= 3` and every distractor
   particle already introduced; otherwise the item renders as typed cloze.
-- Build trigger is data-gated: work starts when >= 8 certified frames across
-  > = 5 distinct verbs exist after the F2 additions land.
+- Build trigger is data-gated: work starts when the corpus holds at least 8
+  certified frames across at least 5 distinct verbs, counted after the F2
+  additions land.
 - Falsifiers: pooled choice accuracy above ~90% means the lures are not
   competitive; per-frame accuracy below ~50% while the verb's typed-cloze
   accuracy is above 80% means a lure is correct in the frame and the data is
   wrong — pull the frame, file a linguist defect.
+- The falsifiers need a per-answer log (item id, modality, correct) that does
+  not exist yet. That log is a prerequisite of the variant, not an assumption.
