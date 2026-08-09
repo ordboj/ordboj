@@ -544,6 +544,102 @@ describe('shipped verbData.ts validation gate', () => {
     expect(result.status).toBe(0);
   });
 
+  // Regression test (issue #299 finding 2c): unexplainedEmptyImperativ has
+  // no deponens carve-out — the deponens/reflexive branch in
+  // classifyAndValidate only softens `status` to 'needs-check' for the CSV
+  // audit, it does not excuse a shipped row's empty imperativ from needing
+  // its own marker. A shipped deponens row ('hoppas') with an empty
+  // imperativ and no noNaturalImperativ must still fail the build.
+  it('fails the build when a shipped deponens row has an empty imperativ with no noNaturalImperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'hoppas',
+          imperativ: '',
+          presens: 'hoppas',
+          preteritum: 'hoppades',
+          supinum: 'hoppats',
+          grupp: '4',
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('empty imperativ on non-modal verb');
+  });
+
+  // Paired case: the same deponens row, but with noNaturalImperativ: true,
+  // must still pass — the marker requirement is satisfiable, not a blanket
+  // ban on empty deponens imperativs.
+  it('accepts the same shipped deponens row when noNaturalImperativ explains the empty imperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'hoppas',
+          imperativ: '',
+          presens: 'hoppas',
+          preteritum: 'hoppades',
+          supinum: 'hoppats',
+          grupp: '4',
+          noNaturalImperativ: true,
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(0);
+  });
+
+  // Regression test (issue #299 finding 2c): same as above for the
+  // reflexive ("X sig") carve-out — a shipped reflexive row ('bry sig')
+  // with an empty imperativ and no noNaturalImperativ must still fail the
+  // build, even though its own `status` from classifyAndValidate is
+  // 'needs-check' rather than 'fail'.
+  it('fails the build when a shipped reflexive row has an empty imperativ with no noNaturalImperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'bry sig',
+          imperativ: '',
+          presens: 'bryr sig',
+          preteritum: 'brydde sig',
+          supinum: 'brytt sig',
+          grupp: '3',
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('empty imperativ on non-modal verb');
+  });
+
+  // Paired case: the same reflexive row, but with noNaturalImperativ: true,
+  // must still pass.
+  it('accepts the same shipped reflexive row when noNaturalImperativ explains the empty imperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'bry sig',
+          imperativ: '',
+          presens: 'bryr sig',
+          preteritum: 'brydde sig',
+          supinum: 'brytt sig',
+          grupp: '3',
+          noNaturalImperativ: true,
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(0);
+  });
+
   // Regression test: the missing-grupp gate previously ran AFTER the
   // explained-empty-imperativ early-continue, so a shipped row that was
   // BOTH grupp-less AND had an explained empty imperativ (noNaturalImperativ)
