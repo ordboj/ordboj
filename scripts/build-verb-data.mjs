@@ -351,14 +351,16 @@ function classifyAndValidate(infinitive, imperativ, presens, preteritum, supinum
   // empty, unexplained imperativ (a real data bug, e.g. "bli" blanked by
   // mistake) would silently pass the shipped-table gate in step 2, because
   // step 2 only escalates `status === 'fail'` to a build failure.
-  // Modal verbs (no natural imperativ), and deponens/reflexive verbs (whose
-  // imperativ is a documented per-verb judgment call, not mechanically
-  // derived — see the `emptyImperativ && (grupp === 'deponens' ||
-  // isReflexive)` branch below) are legitimately empty without any
-  // additional marker, so they are excluded here the same way `status`
-  // already excludes them.
-  const unexplainedEmptyImperativ =
-    emptyImperativ && !isModal && grupp !== 'deponens' && !isReflexive;
+  // The shipped table requires an explicit marker for every empty
+  // imperativ: noNaturalImperativ, MODAL_VERBS, a 'modal verb' comment, or
+  // a 'NEEDS HUMAN CHECK' comment (see `explainedEmpty` in step 2 below).
+  // Only a modal verb is exempt here without one of those markers; a
+  // deponens or reflexive row still needs one on the shipped table. The
+  // deponens/reflexive carve-out in the `emptyImperativ && (grupp ===
+  // 'deponens' || isReflexive)` branch below applies only to the CSV audit
+  // `status` (needs-check instead of fail) — it does not excuse an empty
+  // imperativ on a shipped row from the marker requirement.
+  const unexplainedEmptyImperativ = emptyImperativ && !isModal;
 
   let status;
   if (reasons.length > 0) {
