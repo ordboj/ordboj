@@ -343,6 +343,23 @@ function classifyAndValidate(infinitive, imperativ, presens, preteritum, supinum
       : '';
   const isReflexive = particle === ' sig';
 
+  // Issue #299 remediation: the empty-imperativ FACT must be reportable
+  // independently of `status`, because `status` short-circuits to
+  // 'needs-check' for every mechanically-unconfirmed (grupp 4) row before
+  // the empty-imperativ check ever runs (see the `!mechanicallyConfirmed`
+  // branch below). Without this, a shipped grupp-4 row with a genuinely
+  // empty, unexplained imperativ (a real data bug, e.g. "bli" blanked by
+  // mistake) would silently pass the shipped-table gate in step 2, because
+  // step 2 only escalates `status === 'fail'` to a build failure.
+  // Modal verbs (no natural imperativ), and deponens/reflexive verbs (whose
+  // imperativ is a documented per-verb judgment call, not mechanically
+  // derived — see the `emptyImperativ && (grupp === 'deponens' ||
+  // isReflexive)` branch below) are legitimately empty without any
+  // additional marker, so they are excluded here the same way `status`
+  // already excludes them.
+  const unexplainedEmptyImperativ =
+    emptyImperativ && !isModal && grupp !== 'deponens' && !isReflexive;
+
   let status;
   if (reasons.length > 0) {
     status = 'fail';
@@ -380,7 +397,7 @@ function classifyAndValidate(infinitive, imperativ, presens, preteritum, supinum
     status = 'pass';
   }
 
-  return { grupp: grupp ?? '', status, reasons };
+  return { grupp: grupp ?? '', status, reasons, unexplainedEmptyImperativ };
 }
 
 // ---------------------------------------------------------------------
@@ -634,6 +651,24 @@ function main() {
     }
     if (result.status === 'fail') {
       shippedFailures.push({ infinitive: f.infinitive, reasons: result.reasons });
+      continue;
+    }
+    // Issue #299 remediation: `status` alone is not enough here. A
+    // mechanically-unconfirmed (grupp 4) shipped row with a genuinely empty,
+    // unexplained imperativ reports 'needs-check' (not 'fail') because grupp
+    // confirmation is a separate, human-verified concern from imperativ
+    // completeness — see the `!mechanicallyConfirmed` branch in
+    // classifyAndValidate. That must not let a real empty-imperativ data bug
+    // (no noNaturalImperativ, no modal/comment marker) through the gate
+    // silently. `unexplainedEmptyImperativ` is the fact, computed
+    // independently of `status`; `explainedEmpty` is still the only carve-out
+    // (noNaturalImperativ / MODAL_VERBS / 'modal verb' or 'NEEDS HUMAN CHECK'
+    // comment).
+    if (result.unexplainedEmptyImperativ && !explainedEmpty) {
+      shippedFailures.push({
+        infinitive: f.infinitive,
+        reasons: ['empty imperativ on non-modal verb'],
+      });
     }
   }
 
