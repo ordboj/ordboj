@@ -493,6 +493,57 @@ describe('shipped verbData.ts validation gate', () => {
     expect(result.stderr).toContain('empty imperativ on non-modal verb');
   });
 
+  // Regression test (issue #299 finding 2a): a shipped, mechanically-
+  // unconfirmed (grupp 4 / irregular) row reports 'needs-check' from
+  // classifyAndValidate, not 'fail' — but an empty, unexplained imperativ on
+  // such a row is still a real data bug (e.g. the shipped "bli" row's
+  // imperativ blanked by mistake). Step 2 must catch this via
+  // `unexplainedEmptyImperativ`, independently of `status`, or a genuine
+  // empty-imperativ defect on an irregular verb would pass the gate silently.
+  it('fails the build when a shipped grupp-4 (irregular) row has an empty imperativ with no noNaturalImperativ and no NEEDS HUMAN REVIEW comment', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'bli',
+          imperativ: '',
+          presens: 'blir',
+          preteritum: 'blev',
+          supinum: 'blivit',
+          grupp: '4',
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('empty imperativ on non-modal verb');
+  });
+
+  // Regression test (issue #299 finding 2b): the paired case — the same
+  // grupp-4 row, but with noNaturalImperativ: true, must still pass. This
+  // pins that the unexplainedEmptyImperativ gate only fires when the empty
+  // imperativ is genuinely unexplained, not on every irregular verb.
+  it('accepts the same shipped grupp-4 (irregular) row when noNaturalImperativ explains the empty imperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'bli',
+          imperativ: '',
+          presens: 'blir',
+          preteritum: 'blev',
+          supinum: 'blivit',
+          grupp: '4',
+          noNaturalImperativ: true,
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(0);
+  });
+
   // Regression test: the missing-grupp gate previously ran AFTER the
   // explained-empty-imperativ early-continue, so a shipped row that was
   // BOTH grupp-less AND had an explained empty imperativ (noNaturalImperativ)
@@ -1063,11 +1114,14 @@ describe('real repo: empty-imperativ is no longer the dominant residual-fail cla
     // Before the #299 gate-reorder fix, ~1500 of the CSV's 1538 rows failed,
     // almost all of them for exactly this reason, because every
     // mechanically-unconfirmed row's empty imperativ was misreported as a
-    // data bug. The real residual fail count must now be small in absolute
-    // terms (well under half the pre-fix count)...
-    expect(failRows.length).toBeLessThan(200);
+    // data bug. The real residual fail count is now 32 (measured), so this
+    // pins a real ceiling well above that but far below the pre-fix count,
+    // rather than the near-vacuous "< 200" bound.
+    expect(failRows.length).toBeLessThan(50);
     // ...and even within that smaller fail set, empty-imperativ-caused
-    // failures must not be the dominant reason.
-    expect(emptyImperativFailRows.length).toBeLessThan(failRows.length);
+    // failures must not be the dominant reason: a real dominance bound,
+    // not merely "less than the total" (which is true of any non-empty
+    // other-reason fail set, even a single row).
+    expect(emptyImperativFailRows.length).toBeLessThanOrEqual(failRows.length / 2);
   });
 });
