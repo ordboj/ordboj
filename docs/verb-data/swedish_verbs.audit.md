@@ -7,6 +7,10 @@ into the production bundle by Vite, and this is an internal working note.
 Line numbers below refer to `public/data/swedish_verbs.csv` as of this
 commit (1-based, header is line 1).
 
+The file moved to `docs/verb-data/candidates.csv` (issue #280, `git mv`, same
+content and line numbers) after this audit was written; the line numbers
+above still apply at the new path.
+
 ## Why
 
 `swedish_verbs.csv` was generated in a way that applied a naive grupp-1
