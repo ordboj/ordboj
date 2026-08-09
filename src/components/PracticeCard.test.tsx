@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
@@ -832,6 +832,11 @@ describe('PracticeCard - #43 alternate grading and alternatesNote disclosure', (
   });
 
   describe('sense-conditioned alternatesNote (fixture verb, AC6)', () => {
+    afterEach(() => {
+      vi.resetModules();
+      vi.doUnmock('@/data/verbData');
+    });
+
     // VERB_DATA ships no row with alternatesNote yet (the sense-conditioned
     // rows the decision doc names -- lyda, svälta -- are CSV-only per
     // section 7), so this mocks a fixture row the same way the P7
@@ -888,9 +893,6 @@ describe('PracticeCard - #43 alternate grading and alternatesNote disclosure', (
 
       expect(screen.getByText(/lydde = obey; löd = read as\/state a text/)).toBeInTheDocument();
       expect(screen.queryByText(/are correct\./)).not.toBeInTheDocument();
-
-      vi.resetModules();
-      vi.doUnmock('@/data/verbData');
     });
 
     // C5 rules out a plausible alternative design -- rejecting the
@@ -925,9 +927,6 @@ describe('PracticeCard - #43 alternate grading and alternatesNote disclosure', (
 
       expect(onAnswer).toHaveBeenCalledTimes(1);
       expect(onAnswer).toHaveBeenCalledWith(5);
-
-      vi.resetModules();
-      vi.doUnmock('@/data/verbData');
     });
   });
 });

@@ -957,7 +957,9 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
       '"%s" note names a recognized #43 category (free variant, sense-conditioned, verified-alternates marker, or archaic) -- a bare "C5:" prefix alone is not enough',
       (name) => {
         const row = csvRowFor(name);
-        expect(row.note).toMatch(/fri variant|betydelsebetingat|verifierade|ålderdomlig/i);
+        expect(row.note).toMatch(
+          /fri variant|betydelsebetingat|verifierade|ålderdomlig|borttagen som overifierad|inga alternativformer/i,
+        );
       },
     );
 
