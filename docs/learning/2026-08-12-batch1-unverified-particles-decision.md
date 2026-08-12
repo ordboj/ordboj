@@ -36,7 +36,7 @@ _det slog mig_. Three facts each independently disqualify the entry:
 1. **One fixed frame.** The reading does not exist outside _det kommer för
    mig_. A cloze card built on a single frozen frame teaches the chunk, not
    the particle system, and the dataset test rightly requires two frames for
-   every verified entry (`particleVerbData.test.ts:127`). A second frame
+   every verified entry (`particleVerbData.test.ts:157`). A second frame
    cannot be written without inventing Swedish.
 2. **The A1 band is a corpus artifact.** SVALex matches surface bigrams, and
    _kommer för_ appears constantly in A1 text as _kommer för att_ + purpose
@@ -119,8 +119,8 @@ and the field's contract forbids guessing (`particleVerbData.ts:46-54`).
 ## What implementers change
 
 **`swedish-linguist` — `src/data/particleVerbData.ts`.** Delete the
-`pv:komma-for` object (lines 1473–1489) and the `pv:vara-till` object
-(lines 1711–1727). Extend the header exclusion note with the two retired
+`pv:komma-for` object (lines 1479–1497) and the `pv:vara-till` object
+(lines 1717–1734). Extend the header exclusion note with the two retired
 ids and their one-line reasons. Apply the `pv:komma-till` field table and
 example block above verbatim.
 
