@@ -23,6 +23,14 @@ export interface SrsState {
 // tracked as a separate piece of work.
 export type Grade = 0 | 5; // 0 = wrong, 5 = correct
 
+// How the learner produced the answer. Lived in useSrsProgress.ts while the
+// scheduler ignored it (plumb-and-ignore, spec v1); it moves here now that
+// the scheduler branches on it (#388, the discrimination-card credit path in
+// docs/learning/2026-08-08-discrimination-exercise.md). The credit attaches
+// to how the item *was* answered, never to a settings value, so a mode
+// switch can never reinterpret history.
+export type AnswerModality = 'typed' | 'choice';
+
 const EASE_CEILING = 2.8;
 const EASE_FLOOR = 1.3;
 const EASE_DELTA_CORRECT = 0.05;
@@ -45,6 +53,13 @@ function roundEase(easeFactor: number): number {
 // item's schedule cannot leave the app's one-year horizon.
 export const MAX_INTERVAL_DAYS = 365;
 
+// Cap on the interval multiplier for a correct *choice* (recognition)
+// answer. Recognition success is weaker evidence than production success,
+// so it advances the interval at a capped rate and earns no ease; the
+// falsifier in docs/learning/2026-08-08-discrimination-exercise.md names
+// 1.8 as the first adjustment if 1.6 over-schedules.
+const CHOICE_EASE_CAP = 1.6;
+
 // SM-2-derived scheduler, but with flat ease deltas instead of the
 // textbook graded-ease formula. The textbook formula assumes a self-rated
 // 0-5 input; fed a binary correct/wrong signal it produced a -0.80/+0.10
@@ -54,7 +69,11 @@ export const MAX_INTERVAL_DAYS = 365;
 // without bound. Flat -0.20/+0.05 deltas, floored at 1.3 and now also
 // ceilinged at 2.8, keep ease as a meaningful per-item difficulty signal
 // without either failure mode.
-export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
+export function calculateNextReview(
+  state: SrsState,
+  grade: Grade,
+  modality: AnswerModality = 'typed',
+): SrsState {
   let { repetitions, intervalDays, easeFactor } = state;
 
   // Exact match, not >= 3: Grade is 0 | 5 today, and a future hinted
@@ -65,9 +84,23 @@ export function calculateNextReview(state: SrsState, grade: Grade): SrsState {
   if (!isCorrect) {
     // Lapse: flat penalty, reset progress. No longer runs the SM-2 formula
     // before resetting, so the penalty is bounded and predictable.
+    // Deliberately modality-independent: a wrong choice is a full lapse,
+    // identical to a typed wrong answer — failing a recognition test is
+    // worse evidence than failing production, not better (spec ruling in
+    // docs/learning/2026-08-08-discrimination-exercise.md).
     easeFactor = roundEase(Math.max(EASE_FLOOR, easeFactor + EASE_DELTA_WRONG));
     repetitions = 0;
     intervalDays = 1;
+  } else if (modality === 'choice') {
+    // Correct choice (recognition): no ease reward, and the interval grows
+    // at the item's ease capped at CHOICE_EASE_CAP. The max(1, ...) floor
+    // covers the first-ever review, where intervalDays is still 0 and the
+    // product would otherwise pin the item at a zero interval.
+    repetitions += 1;
+    intervalDays = Math.min(
+      MAX_INTERVAL_DAYS,
+      Math.max(1, Math.round(intervalDays * Math.min(easeFactor, CHOICE_EASE_CAP))),
+    );
   } else {
     // Success: small capped reward. The ceiling is what stops runaway ease
     // growth on a long correct streak (previously uncapped).
