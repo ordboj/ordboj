@@ -10,6 +10,25 @@ import { useSrsProgress } from '@/hooks/useSrsProgress';
 // persistence itself (what a flush writes) is pinned in
 // useSrsProgress.test.ts and useSrsProgress.realdata.test.ts.
 
+// useSrsProgress creates its writer with the real default debounce window
+// (src/lib/storage.ts, DEFAULT_WRITE_DELAY_MS = 500ms), running on the real
+// clock even though this file fakes Date. A test that counts setItem calls
+// across several synchronous recordAnswer calls plus an unmount is racing
+// that window: on a slow CI runner, the 500ms timer can elapse mid-test and
+// turn one expected write into two. Widen the window at this mock boundary
+// to far longer than the test can take in real time, so only unmount's
+// synchronous dispose -> flush ever triggers a write here.
+const NEVER_ELAPSES_IN_TEST_MS = 60_000;
+
+vi.mock('@/lib/storage', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/storage')>();
+  return {
+    ...actual,
+    createCoalescedJsonWriter: (key: string) =>
+      actual.createCoalescedJsonWriter(key, NEVER_ELAPSES_IN_TEST_MS),
+  };
+});
+
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 const FIXED_NOW = new Date('2026-01-01T00:00:00.000Z').getTime();
 
@@ -83,5 +102,57 @@ describe('#253: bounded per-answer write cost', () => {
 
     const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
     expect(persisted.items['tala-presens']).toMatchObject({ repetitions: 1 });
+  });
+});
+
+// Reset and import are one-shot, user-confirmed actions: leaving them in
+// the 500 ms coalescing window means a hard tab kill right after the action
+// puts the OLD store back on reload, and the action appears not to have
+// taken. The hook flushes them through the writer synchronously.
+describe('#253: reset and import bypass the coalescing window', () => {
+  it('resetProgress puts the emptied envelope on disk synchronously, without waiting for unmount or the timer', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.recordAnswer('tala-presens', 5);
+    });
+    act(() => {
+      result.current.resetProgress();
+    });
+
+    // Read immediately: no unmount, no waitFor on storage. The pre-reset
+    // answer was pending when reset ran; going through the writer replaced
+    // it, so it must not appear either now or via a later stale flush.
+    const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(persisted).toEqual({ version: 3, items: {} });
+  });
+
+  it('importData puts the imported items on disk synchronously', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const backup = JSON.stringify({
+      version: 3,
+      items: {
+        'tala-presens': {
+          repetitions: 4,
+          intervalDays: 12,
+          easeFactor: 2.3,
+          dueAt: FIXED_NOW + 5 * 24 * 60 * 60 * 1000,
+        },
+      },
+    });
+
+    let imported: boolean | undefined;
+    act(() => {
+      imported = result.current.importData(backup);
+    });
+    expect(imported).toBe(true);
+
+    // Read immediately: the imported schedule is already on disk.
+    const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(persisted.version).toBe(3);
+    expect(persisted.items['tala-presens']).toMatchObject({ repetitions: 4, intervalDays: 12 });
   });
 });
