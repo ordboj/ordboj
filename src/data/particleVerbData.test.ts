@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { PARTICLE_VERB_DATA } from '@/data/particleVerbData';
 import { VERB_DATA } from '@/data/verbData';
-import { getVerifiedParticleVerbs, renderLemma } from '@/lib/particleVerbs';
+import {
+  getVerifiedParticleVerbs,
+  renderLemma,
+  getPhraseForms,
+  isAcceptedRecall,
+} from '@/lib/particleVerbs';
 import { PARTICLE_ID_PREFIX } from '@/lib/itemIds';
 
 const VERIFIED = PARTICLE_VERB_DATA.filter((entry) => entry.verified);
@@ -461,5 +466,127 @@ describe('particle verb dataset - #359 band-6 operational particle verbs', () =>
       return found!.gloss.en.toLowerCase();
     });
     expect(new Set(glosses).size).toBe(glosses.length);
+  });
+});
+
+describe('particle verb dataset - obligatory trailing preposition (#357/#376)', () => {
+  // #357 decision: an entry whose phrase never occurs without a trailing
+  // preposition stores it in `preposition` and folds it into `lemma`. This
+  // block is the acceptance criterion from section 4 of
+  // docs/product/2026-08-12-fragment-lemma-preposition-decision.md, checked
+  // against every entry that carries the field.
+  const WITH_PREPOSITION = PARTICLE_VERB_DATA.filter((entry) => entry.preposition !== undefined);
+
+  it('has at least one entry carrying preposition, so the checks below are not vacuous', () => {
+    expect(WITH_PREPOSITION.length).toBeGreaterThan(0);
+  });
+
+  it('gives every preposition a clean, single-token, lowercase, NFC value on a non-reflexive entry', () => {
+    const offenders: string[] = [];
+    for (const entry of WITH_PREPOSITION) {
+      const prep = entry.preposition!;
+      const ok =
+        prep.length > 0 &&
+        prep === prep.trim() &&
+        prep === prep.normalize('NFC') &&
+        prep === prep.toLowerCase() &&
+        !prep.includes(' ') &&
+        entry.reflexive === 'none';
+      if (!ok) offenders.push(`${entry.id}: "${prep}"`);
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('builds lemma as `${baseInfinitive} ${particle} ${preposition}`', () => {
+    const mismatches: string[] = [];
+    for (const entry of WITH_PREPOSITION) {
+      const expected = `${entry.baseInfinitive} ${entry.particle} ${entry.preposition}`;
+      if (entry.lemma !== expected) {
+        mismatches.push(`${entry.id}: lemma "${entry.lemma}" vs expected "${expected}"`);
+      }
+    }
+    expect(mismatches).toEqual([]);
+  });
+
+  it('never lets the preposition itself be the cloze answer', () => {
+    const offenders: string[] = [];
+    for (const entry of WITH_PREPOSITION) {
+      const prep = entry.preposition!;
+      const accepted = entry.acceptedParticles.map((particle) => particle.toLowerCase());
+      if (accepted.includes(prep.toLowerCase())) {
+        offenders.push(`${entry.id}: "${prep}" is in acceptedParticles`);
+      }
+      for (const example of entry.examples) {
+        const tokens = example.sv.split(' ');
+        const blanked = tokens[example.blankIndex];
+        if (blanked?.toLowerCase() === prep.toLowerCase()) {
+          offenders.push(`${entry.id}: blankIndex ${example.blankIndex} blanks the preposition in "${example.sv}"`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('shows the preposition right after the particle in every frame', () => {
+    const offenders: string[] = [];
+    for (const entry of WITH_PREPOSITION) {
+      const prep = entry.preposition!;
+      for (const example of entry.examples) {
+        const tokens = example.sv.split(' ');
+        const afterBlank = tokens[example.blankIndex + 1];
+        if (afterBlank?.toLowerCase() !== prep.toLowerCase()) {
+          offenders.push(
+            `${entry.id}: token after blankIndex ${example.blankIndex} is "${afterBlank}", expected "${prep}" in "${example.sv}"`,
+          );
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('renders all four reference lines ending with the preposition', () => {
+    const offenders: string[] = [];
+    for (const entry of WITH_PREPOSITION) {
+      const forms = getPhraseForms(entry);
+      if (!forms) {
+        offenders.push(`${entry.id}: getPhraseForms returned null`);
+        continue;
+      }
+      const lines = [forms.infinitive, forms.presens, forms.preteritum, forms.supinum];
+      for (const line of lines) {
+        if (!line.endsWith(` ${entry.preposition}`)) {
+          offenders.push(`${entry.id}: reference line "${line}" does not end with " ${entry.preposition}"`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('accepts the full phrase on recall and rejects the bare fragment', () => {
+    const offenders: string[] = [];
+    for (const entry of WITH_PREPOSITION) {
+      const full = renderLemma(entry);
+      const fragment = `${entry.baseInfinitive} ${entry.particle}`;
+      if (!isAcceptedRecall(entry, full)) {
+        offenders.push(`${entry.id}: full phrase "${full}" was not accepted`);
+      }
+      if (isAcceptedRecall(entry, fragment)) {
+        offenders.push(`${entry.id}: fragment "${fragment}" was wrongly accepted`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('pins se fram emot, gå miste om and ta itu med as verified with a preposition (#376)', () => {
+    // Named regression fixture, #262-style: the three entries this decision
+    // unblocked. A partial land (one entry still verified:false, or a
+    // dropped preposition field) reports here by name.
+    const ISSUE_376_IDS = ['pv:se-fram', 'pv:ga-miste', 'pv:ta-itu'];
+    for (const id of ISSUE_376_IDS) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      expect(found!.verified, `${id} is not verified`).toBe(true);
+      expect(found!.preposition, `${id} has no preposition`).toBeTruthy();
+    }
   });
 });
