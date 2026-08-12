@@ -8,7 +8,7 @@
 //   - it has no exported functions to call directly.
 // So these tests spawn it as a real child process, twice:
 //   (a) against synthetic fixture "repos" (tmp dirs shaped like
-//       scripts/ + public/data/ + src/data/) built per test, to pin exact
+//       scripts/ + docs/verb-data/ + src/data/) built per test, to pin exact
 //       classifier/gate contracts without depending on the real CSV's
 //       ~1538 rows drifting the assertions over time; and
 //   (b) once, read-only (--check), against the REAL repo files, to lock in
@@ -107,10 +107,10 @@ afterEach(() => {
 
 function setupFixture(csv: string, verbDataTs: string): void {
   mkdirSync(join(tmpRoot, 'scripts'), { recursive: true });
-  mkdirSync(join(tmpRoot, 'public', 'data'), { recursive: true });
+  mkdirSync(join(tmpRoot, 'docs', 'verb-data'), { recursive: true });
   mkdirSync(join(tmpRoot, 'src', 'data'), { recursive: true });
   copyFileSync(REAL_SCRIPT_PATH, join(tmpRoot, 'scripts', 'build-verb-data.mjs'));
-  writeFileSync(join(tmpRoot, 'public', 'data', 'swedish_verbs.csv'), csv, 'utf8');
+  writeFileSync(join(tmpRoot, 'docs', 'verb-data', 'candidates.csv'), csv, 'utf8');
   writeFileSync(join(tmpRoot, 'src', 'data', 'verbData.ts'), verbDataTs, 'utf8');
 }
 
@@ -1147,7 +1147,7 @@ describe('real repo: shipped table validity (regression gate)', () => {
   });
 
   it('every row of the real CSV gets a verdict (no rows silently dropped)', () => {
-    const csvText = readFileSync(join(REPO_ROOT, 'public', 'data', 'swedish_verbs.csv'), 'utf8');
+    const csvText = readFileSync(join(REPO_ROOT, 'docs', 'verb-data', 'candidates.csv'), 'utf8');
     const nonEmptyLines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
     const expectedRowCount = nonEmptyLines.length - 1; // minus header
 
@@ -1193,7 +1193,7 @@ function parseReviewRows(
 
 describe('real repo: empty-imperativ is no longer the dominant residual-fail class (issue #299)', () => {
   it('the real CSV audit fail count is small and NOT dominated by "empty imperativ on non-modal verb"', () => {
-    const csv = readFileSync(join(REPO_ROOT, 'public', 'data', 'swedish_verbs.csv'), 'utf8');
+    const csv = readFileSync(join(REPO_ROOT, 'docs', 'verb-data', 'candidates.csv'), 'utf8');
     const verbDataTs = readFileSync(join(REPO_ROOT, 'src', 'data', 'verbData.ts'), 'utf8');
     setupFixture(csv, verbDataTs);
     const result = run();
