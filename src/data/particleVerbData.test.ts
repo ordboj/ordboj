@@ -404,15 +404,62 @@ describe('particle verb dataset - CEFR', () => {
     }
   });
 
-  const MIN_VERIFIED_A1_A2 = 45;
+  const MIN_VERIFIED_A1_A2 = 60;
 
-  it('keeps the beginner runway: at least 45 verified A1/A2 entries', () => {
+  it('keeps the beginner runway: at least 60 verified A1/A2 entries (#359)', () => {
     // Not a majority (see docs/learning/2026-08-09-particle-cefr-majority-decision.md).
     // A1+A2 is 22% of SVALex, so a proportional rule is an intake ratio the corpus
     // cannot supply. What the learner meets first is decided by CEFR_BAND_ORDER in
     // particleQueue.ts; this floor only guarantees there is enough A1/A2 material to
-    // fill the first ~30 days of default-paced introductions.
+    // fill the first ~30 days of default-paced introductions. #359 raised the floor
+    // from 45 to 60 as its stated backlog target (band-6 operational particle verbs).
     const early = VERIFIED.filter((entry) => entry.cefr === 'A1' || entry.cefr === 'A2').length;
     expect(early).toBeGreaterThanOrEqual(MIN_VERIFIED_A1_A2);
+  });
+});
+
+describe('particle verb dataset - #359 band-6 operational particle verbs', () => {
+  // Pins the acceptance criteria of #359 by name: each entry resolves to a
+  // VERB_DATA base that was already pinned before this ticket (ha, ta, stiga,
+  // se — no cross-owner VERB_DATA edit was in scope), ships verified:true,
+  // and lands in A1/A2 so it actually counts toward the runway target above.
+  // A partial land (e.g. one entry left verified:false, or a base typo) would
+  // still pass the aggregate floor check by coincidence on some other entry;
+  // this reports the specific #359 rows by id instead.
+  const ISSUE_359_IDS = [
+    'pv:ha-pa-sig',
+    'pv:ta-pa-sig',
+    'pv:ta-av-sig',
+    'pv:stiga-av',
+    'pv:se-upp',
+  ];
+
+  it('ships every #359 entry verified, in A1/A2, with a base VERB_DATA already pinned', () => {
+    for (const id of ISSUE_359_IDS) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      expect(found!.verified, `${id} is not verified`).toBe(true);
+      expect(['A1', 'A2'], `${id} cefr "${found!.cefr}" is not A1/A2`).toContain(found!.cefr);
+      expect(
+        BASE_INFINITIVES.has(found!.baseInfinitive),
+        `${id} base "${found!.baseInfinitive}" does not resolve in VERB_DATA`,
+      ).toBe(true);
+    }
+  });
+
+  it('gives the two reflexive-clothing pairs (ha på sig / ta på sig / ta av sig) distinct glosses', () => {
+    // #359's authoring note leans on "getting dressed/undressed" as the
+    // justification for three very similar entries built on the same
+    // particle+reflexive shape. A copy-paste that left two of them with the
+    // same gloss would make the recall direction unanswerable (see the
+    // generic duplicate-gloss check above) but this names which three ids
+    // must be mutually distinguishable so a regression reports here first.
+    const ids = ['pv:ha-pa-sig', 'pv:ta-pa-sig', 'pv:ta-av-sig'];
+    const glosses = ids.map((id) => {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      return found!.gloss.en.toLowerCase();
+    });
+    expect(new Set(glosses).size).toBe(glosses.length);
   });
 });
