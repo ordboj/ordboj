@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { PracticeCard } from '@/components/PracticeCard';
 import type { Grade } from '@/lib/srs';
-import { getAllConjugatedVerbs, getVerbGrupp } from '@/lib/verbs';
+import { getAllConjugatedVerbs, getFormLabel, getVerbGrupp } from '@/lib/verbs';
 
 // "vara" is a stable, real fixture from VERB_DATA (owned by swedish-linguist):
 // presens "är", preteritum "var", supinum "varit", imperativ "var".
@@ -186,6 +186,37 @@ describe('PracticeCard - typing mode', () => {
   });
 });
 
+describe('PracticeCard - mobile input attributes (#113)', () => {
+  it('sets enterkeyhint, disables autocapitalize/autocorrect/spellcheck, and keeps the caret visible', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+
+    // Mobile keyboards: "go" lets the on-screen keyboard submit the answer,
+    // and turning off capitalize/correct/spellcheck stops the OS from
+    // "fixing" Swedish words into English ones mid-entry.
+    expect(input).toHaveAttribute('enterkeyhint', 'go');
+    expect(input).toHaveAttribute('autocapitalize', 'off');
+    expect(input).toHaveAttribute('autocorrect', 'off');
+    expect(input).toHaveAttribute('spellcheck', 'false');
+
+    // Regression: caret-transparent hid the text caret entirely, which is
+    // fine on the on-screen keyboard (letter buttons) but leaves
+    // hardware-keyboard users with no visible insertion point at all.
+    expect(input.className.split(/\s+/)).not.toContain('caret-transparent');
+  });
+});
+
 describe("PracticeCard - wrong-answer feedback shows the learner's own input (#136)", () => {
   // Regression: the feedback screen used to reveal only the correct
   // conjugation on a wrong answer, never what the learner actually typed.
@@ -224,6 +255,54 @@ describe("PracticeCard - wrong-answer feedback shows the learner's own input (#1
     expect(screen.getByText('Complete pattern:').closest('div')).toHaveTextContent(
       VARA_PRESENS_ANSWER,
     );
+  });
+
+  it('renders the wrong-answer line at reduced size with no pronounce button, and the missing form in the pattern reveal at full prominence (#254)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'totallywrong');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    await screen.findByText('Not quite');
+
+    // The wrong-answer line is visually subordinate: small text, struck
+    // through and muted, never at the same weight as the correct form.
+    const wrongAnswerLine = screen.getByText(/You typed:/);
+    expect(wrongAnswerLine).toHaveClass('text-xs');
+    const struckSpan = wrongAnswerLine.querySelector('span');
+    expect(struckSpan).toHaveClass('line-through');
+    expect(struckSpan).toHaveClass('opacity-60');
+
+    // The correct form, shown in the "Complete pattern" reveal, keeps full
+    // prominence: larger text inside a highlighted, bold wrapper.
+    const missingFormSpan = screen.getByText(VARA_PRESENS_ANSWER, { selector: 'span' });
+    expect(missingFormSpan).toHaveClass('text-lg');
+    const missingFormWrapper = missingFormSpan.parentElement;
+    expect(missingFormWrapper).toHaveClass('bg-primary');
+    expect(missingFormWrapper).toHaveClass('font-bold');
+
+    // The wrong answer is never spoken: no pronounce button targets it, and
+    // no button anywhere in the panel carries the learner's wrong text.
+    expect(
+      within(wrongAnswerLine).queryByRole('button', { name: /^Pronounce/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /totallywrong/i })).not.toBeInTheDocument();
+    // Every pronounce button belongs to a form the learner did not have to supply.
+    expect(
+      screen.queryByRole('button', { name: `Pronounce ${getFormLabel('presens')}` }),
+    ).not.toBeInTheDocument();
   });
 
   it('preserves the exact case the learner typed in the wrong-answer line (comparison is case-insensitive, display is not)', async () => {
@@ -1023,8 +1102,10 @@ describe('PracticeCard - multiple-choice distractor policy (#139)', () => {
     // (which are all irregular/grupp '4' or '3'). VERB_DATA has 10 grupp-'1'
     // verbs total (9 excluding "unna" itself) — enough that all 3
     // distractors should be drawn from grupp '1' under the scoring policy
-    // (same-group score strictly beats every other candidate, since every
-    // row shares the same CEFR level). Under the old fixed-pool
+    // (same-group score of 20 strictly beats any cross-group candidate
+    // regardless of the +1 same-CEFR tie-break; unna is tagged B2 per #42
+    // while its grupp-1 peers are A1, so the CEFR bonus never applies here
+    // and does not change which group wins). Under the old fixed-pool
     // implementation this could never happen: none of the 8 pool verbs are
     // grupp '1'.
     renderWithProviders(
@@ -1479,5 +1560,181 @@ describe('PracticeCard - grupp badge (issue #228)', () => {
 
     expect(screen.queryByText(/grupp/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument();
+  });
+});
+
+// Issue #110 AC: answer-correctness feedback must be announced via
+// aria-live, since screen reader users must not be required to move focus
+// onto the feedback region to hear it.
+describe('PracticeCard - aria-live feedback (issue #110 AC)', () => {
+  it('announces "Correct!" through a polite aria-live status region', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, VARA_PRESENS_ANSWER);
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveTextContent('Correct!');
+    // The region announces itself; the learner is never required to move
+    // focus onto it to perceive the feedback.
+    expect(document.activeElement).not.toBe(status);
+  });
+
+  it('announces "Not quite" through the same aria-live status region on a wrong answer', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'definitely-not-the-answer');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveTextContent('Not quite');
+  });
+});
+
+// Issue #110 AC: touch targets must be at least 44px. The per-form
+// pronounce buttons in the post-answer "Complete pattern" row were 24px
+// (h-6 w-6) before this fix.
+describe('PracticeCard - pronounce button touch target (issue #110 AC)', () => {
+  it('renders the per-form pronounce buttons in the complete pattern at 44px (h-11 w-11) with an aria-label', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, VARA_PRESENS_ANSWER);
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    // "vara" pattern has multiple non-missing forms, each with its own
+    // per-form pronounce button (aria-label="Pronounce <form label>"),
+    // distinct from the unrelated "Pronounce answer" button below the
+    // pattern, which has no aria-label attribute of its own.
+    const pronounceButtons = Array.from(
+      container.querySelectorAll('button[aria-label^="Pronounce "]'),
+    );
+    expect(pronounceButtons.length).toBeGreaterThan(0);
+    for (const button of pronounceButtons) {
+      expect(button).toHaveClass('h-11');
+      expect(button).toHaveClass('w-11');
+      expect(button).not.toHaveClass('h-6');
+      expect(button).not.toHaveClass('w-6');
+    }
+  });
+});
+
+// Issue #100 / PR #202: pronounce buttons need accessible names (screen
+// readers announce icon-only <Volume2> buttons as unlabeled otherwise) and
+// a >=44x44px touch target (via box size; the glyph itself stays small).
+describe('PracticeCard - pronounce button accessibility', () => {
+  it('gives every per-form pronounce button a descriptive, form-specific aria-label', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'är');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    // Infinitiv ("vara"), Preteritum ("var") and Supinum ("varit") are the
+    // non-missing pattern parts for infinitive="vara"/form="presens" — each
+    // gets its own pronounce button labeled by its grammatical form name
+    // (getFormLabel, owned by swedish-linguist), not a generic "Pronounce"
+    // label that would be indistinguishable to a screen reader.
+    expect(screen.getByRole('button', { name: 'Pronounce Infinitiv' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pronounce Preteritum' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pronounce Supinum' })).toBeInTheDocument();
+  });
+
+  it('gives per-form pronounce buttons and the full pronounce-answer button a >=44px touch target', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'är');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    // Tailwind's default spacing scale: h-11/w-11 = 2.75rem = 44px. jsdom
+    // doesn't compute real CSS (vitest.config.ts sets css: false), so this
+    // pins the utility classes that deliver the 44px box per Tailwind's
+    // documented scale, not a computed pixel value.
+    const formButton = screen.getByRole('button', { name: 'Pronounce Infinitiv' });
+    expect(formButton.className).toMatch(/\bh-11\b/);
+    expect(formButton.className).toMatch(/\bw-11\b/);
+
+    const pronounceAnswerButton = screen.getByRole('button', { name: /pronounce answer/i });
+    expect(pronounceAnswerButton.className).toMatch(/\bh-11\b/);
+  });
+
+  it('gives the backspace key an accessible name', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await screen.findByPlaceholderText('Type your answer...');
+    expect(screen.getByRole('button', { name: /backspace/i })).toBeInTheDocument();
   });
 });

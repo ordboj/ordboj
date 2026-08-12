@@ -41,23 +41,6 @@ describe('particle verb dataset - the verified gate', () => {
     expect(VERIFIED.length).toBeGreaterThanOrEqual(40);
   });
 
-  it('resolves every verified entry base verb in VERB_DATA', () => {
-    // The introduction gate joins on the base verb's conjugation progress.
-    // An unresolvable base is not a cosmetic defect: it is content no
-    // learner can ever reach, sitting in the dataset looking shipped.
-    const unresolvable = VERIFIED.filter((entry) => !BASE_INFINITIVES.has(entry.baseInfinitive));
-    expect(unresolvable.map((entry) => `${entry.id} -> ${entry.baseInfinitive}`)).toEqual([]);
-  });
-
-  it('marks every entry with an unresolvable base as unverified', () => {
-    // The contrapositive of the rule above, stated so that the fix for a
-    // missing base is never "quietly ship it anyway".
-    const wronglyVerified = PARTICLE_VERB_DATA.filter(
-      (entry) => !BASE_INFINITIVES.has(entry.baseInfinitive) && entry.verified,
-    );
-    expect(wronglyVerified.map((entry) => entry.id)).toEqual([]);
-  });
-
   it('gives every unverified entry a stated reason', () => {
     const unexplained = PARTICLE_VERB_DATA.filter(
       (entry) => !entry.verified && !entry.unverifiedReason?.trim(),
@@ -68,6 +51,50 @@ describe('particle verb dataset - the verified gate', () => {
   it('never exposes an unverified entry through the shipping accessor', () => {
     expect(getVerifiedParticleVerbs().every((entry) => entry.verified)).toBe(true);
     expect(getVerifiedParticleVerbs().length).toBe(VERIFIED.length);
+  });
+});
+
+describe('particle verb dataset - baseInfinitive format (#317)', () => {
+  // #317: VERB_DATA membership stopped being a validity constraint on
+  // baseInfinitive (that gate was already dead code after #315). What still
+  // matters is the field's own shape, since the 7-day same-base rule in
+  // particleQueue.ts joins entries to each other on this exact string, never
+  // on VERB_DATA. Every current entry proves every assertion below; a
+  // future authoring mistake reports here instead of only showing up as a
+  // silently disabled interference rule.
+  it('is non-empty, matches the lemma head, is NFC, and is one string per base', () => {
+    const untrimmed: string[] = [];
+    const detachedFromLemma: string[] = [];
+    const notNfc: string[] = [];
+    const groups = new Map<string, Set<string>>();
+
+    for (const entry of PARTICLE_VERB_DATA) {
+      const base = entry.baseInfinitive;
+
+      if (base.length === 0 || base !== base.trim()) {
+        untrimmed.push(entry.id);
+      }
+      if (entry.lemma.split(' ')[0] !== base) {
+        detachedFromLemma.push(`${entry.id}: lemma "${entry.lemma}" vs base "${base}"`);
+      }
+      if (base !== base.normalize('NFC')) {
+        notNfc.push(entry.id);
+      }
+
+      const key = base.normalize('NFC').toLowerCase();
+      const raw = groups.get(key) ?? new Set<string>();
+      raw.add(base);
+      groups.set(key, raw);
+    }
+
+    const inconsistentGroups = [...groups.entries()]
+      .filter(([, raw]) => raw.size > 1)
+      .map(([key, raw]) => `${key}: ${[...raw].join(' / ')}`);
+
+    expect(untrimmed).toEqual([]);
+    expect(detachedFromLemma).toEqual([]);
+    expect(notNfc).toEqual([]);
+    expect(inconsistentGroups).toEqual([]);
   });
 });
 
@@ -274,6 +301,102 @@ describe('particle verb dataset - glosses', () => {
   });
 });
 
+describe('particle verb dataset - embedded reference forms (#318)', () => {
+  // #318: the reference line renders from forms embedded on the data row,
+  // never from a VERB_DATA join at render time. That only holds if every
+  // verified entry actually carries the three forms — a verified entry
+  // missing `forms` would (per lib/particleVerbs.getPhraseForms) render no
+  // reference line at all, silently.
+  it('gives every verified entry non-empty embedded presens/preteritum/supinum forms', () => {
+    const missing = VERIFIED.filter(
+      (entry) =>
+        !entry.forms ||
+        !entry.forms.presens?.trim() ||
+        !entry.forms.preteritum?.trim() ||
+        !entry.forms.supinum?.trim(),
+    );
+    expect(missing.map((entry) => entry.id)).toEqual([]);
+  });
+
+  it('keeps every embedded form in step with its VERB_DATA base', () => {
+    // Guards against a future VERB_DATA correction silently diverging from
+    // the embedded presens/preteritum/supinum copies in particleVerbData.ts.
+    const drift: string[] = [];
+    for (const entry of VERIFIED) {
+      const base = VERB_DATA.find((verb) => verb.infinitive === entry.baseInfinitive);
+      if (!entry.forms) continue;
+      if (!base) {
+        // #317: an absent base is coverage, not drift. The embedded `forms`
+        // (#318) are the authoritative, linguist-verified strings; the
+        // VERB_DATA comparison below is an opportunistic cross-check that
+        // only applies where a base row exists.
+        continue;
+      }
+      const tail = renderLemma(entry).slice(entry.baseInfinitive.length);
+      const expected = {
+        presens: base.presens + tail,
+        preteritum: base.preteritum + tail,
+        supinum: base.supinum + tail,
+      };
+      for (const key of ['presens', 'preteritum', 'supinum'] as const) {
+        if (entry.forms[key] !== expected[key]) {
+          drift.push(`${entry.id} ${key}: "${entry.forms[key]}" vs VERB_DATA "${expected[key]}"`);
+        }
+      }
+    }
+    expect(drift).toEqual([]);
+  });
+});
+
+describe('particle verb dataset - excludedParticles (#318)', () => {
+  it('ships excludedParticles annotations, and none of them overlaps acceptedParticles for the same frame', () => {
+    // A single assertion on purpose: an empty-overlaps check alone would
+    // pass vacuously on a dataset that ships no excludedParticles data at
+    // all (as pre-#318 data did), which would prove nothing. Requiring at
+    // least one annotated frame makes the "no overlap" half meaningful.
+    const annotatedIds: string[] = [];
+    const overlaps: string[] = [];
+    const unknownParticles: string[] = [];
+    const knownParticles = new Set(PARTICLE_VERB_DATA.map((entry) => entry.particle.toLowerCase()));
+    for (const entry of PARTICLE_VERB_DATA) {
+      const accepted = new Set(entry.acceptedParticles.map((particle) => particle.toLowerCase()));
+      for (const example of entry.examples) {
+        if (!example.excludedParticles || example.excludedParticles.length === 0) continue;
+        annotatedIds.push(entry.id);
+        for (const excluded of example.excludedParticles) {
+          if (accepted.has(excluded.toLowerCase())) {
+            overlaps.push(`${entry.id}: "${excluded}" is both accepted and excluded`);
+          }
+          if (!knownParticles.has(excluded.toLowerCase())) {
+            unknownParticles.push(`${entry.id}: "${excluded}" is not any entry's particle`);
+          }
+        }
+      }
+    }
+    expect(annotatedIds.length).toBeGreaterThan(0);
+    expect(unknownParticles).toEqual([]);
+    expect(overlaps).toEqual([]);
+  });
+
+  it('pins the #318 exclusions for komma ihåg, tala om, and ta slut', () => {
+    // Named regression fixture: the general check above would also catch a
+    // dropped or corrupted annotation, but this names exactly which entries
+    // and values #318 introduced, so a partial revert reports by name.
+    const expectations: Array<[string, string[]]> = [
+      ['pv:komma-ihag', ['in', 'fram']],
+      ['pv:tala-om', ['till']],
+      ['pv:ta-slut', ['bort']],
+    ];
+    for (const [id, particles] of expectations) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      for (const example of found!.examples) {
+        expect(example.excludedParticles, `${id}: "${example.sv}"`).toEqual(particles);
+      }
+    }
+  });
+});
+
 describe('particle verb dataset - CEFR', () => {
   it('records where every band came from', () => {
     for (const entry of PARTICLE_VERB_DATA) {
@@ -281,8 +404,15 @@ describe('particle verb dataset - CEFR', () => {
     }
   });
 
-  it('leads with A1 and A2 core material', () => {
+  const MIN_VERIFIED_A1_A2 = 45;
+
+  it('keeps the beginner runway: at least 45 verified A1/A2 entries', () => {
+    // Not a majority (see docs/learning/2026-08-09-particle-cefr-majority-decision.md).
+    // A1+A2 is 22% of SVALex, so a proportional rule is an intake ratio the corpus
+    // cannot supply. What the learner meets first is decided by CEFR_BAND_ORDER in
+    // particleQueue.ts; this floor only guarantees there is enough A1/A2 material to
+    // fill the first ~30 days of default-paced introductions.
     const early = VERIFIED.filter((entry) => entry.cefr === 'A1' || entry.cefr === 'A2').length;
-    expect(early).toBeGreaterThan(VERIFIED.length / 2);
+    expect(early).toBeGreaterThanOrEqual(MIN_VERIFIED_A1_A2);
   });
 });

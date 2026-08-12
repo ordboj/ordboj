@@ -49,7 +49,7 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "vara", imperativ: "var", presens: "är", preteritum: "var", supinum: "varit", grupp: "4" },
   { cefr: "A1", infinitive: "ha", imperativ: "ha", presens: "har", preteritum: "hade", supinum: "haft", grupp: "4" },
   { cefr: "A1", infinitive: "kunna", imperativ: "", presens: "kan", preteritum: "kunde", supinum: "kunnat", grupp: "4", noNaturalImperativ: true }, // modal verb: no imperativ in Swedish, empty is correct
-  { cefr: "A1", infinitive: "unna", imperativ: "unna", presens: "unnar", preteritum: "unnade", supinum: "unnat", grupp: "1" },
+  { cefr: "B2", infinitive: "unna", imperativ: "unna", presens: "unnar", preteritum: "unnade", supinum: "unnat", grupp: "1" }, // re-tagged #42: "unna" (indulge/not begrudge) is formal register, not everyday A1 vocabulary
   { cefr: "A1", infinitive: "få", imperativ: "", presens: "får", preteritum: "fick", supinum: "fått", grupp: "4", noNaturalImperativ: true }, // modal verb: no imperativ in Swedish, empty is correct
   { cefr: "A1", infinitive: "bli", imperativ: "bli", presens: "blir", preteritum: "blev", supinum: "blivit", grupp: "4" },
   { cefr: "A1", infinitive: "komma", imperativ: "kom", presens: "kommer", preteritum: "kom", supinum: "kommit", grupp: "4" },
@@ -68,7 +68,7 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "betyda", imperativ: "betyd", presens: "betyder", preteritum: "betydde", supinum: "betytt", grupp: "2a" },
   { cefr: "A1", infinitive: "ge", imperativ: "ge", presens: "ger", preteritum: "gav", supinum: "gett", grupp: "4" },
   { cefr: "A1", infinitive: "skriva", imperativ: "skriv", presens: "skriver", preteritum: "skrev", supinum: "skrivit", grupp: "4" },
-  { cefr: "A1", infinitive: "te sig", imperativ: "", presens: "ter sig", preteritum: "tedde sig", supinum: "tett sig", grupp: "3" }, // NEEDS HUMAN CHECK: reflexive + stative ("to appear/seem"); imperativ would need pronoun swap (sig -> dig), uncertain whether it's used naturally — not guessed
+  { cefr: "C1", infinitive: "te sig", imperativ: "", presens: "ter sig", preteritum: "tedde sig", supinum: "tett sig", grupp: "3" }, // re-tagged #42: formal/literary register ("to appear/seem"), not a beginner verb. NEEDS HUMAN CHECK: reflexive + stative; imperativ would need pronoun swap (sig -> dig), uncertain whether it's used naturally — not guessed
   { cefr: "A1", infinitive: "riva", imperativ: "riv", presens: "river", preteritum: "rev", supinum: "rivit", grupp: "4" },
   { cefr: "A1", infinitive: "börja", imperativ: "börja", presens: "börjar", preteritum: "började", supinum: "börjat", grupp: "1" },
   { cefr: "A1", infinitive: "tro", imperativ: "tro", presens: "tror", preteritum: "trodde", supinum: "trott", grupp: "3" },
@@ -97,7 +97,7 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "handla", imperativ: "handla", presens: "handlar", preteritum: "handlade", supinum: "handlat", grupp: "1" },
   { cefr: "A1", infinitive: "öka", imperativ: "öka", presens: "ökar", preteritum: "ökade", supinum: "ökat", grupp: "1" },
   { cefr: "A1", infinitive: "skapa", imperativ: "skapa", presens: "skapar", preteritum: "skapade", supinum: "skapat", grupp: "1" },
-  { cefr: "A1", infinitive: "kapa", imperativ: "kapa", presens: "kapar", preteritum: "kapade", supinum: "kapat", grupp: "1" },
+  { cefr: "B2", infinitive: "kapa", imperativ: "kapa", presens: "kapar", preteritum: "kapade", supinum: "kapat", grupp: "1" }, // re-tagged #42: "kapa" (hijack/cut/chop) is specialized register, not everyday A1 vocabulary
   { cefr: "A1", infinitive: "gälla", imperativ: "gäll", presens: "gäller", preteritum: "gällde", supinum: "gällt", grupp: "2a" },
   { cefr: "A1", infinitive: "verka", imperativ: "verka", presens: "verkar", preteritum: "verkade", supinum: "verkat", grupp: "1" },
   { cefr: "A1", infinitive: "tala", imperativ: "tala", presens: "talar", preteritum: "talade", supinum: "talat", grupp: "1" },

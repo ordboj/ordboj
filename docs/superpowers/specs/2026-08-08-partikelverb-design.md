@@ -13,6 +13,12 @@ Companion docs: `docs/product/2026-08-08-particle-verbs-research.md`,
    conjugation queue.
 2. Exercise formats: cloze with the particle blanked, plus meaning-to-phrase
    recall. Both typed. No multiple choice in v1.
+   **Amended 2026-08-08 (#319, explicit human sign-off; the human proposed the
+   format):** a discrimination variant of the cloze item is approved as a
+   data-gated later revision — 4 options, weaker credit, chosen
+   deterministically by the app. Typed remains the default and the majority
+   of reviews. See the Amendment section below and
+   `docs/learning/2026-08-08-discrimination-exercise.md`.
 3. Lexical-unit-first: no conjugation practice of particle verbs in v1. All
    exercise frames are presens; feedback screen may show other forms as a
    static, never-tested reference line.
@@ -51,8 +57,6 @@ Rules:
   citation form (`höra av sig`) that is ungrammatical in 1st/2nd person.
 - The two items of one verb never appear in the same sitting (cloze feedback
   reveals the recall answer).
-- A verb is eligible for introduction only when its base verb has
-  `repetitions >= 2` on presens and preteritum in the conjugation store.
 - Never introduce two particle verbs sharing a base verb within the same week
   (semantic-set interference: bygga upp / bygga ut).
 - Introduction card (unscheduled, untested) appears at the top of the sitting;
@@ -76,7 +80,7 @@ example sentences contain commas.
 export interface ParticleVerbData {
   id: string; // "pv:hora-av-sig" — ASCII-folded slug, stable, never positional
   cefr: 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
-  baseInfinitive: string; // "höra" — MUST resolve in VERB_DATA (eligibility gate joins on it in v1)
+  baseInfinitive: string; // "höra" — required; format-constrained per #317, no VERB_DATA membership requirement
   particle: string; // "av" — the cloze answer
   reflexive: 'none' | 'beforeParticle' | 'afterParticle';
   lemma: string; // "höra av {refl}" — placeholder, never literal "sig"
@@ -85,7 +89,15 @@ export interface ParticleVerbData {
   contrast?: string; // prepositional twin, e.g. "hälsa på (greet)"
   acceptedParticles: string[]; // cloze accepted answers; [0] primary
   acceptedRecall?: string[]; // recall accepted answers where the gloss is irreducibly ambiguous; [0] primary
-  examples: Array<{ sv: string; blankIndex?: number; en?: string }>;
+  examples: Array<{
+    sv: string;
+    blankIndex?: number;
+    en?: string;
+    // #319 discrimination variant: particles that form an attested same-base
+    // verb AND are impossible in this exact sentence. Linguist-certified,
+    // both halves. Absent = frame never renders as a discrimination card.
+    excludedParticles?: string[];
+  }>;
   verified: boolean; // human-checked against SO/SAOL; false = never shipped to learners
 }
 ```
@@ -106,9 +118,18 @@ Key constraints:
   Single-answer grading of ambiguous cloze is a correctness violation.
 - Glosses must be narrow enough to select one phrase for recall, or the recall
   item carries `acceptedRecall`.
-- Every `baseInfinitive` MUST resolve to a VERB_DATA verb — enforced by a
-  build-time/test assertion, so a miss is a data defect, not a silently
-  unsatisfiable eligibility gate (dead content).
+- `baseInfinitive` is required, but VERB_DATA membership is **not** a
+  validity constraint (**amended 2026-08-08, #317** — full ruling:
+  `docs/product/2026-08-08-baseinfinitive-format-decision.md`). Format
+  assertions replace the old MUST-resolve rule: the field is non-empty, it
+  equals the first token of `lemma`, and entries sharing a base use the
+  identical NFC string (the 7-day interference rule joins on it). A base
+  absent from VERB_DATA is a coverage gap, not a data defect: the entry is
+  valid. The entry ships and is introduced on its own SRS schedule; the
+  feedback reference line renders from the embedded `forms` (#318), so no
+  VERB_DATA join exists at render time (the linguist appends the base in the
+  same PR where possible; otherwise the lead files a base-append ticket, per
+  the #262 pattern).
 - **CEFR bands come from SVALex** (CEFRLex project, UCLouvain/Språkbanken —
   graded lexicon derived from 12 CEFR-graded Swedish coursebooks incl.
   Rivstart; 429 verb+particle combinations, A1: 25 / A2: 70 / B1: 122 /
@@ -168,9 +189,12 @@ floor((particleDailyGoal - min(particleReviewsDue, particleDailyGoal)) / 4))`.
   is **plumb-and-ignore**: recorded, never branched on — the weaker-credit
   path (ease unchanged, interval multiplier capped at 1.6, wrong = full lapse)
   is specified here for the future but ships no code, so "scheduler needs zero
-  changes" stays literally true. Typed-answer normalization (case, whitespace,
-  optional leading "att") follows
-  `docs/product/2026-08-08-alternate-answers-decision.md`.
+  changes" stays literally true. **Amendment #319:** when the discrimination
+  variant ships, `modality` stops being plumb-and-ignore — the scheduler
+  branches on it. srs-engine is notified before any related provider work
+  starts; the modality branch lands before or with the first UI work.
+  Typed-answer normalization (case, whitespace, optional leading "att")
+  follows `docs/product/2026-08-08-alternate-answers-decision.md`.
 
 ## UI surface (owner: frontend-expert)
 
@@ -236,9 +260,11 @@ Feature:
 - F6. qa: provider tests, reflexive renderer tests, accepted-answer grading
   tests, export/import round-trip with mixed legacy + `pv:` keys, e2e of the
   mode, and a **dataset-integrity test**: ids unique across
-  `particleVerbData`, `acceptedParticles[0] === particle`, every
-  `baseInfinitive` resolves in VERB_DATA, `verified: false` entries never
-  enumerated by the provider.
+  `particleVerbData`, `acceptedParticles[0] === particle`,
+  `baseInfinitive` format assertions (non-empty; first token of `lemma`;
+  identical string across a shared base — amended per #317, no VERB_DATA
+  membership check), `verified: false` entries never enumerated by the
+  provider.
 
 Refuse-to-merge list (staff-engineer, adopted):
 
@@ -299,3 +325,33 @@ Refuse-to-merge list (staff-engineer, adopted):
   currently judgment, several classifications flagged UNCERTAIN).
 - Whether the particle-vs-compound contrast (bryta av / avbryta) is disclosed
   on cards: deferred to linguist + learning-designer during F2.
+
+## Amendment 2026-08-08 — discrimination variant (#319)
+
+Revises human decision 2 with the human's explicit sign-off (the human
+proposed the format). Full ruling:
+`docs/learning/2026-08-08-discrimination-exercise.md`. Binding summary:
+
+- Presentation variant of `pv:<slug>:cloze`, chosen deterministically by the
+  app (`repetitions % 3 === 0` when eligible). Not a third scheduled item; no
+  new id, no new state, no storage bump.
+- 4 options. Distractors are same-base different-particle only, drawn from a
+  per-frame `excludedParticles` list the linguist certifies (attested
+  same-base verb + impossible in that sentence). Cross-verb near-synonym
+  distractors are deferred to a later revision with per-option rejection
+  reasons.
+- Choice answers take the weaker-credit path: ease unchanged, interval
+  multiplier capped at 1.6, wrong = full lapse. Modality stops being
+  plumb-and-ignore; srs-engine is notified before any related provider work.
+- Lifecycle trigger: target cloze `repetitions >= 3` and at least three
+  introduced distractor particles; only introduced particles become options;
+  otherwise the item renders as typed cloze.
+- Build trigger is data-gated: work starts when the corpus holds at least 8
+  certified frames across at least 5 distinct verbs, counted after the F2
+  additions land.
+- Falsifiers: pooled choice accuracy above ~90% means the lures are not
+  competitive; per-frame accuracy below ~50% while the verb's typed-cloze
+  accuracy is above 80% means a lure is correct in the frame and the data is
+  wrong — pull the frame, file a linguist defect.
+- The falsifiers need a per-answer log (item id, modality, correct) that does
+  not exist yet. That log is a prerequisite of the variant, not an assumption.

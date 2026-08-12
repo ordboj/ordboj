@@ -3,7 +3,6 @@ import {
   type ParticleVerbData,
   type ParticleVerbExample,
 } from '@/data/particleVerbData';
-import { VERB_DATA } from '@/data/verbData';
 
 // Grammatical person for rendering a reflexive particle verb. Swedish uses
 // `sig` only in the third person; a learner who meets `höra av sig` as a
@@ -153,13 +152,17 @@ export function selectExample(entry: ParticleVerbData, repetitions: number): Par
 }
 
 // The phrase's four conjugated forms, for the static reference line on the
-// feedback screen. Exposure only: never scheduled, never tested in v1, which
-// is what keeps "lexical-unit-first" intact while stopping `gick ut` from
-// being a surprise the first time the learner meets it in the wild.
+// feedback screen and the introduction-card fallback. Exposure only: never
+// scheduled, never tested in v1, which is what keeps "lexical-unit-first"
+// intact while stopping `gick ut` from being a surprise the first time the
+// learner meets it in the wild.
 //
-// The base verb's forms come from VERB_DATA, which is human-verified, so
-// nothing here is derived by rule. Returns null when the base does not
-// resolve — for a verified entry that cannot happen (dataset test), and for
+// Reads entry.forms directly — embedded on the data row, not joined against
+// VERB_DATA at render time (#318). A join would leave the reference line
+// unrenderable for any entry whose base is not (yet) a VERB_DATA row; the
+// embedded forms are still human-verified against SO/SAOL, only the lookup
+// moved from render time to data-authoring time. Returns null when forms is
+// absent — for a verified entry that cannot happen (dataset test), and for
 // an unverified one nothing renders anyway.
 export interface PhraseForms {
   infinitive: string;
@@ -169,24 +172,21 @@ export interface PhraseForms {
 }
 
 export function getPhraseForms(entry: ParticleVerbData): PhraseForms | null {
-  const base = VERB_DATA.find((verb) => verb.infinitive === entry.baseInfinitive);
-  if (!base) return null;
+  if (!entry.forms) return null;
   // Reflexives are shown in their third-person citation form, the same one a
   // dictionary prints. This line is read, never produced, so it does not
   // carry the risk that rules a recall card out.
-  const tail = renderLemma(entry).slice(entry.baseInfinitive.length);
-  const withTail = (form: string) => (form ? `${form}${tail}` : '');
   return {
     infinitive: renderLemma(entry),
-    presens: withTail(base.presens),
-    preteritum: withTail(base.preteritum),
-    supinum: withTail(base.supinum),
+    presens: entry.forms.presens,
+    preteritum: entry.forms.preteritum,
+    supinum: entry.forms.supinum,
   };
 }
 
 // One line per particle for the feedback screen, per the learning note: the
 // benefit Boers found was in the explanation, not in batching a "upp week",
-// so this is fifteen-odd strings rather than a curriculum. Hedged with
+// so this is thirty-odd strings rather than a curriculum. Hedged with
 // "often" throughout because these are tendencies, not rules, and a particle
 // verb's meaning is not reliably compositional. Particles with no confident
 // line return null rather than an invented one.
@@ -213,6 +213,21 @@ const PARTICLE_CORE_SENSE: Record<string, string> = {
   slut: 'reaching an end',
   ihåg: 'into memory',
   igenom: 'through, from one end to the other',
+  // Added for #342, to unblock the #336 entries built on these particles.
+  // "hem" and "hemma" are the directional/locative pair Swedish keeps apart
+  // and English collapses into one word, so they get separate lines rather
+  // than one shared string.
+  hem: 'movement home — towards where one lives or belongs',
+  hemma: 'position at home — where something already belongs',
+  igång: 'into motion — something starting to run',
+  ihop: 'together, into one whole',
+  samman: 'together, in a more formal register than ihop',
+  fast: 'often fixed in place, or caught and held',
+  undan: 'often out of the way, or kept at a distance',
+  åt: 'often using something up, or acting on a problem',
+  // "an" is the honest exception: it survives in a handful of fixed phrases
+  // and carries no productive sense to teach. Saying so beats inventing one.
+  an: 'mostly fossilised, surviving in a few fixed phrases',
 };
 
 export function getParticleCoreSense(particle: string): string | null {

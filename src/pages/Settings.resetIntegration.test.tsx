@@ -29,6 +29,10 @@ vi.mock('@/hooks/useSettings', () => ({
 
 const SETTINGS_KEY = 'swedish-verbs-settings';
 const SRS_KEY = 'swedish-verbs-srs-progress';
+// Issue #53: a one-shot, never-overwritten copy of whatever was at SRS_KEY
+// before the first v3 migration write. Written on load, before reset ever
+// runs, so a seeded pre-v3 store always produces this key too.
+const LEGACY_BACKUP_KEY = 'swedish-verbs-srs-progress-backup-pre-v3';
 
 function storedKeys(): string[] {
   const keys: string[] = [];
@@ -46,14 +50,22 @@ describe('Settings page - issue #93: reset confirmation reaches the real reset p
   it('closes the dialog and empties the SRS store (version envelope, no items) after confirming, without touching the unrelated settings key', async () => {
     // Seed both stores like a real user with existing progress and
     // settings, so the assertions below can tell "touched" from "untouched".
-    localStorage.setItem(
-      SRS_KEY,
-      JSON.stringify({ version: 2, items: { '1-presens': { repetitions: 3, easeFactor: 2.5 } } }),
-    );
+    const preV3Store = JSON.stringify({
+      version: 2,
+      items: { '1-presens': { repetitions: 3, easeFactor: 2.5 } },
+    });
+    localStorage.setItem(SRS_KEY, preV3Store);
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({ practiceMode: 'typing' }));
 
     const user = userEvent.setup();
     renderWithProviders(<Settings />, { route: '/settings' });
+
+    // The backup is written on load, before reset ever runs - pin that half
+    // of the behaviour here (async: the migration load awaits getVerbs()),
+    // before the confirm click below removes it.
+    await waitFor(() => {
+      expect(localStorage.getItem(LEGACY_BACKUP_KEY)).toBe(preV3Store);
+    });
 
     await user.click(screen.getByRole('button', { name: /reset all progress/i }));
     const dialog = await screen.findByRole('alertdialog');
@@ -71,12 +83,15 @@ describe('Settings page - issue #93: reset confirmation reaches the real reset p
     await waitFor(() => {
       const stored = localStorage.getItem(SRS_KEY);
       expect(stored).not.toBeNull();
-      expect(JSON.parse(stored as string)).toEqual({ version: 2, items: {} });
+      expect(JSON.parse(stored as string)).toEqual({ version: 3, items: {} });
     });
 
-    // The exact set of localStorage keys present is unchanged by reset:
-    // settings is untouched, and no other key appears or disappears.
+    // Reset means reset: the one-shot pre-v3 backup the load path wrote is a
+    // migration safety net, not a second undo history, so "reset all
+    // progress" removes it along with the live store. Only the unrelated
+    // settings key survives untouched.
     expect(storedKeys()).toEqual([SETTINGS_KEY, SRS_KEY].sort());
     expect(localStorage.getItem(SETTINGS_KEY)).toBe(JSON.stringify({ practiceMode: 'typing' }));
+    expect(localStorage.getItem(LEGACY_BACKUP_KEY)).toBeNull();
   });
 });

@@ -1,7 +1,6 @@
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
 import { getVerbs, getAllConjugatedVerbs, type Form } from '@/lib/verbs';
 import { getVerifiedParticleVerbs, hasRecallItem } from '@/lib/particleVerbs';
-import { isBaseVerbReady } from '@/lib/particleQueue';
 import type { SrsState } from '@/lib/srs';
 import type { ParticleVerbData } from '@/data/particleVerbData';
 
@@ -127,7 +126,6 @@ export function createParticleProvider(
     async listAvailableItems() {
       const items: ParticleItem[] = [];
       for (const entry of getVerifiedParticleVerbs()) {
-        if (!isBaseVerbReady(entry, srsStates)) continue;
         const kinds: Array<'cloze' | 'recall'> = hasRecallItem(entry)
           ? ['cloze', 'recall']
           : ['cloze'];
