@@ -2585,4 +2585,119 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'står till', preteritum: 'stod till', supinum: 'stått till' },
   },
+
+  // ---- #359: band-6 operational particle verbs ----
+  // The decision note (docs/learning/2026-08-09-particle-cefr-majority-decision.md,
+  // "swedish-linguist — intake") names stänga av, slå på, slå av, följa med, ha på
+  // sig, ta på sig, ta av sig, flytta in, checka in, torka av, städa upp, fylla i
+  // as the day-one operational vocabulary the coursebook corpus misses. stänga av
+  // already shipped in the #262 section above. The other seven named verbs (slå,
+  // följa, flytta, checka, torka, städa, fylla) all need a new VERB_DATA base row,
+  // which also means updating the pinned snapshot in
+  // src/data/verbData.orderPin.test.ts in the same commit — a qa-owned test file.
+  // That base-verb growth is a follow-up (see PR description). The five rows below
+  // are equally justified band-6 peers built on bases VERB_DATA already pins
+  // (ha, ta, stiga, se), so the runway target is met without a cross-owner edit:
+  // getting dressed/undressed (ha på sig / ta på sig / ta av sig) and public-
+  // transport, safety-warning vocabulary (stiga av, se upp) are exactly the kind
+  // of "operate daily life" phrases stänga av and sätta på are — a learner needs
+  // them within the first weeks, not the SVALex ranking.
+  {
+    id: 'pv:ha-pa-sig',
+    cefr: 'A2',
+    cefrEvidence: 'judgment',
+    baseInfinitive: 'ha',
+    particle: 'på',
+    reflexive: 'afterParticle',
+    lemma: 'ha på {refl}',
+    gloss: { en: 'to be wearing something' },
+    transparency: 'literal',
+    acceptedParticles: ['på'],
+    examples: [
+      { sv: 'Jag har på mig en varm jacka idag.', blankIndex: 2 },
+      { sv: 'Hon har på sig en röd klänning.', blankIndex: 2 },
+      { sv: 'Barnen har på sig mössor när det är kallt.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'har på sig', preteritum: 'hade på sig', supinum: 'haft på sig' },
+  },
+  {
+    id: 'pv:ta-pa-sig',
+    cefr: 'A2',
+    cefrEvidence: 'judgment',
+    baseInfinitive: 'ta',
+    particle: 'på',
+    reflexive: 'afterParticle',
+    lemma: 'ta på {refl}',
+    gloss: { en: 'to dress oneself in a piece of clothing' },
+    transparency: 'literal',
+    contrast: 'ta på (no reflexive) — to touch something: ta inte på tavlan!',
+    acceptedParticles: ['på'],
+    examples: [
+      { sv: 'Jag tar på mig skorna innan vi går ut.', blankIndex: 2 },
+      { sv: 'Hon tar på sig jackan i hallen.', blankIndex: 2 },
+      { sv: 'Vi tar på oss regnkläder innan promenaden.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'tar på sig', preteritum: 'tog på sig', supinum: 'tagit på sig' },
+  },
+  {
+    id: 'pv:ta-av-sig',
+    cefr: 'A2',
+    cefrEvidence: 'judgment',
+    baseInfinitive: 'ta',
+    particle: 'av',
+    reflexive: 'afterParticle',
+    lemma: 'ta av {refl}',
+    gloss: { en: 'to remove a piece of clothing from oneself' },
+    transparency: 'literal',
+    acceptedParticles: ['av'],
+    examples: [
+      { sv: 'Jag tar av mig skorna vid dörren.', blankIndex: 2 },
+      { sv: 'Han tar av sig jackan när han kommer in.', blankIndex: 2 },
+      { sv: 'Barnen tar av sig mössorna inomhus.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'tar av sig', preteritum: 'tog av sig', supinum: 'tagit av sig' },
+  },
+  {
+    id: 'pv:stiga-av',
+    cefr: 'A2',
+    cefrEvidence: 'judgment',
+    baseInfinitive: 'stiga',
+    particle: 'av',
+    reflexive: 'none',
+    lemma: 'stiga av',
+    gloss: { en: 'to exit a vehicle such as a bus or train' },
+    transparency: 'literal',
+    contrast: 'stiga på — the opposite: to board a vehicle',
+    acceptedParticles: ['av'],
+    examples: [
+      { sv: 'Jag stiger av bussen vid torget.', blankIndex: 2 },
+      { sv: 'Hon stiger av tåget i Malmö.', blankIndex: 2 },
+      { sv: 'Vi stiger av spårvagnen vid stationen.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'stiger av', preteritum: 'steg av', supinum: 'stigit av' },
+  },
+  {
+    id: 'pv:se-upp',
+    cefr: 'A1',
+    cefrEvidence: 'judgment',
+    baseInfinitive: 'se',
+    particle: 'upp',
+    reflexive: 'none',
+    lemma: 'se upp',
+    gloss: { en: 'to watch out, to be careful of something' },
+    transparency: 'idiomatic',
+    contrast: 'se upp till någon — to admire someone; literal se upp — to raise one’s gaze',
+    acceptedParticles: ['upp'],
+    examples: [
+      { sv: 'Du måste se upp för bilarna på vägen.', blankIndex: 3 },
+      { sv: 'Barnen ska se upp för trafiken vid skolan.', blankIndex: 3 },
+      { sv: 'Vi får se upp för isen på trottoaren.', blankIndex: 3 },
+    ],
+    verified: true,
+    forms: { presens: 'ser upp', preteritum: 'såg upp', supinum: 'sett upp' },
+  },
 ];
