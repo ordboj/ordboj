@@ -10,6 +10,25 @@ import { useSrsProgress } from '@/hooks/useSrsProgress';
 // persistence itself (what a flush writes) is pinned in
 // useSrsProgress.test.ts and useSrsProgress.realdata.test.ts.
 
+// useSrsProgress creates its writer with the real default debounce window
+// (src/lib/storage.ts, DEFAULT_WRITE_DELAY_MS = 500ms), running on the real
+// clock even though this file fakes Date. A test that counts setItem calls
+// across several synchronous recordAnswer calls plus an unmount is racing
+// that window: on a slow CI runner, the 500ms timer can elapse mid-test and
+// turn one expected write into two. Widen the window at this mock boundary
+// to far longer than the test can take in real time, so only unmount's
+// synchronous dispose -> flush ever triggers a write here.
+const NEVER_ELAPSES_IN_TEST_MS = 60_000;
+
+vi.mock('@/lib/storage', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/storage')>();
+  return {
+    ...actual,
+    createCoalescedJsonWriter: (key: string) =>
+      actual.createCoalescedJsonWriter(key, NEVER_ELAPSES_IN_TEST_MS),
+  };
+});
+
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 const FIXED_NOW = new Date('2026-01-01T00:00:00.000Z').getTime();
 
