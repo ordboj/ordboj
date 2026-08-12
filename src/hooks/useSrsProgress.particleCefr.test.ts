@@ -87,6 +87,7 @@ describe('#350: useSrsProgress(cefrLevels).getParticleSitting', () => {
     const introducedIds = sitting!.cards
       .filter((card) => card.kind === 'introduction')
       .map((card) => card.entry.id);
+    expect(introducedIds.length).toBeGreaterThan(0);
     expect(introducedIds).not.toContain(b1Entry.id);
     for (const id of introducedIds) {
       const introduced = allVerified.find((entry) => entry.id === id);
