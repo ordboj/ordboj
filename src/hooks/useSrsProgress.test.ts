@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
-import { getVerbs, getAllConjugatedVerbs, conjugateVerb } from '@/lib/verbs';
+import { getVerbs, getAllConjugatedVerbs, conjugateVerb, verbs } from '@/lib/verbs';
 import type { ConjugatedVerb, Verb } from '@/lib/verbs';
+import { conjugationItemId, particleItemId } from '@/lib/itemIds';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -1009,6 +1010,13 @@ describe('#53: explicit reject list ([], {"x":1}, settings export)', () => {
 // Two edge cases were previously argued only in a comment above the
 // implementation and had no test pinning them.
 describe('migrateConjugationKeys - #189 finding 13 edge cases', () => {
+  // This suite swaps the getVerbs fixture. restoreMocks only restores
+  // vi.spyOn spies, not the module-factory vi.fn, so without this cleanup
+  // the swap would leak into every suite that runs after this one.
+  afterEach(() => {
+    vi.mocked(getVerbs).mockResolvedValue(FIXTURE_VERBS);
+  });
+
   // Both variants seed the same two items in opposite key order, since
   // Object.entries order is the only thing that could make an
   // insertion-order-dependent implementation look correct by accident.
@@ -1077,5 +1085,623 @@ describe('migrateConjugationKeys - #189 finding 13 edge cases', () => {
     unmount();
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
     expect(stored.items['999-presens']).toMatchObject({ repetitions: 4 });
+  });
+});
+
+// Issue #251: exportData writes a whole-app envelope (src/lib/backup.ts) —
+// the SRS schedule at the top level in the persisted {version, items} shape,
+// every other swedish-verbs-* store under `stores`. These pin the hook-level
+// contract on top of the pure backup.ts unit tests (src/lib/backup.test.ts):
+// a structurally valid envelope restores both the schedule and the sibling
+// stores in one call, and anything the backup module reports as invalid
+// leaves the hook's in-memory state and localStorage exactly as they were.
+describe('importData - whole-app envelope (issue #251)', () => {
+  it('restores srsStates and writes the settings store when importing a whole-app envelope carrying a version-2 SRS payload', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const envelope = JSON.stringify({
+      app: 'ordboj',
+      backupVersion: 2,
+      exportedAt: new Date(FIXED_NOW).toISOString(),
+      // A version-2 SRS payload inside the whole-app file: the import path
+      // must run it through the same v2 -> v3 ladder as an SRS-only file.
+      version: 2,
+      items: {
+        '1-presens': {
+          itemId: '1-presens',
+          repetitions: 5,
+          intervalDays: 10,
+          easeFactor: 2.2,
+          dueAt: FIXED_NOW,
+        },
+      },
+      stores: {
+        'swedish-verbs-settings': { theme: 'dark' },
+      },
+    });
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(envelope);
+    });
+
+    expect(importResult).toBe(true);
+    expect(result.current.srsStates).toEqual({
+      '1-presens': {
+        itemId: '1-presens',
+        repetitions: 5,
+        intervalDays: 10,
+        easeFactor: 2.2,
+        dueAt: FIXED_NOW,
+      },
+    });
+    expect(localStorage.getItem('swedish-verbs-settings')).toBe(JSON.stringify({ theme: 'dark' }));
+    // Import persists synchronously (persistNow), so a tab killed right
+    // after the success toast still holds the imported schedule.
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored.version).toBe(3);
+    expect(stored.items['1-presens']).toMatchObject({ repetitions: 5 });
+  });
+
+  const invalidEnvelopes: Array<[string, unknown]> = [
+    ['a foreign app token', { app: 'anki', backupVersion: 2, version: 2, items: {}, stores: {} }],
+    [
+      'a string backupVersion',
+      { app: 'ordboj', backupVersion: '2', version: 2, items: {}, stores: {} },
+    ],
+    [
+      'a zero backupVersion',
+      { app: 'ordboj', backupVersion: 0, version: 2, items: {}, stores: {} },
+    ],
+    [
+      'a non-integer backupVersion',
+      { app: 'ordboj', backupVersion: 2.5, version: 2, items: {}, stores: {} },
+    ],
+    [
+      'a backupVersion newer than this build understands',
+      { app: 'ordboj', backupVersion: 99, version: 2, items: {}, stores: {} },
+    ],
+    ['stores as an array', { app: 'ordboj', backupVersion: 2, version: 2, items: {}, stores: [] }],
+    ['stores missing entirely', { app: 'ordboj', backupVersion: 2, version: 2, items: {} }],
+    [
+      'a backupVersion-1 file with no swedish-verbs-srs-progress key',
+      {
+        app: 'ordboj',
+        backupVersion: 1,
+        exportedAt: '2026-01-01T00:00:00.000Z',
+        'swedish-verbs-settings': { theme: 'dark' },
+      },
+    ],
+  ];
+
+  it.each(invalidEnvelopes)(
+    'returns false and leaves srsStates and localStorage untouched for %s',
+    async (_label, payload) => {
+      const { result } = renderHook(() => useSrsProgress());
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      act(() => {
+        result.current.recordAnswer('1-presens', 5);
+      });
+      await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+
+      await settlePersistence(reflectsRecordedAnswer(1));
+      const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
+      const storageSnapshot = localStorage.getItem(STORAGE_KEY);
+      const settingsSnapshot = localStorage.getItem('swedish-verbs-settings');
+
+      let importResult: boolean | undefined;
+      act(() => {
+        importResult = result.current.importData(JSON.stringify(payload));
+      });
+
+      expect(importResult).toBe(false);
+      expect(result.current.srsStates).toEqual(stateSnapshot);
+      expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+      expect(localStorage.getItem('swedish-verbs-settings')).toBe(settingsSnapshot);
+    },
+  );
+
+  it('returns false and leaves state untouched when an envelope item is filed under a mismatched map key', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+
+    await settlePersistence(reflectsRecordedAnswer(1));
+    const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
+    const storageSnapshot = localStorage.getItem(STORAGE_KEY);
+
+    const mismatchedEnvelope = JSON.stringify({
+      app: 'ordboj',
+      backupVersion: 2,
+      version: 2,
+      items: {
+        '1-presens': {
+          // itemId disagrees with the map key it is filed under (issue #251
+          // acceptance: itemId must match key).
+          itemId: '1-preteritum',
+          repetitions: 3,
+          intervalDays: 6,
+          easeFactor: 2.0,
+          dueAt: FIXED_NOW,
+        },
+      },
+      stores: {},
+    });
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(mismatchedEnvelope);
+    });
+
+    expect(importResult).toBe(false);
+    expect(result.current.srsStates).toEqual(stateSnapshot);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+  });
+});
+
+// Issue #251 acceptance: the load-path quarantine (quarantineInvalidItems in
+// src/hooks/useSrsProgress.ts) must not let one unreadable entry poison its
+// siblings, and must not silently delete bytes it cannot read - they are
+// written back verbatim so a later build has a chance to read them. The
+// item id '5-presens' in the first two tests deliberately names a verb
+// absent from FIXTURE_VERBS (only ids '1' and '2' exist), so those tests are
+// isolated to the quarantine mechanism itself; the last two use ids the
+// schedulers *can* serve, which is where the destructive interactions live.
+describe('load-path quarantine (issue #251)', () => {
+  it('loads the valid item normally and keeps a structurally invalid entry (bad dueAt) out of srsStates, while preserving it verbatim in storage after an unrelated write', async () => {
+    const validItem = {
+      itemId: '1-presens',
+      repetitions: 2,
+      intervalDays: 6,
+      easeFactor: 2.5,
+      dueAt: FIXED_NOW - 1000, // already due
+    };
+    const malformedItem = {
+      itemId: '5-presens',
+      repetitions: 1,
+      intervalDays: 1,
+      easeFactor: 2.5,
+      dueAt: null, // not a finite number: fails isStoredSrsState
+    };
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        items: {
+          '1-presens': validItem,
+          '5-presens': malformedItem,
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // The valid item loaded untouched and is schedulable.
+    expect(result.current.srsStates['1-presens']).toEqual(validItem);
+    const due = await result.current.getDueItems();
+    expect(due.map((i) => i.itemId)).toContain('1-presens');
+
+    // The malformed item never reaches the scheduler.
+    expect(result.current.srsStates).not.toHaveProperty('5-presens');
+
+    // An unrelated answer still writes it back to disk, byte for byte.
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(3));
+    await settlePersistence(reflectsRecordedAnswer(3));
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored.items['5-presens']).toEqual(malformedItem);
+  });
+
+  it('keeps an entry whose itemId disagrees with its map key out of srsStates, and still writes it back verbatim', async () => {
+    const malformedItem = {
+      // Structurally a valid state on its own, but filed under a different
+      // key below - the mismatch is what makes it invalid.
+      itemId: 'nonsense',
+      repetitions: 1,
+      intervalDays: 1,
+      easeFactor: 2.5,
+      dueAt: FIXED_NOW,
+    };
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        items: {
+          '5-presens': malformedItem,
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.srsStates).not.toHaveProperty('5-presens');
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+    await settlePersistence(reflectsRecordedAnswer(1));
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored.items['5-presens']).toEqual(malformedItem);
+  });
+
+  // Regression test for the eager-init overwrite bug (#251 round 1, first
+  // fixed in 7e1c905): this one deliberately uses '1-presens', an id that IS
+  // an eager-init id for FIXTURE_VERBS. Without the skips, the load effect
+  // stamps a fresh initializeSrsState('1-presens') over the quarantined id,
+  // getDueItems serves it as due, and the first recordAnswer writes a
+  // non-pristine fresh state that wins the { ...quarantined, ...items }
+  // spread on save — silently replacing bytes this build could not read
+  // with a zeroed schedule. Under v3 the eager-init skip alone is not
+  // enough: getDueItems treats a missing key as "new, due now", so it must
+  // apply the same skip.
+  it('does not let eager init or getDueItems resurrect a quarantined entry that shares an id with a live verb x form', async () => {
+    const malformedItem = {
+      // A version-3 store: no itemId (the key is the id); dueAt is not a
+      // finite number, so the entry fails isStoredSrsState.
+      repetitions: 1,
+      intervalDays: 1,
+      easeFactor: 2.5,
+      dueAt: null,
+    };
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 3,
+        items: {
+          '1-presens': malformedItem,
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // (i) The quarantined id never reaches the scheduler - not even as a
+    // fresh eager-init state.
+    expect(result.current.srsStates).not.toHaveProperty('1-presens');
+
+    // (ii) getDueItems does not serve it as a new item either, even though
+    // a missing key normally means "new, due now" under v3.
+    const due = await result.current.getDueItems();
+    expect(due.map((i) => i.itemId)).not.toContain('1-presens');
+
+    // (iii) The bytes on disk are exactly what was seeded, immediately
+    // after load...
+    let stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored.items['1-presens']).toEqual(malformedItem);
+
+    // ...and still exactly that after an unrelated write.
+    act(() => {
+      result.current.recordAnswer('2-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['2-presens']!.repetitions).toBe(1));
+    await settlePersistence(
+      (s) =>
+        (s as { items?: Record<string, { repetitions?: number }> }).items?.['2-presens']
+          ?.repetitions === 1,
+    );
+
+    stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored.items['1-presens']).toEqual(malformedItem);
+  });
+
+  // Regression test for the particle-sitting overwrite bug (#251 round 2,
+  // first fixed in 5c941dd): getParticleSitting reads srsStates, which
+  // never contains a quarantined entry - so without the skip a quarantined
+  // particle cloze looks exactly like "verb never introduced", and
+  // buildParticleSitting serves it as new material. The next recordAnswer
+  // on that card would then write a fresh state under the same key, which
+  // wins the { ...quarantined, ...items } spread on save and destroys the
+  // bytes quarantine exists to keep. Uses a real, verified entry from
+  // PARTICLE_VERB_DATA (not a fixture) because particleQueue.ts resolves
+  // the base verb id through the real `verbs` array (verbIdByInfinitive in
+  // src/lib/particleQueue.ts), which this suite does not mock.
+  it('getParticleSitting does not serve a particle verb whose cloze is quarantined as new introduction material, and the write-back stays byte-for-byte', async () => {
+    const particleId = 'pv:ga-ut'; // baseInfinitive 'gå', reflexive 'none', verified
+    const baseInfinitive = 'gå';
+    const baseVerbId = verbs.find((v) => v.infinitive === baseInfinitive)?.id;
+    if (!baseVerbId) {
+      throw new Error(`fixture error: "${baseInfinitive}" is not in VERB_DATA`);
+    }
+
+    const clozeId = particleItemId(particleId, 'cloze');
+    // Malformed enough to be quarantined (dueAt is not a finite number, so
+    // it fails isStoredSrsState), and carrying a field this build does not
+    // know about - proof that quarantine preserves unknown bytes verbatim
+    // rather than re-serializing only the fields it understands.
+    const malformedCloze = {
+      itemId: clozeId,
+      repetitions: 1,
+      intervalDays: 1,
+      easeFactor: 2.5,
+      dueAt: null,
+      fromAFutureBuild: 'do not lose me',
+    };
+
+    // The base verb must clear the introduction gate (repetitions >= 2 on
+    // both presens and preteritum; BASE_VERB_GATE_REPETITIONS in
+    // src/lib/particleQueue.ts) - 5 is comfortably past it.
+    const readyBaseState = (form: 'presens' | 'preteritum') => ({
+      itemId: conjugationItemId(baseVerbId, form),
+      repetitions: 5,
+      intervalDays: 30,
+      easeFactor: 2.5,
+      dueAt: FIXED_NOW - 1000,
+    });
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        items: {
+          [conjugationItemId(baseVerbId, 'presens')]: readyBaseState('presens'),
+          [conjugationItemId(baseVerbId, 'preteritum')]: readyBaseState('preteritum'),
+          [clozeId]: malformedCloze,
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // (a) The malformed cloze never reaches the scheduler.
+    expect(result.current.srsStates).not.toHaveProperty(clozeId);
+
+    // (b) The verb is not served as new material by the particle sitting -
+    // neither as a placed card nor as a deferred first cloze.
+    const sitting = result.current.getParticleSitting(20);
+    expect(sitting.cards.some((card) => card.entry.id === particleId)).toBe(false);
+    expect(sitting.deferredFirstClozes).not.toContain(particleId);
+
+    // (c) An unrelated answer on the (fixture) conjugation deck still writes
+    // the quarantined cloze back to disk exactly as seeded.
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(1));
+    await settlePersistence(reflectsRecordedAnswer(1));
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored.items[clozeId]).toEqual(malformedCloze);
+  });
+});
+
+describe('importData - refuses while the store is still loading (issue #251 review)', () => {
+  // The load effect is async. An import accepted before it resolves would
+  // write the sibling stores to disk and swap srsStates in memory, while
+  // persistNow no-ops on its own isLoading guard - and then the load effect
+  // completes and clobbers srsStates (and the quarantine ref) with
+  // pre-import data: success toast, siblings changed, schedule not
+  // imported. canonicalVerbIdsRef is also still [] at that point, so legacy
+  // keys would skip re-keying. importData must refuse outright until
+  // loading is done.
+  it('returns false and writes nothing (neither sibling stores nor schedule) when called before loading resolves, then accepts the same file afterwards', async () => {
+    const preImportStore = JSON.stringify({
+      version: 3,
+      items: {
+        '1-presens': { repetitions: 2, intervalDays: 6, easeFactor: 2.5, dueAt: FIXED_NOW },
+      },
+    });
+    localStorage.setItem(STORAGE_KEY, preImportStore);
+    localStorage.setItem('swedish-verbs-settings', JSON.stringify({ theme: 'light' }));
+
+    const envelope = JSON.stringify({
+      app: 'ordboj',
+      backupVersion: 2,
+      version: 3,
+      items: {
+        '1-presens': { repetitions: 9, intervalDays: 30, easeFactor: 2.8, dueAt: FIXED_NOW },
+      },
+      stores: {
+        'swedish-verbs-settings': { theme: 'dark' },
+      },
+    });
+
+    const { result } = renderHook(() => useSrsProgress());
+    // Deliberately no waitFor here: the import races the load effect.
+    expect(result.current.isLoading).toBe(true);
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(envelope);
+    });
+
+    expect(importResult).toBe(false);
+    // Nothing reached disk: not the sibling store, not the schedule.
+    expect(localStorage.getItem('swedish-verbs-settings')).toBe(JSON.stringify({ theme: 'light' }));
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(preImportStore);
+
+    // The load effect completes onto the pre-import store, unclobbered.
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.srsStates['1-presens']).toMatchObject({ repetitions: 2 });
+
+    // Only the timing was wrong with the file: the same import succeeds
+    // once loading is done.
+    act(() => {
+      importResult = result.current.importData(envelope);
+    });
+    expect(importResult).toBe(true);
+    expect(result.current.srsStates['1-presens']).toMatchObject({ repetitions: 9 });
+    expect(localStorage.getItem('swedish-verbs-settings')).toBe(JSON.stringify({ theme: 'dark' }));
+  });
+});
+
+describe('importData - refuses while the store is read-only (issue #251, #241)', () => {
+  // #241's read-only guard stops *scheduled writes* from clobbering a
+  // newer-build store, but importData needs its own check: without it a
+  // read-only session would validate the file, call restoreAppStores (a
+  // real write to sibling stores), and swap srsStates in memory - all while
+  // the schedule store's on-disk bytes were never going to change. This
+  // pins that a read-only session refuses the whole import, sibling stores
+  // included, rather than half-applying it.
+  it('returns false and leaves both the settings store and the SRS store bytes untouched when the store is read-only', async () => {
+    const readOnlyStore = JSON.stringify({ version: 4, items: {} });
+    localStorage.setItem(STORAGE_KEY, readOnlyStore);
+    localStorage.setItem('swedish-verbs-settings', JSON.stringify({ theme: 'light' }));
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.isReadOnly).toBe(true);
+
+    const envelope = JSON.stringify({
+      app: 'ordboj',
+      backupVersion: 2,
+      version: 2,
+      items: {
+        '1-presens': {
+          itemId: '1-presens',
+          repetitions: 3,
+          intervalDays: 6,
+          easeFactor: 2.0,
+          dueAt: FIXED_NOW,
+        },
+      },
+      stores: {
+        'swedish-verbs-settings': { theme: 'dark' },
+      },
+    });
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(envelope);
+    });
+
+    expect(importResult).toBe(false);
+    expect(localStorage.getItem('swedish-verbs-settings')).toBe(JSON.stringify({ theme: 'light' }));
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(readOnlyStore);
+  });
+});
+
+// Issue #251 acceptance: "export produces a versioned whole-app envelope ...
+// import round-trips it". Every other test in this file either drives
+// importData with a hand-built envelope literal, or exercises buildAppBackup
+// directly (src/lib/backup.test.ts) — neither calls the hook's own
+// exportData() and feeds its actual output back into its own importData().
+// That handoff is the one place a shape mismatch between the writer
+// (buildAppBackup) and the reader (readAppBackup + validateImportedProgress)
+// would hide: the two sides are unit-tested in isolation, but never proven
+// to agree on the wire format they exchange.
+describe('exportData -> importData round-trip through the real store (issue #251)', () => {
+  it('restores a prior in-memory schedule and the settings store to exactly what was exported, discarding changes made after the export', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    localStorage.setItem('swedish-verbs-settings', JSON.stringify({ theme: 'dark' }));
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+
+    const exported = result.current.exportData();
+
+    // Diverge from the exported snapshot: a second answer changes the
+    // schedule, and the settings store changes underneath it too.
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(2));
+    localStorage.setItem('swedish-verbs-settings', JSON.stringify({ theme: 'light' }));
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(exported);
+    });
+
+    expect(importResult).toBe(true);
+    // The schedule is back to what it was at export time, not the
+    // post-export state.
+    expect(result.current.srsStates['1-presens']?.repetitions).toBe(1);
+    // The settings store, carried in the envelope's `stores`, is restored
+    // too - this is the part a bare SRS-only export/import could not do.
+    expect(localStorage.getItem('swedish-verbs-settings')).toBe(JSON.stringify({ theme: 'dark' }));
+  });
+});
+
+// Issue #251 acceptance: a rejected import "leaves state untouched". The
+// invalidEnvelopes cases above all reject at the structural-validation stage
+// (readAppBackup / validateImportedProgress). This covers the other failure
+// branch in importData: a structurally valid envelope whose sibling-store
+// write fails (quota exceeded) mid-restore. The schedule must never be
+// swapped in when that happens, and the failing store write must already
+// have rolled itself back (restoreAppStores' own contract, pinned at the
+// unit level in src/lib/backup.test.ts) - this test pins that the *hook*
+// honours both halves of that contract instead of, say, applying the
+// schedule regardless of whether the stores restored.
+describe('importData - envelope store-write failure rolls back cleanly (issue #251)', () => {
+  it('returns false and leaves srsStates, the SRS store and the settings store untouched when a sibling store write throws (quota exceeded)', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    localStorage.setItem('swedish-verbs-settings', JSON.stringify({ theme: 'light' }));
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+
+    await settlePersistence(reflectsRecordedAnswer(1));
+    const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
+    const srsStorageSnapshot = localStorage.getItem(STORAGE_KEY);
+
+    const realSetItem = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+      this: Storage,
+      key: string,
+      value: string,
+    ) {
+      if (key === 'swedish-verbs-settings') {
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      }
+      return realSetItem.call(this, key, value);
+    });
+
+    const envelope = JSON.stringify({
+      app: 'ordboj',
+      backupVersion: 2,
+      version: 2,
+      items: {
+        '1-presens': {
+          itemId: '1-presens',
+          repetitions: 9,
+          intervalDays: 30,
+          easeFactor: 2.8,
+          dueAt: FIXED_NOW,
+        },
+      },
+      stores: {
+        'swedish-verbs-settings': { theme: 'dark' },
+      },
+    });
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(envelope);
+    });
+
+    expect(importResult).toBe(false);
+    // The schedule was never swapped in.
+    expect(result.current.srsStates).toEqual(stateSnapshot);
+    // The failed store write rolled back to its pre-import bytes rather
+    // than being left half-written.
+    expect(localStorage.getItem('swedish-verbs-settings')).toBe(JSON.stringify({ theme: 'light' }));
+    // A rejected import never even attempts to persist the schedule.
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(srsStorageSnapshot);
   });
 });
