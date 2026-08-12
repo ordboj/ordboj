@@ -84,6 +84,14 @@ beforeEach(() => {
   vi.setSystemTime(FIXED_NOW);
 });
 
+// Writes are coalesced with a real-clock window (issue #253,
+// src/lib/storage.ts). A test that snapshots localStorage and later asserts
+// it did not change must first let the armed write land — otherwise the
+// flush can fire between snapshot and assertion and fail it spuriously.
+async function settlePersistence() {
+  await waitFor(() => expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull());
+}
+
 afterEach(() => {
   vi.useRealTimers();
 });
@@ -117,13 +125,15 @@ describe('persistence - the irreplaceable-progress invariant', () => {
     });
     await waitFor(() => expect(first.result.current.srsStates['1-presens']!.repetitions).toBe(1));
 
+    // Writes are coalesced (issue #253): the answer reaches disk at the
+    // latest when the hook unmounts and the writer's dispose() flushes.
+    first.unmount();
+
     const stored = localStorage.getItem(STORAGE_KEY);
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored as string);
     expect(parsed.version).toBe(3);
     expect(parsed.items['1-presens'].repetitions).toBe(1);
-
-    first.unmount();
 
     // Advance the clock so a fresh initialization (a bug) would produce a
     // different dueAt than the one already persisted (correct behavior).
@@ -252,14 +262,15 @@ describe('importData', () => {
 });
 
 describe('quota exceeded on write', () => {
-  // FIXED: src/hooks/useSrsProgress.ts wraps the localStorage.setItem call
-  // in a try/catch (the save effect around STORAGE_VERSION). When the
-  // browser's storage quota is exceeded, setItem throwing a DOMException is
-  // now caught and logged instead of propagating as an uncaught
-  // render-phase error, so a full write failure no longer crashes the tree.
-  // Owner: srs-engine (src/hooks/useSrsProgress.ts).
+  // The save path goes through the coalesced writer (src/lib/storage.ts,
+  // issue #253), whose writeSerialized swallows a throwing setItem. When
+  // the browser's storage quota is exceeded, the DOMException is caught and
+  // logged instead of propagating, so a full write failure never crashes
+  // the tree — neither when the answer is recorded nor when the pending
+  // write is flushed at unmount.
+  // Owner: srs-engine (src/hooks/useSrsProgress.ts, src/lib/storage.ts).
   it('does not crash the component tree when localStorage.setItem throws (quota exceeded)', async () => {
-    const { result } = renderHook(() => useSrsProgress());
+    const { result, unmount } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
@@ -270,6 +281,8 @@ describe('quota exceeded on write', () => {
       act(() => {
         result.current.recordAnswer('1-presens', 5);
       });
+      // Force the pending write to actually hit the throwing setItem.
+      unmount();
     }).not.toThrow();
   });
 });
@@ -641,6 +654,7 @@ describe('importData shape validation (issue #135)', () => {
     });
     await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
+    await settlePersistence();
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
@@ -671,6 +685,7 @@ describe('importData shape validation (issue #135)', () => {
     });
     await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
+    await settlePersistence();
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
@@ -713,6 +728,7 @@ describe('importData shape validation (issue #135)', () => {
     });
     await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
+    await settlePersistence();
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
@@ -743,6 +759,7 @@ describe('importData shape validation (issue #135)', () => {
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
+    await settlePersistence();
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
@@ -765,6 +782,7 @@ describe('importData shape validation (issue #135)', () => {
     });
     await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
+    await settlePersistence();
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
     let importResult: boolean | undefined;
@@ -837,7 +855,7 @@ describe('#241: forward-compat guard against a newer store', () => {
         },
       }),
     );
-    const { result } = renderHook(() => useSrsProgress());
+    const { result, unmount } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.isReadOnly).toBe(false);
@@ -847,6 +865,8 @@ describe('#241: forward-compat guard against a newer store', () => {
     });
     await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(2));
 
+    // The write is coalesced (issue #253); unmounting flushes it.
+    unmount();
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
     expect(stored.version).toBe(3);
     expect(stored.items['1-presens'].repetitions).toBe(2);
@@ -944,6 +964,7 @@ describe('#53: explicit reject list ([], {"x":1}, settings export)', () => {
 
     const rejectedPayloads = ['[]', '{"x":1}', settingsExport];
 
+    await settlePersistence();
     for (const payload of rejectedPayloads) {
       const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
       const storageSnapshot = localStorage.getItem(STORAGE_KEY);
@@ -1022,16 +1043,16 @@ describe('migrateConjugationKeys - #189 finding 13 edge cases', () => {
       JSON.stringify({ version: 2, items: { '999-presens': outOfRangeState } }),
     );
 
-    const { result } = renderHook(() => useSrsProgress());
+    const { result, unmount } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.srsStates['999-presens']).toMatchObject({ repetitions: 4 });
 
     // Verbatim in the persisted store too - an out-of-range key is not
-    // derivable, so the save path must never treat it as prunable.
-    await waitFor(() => {
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-      expect(stored.items['999-presens']).toMatchObject({ repetitions: 4 });
-    });
+    // derivable, so the save path must never treat it as prunable. The
+    // write is coalesced (issue #253); unmounting flushes it.
+    unmount();
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored.items['999-presens']).toMatchObject({ repetitions: 4 });
   });
 });

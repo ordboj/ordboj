@@ -447,7 +447,7 @@ describe('particle verb dataset - #359 band-6 operational particle verbs', () =>
     }
   });
 
-  it('gives the two reflexive-clothing pairs (ha på sig / ta på sig / ta av sig) distinct glosses', () => {
+  it('gives the three reflexive-clothing entries (ha på sig / ta på sig / ta av sig) distinct glosses', () => {
     // #359's authoring note leans on "getting dressed/undressed" as the
     // justification for three very similar entries built on the same
     // particle+reflexive shape. A copy-paste that left two of them with the

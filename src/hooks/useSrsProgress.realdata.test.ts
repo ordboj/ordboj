@@ -91,7 +91,7 @@ describe('useSrsProgress against real VERB_DATA', () => {
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(legacyBlob));
 
-    const { result } = renderHook(() => useSrsProgress());
+    const { result, unmount } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     first3.forEach((verb, position) => {
@@ -103,6 +103,9 @@ describe('useSrsProgress against real VERB_DATA', () => {
       expect(result.current.srsStates[`${position + 1}-presens`]).toBeUndefined();
     });
 
+    // The migrated store reaches disk at the latest when the coalesced
+    // writer (issue #253) flushes on unmount.
+    unmount();
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
     expect(stored.version).toBe(3);
     first3.forEach((verb, position) => {

@@ -90,11 +90,14 @@ jobs:
 
   # Guards the verb data itself rather than the code: rejects mojibake and
   # casing corruption in the conjugation form fields of both
-  # swedish_verbs.csv and src/data/verbData.ts. Wrong Swedish is worse than
-  # missing Swedish, and this is the defect class (issue #45, plus the SVor /
-  # SOV rows fixed in #158) that reaches a learner as a confidently wrong
-  # answer. The script is dependency-free plain Node, so this job deliberately
-  # skips `npm ci` and finishes in seconds.
+  # docs/verb-data/candidates.csv and src/data/verbData.ts. Wrong Swedish is
+  # worse than missing Swedish, and this is the defect class (issue #45,
+  # plus the SVor / SOV rows fixed in #158) that reaches a learner as a
+  # confidently wrong answer. It also enforces four structural rules from
+  # issue #280 (R2/R4/R5): no CSV file under public/, no non-test src/
+  # reference to either CSV filename, no duplicate VERB_DATA infinitive, and
+  # the VERB_DATA row-count pin. The script is dependency-free plain Node,
+  # so this job deliberately skips `npm ci` and finishes in seconds.
   validate-verbs:
     name: Validate verb data
     runs-on: ubuntu-latest
