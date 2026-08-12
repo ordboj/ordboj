@@ -669,7 +669,11 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     renderWithProviders(<Practice />, { route: '/practice' });
 
     const keepPractising = await screen.findByRole('button', { name: /keep practising/i });
-    expect(keepPractising).toBeEnabled();
+    // The button mounts disabled and flips enabled once the pending-pools
+    // effect (loadPending, Practice.tsx) resolves -- a separate commit from
+    // the mount that findByRole already resolved on. Assert after that
+    // settles instead of racing it.
+    await waitFor(() => expect(keepPractising).toBeEnabled());
     expect(screen.queryByRole('button', { name: /extra reviews/i })).not.toBeInTheDocument();
   });
 
@@ -724,7 +728,10 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
 
     const user = userEvent.setup();
     const keepPractising = await screen.findByRole('button', { name: /keep practising/i });
-    expect(keepPractising).toBeEnabled();
+    // Same effect-driven enable race as above: wait for it to settle before
+    // asserting or clicking, otherwise the click can land on a still-disabled
+    // button and silently no-op.
+    await waitFor(() => expect(keepPractising).toBeEnabled());
     await user.click(keepPractising);
 
     // First card must be the nearest-due one (vara, +1 day): submitting its
@@ -764,7 +771,9 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     // Repeatable: clicking "Keep practising" again redraws a round from the
     // same untouched pool without error, and still records nothing.
     const keepPractisingAgain = await screen.findByRole('button', { name: /keep practising/i });
-    expect(keepPractisingAgain).toBeEnabled();
+    // The pending-pools effect re-runs on every sessionComplete flip, so this
+    // second round's button also starts disabled before it settles.
+    await waitFor(() => expect(keepPractisingAgain).toBeEnabled());
     await user.click(keepPractisingAgain);
     expect(await screen.findByText('1 / 3')).toBeInTheDocument();
     expect(mocks.recordAnswer).not.toHaveBeenCalled();
@@ -778,7 +787,11 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     renderWithProviders(<Practice />, { route: '/practice' });
 
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: /keep practising/i }));
+    const keepPractising = await screen.findByRole('button', { name: /keep practising/i });
+    // Wait for the effect-driven enable, otherwise this click can land on a
+    // still-disabled button and silently no-op.
+    await waitFor(() => expect(keepPractising).toBeEnabled());
+    await user.click(keepPractising);
 
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.type(input, 'definitely not swedish');
@@ -809,7 +822,9 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     renderWithProviders(<Practice />, { route: '/practice' });
 
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: /keep practising/i }));
+    const keepPractising = await screen.findByRole('button', { name: /keep practising/i });
+    await waitFor(() => expect(keepPractising).toBeEnabled());
+    await user.click(keepPractising);
 
     expect(await screen.findByText('1 / 5')).toBeInTheDocument();
   });
@@ -826,7 +841,9 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     renderWithProviders(<Practice />, { route: '/practice' });
 
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: /keep practising/i }));
+    const keepPractising = await screen.findByRole('button', { name: /keep practising/i });
+    await waitFor(() => expect(keepPractising).toBeEnabled());
+    await user.click(keepPractising);
 
     expect(await screen.findByText('1 / 1')).toBeInTheDocument();
     const input = await screen.findByPlaceholderText('Type your answer...');
