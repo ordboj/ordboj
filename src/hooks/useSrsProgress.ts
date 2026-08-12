@@ -528,6 +528,23 @@ export function useSrsProgress(cefrLevels?: string[]) {
     );
   };
 
+  // Reset and import are one-shot, user-confirmed actions, so they must not
+  // sit in the coalesced 500 ms window: a tab killed right after "Reset all
+  // progress" (or a successful import) would otherwise still hold the OLD
+  // store on disk, and the action would appear not to have taken after
+  // reload. Going through the writer (schedule + flush) rather than a bare
+  // setItem also clears any pending pre-action snapshot, so a stale flush
+  // cannot land over the new bytes later. The map is passed in explicitly
+  // because the matching setSrsStates has not re-rendered yet when this
+  // runs. Same isLoading/isReadOnly guard as the save effect.
+  const persistNow = (items: Record<string, SrsState>) => {
+    if (isLoading || isReadOnly) return;
+    const writer = writerRef.current;
+    if (!writer) return;
+    writer.schedule(() => serializeStore(items, derivableIdsRef.current, Date.now()));
+    writer.flush();
+  };
+
   // Accepts both versioned exports and legacy bare-map exports; legacy
   // imports get the same one-time ease rebase as legacy storage. Anything
   // that is not a structurally valid backup is rejected: false is returned
@@ -540,6 +557,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
       return false;
     }
     setSrsStates(imported);
+    persistNow(imported);
     return true;
   };
 
@@ -551,6 +569,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
   // silent violation of "reset all progress".
   const resetProgress = () => {
     setSrsStates({});
+    persistNow({});
     localStorage.removeItem(LEGACY_BACKUP_KEY);
   };
 
