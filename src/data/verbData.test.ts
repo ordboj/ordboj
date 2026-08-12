@@ -1008,8 +1008,8 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
   // the comparison logic (array equality of an ordered id list) was checked
   // against a deliberately reordered fixture outside this suite to confirm
   // it is not a tautology.
-  it('AC8: VERB_DATA has exactly the pinned 56 rows, in the pinned order', () => {
-    expect(VERB_DATA).toHaveLength(56);
+  it('AC8: VERB_DATA has exactly the pinned 68 rows, in the pinned order', () => {
+    expect(VERB_DATA).toHaveLength(68);
     expect(VERB_DATA.map((v) => v.infinitive)).toEqual([
       'vara',
       'ha',
@@ -1067,6 +1067,18 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
       'hälsa',
       'bygga',
       'ställa',
+      'slå',
+      'dra',
+      'köra',
+      'arbeta',
+      'hänga',
+      'sitta',
+      'falla',
+      'kasta',
+      'bryta',
+      'åka',
+      'plocka',
+      'titta',
     ]);
   });
 
