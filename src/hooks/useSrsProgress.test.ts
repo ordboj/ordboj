@@ -88,8 +88,31 @@ beforeEach(() => {
 // src/lib/storage.ts). A test that snapshots localStorage and later asserts
 // it did not change must first let the armed write land — otherwise the
 // flush can fire between snapshot and assertion and fail it spuriously.
-async function settlePersistence() {
-  await waitFor(() => expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull());
+//
+// A plain "storage is non-null" check is not enough: on load, the hook
+// itself schedules a write for the initial (empty) state, so storage can go
+// non-null before a subsequent recordAnswer's write has landed. If that
+// initial write's timer fires after the caller already recorded an answer,
+// settlePersistence would return on the stale pre-answer content, and the
+// still-pending post-answer flush would land later, between the caller's
+// snapshot and its "storage unchanged" assertion. Callers that just
+// recorded an answer must say so, so this waits for storage to actually
+// reflect it rather than merely existing.
+async function settlePersistence(isSettled: (stored: unknown) => boolean = () => true) {
+  await waitFor(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    expect(raw).not.toBeNull();
+    expect(isSettled(JSON.parse(raw as string))).toBe(true);
+  });
+}
+
+// Shorthand for the common case: an answer was just recorded for
+// '1-presens' and the caller needs storage to reflect that repetition
+// count before it starts comparing snapshots.
+function reflectsRecordedAnswer(repetitions: number) {
+  return (stored: unknown) =>
+    (stored as { items?: Record<string, { repetitions?: number }> }).items?.['1-presens']
+      ?.repetitions === repetitions;
 }
 
 afterEach(() => {
@@ -654,7 +677,7 @@ describe('importData shape validation (issue #135)', () => {
     });
     await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
-    await settlePersistence();
+    await settlePersistence(reflectsRecordedAnswer(1));
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
@@ -685,7 +708,7 @@ describe('importData shape validation (issue #135)', () => {
     });
     await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
-    await settlePersistence();
+    await settlePersistence(reflectsRecordedAnswer(1));
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
@@ -728,7 +751,7 @@ describe('importData shape validation (issue #135)', () => {
     });
     await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
-    await settlePersistence();
+    await settlePersistence(reflectsRecordedAnswer(1));
     const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
@@ -782,7 +805,7 @@ describe('importData shape validation (issue #135)', () => {
     });
     await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
 
-    await settlePersistence();
+    await settlePersistence(reflectsRecordedAnswer(1));
     const storageSnapshot = localStorage.getItem(STORAGE_KEY);
 
     let importResult: boolean | undefined;
@@ -964,7 +987,7 @@ describe('#53: explicit reject list ([], {"x":1}, settings export)', () => {
 
     const rejectedPayloads = ['[]', '{"x":1}', settingsExport];
 
-    await settlePersistence();
+    await settlePersistence(reflectsRecordedAnswer(1));
     for (const payload of rejectedPayloads) {
       const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
       const storageSnapshot = localStorage.getItem(STORAGE_KEY);
