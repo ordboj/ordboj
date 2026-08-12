@@ -14,7 +14,7 @@ stores that preposition in a new `preposition?: string` field, and its
 alone. The recall answer is the full phrase, preposition included. The
 reference line shows the preposition on every form. The three blocked
 entries (`pv:se-fram`, `pv:ga-miste`, `pv:ta-itu`) flip to `verified: true`
-once `swedish-linguist` applies section 2.
+once a separate implementation ticket applies section 2 and section 4.
 
 Concretely, for the three entries:
 
@@ -95,8 +95,16 @@ as a standalone phrase. It is not for entries where a preposition merely
 selects one sense: `hålla fast` (vid), `se ner` (på), `gå med` (i/på),
 `ställa till` (med) all stand alone in at least one sense and stay exactly
 as they are, with the prepositional sense named in the gloss or `contrast`.
-The research list counts 42 entries in the v+p+prep class; 3 are in the
-dataset today, and this decision governs the rest as they arrive.
+
+Research section 3.6 states that `hålla fast` without `vid` means something
+different. This decision keeps `pv:halla-fast` as it is, because the
+dataset ships the concrete grip sense with three frames, and the `vid`
+sense is named in the gloss. The field tracks phrases with no standalone
+sense at all, not phrases with a second sense.
+The research list counts 42 entries in the v+p+prep class. Three of them are
+blocked on this decision (`pv:se-fram`, `pv:ga-miste`, `pv:ta-itu`). Two more
+class members already ship in their standalone sense (`pv:bli-av`,
+`pv:halla-fast`) and this decision does not change them.
 
 Scope limit: `preposition` requires `reflexive: 'none'` in v1. The one
 known reflexive+preposition candidate (`sätta sig upp mot`) is not in the
