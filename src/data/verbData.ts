@@ -136,7 +136,7 @@ export const VERB_DATA: VerbData[] = [
   // frequency and unambiguous (no vowel-gradation uncertainty). Append-only
   // -- existing row order above is frozen by verbData.orderPin.test.ts.
   { cefr: "A1", infinitive: "slå", imperativ: "slå", presens: "slår", preteritum: "slog", supinum: "slagit", grupp: "4" },
-  { cefr: "A1", infinitive: "dra", imperativ: "dra", presens: "drar", preteritum: "drog", supinum: "dragit", grupp: "4" },
+  { cefr: "A1", infinitive: "dra", imperativ: "dra", presens: "drar", preteritum: "drog", supinum: "dragit", grupp: "4", note: "draga is an archaic, literary variant of dra. Recognition only, not accepted as an answer." },
   { cefr: "A1", infinitive: "köra", imperativ: "kör", presens: "kör", preteritum: "körde", supinum: "kört", grupp: "2a" },
   { cefr: "A1", infinitive: "arbeta", imperativ: "arbeta", presens: "arbetar", preteritum: "arbetade", supinum: "arbetat", grupp: "1" },
   { cefr: "A1", infinitive: "hänga", imperativ: "häng", presens: "hänger", preteritum: "hängde", supinum: "hängt", grupp: "2a" },
