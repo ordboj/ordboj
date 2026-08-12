@@ -125,7 +125,7 @@ describe('#246: mixed legacy + pv: key round trip', () => {
   it('writes the migrated keys back to localStorage after an import', async () => {
     const backup = JSON.stringify({ version: 2, items: MIXED_ITEMS_INPUT });
 
-    const { result } = renderHook(() => useSrsProgress());
+    const { result, unmount } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     act(() => {
@@ -133,6 +133,8 @@ describe('#246: mixed legacy + pv: key round trip', () => {
     });
     await waitFor(() => expect(result.current.srsStates[REFLEXIVE_KEY]).toBeDefined());
 
+    // The write is coalesced (issue #253); unmounting flushes it.
+    unmount();
     const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
     expect(persisted.items[REFLEXIVE_KEY]).toEqual(
       withoutItemId(MIGRATED_ITEMS_EXPECTED[REFLEXIVE_KEY]!),
