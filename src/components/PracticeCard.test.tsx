@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
@@ -767,6 +767,167 @@ describe('PracticeCard - alternate accepted answers (issue #123)', () => {
 
     vi.resetModules();
     vi.doUnmock('@/data/verbData');
+  });
+});
+
+// Issue #43 (docs/learning/2026-08-08-verb-data-conventions.md), acceptance
+// checks 5 and 6: every form in an accepted set grades full credit (grade
+// 5), including a sense-conditioned pair, and a sense-conditioned pair's
+// feedback panel shows the `alternatesNote` override instead of the generic
+// "Both ... are correct." line.
+describe('PracticeCard - #43 alternate grading and alternatesNote disclosure', () => {
+  // AC5, real shipped data: typing the documented alternate for a real
+  // VERB_DATA row must grade full credit (onAnswer(5)), not just show
+  // "Correct!". The "#123" describe block above only asserts the
+  // onAnswer(5) contract for vara/presens (line 163), which has no
+  // alternates at all, so it does not cover this.
+  it('grades onAnswer(5) after typing the alternate "lade" for lägga preteritum (AC5)', async () => {
+    const user = userEvent.setup();
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="lägga"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={onAnswer}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'lade');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(5);
+  });
+
+  it('grades onAnswer(5) after typing the alternate "sade" for säga preteritum (AC5)', async () => {
+    const user = userEvent.setup();
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="säga"
+        form="preteritum"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={onAnswer}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'sade');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(5);
+  });
+
+  describe('sense-conditioned alternatesNote (fixture verb, AC6)', () => {
+    afterEach(() => {
+      vi.resetModules();
+      vi.doUnmock('@/data/verbData');
+    });
+
+    // VERB_DATA ships no row with alternatesNote yet (the sense-conditioned
+    // rows the decision doc names -- lyda, svälta -- are CSV-only per
+    // section 7), so this mocks a fixture row the same way the P7
+    // distractor-collision test above does, rather than asserting against
+    // a shipped row that does not exist.
+    async function renderWithLydaFixture() {
+      vi.resetModules();
+      vi.doMock('@/data/verbData', async () => {
+        const actual = await vi.importActual<typeof import('@/data/verbData')>('@/data/verbData');
+        return {
+          ...actual,
+          VERB_DATA: [
+            ...actual.VERB_DATA,
+            {
+              cefr: 'A2',
+              infinitive: 'lyda-fixture',
+              imperativ: 'lyd',
+              presens: 'lyder',
+              preteritum: 'lydde',
+              supinum: 'lytt',
+              grupp: '2a',
+              alternates: { preteritum: ['löd'] },
+              alternatesNote: {
+                preteritum: 'lydde = obey; löd = read as/state a text (different senses).',
+              },
+            },
+          ],
+        };
+      });
+      const { PracticeCard: MockedPracticeCard } = await import('@/components/PracticeCard');
+      return MockedPracticeCard;
+    }
+
+    it('shows the alternatesNote line, not the generic "Both ... are correct." line', async () => {
+      const user = userEvent.setup();
+      const MockedPracticeCard = await renderWithLydaFixture();
+
+      renderWithProviders(
+        <MockedPracticeCard
+          infinitive="lyda-fixture"
+          form="preteritum"
+          mode="typing"
+          showExamples={false}
+          autoplayAudio={false}
+          muteAudio={true}
+          onAnswer={vi.fn()}
+        />,
+      );
+
+      const input = await screen.findByPlaceholderText('Type your answer...');
+      await user.type(input, 'lydde');
+      await user.click(screen.getByRole('button', { name: /check answer/i }));
+      await screen.findByText('Correct!');
+
+      expect(screen.getByText(/lydde = obey; löd = read as\/state a text/)).toBeInTheDocument();
+      expect(screen.queryByText(/are correct\./)).not.toBeInTheDocument();
+    });
+
+    // C5 rules out a plausible alternative design -- rejecting the
+    // "wrong-sense" member of a sense-conditioned pair, since the bare
+    // paradigm card can't disambiguate sense. isAcceptedAnswer never reads
+    // `alternatesNote`, so nothing here could special-case a
+    // sense-conditioned alternate differently from a free one; this pins
+    // that policy decision (both grade 5) at the UI level rather than
+    // proving a new code path.
+    it('grades the sense-conditioned alternate "löd" full credit (grade 5), same as the primary "lydde" (AC5)', async () => {
+      const user = userEvent.setup();
+      const onAnswer = vi.fn<(grade: Grade) => void>();
+      const MockedPracticeCard = await renderWithLydaFixture();
+
+      renderWithProviders(
+        <MockedPracticeCard
+          infinitive="lyda-fixture"
+          form="preteritum"
+          mode="typing"
+          showExamples={false}
+          autoplayAudio={false}
+          muteAudio={true}
+          onAnswer={onAnswer}
+        />,
+      );
+
+      const input = await screen.findByPlaceholderText('Type your answer...');
+      await user.type(input, 'löd');
+      await user.click(screen.getByRole('button', { name: /check answer/i }));
+      await screen.findByText('Correct!');
+      await user.click(screen.getByRole('button', { name: /next card/i }));
+
+      expect(onAnswer).toHaveBeenCalledTimes(1);
+      expect(onAnswer).toHaveBeenCalledWith(5);
+    });
   });
 });
 

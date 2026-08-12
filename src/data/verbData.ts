@@ -43,6 +43,21 @@ export interface VerbData {
   // data bug, not a deliberate gap. Omitted (undefined) is equivalent to
   // false and is the correct value for every non-modal verb.
   noNaturalImperativ?: boolean;
+  // Recognition-only prose about the lemma, e.g. naming an archaic or
+  // colloquial variant ("taga" for "ta"). #43/C2 (docs/learning/
+  // 2026-08-08-verb-data-conventions.md): may be shown after an answer is
+  // graded, never during retrieval, and the variant it names never joins
+  // any accepted-answer set — AlternateFormField / getAcceptedAnswers stay
+  // untouched by this field. Optional; omitted for almost every row.
+  note?: string;
+  // Per-form disclosure override for a sense-conditioned alternate pair
+  // (e.g. lyda preteritum -- "lydde" for the "obey" sense vs "löd" for the
+  // "read as/state" sense). #43/C6a: when a note exists for the graded
+  // form, getAlternatesDisclosure (src/lib/verbs.ts) returns it instead of
+  // the generic "Both X and Y are correct" line, which would misstate a
+  // real sense split as free interchangeability. Optional; only pairs the
+  // linguist has classified as sense-conditioned carry one.
+  alternatesNote?: Partial<Record<AlternateFormField, string>>;
 }
 
 export const VERB_DATA: VerbData[] = [
@@ -56,17 +71,18 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "vilja", imperativ: "", presens: "vill", preteritum: "ville", supinum: "velat", grupp: "4", noNaturalImperativ: true }, // modal verb: no imperativ in Swedish, empty is correct
   { cefr: "A1", infinitive: "göra", imperativ: "gör", presens: "gör", preteritum: "gjorde", supinum: "gjort", grupp: "4" },
   { cefr: "A1", infinitive: "finna", imperativ: "finn", presens: "finner", preteritum: "fann", supinum: "funnit", grupp: "4" },
-  { cefr: "A1", infinitive: "ta", imperativ: "ta", presens: "tar", preteritum: "tog", supinum: "tagit", grupp: "4" },
+  { cefr: "A1", infinitive: "ta", imperativ: "ta", presens: "tar", preteritum: "tog", supinum: "tagit", grupp: "4", note: "taga is an archaic, literary variant of ta. Recognition only, not accepted as an answer." },
   { cefr: "A1", infinitive: "se", imperativ: "se", presens: "ser", preteritum: "såg", supinum: "sett", grupp: "4" },
   { cefr: "A1", infinitive: "gå", imperativ: "gå", presens: "går", preteritum: "gick", supinum: "gått", grupp: "4" },
   // preteritum: "sa" is the primary stored form and "sade" the equally
   // correct SAOL alternate. Both are standard modern Swedish; "sade" is the
   // more written/formal of the two. Order matters — index 0 is what the app
   // displays, hints and speaks (see the #123 decision doc, P1/P5).
+  // #43/C5 category: free variant (same sense, register difference only).
   { cefr: "A1", infinitive: "säga", imperativ: "säg", presens: "säger", preteritum: "sa", supinum: "sagt", grupp: "4", alternates: { preteritum: ["sade"] } },
   { cefr: "A1", infinitive: "äga", imperativ: "äg", presens: "äger", preteritum: "ägde", supinum: "ägt", grupp: "2a" },
   { cefr: "A1", infinitive: "betyda", imperativ: "betyd", presens: "betyder", preteritum: "betydde", supinum: "betytt", grupp: "2a" },
-  { cefr: "A1", infinitive: "ge", imperativ: "ge", presens: "ger", preteritum: "gav", supinum: "gett", grupp: "4" },
+  { cefr: "A1", infinitive: "ge", imperativ: "ge", presens: "ger", preteritum: "gav", supinum: "gett", grupp: "4", note: "giva is an archaic, literary variant of ge. Recognition only, not accepted as an answer." },
   { cefr: "A1", infinitive: "skriva", imperativ: "skriv", presens: "skriver", preteritum: "skrev", supinum: "skrivit", grupp: "4" },
   { cefr: "C1", infinitive: "te sig", imperativ: "", presens: "ter sig", preteritum: "tedde sig", supinum: "tett sig", grupp: "3" }, // re-tagged #42: formal/literary register ("to appear/seem"), not a beginner verb. NEEDS HUMAN CHECK: reflexive + stative; imperativ would need pronoun swap (sig -> dig), uncertain whether it's used naturally — not guessed
   { cefr: "A1", infinitive: "riva", imperativ: "riv", presens: "river", preteritum: "rev", supinum: "rivit", grupp: "4" },
@@ -91,6 +107,7 @@ export const VERB_DATA: VerbData[] = [
   // preteritum: same pair as "säga" above — "la" primary, "lade" the equally
   // correct SAOL alternate. The short form is primary for consistency with
   // "sa", and because P5 sizes the hint blanks to the primary.
+  // #43/C5 category: free variant (same sense, register difference only).
   { cefr: "A1", infinitive: "lägga", imperativ: "lägg", presens: "lägger", preteritum: "la", supinum: "lagt", grupp: "4", alternates: { preteritum: ["lade"] } },
   { cefr: "A1", infinitive: "anse", imperativ: "", presens: "anser", preteritum: "ansåg", supinum: "ansett", grupp: "4" }, // NEEDS HUMAN CHECK: formal stative "to deem/consider" (like "se" pattern, possibly imperativ "anse"), uncertain if naturally used — not guessed
   { cefr: "A1", infinitive: "öva", imperativ: "öva", presens: "övar", preteritum: "övade", supinum: "övat", grupp: "1" },
