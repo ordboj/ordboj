@@ -17,7 +17,9 @@ type ParticleSessionKind = 'scheduled' | 'free';
 export default function PracticeParticles() {
   const navigate = useNavigate();
   const { settings, isLoading: settingsLoading } = useSettings();
-  const { getParticleSitting, recordAnswer, srsStates, isLoading, isReadOnly } = useSrsProgress();
+  const { getParticleSitting, recordAnswer, srsStates, isLoading, isReadOnly } = useSrsProgress(
+    settings.cefrLevels,
+  );
 
   const [cards, setCards] = useState<ParticleSittingCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
