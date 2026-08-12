@@ -84,7 +84,7 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "betyda", imperativ: "betyd", presens: "betyder", preteritum: "betydde", supinum: "betytt", grupp: "2a" },
   { cefr: "A1", infinitive: "ge", imperativ: "ge", presens: "ger", preteritum: "gav", supinum: "gett", grupp: "4", note: "giva is an archaic, literary variant of ge. Recognition only, not accepted as an answer." },
   { cefr: "A1", infinitive: "skriva", imperativ: "skriv", presens: "skriver", preteritum: "skrev", supinum: "skrivit", grupp: "4" },
-  { cefr: "C1", infinitive: "te sig", imperativ: "", presens: "ter sig", preteritum: "tedde sig", supinum: "tett sig", grupp: "3" }, // re-tagged #42: formal/literary register ("to appear/seem"), not a beginner verb. NEEDS HUMAN CHECK: reflexive + stative; imperativ would need pronoun swap (sig -> dig), uncertain whether it's used naturally — not guessed
+  { cefr: "C1", infinitive: "te sig", imperativ: "", presens: "ter sig", preteritum: "tedde sig", supinum: "tett sig", grupp: "3" }, // re-tagged #42: formal/literary register ("to appear/seem"), not a beginner verb. NEEDS HUMAN CHECK: reflexive + stative; the "sig" -> "dig" swap is regular morphology, but "te sig" takes almost only non-human/abstract subjects ("det ter sig underligt"), so an addressed imperativ "te dig" is not attested in SAOL/SO. Morphological derivability is not attestation — left empty rather than guessed
   { cefr: "A1", infinitive: "riva", imperativ: "riv", presens: "river", preteritum: "rev", supinum: "rivit", grupp: "4" },
   { cefr: "A1", infinitive: "börja", imperativ: "börja", presens: "börjar", preteritum: "började", supinum: "börjat", grupp: "1" },
   { cefr: "A1", infinitive: "tro", imperativ: "tro", presens: "tror", preteritum: "trodde", supinum: "trott", grupp: "3" },
@@ -109,7 +109,7 @@ export const VERB_DATA: VerbData[] = [
   // "sa", and because P5 sizes the hint blanks to the primary.
   // #43/C5 category: free variant (same sense, register difference only).
   { cefr: "A1", infinitive: "lägga", imperativ: "lägg", presens: "lägger", preteritum: "la", supinum: "lagt", grupp: "4", alternates: { preteritum: ["lade"] } },
-  { cefr: "A1", infinitive: "anse", imperativ: "", presens: "anser", preteritum: "ansåg", supinum: "ansett", grupp: "4" }, // NEEDS HUMAN CHECK: formal stative "to deem/consider" (like "se" pattern, possibly imperativ "anse"), uncertain if naturally used — not guessed
+  { cefr: "A1", infinitive: "anse", imperativ: "", presens: "anser", preteritum: "ansåg", supinum: "ansett", grupp: "4" }, // NEEDS HUMAN CHECK: formal stative "to deem/consider", prefixed "se" (anser/ansåg/ansett), so the form would be "anse". Morphology is certain, but usage is restricted to fixed formal frames ("anse dig varnad"); whether it is teachable as a bare imperativ needs a human ruling — not guessed
   { cefr: "A1", infinitive: "öva", imperativ: "öva", presens: "övar", preteritum: "övade", supinum: "övat", grupp: "1" },
   { cefr: "A1", infinitive: "handla", imperativ: "handla", presens: "handlar", preteritum: "handlade", supinum: "handlat", grupp: "1" },
   { cefr: "A1", infinitive: "öka", imperativ: "öka", presens: "ökar", preteritum: "ökade", supinum: "ökat", grupp: "1" },
