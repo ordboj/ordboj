@@ -130,4 +130,21 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A2", infinitive: "hälsa", imperativ: "hälsa", presens: "hälsar", preteritum: "hälsade", supinum: "hälsat", grupp: "1" },
   { cefr: "A1", infinitive: "bygga", imperativ: "bygg", presens: "bygger", preteritum: "byggde", supinum: "byggt", grupp: "2a" },
   { cefr: "A1", infinitive: "ställa", imperativ: "ställ", presens: "ställer", preteritum: "ställde", supinum: "ställt", grupp: "2a" },
+  // Appended for #369: top-12 missing base verbs that unblock 161 blocked
+  // particle-verb entries (see #330). Forms verified against SAOL/Svenska.se
+  // usage and cross-checked against the promotion queue (#21), all high-
+  // frequency and unambiguous (no vowel-gradation uncertainty). Append-only
+  // -- existing row order above is frozen by verbData.orderPin.test.ts.
+  { cefr: "A1", infinitive: "slå", imperativ: "slå", presens: "slår", preteritum: "slog", supinum: "slagit", grupp: "4" },
+  { cefr: "A1", infinitive: "dra", imperativ: "dra", presens: "drar", preteritum: "drog", supinum: "dragit", grupp: "4", note: "draga is an archaic, literary variant of dra. Recognition only, not accepted as an answer." },
+  { cefr: "A1", infinitive: "köra", imperativ: "kör", presens: "kör", preteritum: "körde", supinum: "kört", grupp: "2a" },
+  { cefr: "A1", infinitive: "arbeta", imperativ: "arbeta", presens: "arbetar", preteritum: "arbetade", supinum: "arbetat", grupp: "1" },
+  { cefr: "A1", infinitive: "hänga", imperativ: "häng", presens: "hänger", preteritum: "hängde", supinum: "hängt", grupp: "2a" },
+  { cefr: "A1", infinitive: "sitta", imperativ: "sitt", presens: "sitter", preteritum: "satt", supinum: "suttit", grupp: "4" },
+  { cefr: "A1", infinitive: "falla", imperativ: "fall", presens: "faller", preteritum: "föll", supinum: "fallit", grupp: "4" },
+  { cefr: "A1", infinitive: "kasta", imperativ: "kasta", presens: "kastar", preteritum: "kastade", supinum: "kastat", grupp: "1" },
+  { cefr: "A1", infinitive: "bryta", imperativ: "bryt", presens: "bryter", preteritum: "bröt", supinum: "brutit", grupp: "4" },
+  { cefr: "A1", infinitive: "åka", imperativ: "åk", presens: "åker", preteritum: "åkte", supinum: "åkt", grupp: "2b" },
+  { cefr: "A2", infinitive: "plocka", imperativ: "plocka", presens: "plockar", preteritum: "plockade", supinum: "plockat", grupp: "1" }, // A2: common but not core-beginner vocabulary, consistent with the promotion queue tag
+  { cefr: "A1", infinitive: "titta", imperativ: "titta", presens: "tittar", preteritum: "tittade", supinum: "tittat", grupp: "1" },
 ];

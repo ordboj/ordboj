@@ -73,6 +73,18 @@ const PINNED_INFINITIVES: readonly string[] = [
   'hälsa', // 54
   'bygga', // 55
   'ställa', // 56
+  'slå', // 57
+  'dra', // 58
+  'köra', // 59
+  'arbeta', // 60
+  'hänga', // 61
+  'sitta', // 62
+  'falla', // 63
+  'kasta', // 64
+  'bryta', // 65
+  'åka', // 66
+  'plocka', // 67
+  'titta', // 68
 ];
 
 describe('VERB_DATA order pin', () => {
