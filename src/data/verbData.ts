@@ -147,4 +147,20 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "åka", imperativ: "åk", presens: "åker", preteritum: "åkte", supinum: "åkt", grupp: "2b" },
   { cefr: "A2", infinitive: "plocka", imperativ: "plocka", presens: "plockar", preteritum: "plockade", supinum: "plockat", grupp: "1" }, // A2: common but not core-beginner vocabulary, consistent with the promotion queue tag
   { cefr: "A1", infinitive: "titta", imperativ: "titta", presens: "tittar", preteritum: "tittade", supinum: "tittat", grupp: "1" },
+  // Appended for #399: 8 base verbs that unblock the remaining band 1-2
+  // particle verbs (#397 wave A / #394). Forms verified against SAOL and
+  // cross-checked against docs/verb-data/candidates.csv. Append-only --
+  // existing row order above is frozen by verbData.orderPin.test.ts.
+  // preteritum "växte" is weak, but supinum keeps the older strong
+  // gradation "vuxit" alongside the modern weak alternate "växt" (both
+  // SAOL-standard; "vuxit" fits the organic/physical-growth sense that
+  // dominates A1 usage). #43/C5 category: free variant.
+  { cefr: "A1", infinitive: "växa", imperativ: "väx", presens: "växer", preteritum: "växte", supinum: "vuxit", grupp: "4", alternates: { supinum: ["växt"] } },
+  { cefr: "A1", infinitive: "dela", imperativ: "dela", presens: "delar", preteritum: "delade", supinum: "delat", grupp: "1" },
+  { cefr: "A1", infinitive: "dyka", imperativ: "dyk", presens: "dyker", preteritum: "dök", supinum: "dykit", grupp: "4" },
+  { cefr: "A1", infinitive: "hjälpa", imperativ: "hjälp", presens: "hjälper", preteritum: "hjälpte", supinum: "hjälpt", grupp: "2b" },
+  { cefr: "A2", infinitive: "låna", imperativ: "låna", presens: "lånar", preteritum: "lånade", supinum: "lånat", grupp: "1" },
+  { cefr: "A1", infinitive: "spela", imperativ: "spela", presens: "spelar", preteritum: "spelade", supinum: "spelat", grupp: "1" },
+  { cefr: "A2", infinitive: "koppla", imperativ: "koppla", presens: "kopplar", preteritum: "kopplade", supinum: "kopplat", grupp: "1" },
+  { cefr: "A1", infinitive: "lämna", imperativ: "lämna", presens: "lämnar", preteritum: "lämnade", supinum: "lämnat", grupp: "1" },
 ];
