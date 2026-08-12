@@ -89,7 +89,10 @@ function listFiles(dir) {
 function checkNoPublicCsv() {
   return listFiles('public')
     .filter((f) => f.toLowerCase().endsWith('.csv'))
-    .map((f) => `${f}: a CSV file exists under public/ — verb data must not ship in the bundle (issue #21 R1/R2, #280)`);
+    .map(
+      (f) =>
+        `${f}: a CSV file exists under public/ — verb data must not ship in the bundle (issue #21 R1/R2, #280)`,
+    );
 }
 
 // R5.2 — no non-test file under src/ may reference either CSV filename;
