@@ -450,6 +450,143 @@ describe('introduction ordering (issue #316)', () => {
   });
 });
 
+// #350 / docs/learning/2026-08-09-particle-cefr-majority-decision.md, "The
+// residual risk, named": cefrLevels scopes introduction candidates only.
+// Due reviews and recall unlocks must never be filtered — they are
+// schedules for verbs the learner already met, and filtering them would
+// orphan items with an existing schedule.
+describe('#350: cefrLevels scopes introductions only', () => {
+  it('never offers an introduction outside cefrLevels, even with room in the allowance', () => {
+    const inBand = entry({ id: 'pv:a1-intro', cefr: 'A1', baseInfinitive: 'gå' });
+    const outOfBand = entry({
+      id: 'pv:b1-intro',
+      cefr: 'B1',
+      baseInfinitive: 'ta',
+      particle: 'med',
+      acceptedParticles: ['med'],
+    });
+    const sitting = buildParticleSitting({
+      srsStates: {},
+      particleDailyGoal: 60,
+      now: NOW,
+      shuffle: noShuffle,
+      entries: [inBand, outOfBand],
+      cefrLevels: ['A1'],
+    });
+    const introducedIds = sitting.cards
+      .filter((card) => card.kind === 'introduction')
+      .map((card) => card.entry.id);
+    expect(introducedIds).toEqual(['pv:a1-intro']);
+    expect(introducedIds).not.toContain('pv:b1-intro');
+  });
+
+  it('still serves a due review outside cefrLevels', () => {
+    const outOfBand = entry({ id: 'pv:b1-due', cefr: 'B1', baseInfinitive: 'ta' });
+    const clozeId = particleItemId(outOfBand.id, 'cloze');
+    const sitting = buildParticleSitting({
+      srsStates: {
+        [clozeId]: state({ itemId: clozeId, repetitions: 3, dueAt: NOW - DAY }),
+      },
+      particleDailyGoal: 12,
+      now: NOW,
+      shuffle: noShuffle,
+      entries: [outOfBand],
+      cefrLevels: ['A1'],
+    });
+    expect(sitting.reviewsDue).toBe(1);
+    expect(sitting.cards.map((card) => card.kind)).toEqual(['cloze']);
+    expect(sitting.cards[0]!.entry.id).toBe('pv:b1-due');
+  });
+
+  it('still serves a recall unlock outside cefrLevels', () => {
+    const outOfBand = entry({ id: 'pv:b1-unlock', cefr: 'B1', baseInfinitive: 'ta' });
+    const clozeId = particleItemId(outOfBand.id, 'cloze');
+    const sitting = buildParticleSitting({
+      srsStates: {
+        [clozeId]: state({ itemId: clozeId, repetitions: 2, dueAt: NOW + 6 * DAY }),
+      },
+      particleDailyGoal: 12,
+      now: NOW,
+      shuffle: noShuffle,
+      entries: [outOfBand],
+      cefrLevels: ['A1'],
+    });
+    expect(sitting.cards.map((card) => card.kind)).toEqual(['recall']);
+    expect(sitting.cards[0]!.entry.id).toBe('pv:b1-unlock');
+  });
+
+  it('treats undefined cefrLevels as no filter, matching pre-#350 behavior', () => {
+    const a1 = entry({ id: 'pv:a1', cefr: 'A1', baseInfinitive: 'gå' });
+    const b1 = entry({
+      id: 'pv:b1',
+      cefr: 'B1',
+      baseInfinitive: 'ta',
+      particle: 'med',
+      acceptedParticles: ['med'],
+    });
+    const sitting = buildParticleSitting({
+      srsStates: {},
+      particleDailyGoal: 60,
+      now: NOW,
+      shuffle: noShuffle,
+      entries: [a1, b1],
+      // cefrLevels omitted entirely.
+    });
+    const introducedIds = sitting.cards
+      .filter((card) => card.kind === 'introduction')
+      .map((card) => card.entry.id);
+    expect(introducedIds).toEqual(['pv:a1', 'pv:b1']);
+  });
+
+  it('honors an explicit empty cefrLevels array as "no introductions", not as "no filter"', () => {
+    // Same contract as issue #137 on the conjugation side: [] must never be
+    // silently widened back to "all bands in scope".
+    const a1 = entry({ id: 'pv:a1-empty', cefr: 'A1', baseInfinitive: 'gå' });
+    const sitting = buildParticleSitting({
+      srsStates: {},
+      particleDailyGoal: 60,
+      now: NOW,
+      shuffle: noShuffle,
+      entries: [a1],
+      cefrLevels: [],
+    });
+    expect(sitting.cards.filter((card) => card.kind === 'introduction')).toEqual([]);
+  });
+
+  it('still blocks an in-band introduction whose sibling base is recently used out-of-band', () => {
+    // isBaseRecentlyUsed must check the full corpus, not the cefrLevels-
+    // narrowed candidate list: interference is a fact about the whole
+    // corpus, not about what is currently offered.
+    const outOfBandSibling = entry({
+      id: 'pv:b1-sibling',
+      cefr: 'B1',
+      baseInfinitive: 'ta',
+      particle: 'emot',
+      acceptedParticles: ['emot'],
+    });
+    const inBandCandidate = entry({
+      id: 'pv:a1-candidate',
+      cefr: 'A1',
+      baseInfinitive: 'ta',
+      particle: 'med',
+      acceptedParticles: ['med'],
+    });
+    const siblingClozeId = particleItemId(outOfBandSibling.id, 'cloze');
+    const sitting = buildParticleSitting({
+      srsStates: {
+        // repetitions < RECALL_UNLOCK_REPETITIONS (2) means "recently used".
+        [siblingClozeId]: state({ itemId: siblingClozeId, repetitions: 1, dueAt: NOW + DAY }),
+      },
+      particleDailyGoal: 60,
+      now: NOW,
+      shuffle: noShuffle,
+      entries: [outOfBandSibling, inBandCandidate],
+      cefrLevels: ['A1'],
+    });
+    expect(sitting.cards.filter((card) => card.kind === 'introduction')).toEqual([]);
+  });
+});
+
 describe('first cloze placement', () => {
   function sittingWithReviews(reviewCount: number, goal: number) {
     const entries: ParticleVerbData[] = [
