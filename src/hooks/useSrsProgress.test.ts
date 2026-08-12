@@ -1482,6 +1482,66 @@ describe('load-path quarantine (issue #251)', () => {
   });
 });
 
+describe('importData - refuses while the store is still loading (issue #251 review)', () => {
+  // The load effect is async. An import accepted before it resolves would
+  // write the sibling stores to disk and swap srsStates in memory, while
+  // persistNow no-ops on its own isLoading guard - and then the load effect
+  // completes and clobbers srsStates (and the quarantine ref) with
+  // pre-import data: success toast, siblings changed, schedule not
+  // imported. canonicalVerbIdsRef is also still [] at that point, so legacy
+  // keys would skip re-keying. importData must refuse outright until
+  // loading is done.
+  it('returns false and writes nothing (neither sibling stores nor schedule) when called before loading resolves, then accepts the same file afterwards', async () => {
+    const preImportStore = JSON.stringify({
+      version: 3,
+      items: {
+        '1-presens': { repetitions: 2, intervalDays: 6, easeFactor: 2.5, dueAt: FIXED_NOW },
+      },
+    });
+    localStorage.setItem(STORAGE_KEY, preImportStore);
+    localStorage.setItem('swedish-verbs-settings', JSON.stringify({ theme: 'light' }));
+
+    const envelope = JSON.stringify({
+      app: 'ordboj',
+      backupVersion: 2,
+      version: 3,
+      items: {
+        '1-presens': { repetitions: 9, intervalDays: 30, easeFactor: 2.8, dueAt: FIXED_NOW },
+      },
+      stores: {
+        'swedish-verbs-settings': { theme: 'dark' },
+      },
+    });
+
+    const { result } = renderHook(() => useSrsProgress());
+    // Deliberately no waitFor here: the import races the load effect.
+    expect(result.current.isLoading).toBe(true);
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(envelope);
+    });
+
+    expect(importResult).toBe(false);
+    // Nothing reached disk: not the sibling store, not the schedule.
+    expect(localStorage.getItem('swedish-verbs-settings')).toBe(JSON.stringify({ theme: 'light' }));
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(preImportStore);
+
+    // The load effect completes onto the pre-import store, unclobbered.
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.srsStates['1-presens']).toMatchObject({ repetitions: 2 });
+
+    // Only the timing was wrong with the file: the same import succeeds
+    // once loading is done.
+    act(() => {
+      importResult = result.current.importData(envelope);
+    });
+    expect(importResult).toBe(true);
+    expect(result.current.srsStates['1-presens']).toMatchObject({ repetitions: 9 });
+    expect(localStorage.getItem('swedish-verbs-settings')).toBe(JSON.stringify({ theme: 'dark' }));
+  });
+});
+
 describe('importData - refuses while the store is read-only (issue #251, #241)', () => {
   // #241's read-only guard stops *scheduled writes* from clobbering a
   // newer-build store, but importData needs its own check: without it a

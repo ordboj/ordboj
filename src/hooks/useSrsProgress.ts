@@ -686,6 +686,18 @@ export function useSrsProgress(cefrLevels?: string[]) {
   // successful flush. Closing it needs the writer to report flush success,
   // which is a src/lib/storage.ts API change.
   const importData = (jsonString: string) => {
+    // Refuse until the load effect has resolved. Before that point
+    // isReadOnly is not yet decided, canonicalVerbIdsRef is still [] (so
+    // legacy keys would skip re-keying), and persistNow no-ops on its own
+    // isLoading guard — an import accepted here would write the sibling
+    // stores to disk, report success, and then have its in-memory schedule
+    // (and the quarantine ref) clobbered by the load effect completing with
+    // pre-import data.
+    if (isLoading) {
+      console.error('Failed to import data: the stored schedule has not finished loading');
+      return false;
+    }
+
     // The stored schedule was written by a newer build (#241). Nothing this
     // hook does is persisted in that state, so restoring the sibling stores
     // while the schedule silently stays in memory would half-apply the
