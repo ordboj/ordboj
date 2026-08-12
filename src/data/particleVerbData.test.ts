@@ -520,7 +520,9 @@ describe('particle verb dataset - obligatory trailing preposition (#357/#376)', 
         const tokens = example.sv.split(' ');
         const blanked = tokens[example.blankIndex];
         if (blanked?.toLowerCase() === prep.toLowerCase()) {
-          offenders.push(`${entry.id}: blankIndex ${example.blankIndex} blanks the preposition in "${example.sv}"`);
+          offenders.push(
+            `${entry.id}: blankIndex ${example.blankIndex} blanks the preposition in "${example.sv}"`,
+          );
         }
       }
     }
@@ -555,7 +557,9 @@ describe('particle verb dataset - obligatory trailing preposition (#357/#376)', 
       const lines = [forms.infinitive, forms.presens, forms.preteritum, forms.supinum];
       for (const line of lines) {
         if (!line.endsWith(` ${entry.preposition}`)) {
-          offenders.push(`${entry.id}: reference line "${line}" does not end with " ${entry.preposition}"`);
+          offenders.push(
+            `${entry.id}: reference line "${line}" does not end with " ${entry.preposition}"`,
+          );
         }
       }
     }
