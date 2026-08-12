@@ -39,31 +39,31 @@ certified `excludedParticles`.** At three lures the gate is unreachable
 today; the dataset contains **zero** frames with three excluded particles.
 At two it is reachable and close.
 
-| Parameter                | Value                                                                                        |
-| ------------------------ | -------------------------------------------------------------------------------------------- |
-| item                     | `pv:<slug>:cloze` — a render mode, never a new item                                           |
-| options                  | exactly 3: target plus 2 distractors                                                          |
-| option label             | `${baseInfinitive} ${particle}` — the citation-form phrase, e.g. `ta med`                     |
-| blank span               | the single token at the frame's `blankIndex`. Never two tokens                                |
-| inserted on answer       | the particle alone, so the completed sentence keeps its own presens verb                      |
-| distractor source        | the frame's `excludedParticles`, certified per frame by `swedish-linguist`                     |
-| distractor construal     | same base, different particle. Every label starts with the same word                          |
-| distractor eligibility   | the particle is already introduced (definition unchanged)                                     |
-| eligibility (frame)      | target cloze `repetitions >= 3`, at least 2 eligible lures, `reflexive === 'none'`             |
-| eligibility (answer key) | the option set intersects `acceptedParticles` in exactly one member                            |
-| rendered correct option  | `acceptedParticles[0]` only; a second accepted particle never appears as an option             |
-| variant trigger          | eligible AND `repetitions % 3 === 0` — one review in three                                     |
+| Parameter                | Value                                                                                           |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| item                     | `pv:<slug>:cloze` — a render mode, never a new item                                             |
+| options                  | exactly 3: target plus 2 distractors                                                            |
+| option label             | `${baseInfinitive} ${particle}` — the citation-form phrase, e.g. `ta med`                       |
+| blank span               | the single token at the frame's `blankIndex`. Never two tokens                                  |
+| inserted on answer       | the particle alone, so the completed sentence keeps its own presens verb                        |
+| distractor source        | the frame's `excludedParticles`, certified per frame by `swedish-linguist`                      |
+| distractor construal     | same base, different particle. Every label starts with the same word                            |
+| distractor eligibility   | the particle is already introduced (definition unchanged)                                       |
+| eligibility (frame)      | target cloze `repetitions >= 3`, at least 2 eligible lures, `reflexive === 'none'`              |
+| eligibility (answer key) | the option set intersects `acceptedParticles` in exactly one member                             |
+| rendered correct option  | `acceptedParticles[0]` only; a second accepted particle never appears as an option              |
+| variant trigger          | eligible AND `repetitions % 3 === 0` — one review in three                                      |
 | render index             | `k = floor(repetitions / 3)`. Every rotation below is driven by `k`, never by `repetitions`     |
-| distractor pick          | eligible list in authored order, 2 taken cyclically from index `k % n`                         |
-| option order             | sort by `localeCompare(b, 'sv')`, then rotate by `k % 3`                                       |
-| ineligible fallback      | typed cloze as normal; never a two-option card                                                 |
-| commit                   | first option tapped commits, no re-tap, no retry                                               |
+| distractor pick          | eligible list in authored order, 2 taken cyclically from index `k % n`                          |
+| option order             | sort by `localeCompare(b, 'sv')`, then rotate by `k % 3`                                        |
+| ineligible fallback      | typed cloze as normal; never a two-option card                                                  |
+| commit                   | first option tapped commits, no re-tap, no retry                                                |
 | choice correct           | ease unchanged, `repetitions += 1`, `intervalDays = min(365, max(1, round(iv * min(ef, 1.6))))` |
-| choice wrong             | full lapse, identical to a typed wrong answer                                                  |
-| feedback, wrong option   | gloss of the chosen phrase, only when a `verified` entry carries that lemma                    |
-| audio                    | the corrected sentence only. No pronounce control on any wrong option                          |
-| build gate               | >= 8 certified frames, >= 5 distinct bases, >= 2 `excludedParticles` each                      |
-| storage                  | no shape change, no version bump                                                               |
+| choice wrong             | full lapse, identical to a typed wrong answer                                                   |
+| feedback, wrong option   | gloss of the chosen phrase, only when a `verified` entry carries that lemma                     |
+| audio                    | the corrected sentence only. No pronounce control on any wrong option                           |
+| build gate               | >= 8 certified frames, >= 5 distinct bases, >= 2 `excludedParticles` each                       |
+| storage                  | no shape change, no version bump                                                                |
 
 ## What the code and the data actually contain today
 
@@ -116,7 +116,7 @@ That finding is about assessment efficiency rather than learning, so on its
 own it would not overturn a decision already made. Two other things do.
 
 The learning benefit of a multiple-choice item depends entirely on the lures
-being *competitive*. Little and Bjork's result is that a multiple-choice
+being _competitive_. Little and Bjork's result is that a multiple-choice
 test with plausible alternatives produces recall benefits comparable to
 cued recall, and additionally improves later recall of material related to
 the distractors — because the learner retrieves not only why the target is
@@ -128,7 +128,7 @@ card that teaches three particle contrasts and a card the learner solves by
 elimination.
 
 And the corpus fact above decides it. Demanding a third certified
-impossibility per frame asks `swedish-linguist` for the *weakest* lure on
+impossibility per frame asks `swedish-linguist` for the _weakest_ lure on
 every frame, which is precisely the one most likely to be defensible in the
 sentence — the failure this design must not have. Two certified lures per
 frame is roughly half the certification cost and buys a card whose every
@@ -145,7 +145,7 @@ The whole-phrase framing is the human's original request, and it is the
 right framing for what the learner is choosing between: `ta med` against
 `ta ut` is a choice between two lexical items, not between two prepositions.
 The buttons therefore carry the full phrase. What this note got wrong was
-concluding that the *blank* had to widen to two tokens to deliver that. The
+concluding that the _blank_ had to widen to two tokens to deliver that. The
 critic round found two defects, both verified against the data, and both
 fatal to the two-token blank.
 
@@ -157,7 +157,7 @@ not a quirk of one entry: verb-second order plus a subject or object
 pronoun separates the two tokens whenever the clause is a question or has
 fronted material, and `blankIndex` exists as an explicit field precisely
 because the particle's position cannot be derived. A two-token blank would
-have to be defined per frame as a token *set*, and the frames that need it
+have to be defined per frame as a token _set_, and the frames that need it
 most are the ones where the learner most needs to see the surrounding
 structure.
 
@@ -188,7 +188,7 @@ than provisionally.
 
 The competitiveness argument runs backwards from intuition here. An option
 that differs from the target on two dimensions at once is rejectable on
-*either* dimension, so a mixed set is **easier** than a same-base set, not
+_either_ dimension, so a mixed set is **easier** than a same-base set, not
 harder. `Jag ska ___ paraplyet` with `ta med / gå ut / komma in` is solved by
 anyone who knows that umbrellas are taken rather than walked. The same-base
 set forces the discrimination the item exists for, which is exactly Little
@@ -214,14 +214,14 @@ First, an easier version of this card is a card that lies to the scheduler.
 The credit path treats a correct choice as evidence about the item; if the
 lures were deliberately made non-competitive for a beginner, the evidence is
 manufactured, and the beginner is the learner least able to afford an
-inflated interval. Making the early card *easier* is the standard
+inflated interval. Making the early card _easier_ is the standard
 desirable-difficulty error (Bjork; and Little & Bjork's non-competitive
 condition is literally this manipulation, which produced no benefit).
 
 Second, the band does not measure what the knob would need it to measure.
 [[2026-08-09-particle-cefr-majority-decision]] establishes that `cefr` here
 records the first coursebook level with nonzero SVALex frequency — when a
-phrase is first *useful*, not how hard the retrieval is — and states the
+phrase is first _useful_, not how hard the retrieval is — and states the
 consequence plainly: `ta slut` (B1) is not a harder blank than `ta bort`
 (A2). Tuning lure difficulty by a usefulness label is tuning by a proxy the
 project has already documented as weak.
@@ -298,7 +298,7 @@ The standard cloze feedback panel, unchanged, plus exactly one addition.
    learner copy. Authoring 2 reasons per frame is corpus work of the same
    order as the exclusions themselves and belongs in its own ticket.
 5. **No pronounce control on any wrong option.** Audio speaks the corrected
-   sentence. The wrong option is real Swedish, but it is wrong *here*, and
+   sentence. The wrong option is real Swedish, but it is wrong _here_, and
    the sentence is where the prosody lives.
 
 Point 3 is the one worth defending. A learner who leaves the card knowing

@@ -62,7 +62,7 @@ verbs. The rendering differs, the discrimination does not.
 - `src/pages/PracticeParticles.tsx` runs the particle mode. It renders one
   component, `ParticleVerbCard`, for every card in the sitting.
 - Line 86 states the current position in a comment: `'typed' is the only
-  modality particle items use in v1`.
+modality particle items use in v1`.
 - `src/lib/particleQueue.ts` builds the sitting. Card kinds today are the
   introduction, the cloze and the recall card.
 - `src/data/particleVerbData.ts:60` already declares the field the variant
