@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import PracticeParticles from '@/pages/PracticeParticles';
@@ -64,6 +64,18 @@ function seed(items: Record<string, SrsState>, version = 2) {
 
 function storedItems(): Record<string, SrsState> {
   return JSON.parse(localStorage.getItem(STORAGE_KEY) as string).items;
+}
+
+// Writes go through a coalesced writer (src/lib/storage.ts) that debounces
+// on a real 500ms timer. A test that reads localStorage twice and compares
+// the results is racing that timer: if the initial flush lands between the
+// two reads, the comparison sees a shape change (e.g. itemId stripped under
+// v3) that has nothing to do with what the test is actually checking. Force
+// a synchronous flush before each read instead of waiting on the timer.
+function flushPersistence() {
+  act(() => {
+    window.dispatchEvent(new Event('pagehide'));
+  });
 }
 
 beforeEach(() => {
@@ -333,6 +345,7 @@ describe('particle practice flow', () => {
     const keepPractising = await screen.findByRole('button', { name: 'Keep practising' });
     await waitFor(() => expect(keepPractising).toBeEnabled());
 
+    flushPersistence();
     const before = JSON.stringify(storedItems()[clozeId]);
     await user.click(keepPractising);
 
@@ -344,7 +357,8 @@ describe('particle practice flow', () => {
 
     // The whole point: a free round never writes, whatever else is in the
     // pool. The real schedule for the card just answered did not move.
-    await waitFor(() => expect(JSON.stringify(storedItems()[clozeId])).toBe(before));
+    flushPersistence();
+    expect(JSON.stringify(storedItems()[clozeId])).toBe(before);
   });
 
   it('shows the free-practice completion message once the round is answered through', async () => {
