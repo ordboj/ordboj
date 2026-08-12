@@ -120,6 +120,12 @@ export interface ParticleVerbData {
     preteritum: string;
     supinum: string;
   };
+  // Obligatory trailing preposition for the v+p+prep class (research list
+  // section 3.6): the phrase never occurs without it. Displayed after the
+  // particle everywhere the phrase renders, part of the recall answer,
+  // never a cloze answer. Unset for every entry whose verb+particle string
+  // stands on its own.
+  preposition?: string;
 }
 
 export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
@@ -1604,14 +1610,17 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     baseInfinitive: 'se',
     particle: 'fram',
     reflexive: 'none',
-    lemma: 'se fram',
-    gloss: { en: 'to anticipate something with pleasure (always with emot)' },
+    lemma: 'se fram emot',
+    gloss: { en: 'to anticipate something with pleasure' },
     transparency: 'idiomatic',
     acceptedParticles: ['fram'],
-    examples: [{ sv: 'Jag ser fram emot semestern i juli.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason:
-      'The phrase never occurs without its obligatory preposition: "se fram emot", never bare "se fram". The cloze frames are correct Swedish, but the stored lemma is a fragment, so the recall direction would prompt for a form that does not exist on its own. Needs a decision on whether the lemma should carry the preposition before it ships.',
+    preposition: 'emot',
+    examples: [
+      { sv: 'Jag ser fram emot semestern i juli.', blankIndex: 2 },
+      { sv: 'Barnen ser fram emot julen hela december.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'ser fram emot', preteritum: 'såg fram emot', supinum: 'sett fram emot' },
   },
   {
     id: 'pv:ga-miste',
@@ -1620,14 +1629,17 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     baseInfinitive: 'gå',
     particle: 'miste',
     reflexive: 'none',
-    lemma: 'gå miste',
-    gloss: { en: 'to lose an opportunity (always with om)' },
+    lemma: 'gå miste om',
+    gloss: { en: 'to lose an opportunity' },
     transparency: 'idiomatic',
     acceptedParticles: ['miste'],
-    examples: [{ sv: 'Vi går miste om en stor chans här.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason:
-      'Same fragment problem as se fram: the phrase exists only as "gå miste om". The stored lemma "gå miste" is not a usable citation form, so the recall direction would teach a fragment. Needs the same lemma decision.',
+    preposition: 'om',
+    examples: [
+      { sv: 'Vi går miste om en stor chans här.', blankIndex: 2 },
+      { sv: 'Hon går miste om mötet eftersom hon är sjuk.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'går miste om', preteritum: 'gick miste om', supinum: 'gått miste om' },
   },
   {
     id: 'pv:lagga-till',
@@ -2274,14 +2286,17 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     baseInfinitive: 'ta',
     particle: 'itu',
     reflexive: 'none',
-    lemma: 'ta itu',
-    gloss: { en: 'to start dealing with a task (always with med)' },
+    lemma: 'ta itu med',
+    gloss: { en: 'to start dealing with a task' },
     transparency: 'idiomatic',
     acceptedParticles: ['itu'],
-    examples: [{ sv: 'Vi tar itu med problemet redan i dag.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason:
-      'Same fragment problem as se fram and gå miste: the phrase exists only as "ta itu med". The stored lemma "ta itu" is not a usable citation form, so the recall direction would prompt for something that never occurs alone. Blocked on the same lemma decision as those two.',
+    preposition: 'med',
+    examples: [
+      { sv: 'Vi tar itu med problemet redan i dag.', blankIndex: 2 },
+      { sv: 'Regeringen tar itu med arbetslösheten i höst.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'tar itu med', preteritum: 'tog itu med', supinum: 'tagit itu med' },
   },
   {
     id: 'pv:halla-tillbaka',
