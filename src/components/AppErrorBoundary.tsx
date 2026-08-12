@@ -1,5 +1,14 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
+import {
+  Component,
+  Suspense,
+  useRef,
+  type ComponentType,
+  type ErrorInfo,
+  type LazyExoticComponent,
+  type ReactNode,
+} from 'react';
 import { Link } from 'react-router-dom';
+import { ChunkLoadError } from '@/lib/utils';
 
 /**
  * Storage keys duplicated here (read-only) rather than imported, so this
@@ -61,6 +70,13 @@ export function downloadProgressBackup(): boolean {
 interface BoundaryProps {
   children: ReactNode;
   fallback: (reset: () => void) => ReactNode;
+  /**
+   * Fires with the caught error alongside the existing console.error, so a
+   * caller can inspect the error's type without the boundary needing to
+   * plumb it through the fallback's own (already-public, test-covered)
+   * `(reset) => ReactNode` signature.
+   */
+  onError?: (error: Error) => void;
 }
 
 interface BoundaryState {
@@ -81,6 +97,7 @@ export class AppErrorBoundary extends Component<BoundaryProps, BoundaryState> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Ordböj: caught render error', error, info.componentStack);
+    this.props.onError?.(error);
   }
 
   reset = () => {
@@ -116,7 +133,7 @@ function ExportProgressButton({ className }: { className?: string }) {
  */
 export function AppCrashFallback({ reset }: { reset: () => void }) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background text-foreground">
+    <div className="min-h-dvh flex items-center justify-center p-6 bg-background text-foreground">
       <div className="w-full max-w-md space-y-4 text-center">
         <h1 className="text-2xl font-bold">Something went wrong</h1>
         <p className="text-muted-foreground">
@@ -153,7 +170,7 @@ export function AppCrashFallback({ reset }: { reset: () => void }) {
  */
 export function RouteCrashFallback({ reset }: { reset: () => void }) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background text-foreground">
+    <div className="min-h-dvh flex items-center justify-center p-6 bg-background text-foreground">
       <div className="w-full max-w-md space-y-4 text-center">
         <h1 className="text-2xl font-bold">This page hit a snag</h1>
         <p className="text-muted-foreground">
@@ -192,11 +209,43 @@ export function RouteCrashFallback({ reset }: { reset: () => void }) {
   );
 }
 
-/** Convenience wrapper for per-route usage in App.tsx. */
-export function RouteErrorBoundary({ children }: { children: ReactNode }) {
+interface RouteChunkProps {
+  /** A component created via lazyRoute() (src/lib/utils.ts). */
+  component: LazyExoticComponent<ComponentType>;
+  /** Suspense fallback shown while the chunk is loading. */
+  loading: ReactNode;
+  /** Crash fallback shown on failure; call the given function to retry. */
+  fallback: (retry: () => void) => ReactNode;
+}
+
+/**
+ * Renders a lazyRoute() component and turns a chunk-load failure (after
+ * retryImport() has already exhausted its own retries) into a full-reload
+ * recovery path instead of a soft reset that would just replay the same
+ * permanently-cached rejection. An ordinary render crash elsewhere on the
+ * page (not a ChunkLoadError) still gets the regular soft "Try again".
+ */
+export function RouteChunk({ component: Component, loading, fallback }: RouteChunkProps) {
+  const isChunkLoadError = useRef(false);
+
   return (
-    <AppErrorBoundary fallback={(reset) => <RouteCrashFallback reset={reset} />}>
-      {children}
+    <AppErrorBoundary
+      onError={(error) => {
+        isChunkLoadError.current = error instanceof ChunkLoadError;
+      }}
+      fallback={(reset) =>
+        fallback(() => {
+          if (isChunkLoadError.current) {
+            window.location.reload();
+            return;
+          }
+          reset();
+        })
+      }
+    >
+      <Suspense fallback={loading}>
+        <Component />
+      </Suspense>
     </AppErrorBoundary>
   );
 }

@@ -19,7 +19,7 @@ import { buildFullSeed, SRS_STORAGE_KEY } from './support/seed';
 // mid-session. This test asserts the fixed behavior: answering the first
 // of two due cards must reveal the second card, and finishing both must
 // reach the completion screen.
-const DUE_ITEMS = ['1-presens', '7-imperativ']; // vara/är, göra/gör
+const DUE_ITEMS = ['vara-presens', 'komma-imperativ']; // issue #53: item ids are infinitive-keyed
 
 test.describe('regression #103: queue no longer desyncs after answering', () => {
   test('answering the first of two due cards shows the second card, then completion', async ({
@@ -51,7 +51,10 @@ test.describe('regression #103: queue no longer desyncs after answering', () => 
     // 2-item queue is too short for its 3-item requeue gap to ever clear
     // this sitting, so the lapse stays pending and the sitting simply ends
     // once both cards have been shown).
-    await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
+    // exact: true - PracticeCard's on-screen keyboard delete key also has
+    // an accessible name containing "Back" ("Backspace"), so a substring
+    // match here would hit both and fail Playwright's strict-mode check.
+    await expect(page.getByRole('button', { name: 'Back', exact: true })).toBeVisible();
     await expect(page.getByText('1 / 2')).toBeVisible();
     const answerInput = page.getByPlaceholder('Type your answer...');
     await expect(answerInput).toBeVisible();

@@ -34,30 +34,30 @@ The cloze is introduced first. The recall item unlocks only when the cloze item
 reaches `repetitions >= 2`. Both are typed. Both live in the particle queue, which
 has its own due count, its own session and its own daily goal.
 
-| Parameter                      | Value                                                                     |
-| ------------------------------ | ------------------------------------------------------------------------- |
-| item ids                       | `pv:<slug>:cloze`, `pv:<slug>:recall` — **never** an array index          |
-| `particleDailyGoal` default    | **12 cards**, settings range 4–60, independent of `dailyGoal`             |
-| `particleItemsPerMinute`       | 3 (planning constant; conjugation mode uses 5)                            |
-| `particleNewCardsPerDay`       | `clamp(1, 10, round(particleDailyGoal / 4))` → 3 at the default           |
-| new-card priority              | recall unlocks before new verb introductions                              |
-| `reviewsPerNewCard`            | 4 (conjugation mode uses 3)                                               |
-| adherence condition            | unchanged: `answeredToday >= dailyGoal`, particle cards included          |
-| recall unlock condition        | sibling cloze item `repetitions >= 2`                                     |
-| siblings in one sitting        | never — hold the recall item to the next sitting                          |
-| introduction placement         | start of sitting, before reviews                                          |
-| first cloze after introduction | last in sitting, ≥ 6 intervening items preferred, **≥ 2 required**;       |
-|                                | fewer than 2 defers it to the next sitting. Never counts toward the goal. |
-| sentences per verb             | min 2, target 3, **all presens in v1**                                    |
-| sentence rotation              | `sentences[repetitions % sentences.length]`, deterministic                |
-| sentence length                | 6–10 words, target in a main clause                                       |
-| introduction prerequisite      | base verb `repetitions >= 2` on **both** presens and preteritum           |
-| same base verb, new            | never twice within 7 days (`bygga upp` / `bygga ut` are spaced)           |
-| same particle, new             | at most 2 per day                                                         |
-| reflexive verbs                | cloze item only, no recall item                                           |
-| multiple choice                | not offered in v1; if ever offered, reduced credit (see below)            |
-| audio                          | speaks the **sentence**, never the bare two-word phrase                   |
-| accepted answers               | reuse the accepted-set accessor from the alternate-answers decision       |
+| Parameter                      | Value                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| item ids                       | `pv:<slug>:cloze`, `pv:<slug>:recall` — **never** an array index                           |
+| `particleDailyGoal` default    | **12 cards**, settings range 4–60, independent of `dailyGoal`                              |
+| `particleItemsPerMinute`       | 3 (planning constant; conjugation mode uses 5)                                             |
+| `particleNewCardsPerDay`       | `clamp(1, 10, round(particleDailyGoal / 4))` → 3 at the default                            |
+| new-card priority              | recall unlocks before new verb introductions                                               |
+| `reviewsPerNewCard`            | 4 (conjugation mode uses 3)                                                                |
+| adherence condition            | unchanged: `answeredToday >= dailyGoal`, particle cards included                           |
+| recall unlock condition        | sibling cloze item `repetitions >= 2`                                                      |
+| siblings in one sitting        | never — hold the recall item to the next sitting                                           |
+| introduction placement         | start of sitting, before reviews                                                           |
+| first cloze after introduction | last in sitting, ≥ 6 intervening items preferred, **≥ 2 required**;                        |
+|                                | fewer than 2 defers it to the next sitting. Never counts toward the goal.                  |
+| sentences per verb             | min 2, target 3, **all presens in v1**                                                     |
+| sentence rotation              | `sentences[repetitions % sentences.length]`, deterministic                                 |
+| sentence length                | 6–10 words, target in a main clause                                                        |
+| introduction prerequisite      | none — removed by issue #315; introduction order uses a soft base-verb tiebreak (see #316) |
+| same base verb, new            | never twice within 7 days (`bygga upp` / `bygga ut` are spaced)                            |
+| same particle, new             | at most 2 per day                                                                          |
+| reflexive verbs                | cloze item only, no recall item                                                            |
+| multiple choice                | not offered in v1; if ever offered, reduced credit (see below)                             |
+| audio                          | speaks the **sentence**, never the bare two-word phrase                                    |
+| accepted answers               | reuse the accepted-set accessor from the alternate-answers decision                        |
 
 ## What the code does today
 
@@ -302,6 +302,10 @@ memory and reports a success the learner did not earn. When both siblings are du
 serve the cloze and hold the recall to the next sitting.
 
 **3. Multiple choice gets weaker credit — but is not offered in v1.**
+
+Amended 2026-08-08 by #319 — a data-gated discrimination variant of the cloze
+item is approved for a later revision; see
+`docs/learning/2026-08-08-discrimination-exercise.md`.
 
 Not offered for particle items, because the typed answer is two to four characters
 and the mobile-friction argument that justifies multiple choice elsewhere (P11,

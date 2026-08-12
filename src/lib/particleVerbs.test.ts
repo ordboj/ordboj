@@ -275,14 +275,11 @@ describe('the four-form reference line', () => {
     });
   });
 
-  it('returns null rather than a guess when the base verb is not in VERB_DATA', () => {
-    // Regression fixture for #262: previously this asserted against a real
-    // verified:false PARTICLE_VERB_DATA entry (its base was missing from
-    // VERB_DATA). #262 appended all six such bases to VERB_DATA and flipped
-    // their entries to verified:true, so no orphan remains in the shipped
-    // data. The contract getPhraseForms must uphold — never guess a form for
-    // an unresolvable base — still needs a fixture, so this constructs one
-    // directly with a baseInfinitive guaranteed absent from VERB_DATA.
+  it('returns null rather than a guess when the entry carries no embedded forms (#318 replaced the VERB_DATA lookup)', () => {
+    // #318 removed the VERB_DATA join from getPhraseForms: it now reads
+    // presens/preteritum/supinum from entry.forms only. The null path this
+    // fixture exercises therefore depends solely on entry.forms being
+    // absent, not on whether baseInfinitive resolves in VERB_DATA.
     const orphan = entry({ id: 'pv:test-orphan', baseInfinitive: 'zzznotarealverb' });
     expect(getPhraseForms(orphan)).toBeNull();
   });
@@ -291,6 +288,51 @@ describe('the four-form reference line', () => {
     for (const shipped of getVerifiedParticleVerbs()) {
       expect(getPhraseForms(shipped)).not.toBeNull();
     }
+  });
+
+  it('reads embedded forms even when the base verb does not resolve in VERB_DATA (#318 — no VERB_DATA join)', () => {
+    // Before #318 this returned null: the function looked baseInfinitive up
+    // in VERB_DATA and bailed when it was not found, regardless of any forms
+    // supplied on the entry. Embedding the forms on the data row means an
+    // unresolvable base is no longer why the reference line fails to render.
+    const noJoinNeeded = entry({
+      id: 'pv:test-unresolvable-base',
+      baseInfinitive: 'zzznotarealverb',
+      forms: { presens: 'X-pres', preteritum: 'X-pret', supinum: 'X-sup' },
+    });
+    expect(getPhraseForms(noJoinNeeded)).toEqual({
+      infinitive: renderLemma(noJoinNeeded),
+      presens: 'X-pres',
+      preteritum: 'X-pret',
+      supinum: 'X-sup',
+    });
+  });
+
+  it('reads presens/preteritum/supinum from entry.forms rather than joining VERB_DATA, even when the base does resolve (#318)', () => {
+    // baseInfinitive below ("gå") resolves fine in VERB_DATA, whose real
+    // presens is "går". The embedded forms are deliberately different
+    // stand-ins. If getPhraseForms still joined against VERB_DATA it would
+    // return gå's real conjugation ("går ut", "gick ut", "gått ut") and
+    // ignore the stand-ins entirely.
+    const stubbed = entry({
+      id: 'pv:test-stubbed-forms',
+      baseInfinitive: 'gå',
+      particle: 'ut',
+      lemma: 'gå ut',
+      forms: { presens: 'STUB-pres', preteritum: 'STUB-pret', supinum: 'STUB-sup' },
+    });
+    expect(getPhraseForms(stubbed)).toEqual({
+      infinitive: 'gå ut',
+      presens: 'STUB-pres',
+      preteritum: 'STUB-pret',
+      supinum: 'STUB-sup',
+    });
+  });
+
+  it('returns null for a verified entry whose forms have not been embedded, rather than guessing', () => {
+    const missingForms = entry({ id: 'pv:test-missing-forms', baseInfinitive: 'gå' });
+    expect(missingForms.forms).toBeUndefined();
+    expect(getPhraseForms(missingForms)).toBeNull();
   });
 });
 

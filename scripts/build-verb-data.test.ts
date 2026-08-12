@@ -493,6 +493,153 @@ describe('shipped verbData.ts validation gate', () => {
     expect(result.stderr).toContain('empty imperativ on non-modal verb');
   });
 
+  // Regression test (issue #299 finding 2a): a shipped, mechanically-
+  // unconfirmed (grupp 4 / irregular) row reports 'needs-check' from
+  // classifyAndValidate, not 'fail' — but an empty, unexplained imperativ on
+  // such a row is still a real data bug (e.g. the shipped "bli" row's
+  // imperativ blanked by mistake). Step 2 must catch this via
+  // `unexplainedEmptyImperativ`, independently of `status`, or a genuine
+  // empty-imperativ defect on an irregular verb would pass the gate silently.
+  it('fails the build when a shipped grupp-4 (irregular) row has an empty imperativ with no noNaturalImperativ and no NEEDS HUMAN REVIEW comment', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'bli',
+          imperativ: '',
+          presens: 'blir',
+          preteritum: 'blev',
+          supinum: 'blivit',
+          grupp: '4',
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('empty imperativ on non-modal verb');
+  });
+
+  // Regression test (issue #299 finding 2b): the paired case — the same
+  // grupp-4 row, but with noNaturalImperativ: true, must still pass. This
+  // pins that the unexplainedEmptyImperativ gate only fires when the empty
+  // imperativ is genuinely unexplained, not on every irregular verb.
+  it('accepts the same shipped grupp-4 (irregular) row when noNaturalImperativ explains the empty imperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'bli',
+          imperativ: '',
+          presens: 'blir',
+          preteritum: 'blev',
+          supinum: 'blivit',
+          grupp: '4',
+          noNaturalImperativ: true,
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(0);
+  });
+
+  // Regression test (issue #299 finding 2c): unexplainedEmptyImperativ has
+  // no deponens carve-out — the deponens/reflexive branch in
+  // classifyAndValidate only softens `status` to 'needs-check' for the CSV
+  // audit, it does not excuse a shipped row's empty imperativ from needing
+  // its own marker. A shipped deponens row ('hoppas') with an empty
+  // imperativ and no noNaturalImperativ must still fail the build.
+  it('fails the build when a shipped deponens row has an empty imperativ with no noNaturalImperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'hoppas',
+          imperativ: '',
+          presens: 'hoppas',
+          preteritum: 'hoppades',
+          supinum: 'hoppats',
+          grupp: '4',
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('empty imperativ on non-modal verb');
+  });
+
+  // Paired case: the same deponens row, but with noNaturalImperativ: true,
+  // must still pass — the marker requirement is satisfiable, not a blanket
+  // ban on empty deponens imperativs.
+  it('accepts the same shipped deponens row when noNaturalImperativ explains the empty imperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'hoppas',
+          imperativ: '',
+          presens: 'hoppas',
+          preteritum: 'hoppades',
+          supinum: 'hoppats',
+          grupp: '4',
+          noNaturalImperativ: true,
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(0);
+  });
+
+  // Regression test (issue #299 finding 2c): same as above for the
+  // reflexive ("X sig") carve-out — a shipped reflexive row ('bry sig')
+  // with an empty imperativ and no noNaturalImperativ must still fail the
+  // build, even though its own `status` from classifyAndValidate is
+  // 'needs-check' rather than 'fail'.
+  it('fails the build when a shipped reflexive row has an empty imperativ with no noNaturalImperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'bry sig',
+          imperativ: '',
+          presens: 'bryr sig',
+          preteritum: 'brydde sig',
+          supinum: 'brytt sig',
+          grupp: '3',
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('empty imperativ on non-modal verb');
+  });
+
+  // Paired case: the same reflexive row, but with noNaturalImperativ: true,
+  // must still pass.
+  it('accepts the same shipped reflexive row when noNaturalImperativ explains the empty imperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        VALID_SHIPPED_ROW,
+        verbRow({
+          infinitive: 'bry sig',
+          imperativ: '',
+          presens: 'bryr sig',
+          preteritum: 'brydde sig',
+          supinum: 'brytt sig',
+          grupp: '3',
+          noNaturalImperativ: true,
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).toBe(0);
+  });
+
   // Regression test: the missing-grupp gate previously ran AFTER the
   // explained-empty-imperativ early-continue, so a shipped row that was
   // BOTH grupp-less AND had an explained empty imperativ (noNaturalImperativ)
@@ -816,6 +963,160 @@ describe('deponens stem-coherence classifier (residual grupp 4 vs deponens)', ()
 });
 
 // ---------------------------------------------------------------------
+// Issue #299: empty-imperativ classification no longer buries the real
+// fail signal. Two related but distinct fixes:
+//
+//   (a) gate reorder — the `!mechanicallyConfirmed` branch now runs BEFORE
+//       the empty-imperativ check, so a row whose grupp was never
+//       mechanically confirmed (particle-unconfirmed, contradictory,
+//       genuinely irregular/residual-grupp-4) reports 'needs-check', never
+//       'fail', regardless of whether its imperativ happens to be empty.
+//   (b) explicit deponens/reflexive carve-out — a MECHANICALLY CONFIRMED
+//       deponens or reflexive ("X sig") row with an empty imperativ also
+//       reports 'needs-check' (a deliberate, explicitly-reasoned gap, the
+//       same convention as verbData.ts's noNaturalImperativ), not 'fail',
+//       because neither form is mechanically derivable by this classifier.
+//
+// A mechanically-confirmed NON-deponens, NON-reflexive row with an empty
+// imperativ (the 'vimla' case earlier in this file) must still be 'fail':
+// these two fixes narrow the false-positive class, they do not eliminate
+// the real one.
+// ---------------------------------------------------------------------
+describe('empty-imperativ classification (issue #299)', () => {
+  const shipped = buildVerbDataTs([VALID_SHIPPED_ROW]);
+
+  it(
+    'regression: a mechanically-unconfirmed (residual grupp 4) row with an EMPTY imperativ is ' +
+      "needs-check, not 'fail' — the pre-#299 bug reported ~1500 such CSV rows as failing with " +
+      'reason "empty imperativ on non-modal verb" even though their imperativ was never ' +
+      'mechanically derivable in the first place',
+    () => {
+      const csv = buildCsv([
+        // Same shape as the "komma" fixture above (irregular: presens
+        // matches a grupp-2 shape but preteritum/supinum match no
+        // mechanical pattern), but with an EMPTY imperativ instead of "kom"
+        // — this is the exact combination the pre-#299 ordering mishandled.
+        {
+          infinitive: 'komma',
+          imperativ: '',
+          presens: 'kommer',
+          preteritum: 'kom',
+          supinum: 'kommit',
+        },
+      ]);
+      setupFixture(csv, shipped);
+      const result = run();
+      expect(result.status).toBe(0);
+      const row = findReviewRow(readFileSync(reviewPath(), 'utf8'), 'komma');
+      expect(row.status).toBe('needs-check');
+      expect(row.status).not.toBe('fail');
+      expect(row.reasons).not.toContain('empty imperativ on non-modal verb');
+    },
+  );
+
+  it('regression: a particle-unconfirmed row with an EMPTY imperativ is needs-check, not fail', () => {
+    const csv = buildCsv([
+      // Same shape as the "ringa bort" fixture above (particle present in
+      // the infinitive but not confirmed across all conjugated forms), but
+      // with an EMPTY imperativ.
+      {
+        infinitive: 'ringa bort',
+        imperativ: '',
+        presens: 'ringer',
+        preteritum: 'ringde bort',
+        supinum: 'ringt bort',
+      },
+    ]);
+    setupFixture(csv, shipped);
+    const result = run();
+    expect(result.status).toBe(0);
+    const row = findReviewRow(readFileSync(reviewPath(), 'utf8'), 'ringa bort');
+    expect(row.status).toBe('needs-check');
+    expect(row.reasons).not.toContain('empty imperativ on non-modal verb');
+  });
+
+  it('a mechanically-confirmed, non-deponens, non-reflexive row with an empty imperativ is STILL fail (the real defect class is preserved)', () => {
+    const csv = buildCsv([
+      {
+        infinitive: 'vimla',
+        imperativ: '',
+        presens: 'vimlar',
+        preteritum: 'vimlade',
+        supinum: 'vimlat',
+      },
+    ]);
+    setupFixture(csv, shipped);
+    const result = run();
+    expect(result.status).toBe(0);
+    const row = findReviewRow(readFileSync(reviewPath(), 'utf8'), 'vimla');
+    expect(row.grupp).toBe('1');
+    expect(row.status).toBe('fail');
+    expect(row.reasons).toContain('empty imperativ on non-modal verb');
+  });
+
+  it('a mechanically-confirmed, stem-coherent DEPONENS row with an empty imperativ is needs-check with an explicit deponens reason (not a silent pass, not a fail)', () => {
+    const csv = buildCsv([
+      {
+        infinitive: 'hoppas',
+        imperativ: '',
+        presens: 'hoppas',
+        preteritum: 'hoppades',
+        supinum: 'hoppats',
+      },
+    ]);
+    setupFixture(csv, shipped);
+    const result = run();
+    expect(result.status).toBe(0);
+    const row = findReviewRow(readFileSync(reviewPath(), 'utf8'), 'hoppas');
+    expect(row.grupp).toBe('deponens');
+    expect(row.status).toBe('needs-check');
+    expect(row.reasons).toContain(
+      'deponens: imperativ is a per-verb judgment call, not mechanically derived; empty is not a failure',
+    );
+  });
+
+  it('a mechanically-confirmed REFLEXIVE ("X sig") row with an empty imperativ is needs-check with an explicit reflexive reason (sig -> dig is a human call)', () => {
+    const csv = buildCsv([
+      // bare verb "bry" + " sig" particle, confirmed across presens/pret/sup
+      // (grupp 3 shape: bryr / brydde / brytt), empty imperativ.
+      {
+        infinitive: 'bry sig',
+        imperativ: '',
+        presens: 'bryr sig',
+        preteritum: 'brydde sig',
+        supinum: 'brytt sig',
+      },
+    ]);
+    setupFixture(csv, shipped);
+    const result = run();
+    expect(result.status).toBe(0);
+    const row = findReviewRow(readFileSync(reviewPath(), 'utf8'), 'bry sig');
+    expect(row.grupp).toBe('3');
+    expect(row.status).toBe('needs-check');
+    expect(row.reasons).toContain(
+      'reflexive ("X sig"): imperativ needs sig -> dig and is a per-verb judgment call, not mechanically derived; empty is not a failure',
+    );
+  });
+
+  it('a reflexive ("X sig") row that DOES carry an imperativ still passes normally (the carve-out only fires on empty)', () => {
+    const csv = buildCsv([
+      {
+        infinitive: 'bry sig',
+        imperativ: 'bry dig',
+        presens: 'bryr sig',
+        preteritum: 'brydde sig',
+        supinum: 'brytt sig',
+      },
+    ]);
+    setupFixture(csv, shipped);
+    const result = run();
+    expect(result.status).toBe(0);
+    const row = findReviewRow(readFileSync(reviewPath(), 'utf8'), 'bry sig');
+    expect(row).toEqual({ grupp: '3', status: 'pass', reasons: '' });
+  });
+});
+
+// ---------------------------------------------------------------------
 // npm script / CI wiring (static config regression, real repo files)
 // ---------------------------------------------------------------------
 describe('npm script and CI wiring', () => {
@@ -856,5 +1157,67 @@ describe('real repo: shipped table validity (regression gate)', () => {
     });
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(`CSV audit: ${expectedRowCount} rows`);
+  });
+});
+
+// ---------------------------------------------------------------------
+// Issue #299 acceptance criterion, checked against the REAL CSV: "review
+// output shows the real residual fail count, with empty-imperativ no
+// longer the dominant class." The real repo files are copied into a
+// fixture dir (never run against scripts/verb-data-review.csv directly)
+// so this stays read-only with respect to the actual repo tree, matching
+// the other real-repo tests in this file.
+//
+// Independent CSV-row parser (mirrors findReviewRow's approach above, does
+// not call into the module under test): the review file's format is fixed
+// (`line,"cefr","infinitive",grupp,status,"reasons"`, doubled-quote
+// escaping inside quoted fields), so this pins that contract rather than
+// re-deriving it from the script.
+// ---------------------------------------------------------------------
+function parseReviewRows(
+  reviewCsv: string,
+): Array<{ infinitive: string; status: string; reasons: string }> {
+  const rowRe = /^(\d+),"((?:[^"]|"")*)","((?:[^"]|"")*)",([^,]*),([^,]*),"((?:[^"]|"")*)"$/;
+  const out: Array<{ infinitive: string; status: string; reasons: string }> = [];
+  for (const line of reviewCsv.split('\n')) {
+    const m = rowRe.exec(line);
+    if (!m) continue;
+    out.push({
+      infinitive: m[3].replace(/""/g, '"'),
+      status: m[5],
+      reasons: m[6].replace(/""/g, '"'),
+    });
+  }
+  return out;
+}
+
+describe('real repo: empty-imperativ is no longer the dominant residual-fail class (issue #299)', () => {
+  it('the real CSV audit fail count is small and NOT dominated by "empty imperativ on non-modal verb"', () => {
+    const csv = readFileSync(join(REPO_ROOT, 'public', 'data', 'swedish_verbs.csv'), 'utf8');
+    const verbDataTs = readFileSync(join(REPO_ROOT, 'src', 'data', 'verbData.ts'), 'utf8');
+    setupFixture(csv, verbDataTs);
+    const result = run();
+    expect(result.status).toBe(0);
+
+    const rows = parseReviewRows(readFileSync(reviewPath(), 'utf8'));
+    expect(rows.length).toBeGreaterThan(1000); // sanity: the real CSV was actually parsed
+
+    const failRows = rows.filter((r) => r.status === 'fail');
+    const emptyImperativFailRows = failRows.filter((r) =>
+      r.reasons.includes('empty imperativ on non-modal verb'),
+    );
+
+    // Before the #299 gate-reorder fix, ~1500 of the CSV's 1538 rows failed,
+    // almost all of them for exactly this reason, because every
+    // mechanically-unconfirmed row's empty imperativ was misreported as a
+    // data bug. The real residual fail count is now 32 (measured), so this
+    // pins a real ceiling well above that but far below the pre-fix count,
+    // rather than the near-vacuous "< 200" bound.
+    expect(failRows.length).toBeLessThan(50);
+    // ...and even within that smaller fail set, empty-imperativ-caused
+    // failures must not be the dominant reason: a real dominance bound,
+    // not merely "less than the total" (which is true of any non-empty
+    // other-reason fail set, even a single row).
+    expect(emptyImperativFailRows.length).toBeLessThanOrEqual(failRows.length / 2);
   });
 });

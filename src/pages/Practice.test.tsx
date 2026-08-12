@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import confetti from 'canvas-confetti';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import Practice from '@/pages/Practice';
 import { MAX_REQUEUES_PER_DAY } from '@/lib/srs';
+
+// canvas-confetti is mocked globally in src/test/setup.ts.
+const confettiMock = confetti as unknown as ReturnType<typeof vi.fn>;
 
 // Practice.tsx composes useSrsProgress (srs-engine) and useSettings
 // (srs-engine) with PracticeCard (ui-craft). Those two hooks are mocked here
@@ -81,6 +85,10 @@ vi.mock('@/hooks/useSettings', () => ({
 
 beforeEach(() => {
   mocks.recordAnswer.mockClear();
+  // `restoreMocks: true` (vitest.config.ts) is a documented no-op on a
+  // plain vi.fn() (as opposed to a vi.spyOn spy), so canvas-confetti's
+  // call history from src/test/setup.ts's vi.mock() must be cleared here.
+  confettiMock.mockClear();
   mocks.srsLoading = false;
   mocks.settingsLoading = false;
   mocks.srsReadOnly = false;
@@ -137,13 +145,20 @@ describe('Practice page - one full session', () => {
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(2);
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, '1-presens', 5);
     expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '1-preteritum', 5);
+
+    // Issue #100: two correct answers land on the completion screen, which
+    // fires the single goal-completion confetti (not a per-card one).
+    expect(confettiMock).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the completion screen immediately when there are no due cards', async () => {
+  it('shows the completion screen immediately when there are no due cards, without firing confetti', async () => {
     mocks.dueItems = [];
     renderWithProviders(<Practice />, { route: '/practice' });
 
     expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
+    // Arriving to an empty queue is not "finishing a session" — no
+    // celebration for a queue that was never worked.
+    expect(confettiMock).not.toHaveBeenCalled();
   });
 
   it('shows a loading state before settings and progress have loaded', async () => {
@@ -152,6 +167,70 @@ describe('Practice page - one full session', () => {
 
     expect(screen.getByText(/Loading practice cards/i)).toBeInTheDocument();
     expect(screen.queryByText('1 / 2')).not.toBeInTheDocument();
+  });
+});
+
+describe('Practice page - dvh viewport units (#113)', () => {
+  // min-h-dvh tracks the current layout viewport, so the page no longer
+  // leaves a gap or forces a scroll when iOS Safari's URL bar shows or
+  // hides. It does NOT follow the visual viewport, so on its own it is not
+  // a fix for the on-screen keyboard overlapping the Hint/Check row -- that
+  // needs the VisualViewport API and is out of scope here.
+  it('uses min-h-dvh (not min-h-screen) for the root container in the active-session view', async () => {
+    const { container } = renderWithProviders(<Practice />, { route: '/practice' });
+
+    await screen.findByText('1 / 2');
+    const root = container.firstElementChild as HTMLElement;
+    const classes = root.className.split(/\s+/);
+    expect(classes).toContain('min-h-dvh');
+    expect(classes).not.toContain('min-h-screen');
+    // Sanity: not asserting against an empty/wrong root.
+    expect(root.textContent).toContain('Back');
+  });
+
+  it('uses min-h-dvh (not min-h-screen) for the loading view', () => {
+    mocks.settingsLoading = true;
+    const { container } = renderWithProviders(<Practice />, { route: '/practice' });
+
+    const root = container.firstElementChild as HTMLElement;
+    const classes = root.className.split(/\s+/);
+    expect(classes).toContain('min-h-dvh');
+    expect(classes).not.toContain('min-h-screen');
+  });
+
+  it('uses min-h-dvh (not min-h-screen) for the completion view', async () => {
+    mocks.dueItems = [];
+    const { container } = renderWithProviders(<Practice />, { route: '/practice' });
+
+    await screen.findByText(/Great Work/i);
+    const root = container.firstElementChild as HTMLElement;
+    const classes = root.className.split(/\s+/);
+    expect(classes).toContain('min-h-dvh');
+    expect(classes).not.toContain('min-h-screen');
+  });
+});
+
+describe('Practice page - icon-button accessibility and touch targets (issue #100)', () => {
+  it('labels the mute toggle by current mute state and gives it a 44px touch target', async () => {
+    // The shared mock settings fixture in this file has muteAudio: true, so
+    // the accessible name is "Unmute audio" (state-dependent label).
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    await screen.findByText('1 / 2');
+    const muteToggle = screen.getByRole('button', { name: 'Unmute audio' });
+    expect(muteToggle.className).toMatch(/\bh-11\b/);
+    expect(muteToggle.className).toMatch(/\bw-11\b/);
+  });
+
+  it('gives the back button a 44px-tall touch target', async () => {
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    await screen.findByText('1 / 2');
+    // Exact match: PracticeCard's backspace key also has an accessible name
+    // containing "Back" ("Backspace"), so a loose /back/i regex here would
+    // match both buttons.
+    const backButton = screen.getByRole('button', { name: 'Back' });
+    expect(backButton.className).toMatch(/\bh-11\b/);
   });
 });
 
@@ -582,7 +661,10 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
   it("offers only 'Keep practising', enabled, when future items exist but nothing is due", async () => {
     mocks.dueItems = [];
     mocks.srsStates = {
-      '1-presens': futureState('1-presens', Date.now() + DAY_MS),
+      // Issue #53: itemId is infinitive-keyed, not positional. "vara" is
+      // VERB_DATA[0], matching the real getVerbs()/conjugateVerb() lookup
+      // buildFreePracticePool uses (unmocked - see the file header comment).
+      'vara-presens': futureState('vara-presens', Date.now() + DAY_MS),
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -628,13 +710,15 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     // reads insertion order instead of sorting by dueAt would still pass by
     // accident if these were declared ascending.
     mocks.srsStates = {
-      '2-presens': futureState('2-presens', now + 3 * DAY_MS), // ha -> "har"
-      '1-presens': futureState('1-presens', now + 1 * DAY_MS), // vara -> "är"
-      // "komma" (id 7), not "unna" (id 4): #42 re-tagged "unna" A1 -> B2, so
-      // under the STABLE_SETTINGS cefrLevels: ['A1'] filter it would no
-      // longer be in the free-practice pool at all and this fixture's
-      // 3-item assumption would silently break.
-      '7-presens': futureState('7-presens', now + 2 * DAY_MS), // komma -> "kommer"
+      // Issue #53: itemId is infinitive-keyed (buildFreePracticePool reads
+      // the real, unmocked getVerbs()/conjugateVerb()).
+      'ha-presens': futureState('ha-presens', now + 3 * DAY_MS), // ha -> "har"
+      'vara-presens': futureState('vara-presens', now + 1 * DAY_MS), // vara -> "är"
+      // "komma", not "unna": #42 re-tagged "unna" A1 -> B2, so under the
+      // STABLE_SETTINGS cefrLevels: ['A1'] filter it would no longer be in
+      // the free-practice pool at all and this fixture's 3-item assumption
+      // would silently break.
+      'komma-presens': futureState('komma-presens', now + 2 * DAY_MS), // komma -> "kommer"
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -689,7 +773,7 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
   it('never records a wrong answer during free practice either', async () => {
     mocks.dueItems = [];
     mocks.srsStates = {
-      '1-presens': futureState('1-presens', Date.now() + DAY_MS),
+      'vara-presens': futureState('vara-presens', Date.now() + DAY_MS),
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -710,16 +794,17 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     mocks.dueItems = [];
     const now = Date.now();
     mocks.srsStates = {
-      '1-presens': futureState('1-presens', now + 1 * DAY_MS), // vara
-      '2-presens': futureState('2-presens', now + 2 * DAY_MS), // ha
-      '3-presens': futureState('3-presens', now + 3 * DAY_MS), // kunna
-      // "komma" (id 7), not "unna" (id 4): #42 re-tagged "unna" A1 -> B2, so
-      // it would be filtered out under cefrLevels: ['A1'] before the cap
-      // logic even runs, leaving only 5 eligible items and letting this
-      // test pass without ever exercising the 6-down-to-5 cap it names.
-      '7-presens': futureState('7-presens', now + 4 * DAY_MS), // komma
-      '5-presens': futureState('5-presens', now + 5 * DAY_MS), // få
-      '6-presens': futureState('6-presens', now + 6 * DAY_MS), // bli
+      // Issue #53: itemId is infinitive-keyed.
+      'vara-presens': futureState('vara-presens', now + 1 * DAY_MS), // vara
+      'ha-presens': futureState('ha-presens', now + 2 * DAY_MS), // ha
+      'kunna-presens': futureState('kunna-presens', now + 3 * DAY_MS), // kunna
+      // "komma", not "unna": #42 re-tagged "unna" A1 -> B2, so it would be
+      // filtered out under cefrLevels: ['A1'] before the cap logic even
+      // runs, leaving only 5 eligible items and letting this test pass
+      // without ever exercising the 6-down-to-5 cap it names.
+      'komma-presens': futureState('komma-presens', now + 4 * DAY_MS), // komma
+      'få-presens': futureState('få-presens', now + 5 * DAY_MS), // få
+      'bli-presens': futureState('bli-presens', now + 6 * DAY_MS), // bli
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 
@@ -734,9 +819,9 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     const now = Date.now();
     mocks.srsStates = {
       // Already due -- must never appear in "Keep practising".
-      '1-presens': futureState('1-presens', now - DAY_MS),
+      'vara-presens': futureState('vara-presens', now - DAY_MS),
       // Genuinely future -- the only eligible candidate.
-      '2-presens': futureState('2-presens', now + DAY_MS),
+      'ha-presens': futureState('ha-presens', now + DAY_MS),
     };
     renderWithProviders(<Practice />, { route: '/practice' });
 

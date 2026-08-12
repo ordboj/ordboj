@@ -81,14 +81,15 @@ export default function Home() {
   const allLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
+    <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2 relative">
           <Button
             variant="outline"
             size="icon"
-            className="absolute right-0 top-0"
+            className="absolute right-0 top-0 h-11 w-11"
+            aria-label={settings.muteAudio ? 'Unmute audio' : 'Mute audio'}
             onClick={() => updateSettings({ muteAudio: !settings.muteAudio })}
           >
             {settings.muteAudio ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
@@ -205,8 +206,16 @@ export default function Home() {
         {/* Stats & Settings */}
         <div className="grid grid-cols-2 gap-4">
           <Card
-            className="cursor-pointer hover:shadow-lg transition-shadow"
+            role="link"
+            tabIndex={0}
+            className="cursor-pointer hover:shadow-lg transition-shadow focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             onClick={() => navigate('/progress')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate('/progress');
+              }
+            }}
           >
             <CardHeader className="text-center">
               <Trophy className="w-8 h-8 mx-auto text-accent mb-2" />
@@ -216,8 +225,16 @@ export default function Home() {
           </Card>
 
           <Card
-            className="cursor-pointer hover:shadow-lg transition-shadow"
+            role="link"
+            tabIndex={0}
+            className="cursor-pointer hover:shadow-lg transition-shadow focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             onClick={() => navigate('/settings')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate('/settings');
+              }
+            }}
           >
             <CardHeader className="text-center">
               <Settings className="w-8 h-8 mx-auto text-primary mb-2" />

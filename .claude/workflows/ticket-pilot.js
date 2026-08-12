@@ -1,9 +1,9 @@
 export const meta = {
   name: 'ticket-pilot',
   description:
-    'Per-ticket pipeline: triage → implement (or adopt existing open PR) → adversarial review → bounded remediation loop → Fable owner-gate for risky/contested merges → CI watch with remediation retry → merge + board update; park only when the owner-gate cannot decide',
+    'Per-ticket pipeline: triage → implement (or adopt existing open PR) → adversarial review → bounded remediation loop → Fable owner-gate for risky/contested merges → CI watch with remediation retry → ready-to-merge handoff; the LEAD merges with the human approval from the chat, then closes issues and moves the board. Park only when the owner-gate cannot decide',
   whenToUse:
-    'Run Ordböj board tickets autonomously. args: { tickets: [16, 18, 28] } — GitHub issue numbers in ordboj/ordboj. Re-running a ticket that already has an open PR ADOPTS that PR (remediate → merge) instead of opening a duplicate. "Decide/Spec/Define/Research" tickets produce a merged decision doc, written by Fable acting as product owner. Review rejections get up to 2 remediation rounds on the same branch before anyone considers parking. Risky classes (localStorage schema, verb-data, major bump, cross-owner) are decided by the Fable owner-gate — merge with rationale or park with one precise question — never parked unconditionally.',
+    'Run Ordböj board tickets autonomously. args: { tickets: [16, 18, 28] } — GitHub issue numbers in ordboj/ordboj. Re-running a ticket that already has an open PR ADOPTS that PR (remediate → merge) instead of opening a duplicate. "Decide/Spec/Define/Research" tickets produce a merged decision doc, written by Fable acting as product owner. Review rejections get up to 2 remediation rounds on the same branch before anyone considers parking. Risky classes (localStorage schema, verb-data, major bump, cross-owner) are decided by the Fable owner-gate — clear with rationale or park with one precise question — never parked unconditionally. Ship agents never run gh pr merge: a subagent cannot prove human approval to the safety layer, so they return status "ready" and the lead session performs every merge itself (update-branch, merge --squash, close issue, board to Done) under the human approval given in the conversation.',
   phases: [
     {
       title: 'Triage',
@@ -41,7 +41,7 @@ export const meta = {
     {
       title: 'Ship',
       detail:
-        'update branch from main, poll CI; CI-red routes back to remediation once; merge, clear needs-human, board to Done',
+        'update branch from main, poll CI; CI-red routes back to remediation once; on green return ready-to-merge — the lead merges and updates the board',
     },
   ],
 };
@@ -67,10 +67,11 @@ if (!tickets.length)
   );
 
 // Serialization locks: same-owner implements never run concurrently (no two
-// agents hold one owner's files), and merges happen one at a time so a PR is
-// never merged onto a main that just moved under it. File-overlap groups are
-// serialized end-to-end (implement→ship) below, so a later ticket always
-// branches from a main that already contains the earlier ticket's merge.
+// agents hold one owner's files), and ship preps run one at a time. Ships no
+// longer merge (the lead merges with the human's approval after the run), so
+// inside a file-overlap group a later ticket may branch from a main that does
+// NOT yet contain the earlier ticket's changes. The ship agent's CONFLICTING
+// procedure absorbs the mechanical fallout; semantic conflicts park.
 const locks = {};
 function withLock(key, fn) {
   const prev = locks[key] || Promise.resolve();
@@ -83,6 +84,15 @@ function withLock(key, fn) {
 }
 
 // ---------------------------------------------------------------- rules
+
+// ASD-STE100 style for every human-visible GitHub text (PR bodies, comments).
+const STYLE = `
+PR-body and comment style (mandatory):
+- Keep the PR body very short: "Closes #<n>", then at most 4 lines (what changed, why), then the evidence block. No feature lists. No section headers.
+- Keep every PR or issue comment very short: at most 3 sentences.
+- Write in ASD-STE100 style: active voice, simple tenses, one fact per sentence, at most 20 words per sentence, one meaning per word, no noun clusters.
+- Do not add filler, praise, or restated diff content.
+`;
 
 const RULES = `
 Hard rules (non-negotiable):
@@ -97,7 +107,7 @@ Hard rules (non-negotiable):
   npm run lint && npm run typecheck && npm test && npm run build
   If a command fails, fix the cause or return blocked. Do not claim completion without evidence.
 - Evidence must state the commit SHA of the branch head (git rev-parse HEAD). Evidence from an older commit is stale and not valid.
-`;
+${STYLE}`;
 
 // A worktree may not be able to `git checkout <branch>` directly because
 // another active worktree already holds that branch. The standard procedure
@@ -272,7 +282,7 @@ const GATE_SCHEMA = {
 const SHIP_SCHEMA = {
   type: 'object',
   properties: {
-    status: { type: 'string', enum: ['merged', 'parked', 'ci-red', 'failed'] },
+    status: { type: 'string', enum: ['ready', 'merged', 'parked', 'ci-red', 'failed'] },
     detail: { type: 'string' },
   },
   required: ['status', 'detail'],
@@ -374,7 +384,8 @@ Reason: ${reason}
 Record the parked state on GitHub. Use the Bash tool:
 1. Make sure the label exists. This command creates or updates it and never errors:
    gh label create needs-human --repo ${REPO} --color D93F0B --description "agent parked, human decision needed" --force
-2. Comment the reason on the issue in one short paragraph: gh issue comment ${n} --repo ${REPO} --body "..."
+2. Comment the reason on the issue: gh issue comment ${n} --repo ${REPO} --body "..."
+   Keep the comment at most 3 sentences. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.
 3. Add the label to the issue: gh issue edit ${n} --repo ${REPO} --add-label needs-human
 Return status 'parked' with a one-line detail.`,
     {
@@ -400,6 +411,7 @@ Reason: ${reason}
 Record the parked state on GitHub. Use the Bash tool:
 1. Run: gh label create needs-human --repo ${REPO} --color D93F0B --description "agent parked, human decision needed" --force
 2. Comment the reason on the PR. Include any question for the human verbatim: gh pr comment ${r.prNumber} --repo ${REPO} --body "..."
+   Keep the comment at most 3 sentences plus the question. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.
 3. Add the label to both the PR and the issue: gh pr edit ${r.prNumber} --repo ${REPO} --add-label needs-human ; gh issue edit ${n} --repo ${REPO} --add-label needs-human
 Return status 'parked' with a one-line detail.`,
     {
@@ -481,7 +493,8 @@ You are in an isolated git worktree. Steps:
 7. Commit with message "docs: ... (#${n})". Push: git push -u origin HEAD. Open the PR: gh pr create --repo ${REPO} --title "docs: <title> (#${n})" --body "Closes #${n}" plus a three-line summary of the ruling and the lint evidence with the SHA.
 8. Return status 'pr-opened' with branch, prNumber, prUrl, and evidence.
 Push every commit before you return. A commit that stays only in the worktree is lost.
-Do not guess Swedish. If the ruling depends on a Swedish form that you cannot check, return blocked with the precise question.`,
+Do not guess Swedish. If the ruling depends on a Swedish form that you cannot check, return blocked with the precise question.
+${STYLE}`,
     {
       label: `decide:#${n}`,
       phase: 'Implement',
@@ -514,7 +527,7 @@ Check each point:
 - Does the diff change a Swedish string that can be wrong (conjugation, spelling)?
 - Diff hygiene: does the diff reformat lines that are not part of the fix? Is the PR body stale, or does it describe the code incorrectly? Is the branch CONFLICTING or BEHIND against main? Is CI red on the head commit?
 
-Report every finding. Then classify the overall result:
+Report every finding. Write each finding as one short sentence in ASD-STE100 style: active voice, simple tense, one fact per sentence, at most 20 words. Then classify the overall result:
 - approved=true: nothing material is wrong with the code. List description-only imperfections as findings.
 - approved=false and remediable=true: one follow-up commit on this branch can fix all findings. Examples: stale or incorrect PR body, unrelated formatting churn, missing tests, CI red on head, CONFLICTING or BEHIND branch, stale evidence. A remediation stage runs next, and a re-review follows it.
 - approved=false and remediable=false: at least one finding invalidates the approach itself. Examples: acceptance criteria not met, wrong behavior, data loss, weakened tests, wrong Swedish, ownership violations.
@@ -595,7 +608,7 @@ Return decision merge|park and a rationale of 1-3 sentences. On park, also retur
 
 function runShip(n, r, authorizedBy, attempt) {
   return agent(
-    `You are the ship agent for PR #${r.prNumber} in ${REPO} (issue #${n}). The pipeline authorized the merge (${authorizedBy}). Use the Bash tool for all commands.
+    `You are the ship agent for PR #${r.prNumber} in ${REPO} (issue #${n}). The owner-gate cleared this PR (${authorizedBy}). Your job is to make it ready to merge and report back. You never merge: the lead session performs the merge with the human's approval. Use the Bash tool for all commands.
 
 Make sure the 'needs-human' label exists. This command creates or updates it and never errors:
 gh label create needs-human --repo ${REPO} --color D93F0B --description "agent parked, human decision needed" --force
@@ -606,15 +619,12 @@ gh label create needs-human --repo ${REPO} --color D93F0B --description "agent p
 3. Watch CI by polling. Run gh pr checks ${r.prNumber} --repo ${REPO}. Repeat the command about every 60 seconds until every check has concluded, up to about 20 minutes. Do not use --watch, because it can outlive the command timeout.
    If no checks appear at all: trigger CI once with an empty commit. Create a fresh worktree, run git checkout -b tmp2 origin/<branch>, then git commit --allow-empty -m "ci: trigger", then git push origin HEAD:<branch>. Poll again. If checks still do not appear: comment, add needs-human to the PR and the issue, and return 'parked'.
 4. If CI is red: read the failing job with gh run view --log-failed. Do not park. Do not edit code. Return status 'ci-red' and put the decisive failing lines in detail. The pipeline routes the failure to a remediation agent.
-5. If CI is green: check that the concluded checks ran on the current head. Compare with headRefOid. Checks from an older head do not count. Poll until the checks of the current head conclude. Then merge:
-   gh pr merge ${r.prNumber} --repo ${REPO} --squash --delete-branch
-6. After a successful merge:
-   - Check that issue #${n} is closed: gh issue view ${n} --repo ${REPO} --json state. If it is still open, close it: gh issue close ${n} --repo ${REPO}
+5. If CI is green: check that the concluded checks ran on the current head. Compare with headRefOid. Checks from an older head do not count. Poll until the checks of the current head conclude. Do NOT merge.
+6. When the current head is green:
    - Remove stale park labels. Ignore errors: gh pr edit ${r.prNumber} --repo ${REPO} --remove-label needs-human ; gh issue edit ${n} --repo ${REPO} --remove-label needs-human
-   - Move the project item to Done. Find the item id with gh project item-list 1 --owner ordboj --format json. Use the item whose content.number is ${n}. Then run:
-     gh project item-edit --project-id PVT_kwDOEr3qds4BfuEP --id <item-id> --field-id PVTSSF_lADOEr3qds4BfuEPzhZ--ms --single-select-option-id 98236657
-7. Return 'merged' with a one-line detail.
-Do not edit application source. Do not weaken tests.`,
+7. Return 'ready' with a one-line detail that names the green head SHA. The lead merges, closes issue #${n}, and moves the board item to Done.
+Do not edit application source. Do not weaken tests.
+When you comment on a PR or issue: keep the comment at most 3 sentences. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.`,
     {
       label: `ship:#${n}${attempt > 1 ? ':retry' : ''}`,
       phase: 'Ship',
@@ -649,7 +659,7 @@ async function runTicket(n, t, serializedAfter) {
   } else {
     // ---- Implement
     const serialNote = serializedAfter
-      ? `\nNote: this ticket runs after #${serializedAfter} because both tickets touch the same files. The PR of that ticket possibly merged a moment ago. Branch from a freshly fetched origin/main. Do not branch from the local main of the worktree, because it can be stale.`
+      ? `\nNote: this ticket runs after #${serializedAfter} because both tickets touch the same files. That ticket's PR may still be OPEN (ready-to-merge, waiting for the lead) — its changes are then NOT on main yet. Branch from a freshly fetched origin/main, expect a possible conflict with that PR's branch later, and keep your diff minimal so the conflict stays mechanical. Do not branch from the local main of the worktree, because it can be stale.`
       : '';
     const fixtureNote = t.fixtureBreakExpected
       ? `\nExpected fixture breakage: triage predicts that your change breaks existing test fixtures that hardcode what you remove or rename. This is acceptable and does not mean needs-help. Condition: npm test fails only in qa-owned test files whose fixtures reference the thing that you intentionally changed, and every other suite is green. When this condition holds: open the PR as a draft (gh pr create --draft), set fixtureFailures=true, list the failing tests in the evidence, and return 'pr-opened'. The QA stage runs next on your branch and repairs the fixtures. Do not edit test files yourself. Do not wait for help.`
@@ -866,6 +876,11 @@ const parkedMissing = await parallel(
 
 const summary = [...groupRuns.filter(Boolean).flat(), ...parkedMissing].filter(Boolean);
 log(
-  `ticket-pilot done: ${summary.filter((s) => s.status === 'merged').length} merged, ${summary.filter((s) => s.status === 'parked').length} parked, ${summary.filter((s) => s.status === 'failed').length} failed`,
+  `ticket-pilot done: ${summary.filter((s) => s.status === 'ready').length} ready-to-merge, ${summary.filter((s) => s.status === 'merged').length} merged, ${summary.filter((s) => s.status === 'parked').length} parked, ${summary.filter((s) => s.status === 'failed').length} failed`,
 );
+// LEAD: for every 'ready' result, in list order: confirm the human's merge
+// approval from the conversation, then gh pr update-branch, wait for green CI
+// on the new head, gh pr merge --squash --delete-branch, close the issue, and
+// move the board item to Done. Re-update later ready branches after each
+// merge, since main moves under them.
 return summary;

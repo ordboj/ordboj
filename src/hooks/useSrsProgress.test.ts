@@ -120,7 +120,7 @@ describe('persistence - the irreplaceable-progress invariant', () => {
     const stored = localStorage.getItem(STORAGE_KEY);
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored as string);
-    expect(parsed.version).toBe(2);
+    expect(parsed.version).toBe(3);
     expect(parsed.items['1-presens'].repetitions).toBe(1);
 
     first.unmount();
@@ -320,7 +320,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     expect(result.current.srsStates['1-presens']!.easeFactor).toBe(2.4);
   });
 
-  it('persists the migration as a version 2 envelope and does not re-rebase an already-versioned payload on remount (one-shot)', async () => {
+  it('persists the migration as a version 3 envelope and does not re-rebase an already-versioned payload on remount (one-shot)', async () => {
     const legacyBlob = {
       '1-presens': {
         itemId: '1-presens',
@@ -338,7 +338,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     first.unmount();
 
     const storedAfterFirst = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(storedAfterFirst.version).toBe(2);
+    expect(storedAfterFirst.version).toBe(3);
 
     // Prove the rebase does not run again on a versioned payload: knock the
     // persisted ease back under the rebase threshold from outside. If load
@@ -848,7 +848,7 @@ describe('#241: forward-compat guard against a newer store', () => {
     await waitFor(() => expect(result.current.srsStates['1-presens']!.repetitions).toBe(2));
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.version).toBe(2);
+    expect(stored.version).toBe(3);
     expect(stored.items['1-presens'].repetitions).toBe(2);
   });
 
@@ -871,5 +871,167 @@ describe('#241: forward-compat guard against a newer store', () => {
     expect(result.current.isReadOnly).toBe(false);
     // And the legacy ease rebase still ran on the way in.
     expect(result.current.srsStates['1-presens']!.easeFactor).toBe(1.8);
+  });
+});
+
+// Issue #53: storage v3 stops persisting untouched items, so most items in a
+// real store (and every item in an exported backup) have no key in the
+// on-disk map. If getDueItems required a stored entry to consider an item
+// due, importing one of v3's own sparse exports would make the rest of the
+// deck vanish from practice with no error - the same "silent progress loss"
+// class of bug CLAUDE.md calls out, just triggered by a normal backup/
+// restore instead of a corrupt file.
+describe('#53: getDueItems treats a missing key as new/due-now', () => {
+  it('surfaces an item with no stored state as due, and still respects a future dueAt for an item that does have state', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // A sparse v3-shaped backup: only one of the eight fixture items
+    // (2 verbs x 4 forms) carries a stored entry, with a future dueAt. This
+    // is exactly the shape toStoredItems/exportData now produce.
+    const sparseBackup = JSON.stringify({
+      version: 3,
+      items: {
+        '1-presens': {
+          repetitions: 2,
+          intervalDays: 6,
+          easeFactor: 2.5,
+          dueAt: FIXED_NOW + 5 * 24 * 60 * 60 * 1000, // not due
+        },
+      },
+    });
+
+    act(() => {
+      result.current.importData(sparseBackup);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']).toBeDefined());
+
+    // Only one key exists in srsStates now - setSrsStates replaces the map
+    // wholesale, so every other conjugation item genuinely has no entry.
+    expect(Object.keys(result.current.srsStates)).toEqual(['1-presens']);
+
+    const due = await result.current.getDueItems();
+    const dueIds = due.map((item) => item.itemId);
+
+    // The one item with stored state is not due (its dueAt is 5 days out).
+    expect(dueIds).not.toContain('1-presens');
+    // Every item with no stored state at all is still offered - a missing
+    // key means "never practised", which is due now, not "not due". (7
+    // available items total: 2 verbs x 4 forms, minus prova's unavailable
+    // imperativ - see "skips forms whose conjugation is (not available)"
+    // above - minus the one item with stored (future) state.)
+    expect(dueIds.sort()).toEqual(
+      ['1-preteritum', '1-supinum', '1-imperativ', '2-presens', '2-preteritum', '2-supinum'].sort(),
+    );
+  });
+});
+
+describe('#53: explicit reject list ([], {"x":1}, settings export)', () => {
+  it('rejects each of the three literal non-progress payloads without mutating in-memory state or localStorage', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+
+    const settingsExport = JSON.stringify({
+      theme: 'dark',
+      dailyGoal: 20,
+      soundEnabled: true,
+    });
+
+    const rejectedPayloads = ['[]', '{"x":1}', settingsExport];
+
+    for (const payload of rejectedPayloads) {
+      const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
+      const storageSnapshot = localStorage.getItem(STORAGE_KEY);
+
+      let importResult: boolean | undefined;
+      act(() => {
+        importResult = result.current.importData(payload);
+      });
+
+      expect(importResult).toBe(false);
+      expect(result.current.srsStates).toEqual(stateSnapshot);
+      expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+    }
+  });
+});
+
+// #189 finding 13: migrateConjugationKeys re-keys a legacy positional id
+// ("1-presens") onto the canonical verb id ("vara-presens") on every read.
+// Two edge cases were previously argued only in a comment above the
+// implementation and had no test pinning them.
+describe('migrateConjugationKeys - #189 finding 13 edge cases', () => {
+  // Both variants seed the same two items in opposite key order, since
+  // Object.entries order is the only thing that could make an
+  // insertion-order-dependent implementation look correct by accident.
+  it.each([
+    ['positional key first', ['1-presens', 'vara-presens']],
+    ['canonical key first', ['vara-presens', '1-presens']],
+  ] as const)(
+    'an already-canonical key wins a collision with its legacy positional twin (%s)',
+    async (_label, keyOrder) => {
+      vi.mocked(getVerbs).mockResolvedValue([{ id: 'vara', infinitive: 'vara', cefr: 'A1' }]);
+
+      const states: Record<string, unknown> = {
+        '1-presens': {
+          itemId: '1-presens',
+          repetitions: 9,
+          intervalDays: 300,
+          easeFactor: 2.6,
+          dueAt: FIXED_NOW,
+        },
+        'vara-presens': {
+          itemId: 'vara-presens',
+          repetitions: 3,
+          intervalDays: 16,
+          easeFactor: 2.5,
+          dueAt: FIXED_NOW,
+        },
+      };
+      const orderedItems: Record<string, unknown> = {};
+      for (const key of keyOrder) orderedItems[key] = states[key];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, items: orderedItems }));
+
+      const { result } = renderHook(() => useSrsProgress());
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      // The canonical key's own progress survives, not the legacy twin's.
+      expect(result.current.srsStates['vara-presens']?.repetitions).toBe(3);
+      // The legacy positional key is discarded, not kept alongside the winner.
+      expect(result.current.srsStates['1-presens']).toBeUndefined();
+    },
+  );
+
+  it("keeps a positional key past the end of today's verb table verbatim in state, dropping nothing", async () => {
+    // Default fixture mock (2 verbs): position 999 has no canonicalVerbIds
+    // entry at all, so the key cannot be a stale-but-resolvable rewrite - it
+    // is simply out of range.
+    const outOfRangeState = {
+      itemId: '999-presens',
+      repetitions: 4,
+      intervalDays: 10,
+      easeFactor: 2.5,
+      dueAt: FIXED_NOW,
+    };
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: 2, items: { '999-presens': outOfRangeState } }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.srsStates['999-presens']).toMatchObject({ repetitions: 4 });
+
+    // Verbatim in the persisted store too - an out-of-range key is not
+    // derivable, so the save path must never treat it as prunable.
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+      expect(stored.items['999-presens']).toMatchObject({ repetitions: 4 });
+    });
   });
 });

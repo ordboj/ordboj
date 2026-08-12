@@ -27,8 +27,8 @@ export interface ConjugatedVerb extends Verb {
 
 // Get all basic verbs
 export async function getVerbs(): Promise<Verb[]> {
-  return VERB_DATA.map((verb, index) => ({
-    id: String(index + 1),
+  return VERB_DATA.map((verb) => ({
+    id: verb.infinitive,
     infinitive: verb.infinitive,
     cefr: verb.cefr,
   }));
@@ -82,10 +82,13 @@ export function getAcceptedAnswers(infinitive: string, form: Form): string[] {
 // True if `answer` matches the primary form or any documented alternate for
 // this verb + form, case-insensitive and trimmed (product policy P2) — the
 // same normalization the UI already applied to the primary form alone.
+// Also normalizes to NFC on both sides (#328) so an answer typed in
+// decomposed Unicode (NFD, e.g. "a" + combining ring above for "å") still
+// matches the NFC-stored correct form.
 export function isAcceptedAnswer(infinitive: string, form: Form, answer: string): boolean {
-  const normalized = answer.trim().toLowerCase();
+  const normalized = answer.trim().toLowerCase().normalize('NFC');
   return getAcceptedAnswers(infinitive, form).some(
-    (candidate) => candidate.trim().toLowerCase() === normalized,
+    (candidate) => candidate.trim().toLowerCase().normalize('NFC') === normalized,
   );
 }
 
@@ -121,8 +124,8 @@ export function getAlternatesDisclosure(infinitive: string, form: Form): string 
 
 // Get all conjugated verbs efficiently (no file reads needed!)
 export async function getAllConjugatedVerbs(): Promise<ConjugatedVerb[]> {
-  return VERB_DATA.map((verb, index) => ({
-    id: String(index + 1),
+  return VERB_DATA.map((verb) => ({
+    id: verb.infinitive,
     infinitive: verb.infinitive,
     presens: verb.presens || '(not available)',
     preteritum: verb.preteritum || '(not available)',
@@ -138,9 +141,8 @@ export async function conjugateVerb(infinitive: string): Promise<ConjugatedVerb>
   const verb = VERB_DATA.find((v) => v.infinitive === infinitive);
 
   if (verb) {
-    const index = VERB_DATA.indexOf(verb);
     return {
-      id: String(index + 1),
+      id: verb.infinitive,
       infinitive: verb.infinitive,
       presens: verb.presens || '(not available)',
       preteritum: verb.preteritum || '(not available)',
@@ -266,8 +268,8 @@ export function getExampleSentence(infinitive: string, form: Form): string | nul
 }
 
 // Legacy export for backward compatibility
-export const verbs: Verb[] = VERB_DATA.map((verb, index) => ({
-  id: String(index + 1),
+export const verbs: Verb[] = VERB_DATA.map((verb) => ({
+  id: verb.infinitive,
   infinitive: verb.infinitive,
   cefr: verb.cefr,
 }));
