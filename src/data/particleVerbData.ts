@@ -2595,7 +2595,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   // följa, flytta, checka, torka, städa, fylla) all need a new VERB_DATA base row,
   // which also means updating the pinned snapshot in
   // src/data/verbData.orderPin.test.ts in the same commit — a qa-owned test file.
-  // That base-verb growth is a follow-up (see PR description). The two rows below
+  // That base-verb growth is a follow-up (see PR description). The five rows below
   // are equally justified band-6 peers built on bases VERB_DATA already pins
   // (ha, ta, stiga, se), so the runway target is met without a cross-owner edit:
   // getting dressed/undressed (ha på sig / ta på sig / ta av sig) and public-
@@ -2690,11 +2690,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'se upp',
     gloss: { en: 'to watch out, to be careful of something' },
     transparency: 'idiomatic',
+    contrast: 'se upp till någon — to admire someone; literal se upp — to raise one’s gaze',
     acceptedParticles: ['upp'],
     examples: [
-      { sv: 'Jag ser upp för bilarna på vägen.', blankIndex: 2 },
-      { sv: 'Barnen ser upp för trafiken vid skolan.', blankIndex: 2 },
-      { sv: 'Vi ser upp för isen på trottoaren.', blankIndex: 2 },
+      { sv: 'Du måste se upp för bilarna på vägen.', blankIndex: 3 },
+      { sv: 'Barnen ska se upp för trafiken vid skolan.', blankIndex: 3 },
+      { sv: 'Vi får se upp för isen på trottoaren.', blankIndex: 3 },
     ],
     verified: true,
     forms: { presens: 'ser upp', preteritum: 'såg upp', supinum: 'sett upp' },
