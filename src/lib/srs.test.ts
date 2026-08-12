@@ -208,6 +208,110 @@ describe('calculateNextReview - review-table regression (10+ reviews)', () => {
   });
 });
 
+// #388: a correct answer given via the discrimination ("choice") exercise
+// earns weaker credit than a typed answer - no ease reward, and the
+// interval grows at the item's ease capped at 1.6 rather than the raw
+// ease. A wrong choice answer is a full lapse, identical to typed wrong.
+// Spec: docs/learning/2026-08-08-discrimination-exercise.md.
+describe('calculateNextReview - choice modality credit path (#388)', () => {
+  it('an all-choice-correct run never moves ease off the 2.5 default and climbs the 1.6-capped ladder', () => {
+    // Independently hand-traced (not copied from the implementation PR):
+    // ease never changes on a correct choice answer, so min(easeFactor,
+    // 1.6) is min(2.5, 1.6) = 1.6 for the whole run; intervalDays is
+    // round(previous * 1.6), floored at 1 on the first review, clamped at
+    // 365.
+    const expectedIntervalDays = [1, 2, 3, 5, 8, 13, 21, 34, 54, 86, 138, 221, 354, 365, 365];
+
+    let state = initializeSrsState('x');
+    expectedIntervalDays.forEach((expectedInterval, i) => {
+      state = calculateNextReview(state, 5, 'choice');
+      expect(state.repetitions).toBe(i + 1);
+      expect(state.intervalDays).toBe(expectedInterval);
+      expect(state.easeFactor).toBe(INITIAL_EASE_FACTOR);
+    });
+  });
+
+  it('a correct choice answer never changes easeFactor, from a non-default starting ease', () => {
+    const state: SrsState = { ...initializeSrsState('x'), intervalDays: 10, easeFactor: 2.2 };
+    const next = calculateNextReview(state, 5, 'choice');
+    expect(next.easeFactor).toBe(2.2);
+  });
+
+  it('a correct choice answer on a fresh item floors intervalDays at 1, not 0', () => {
+    // intervalDays starts at 0; round(0 * 1.6) is 0, so the max(1, ...)
+    // floor is load-bearing here, not a no-op.
+    const state = calculateNextReview(initializeSrsState('x'), 5, 'choice');
+    expect(state.intervalDays).toBe(1);
+  });
+
+  it('caps the multiplier at 1.6 when easeFactor is above the cap', () => {
+    const state: SrsState = { ...initializeSrsState('x'), intervalDays: 10, easeFactor: 2.8 };
+    const next = calculateNextReview(state, 5, 'choice');
+    // round(10 * min(2.8, 1.6)) = round(16) = 16, not round(10 * 2.8) = 28.
+    expect(next.intervalDays).toBe(16);
+  });
+
+  it('uses the raw easeFactor, unmultiplied by the cap, when it is below 1.6 (a lapsed item at the 1.3 floor)', () => {
+    const state: SrsState = { ...initializeSrsState('x'), intervalDays: 10, easeFactor: 1.3 };
+    const next = calculateNextReview(state, 5, 'choice');
+    // round(10 * min(1.3, 1.6)) = round(10 * 1.3) = 13, not round(10 * 1.6) = 16.
+    expect(next.intervalDays).toBe(13);
+  });
+
+  it('clamps a would-be-large choice interval to the 365-day ceiling', () => {
+    const state: SrsState = { ...initializeSrsState('x'), intervalDays: 300, easeFactor: 2.5 };
+    const next = calculateNextReview(state, 5, 'choice');
+    // round(300 * min(2.5, 1.6)) = round(480) = 480, clamped to 365.
+    expect(next.intervalDays).toBe(365);
+    expect(next.intervalDays).toBe(MAX_INTERVAL_DAYS);
+  });
+
+  it('produces a state identical to a typed wrong answer when a choice answer is wrong, from the same starting state', () => {
+    const starting: SrsState = {
+      ...initializeSrsState('x'),
+      repetitions: 4,
+      intervalDays: 43,
+      easeFactor: 2.4,
+    };
+
+    const typedWrong = calculateNextReview(starting, 0, 'typed');
+    const choiceWrong = calculateNextReview(starting, 0, 'choice');
+
+    expect(choiceWrong).toEqual(typedWrong);
+  });
+
+  it('produces a full lapse (repetitions 0, interval 1, ease -0.20) on a wrong choice answer even after a choice-only streak', () => {
+    let state = initializeSrsState('x');
+    state = calculateNextReview(state, 5, 'choice');
+    state = calculateNextReview(state, 5, 'choice');
+    expect(state.repetitions).toBe(2);
+    expect(state.easeFactor).toBe(INITIAL_EASE_FACTOR); // still untouched by choice credit
+
+    const lapsed = calculateNextReview(state, 0, 'choice');
+    expect(lapsed.repetitions).toBe(0);
+    expect(lapsed.intervalDays).toBe(1);
+    expect(lapsed.easeFactor).toBeCloseTo(2.3, 5);
+  });
+
+  it('treats an omitted modality identically to explicit "typed", across a grid of starting states', () => {
+    const startingStates: SrsState[] = [
+      initializeSrsState('x'),
+      { ...initializeSrsState('x'), repetitions: 1, intervalDays: 1, easeFactor: 2.55 },
+      { ...initializeSrsState('x'), repetitions: 2, intervalDays: 6, easeFactor: 2.6 },
+      { ...initializeSrsState('x'), repetitions: 6, intervalDays: 330, easeFactor: 2.8 },
+      { ...initializeSrsState('x'), repetitions: 0, intervalDays: 0, easeFactor: 1.3 },
+    ];
+
+    for (const grade of [5, 0] as const) {
+      for (const starting of startingStates) {
+        const omitted = calculateNextReview(starting, grade);
+        const explicitTyped = calculateNextReview(starting, grade, 'typed');
+        expect(omitted).toEqual(explicitTyped);
+      }
+    }
+  });
+});
+
 describe('calculateNextReview - MAX_INTERVAL_DAYS clamp', () => {
   it('clamps a would-be-924-day interval (330 * 2.8 ease) to the 365-day ceiling', () => {
     const state: SrsState = {
