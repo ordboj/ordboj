@@ -1008,8 +1008,8 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
   // the comparison logic (array equality of an ordered id list) was checked
   // against a deliberately reordered fixture outside this suite to confirm
   // it is not a tautology.
-  it('AC8: VERB_DATA has exactly the pinned 68 rows, in the pinned order', () => {
-    expect(VERB_DATA).toHaveLength(68);
+  it('AC8: VERB_DATA has exactly the pinned 76 rows, in the pinned order', () => {
+    expect(VERB_DATA).toHaveLength(76);
     expect(VERB_DATA.map((v) => v.infinitive)).toEqual([
       'vara',
       'ha',
@@ -1079,6 +1079,14 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
       'åka',
       'plocka',
       'titta',
+      'växa',
+      'dela',
+      'dyka',
+      'hjälpa',
+      'låna',
+      'spela',
+      'koppla',
+      'lämna',
     ]);
   });
 
@@ -1295,10 +1303,14 @@ describe('issue #369 - top-12 base verbs for particle-verb unblocking (PR #382)'
     },
   );
 
-  it('adds VERB_DATA.length === 56 + 12, with the last 12 infinitives equal to EXPECTED_NEW_ROWS in order', () => {
-    expect(VERB_DATA).toHaveLength(56 + 12);
-    const lastTwelve = VERB_DATA.slice(-12).map((v) => v.infinitive);
-    expect(lastTwelve).toEqual(EXPECTED_NEW_ROWS.map((row) => row.infinitive));
+  // #399 appended 8 more rows after these 12, so the 12 #369 rows are no
+  // longer the last 12 in VERB_DATA; they are now the 12 immediately before
+  // the 8 #399 rows. VERB_DATA.length grows with every append-only batch,
+  // so this pin is updated alongside AC8 each time a batch lands.
+  it('places the 12 #369 rows immediately before the 8 #399 rows, with VERB_DATA.length === 56 + 12 + 8', () => {
+    expect(VERB_DATA).toHaveLength(56 + 12 + 8);
+    const twelveBeforeThe399Rows = VERB_DATA.slice(-12 - 8, -8).map((v) => v.infinitive);
+    expect(twelveBeforeThe399Rows).toEqual(EXPECTED_NEW_ROWS.map((row) => row.infinitive));
   });
 
   it('assigns none of the 12 new rows an `alternates` field, and only `dra` a `note` field for its archaic variant', () => {
@@ -1337,6 +1349,148 @@ describe('issue #369 - top-12 base verbs for particle-verb unblocking (PR #382)'
       expect(presens).toBe(expected.presens);
       expect(preteritum).toBe(expected.preteritum);
       expect(supinum).toBe(expected.supinum);
+    },
+  );
+});
+
+// Issue #399: 8 more base verbs appended after "titta" to unblock the
+// remaining band 1-2 particle verbs (#397 wave A / #394). Pins the exact
+// conjugated forms shipped for each new row, for the same reason as #369
+// (PR #382): a generic character/grupp check would pass on a
+// plausible-looking but linguistically wrong form.
+describe('issue #399 - 8 more base verbs for particle-verb unblocking', () => {
+  const EXPECTED_NEW_ROWS = [
+    {
+      cefr: 'A1',
+      infinitive: 'växa',
+      imperativ: 'väx',
+      presens: 'växer',
+      preteritum: 'växte',
+      supinum: 'vuxit',
+      grupp: '4',
+      alternates: { supinum: ['växt'] },
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'dela',
+      imperativ: 'dela',
+      presens: 'delar',
+      preteritum: 'delade',
+      supinum: 'delat',
+      grupp: '1',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'dyka',
+      imperativ: 'dyk',
+      presens: 'dyker',
+      preteritum: 'dök',
+      supinum: 'dykit',
+      grupp: '4',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'hjälpa',
+      imperativ: 'hjälp',
+      presens: 'hjälper',
+      preteritum: 'hjälpte',
+      supinum: 'hjälpt',
+      grupp: '2b',
+    },
+    {
+      cefr: 'A2',
+      infinitive: 'låna',
+      imperativ: 'låna',
+      presens: 'lånar',
+      preteritum: 'lånade',
+      supinum: 'lånat',
+      grupp: '1',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'spela',
+      imperativ: 'spela',
+      presens: 'spelar',
+      preteritum: 'spelade',
+      supinum: 'spelat',
+      grupp: '1',
+    },
+    {
+      cefr: 'A2',
+      infinitive: 'koppla',
+      imperativ: 'koppla',
+      presens: 'kopplar',
+      preteritum: 'kopplade',
+      supinum: 'kopplat',
+      grupp: '1',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'lämna',
+      imperativ: 'lämna',
+      presens: 'lämnar',
+      preteritum: 'lämnade',
+      supinum: 'lämnat',
+      grupp: '1',
+    },
+  ] as const;
+
+  it.each(EXPECTED_NEW_ROWS)(
+    'pins the exact stored forms for "$infinitive" (cefr/imperativ/presens/preteritum/supinum/grupp)',
+    (expected) => {
+      const row = VERB_DATA.find((v) => v.infinitive === expected.infinitive);
+      expect(row).toBeDefined();
+      expect(row).toMatchObject(expected);
+    },
+  );
+
+  it('adds VERB_DATA.length === 68 + 8, with the last 8 infinitives equal to EXPECTED_NEW_ROWS in order', () => {
+    expect(VERB_DATA).toHaveLength(68 + 8);
+    const lastEight = VERB_DATA.slice(-8).map((v) => v.infinitive);
+    expect(lastEight).toEqual(EXPECTED_NEW_ROWS.map((row) => row.infinitive));
+  });
+
+  it('assigns an `alternates.supinum` of ["växt"] only to "växa", and no `alternates` to the other 7 rows', () => {
+    for (const expected of EXPECTED_NEW_ROWS) {
+      const row = VERB_DATA.find((v) => v.infinitive === expected.infinitive);
+      if (expected.infinitive === 'växa') {
+        expect(row?.alternates).toEqual({ supinum: ['växt'] });
+      } else {
+        expect(row?.alternates).toBeUndefined();
+      }
+    }
+  });
+
+  // Cross-check against docs/verb-data/candidates.csv: every new base verb
+  // already has a candidate row there, so the TS conjugated forms and CEFR
+  // tag must not contradict it. The CSV's imperativ column is still blank
+  // for several of these (#132 imperativ-audit gap), so imperativ is not
+  // compared here, matching the #369 cross-check. "växa" is a C5 free
+  // variant: the CSV records its supinum as the combined "vuxit/växt", so
+  // that field is split and compared against the primary form plus its
+  // `alternates.supinum` rather than by direct equality.
+  it.each(EXPECTED_NEW_ROWS)(
+    'CEFR and conjugated forms for "$infinitive" do not contradict its docs/verb-data/candidates.csv candidate row',
+    (expected) => {
+      const csvPath = join(here, '..', '..', 'docs', 'verb-data', 'candidates.csv');
+      const csv = readFileSync(csvPath, 'utf-8');
+      const lines = csv.split(/\r?\n/).filter(Boolean);
+      const csvRow = lines
+        .slice(1)
+        .map((line) => line.split(','))
+        .find(([, , infinitive]) => infinitive === expected.infinitive);
+
+      expect(csvRow).toBeDefined();
+      const [cefr, , , , presens, preteritum, supinum] = csvRow!;
+      expect(cefr).toBe(expected.cefr);
+      expect(presens).toBe(expected.presens);
+      expect(preteritum).toBe(expected.preteritum);
+      if (expected.infinitive === 'växa') {
+        const altSupinum = 'alternates' in expected ? expected.alternates.supinum : [];
+        expect((supinum ?? '').split('/')).toEqual([expected.supinum, ...altSupinum]);
+      } else {
+        expect(supinum).toBe(expected.supinum);
+      }
     },
   );
 });
