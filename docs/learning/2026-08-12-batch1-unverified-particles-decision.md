@@ -103,8 +103,8 @@ token — `particleVerbData.test.ts:201`):
 
 ```ts
 examples: [
-  { sv: 'Nya ord kommer till när språket förändras.', blankIndex: 3 },
-  { sv: 'Sådana rykten kommer till när ingen vet sanningen.', blankIndex: 3 },
+  { sv: 'Ett nytt museum kommer till mitt i staden.', blankIndex: 4 },
+  { sv: 'Den här sången kommer till under en lång resa.', blankIndex: 4 },
   { sv: 'Många traditioner kommer till av en slump.', blankIndex: 3 },
 ],
 ```
