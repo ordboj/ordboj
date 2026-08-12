@@ -101,10 +101,16 @@ different. This decision keeps `pv:halla-fast` as it is, because the
 dataset ships the concrete grip sense with three frames, and the `vid`
 sense is named in the gloss. The field tracks phrases with no standalone
 sense at all, not phrases with a second sense.
-The research list counts 42 entries in the v+p+prep class. Three of them are
-blocked on this decision (`pv:se-fram`, `pv:ga-miste`, `pv:ta-itu`). Two more
-class members already ship in their standalone sense (`pv:bli-av`,
-`pv:halla-fast`) and this decision does not change them.
+The research list counts 42 entries in the v+p+prep class. Two of the
+blocked entries appear there as class rows (`se fram emot` row 594, `ta itu
+med` row 639); `gå miste` sits in the ranked table (row 109) with the fact
+stated in its gloss instead. Nine shipped entries already carry a
+verb+particle string that a v+p+prep row also uses, and every one of them
+ships a standalone sense: `pv:bli-av` (bli av med), `pv:halla-fast` (hålla
+fast vid), `pv:halla-pa` (hålla på med), `pv:ga-ut` (gå ut på / gå ut över),
+`pv:ga-upp` (gå upp i / gå upp för), `pv:se-ner` (se ner på), `pv:vara-med`
+(vara med om / vara med på), `pv:saga-till` (säga till om), `pv:ta-in` (ta in
+på). The eligibility rule above leaves all nine exactly as they are.
 
 Scope limit: `preposition` requires `reflexive: 'none'` in v1. The one
 known reflexive+preposition candidate (`sätta sig upp mot`) is not in the
