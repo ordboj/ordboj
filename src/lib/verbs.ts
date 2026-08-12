@@ -82,10 +82,13 @@ export function getAcceptedAnswers(infinitive: string, form: Form): string[] {
 // True if `answer` matches the primary form or any documented alternate for
 // this verb + form, case-insensitive and trimmed (product policy P2) — the
 // same normalization the UI already applied to the primary form alone.
+// Also normalizes to NFC on both sides (#328) so an answer typed in
+// decomposed Unicode (NFD, e.g. "a" + combining ring above for "å") still
+// matches the NFC-stored correct form.
 export function isAcceptedAnswer(infinitive: string, form: Form, answer: string): boolean {
-  const normalized = answer.trim().toLowerCase();
+  const normalized = answer.trim().toLowerCase().normalize('NFC');
   return getAcceptedAnswers(infinitive, form).some(
-    (candidate) => candidate.trim().toLowerCase() === normalized,
+    (candidate) => candidate.trim().toLowerCase().normalize('NFC') === normalized,
   );
 }
 
@@ -112,6 +115,18 @@ export function isAcceptedAnswer(infinitive: string, form: Form, answer: string)
 export function getAlternatesDisclosure(infinitive: string, form: Form): string | null {
   const accepted = getAcceptedAnswers(infinitive, form);
   if (accepted.length < 2) return null;
+  // #43/C6a (docs/learning/2026-08-08-verb-data-conventions.md): a
+  // sense-conditioned pair (e.g. lyda preteritum "lydde" for "obey" vs
+  // "löd" for "read as/state") gets a per-form override instead of the
+  // generic line below. The generic line asserts interchangeability, which
+  // is false Swedish for forms tied to different senses. `form` is never
+  // 'infinitive' here: that case always has accepted.length === 1 (see
+  // getAcceptedAnswers) and already returned above.
+  if (form !== 'infinitive') {
+    const verb = VERB_DATA.find((v) => v.infinitive === infinitive);
+    const override = verb?.alternatesNote?.[form];
+    if (override) return override;
+  }
   if (accepted.length === 2) {
     return `Both ${accepted[0]} and ${accepted[1]} are correct.`;
   }

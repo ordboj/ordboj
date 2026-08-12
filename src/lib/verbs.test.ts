@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   conjugateVerb,
   generateVerbPattern,
@@ -411,6 +411,26 @@ describe('isAcceptedAnswer', () => {
     // "lade" is only a documented alternate for lägga's preteritum, not its presens.
     expect(isAcceptedAnswer('lägga', 'presens', 'lade')).toBe(false);
   });
+
+  // Issue #328: a learner's keyboard or input method can produce å/ä/ö as an
+  // NFD (decomposed) sequence — a base letter plus a combining ring/diaeresis
+  // above — instead of the single NFC (composed) code point VERB_DATA stores.
+  // Both sequences render identically and must count as the same answer.
+  it('accepts an answer typed in NFD (decomposed) Unicode against the NFC-stored form, for å, ä and ö', () => {
+    const gårNfd = 'går'.normalize('NFD');
+    const agerNfd = 'äger'.normalize('NFD');
+    const forsokerNfd = 'försöker'.normalize('NFD');
+
+    // Sanity check on the fixture itself: NFD really is a different code
+    // sequence here, so this test would fail without the #328 fix.
+    expect(gårNfd).not.toBe('går');
+    expect(agerNfd).not.toBe('äger');
+    expect(forsokerNfd).not.toBe('försöker');
+
+    expect(isAcceptedAnswer('gå', 'presens', gårNfd)).toBe(true);
+    expect(isAcceptedAnswer('äga', 'presens', agerNfd)).toBe(true);
+    expect(isAcceptedAnswer('försöka', 'presens', forsokerNfd)).toBe(true);
+  });
 });
 
 // Product policy P1 (docs/product/2026-08-08-alternate-answers-decision.md):
@@ -451,5 +471,137 @@ describe('getAlternatesDisclosure', () => {
   it('names the alternate for a form that has one', () => {
     expect(getAlternatesDisclosure('lägga', 'preteritum')).toContain('lade');
     expect(getAlternatesDisclosure('säga', 'preteritum')).toContain('sade');
+  });
+});
+
+// Issue #43/C6a (docs/learning/2026-08-08-verb-data-conventions.md,
+// acceptance check 6): a sense-conditioned alternate pair (e.g. lyda
+// preteritum "lydde" for "obey" vs "löd" for "read as/state") must not get
+// the generic "Both X and Y are correct." line, because that line asserts
+// free interchangeability, which is false Swedish for a sense split.
+// VERB_DATA ships no row with alternatesNote yet (lyda/svälta are CSV-only,
+// per docs section 7), so this is tested via a mocked VERB_DATA fixture --
+// the same pattern already used for the id-stability test above -- rather
+// than against a shipped row that does not exist.
+describe('getAlternatesDisclosure - alternatesNote override (issue #43/C6a)', () => {
+  afterEach(() => {
+    vi.resetModules();
+    vi.doUnmock('@/data/verbData');
+  });
+
+  it('returns the alternatesNote text instead of the generic "Both ... are correct." line when one is set for the graded form', async () => {
+    vi.resetModules();
+    vi.doMock('@/data/verbData', async () => {
+      const actual = await vi.importActual<typeof import('@/data/verbData')>('@/data/verbData');
+      return {
+        ...actual,
+        VERB_DATA: [
+          ...actual.VERB_DATA,
+          {
+            cefr: 'A2',
+            infinitive: 'lyda-fixture',
+            imperativ: 'lyd',
+            presens: 'lyder',
+            preteritum: 'lydde',
+            supinum: 'lytt',
+            grupp: '2a',
+            alternates: { preteritum: ['löd'] },
+            alternatesNote: {
+              preteritum: 'lydde = obey; löd = read as/state a text (different senses).',
+            },
+          },
+        ],
+      };
+    });
+
+    const { getAlternatesDisclosure: getAlternatesDisclosureMocked } = await import('@/lib/verbs');
+
+    const disclosure = getAlternatesDisclosureMocked('lyda-fixture', 'preteritum');
+    expect(disclosure).toBe('lydde = obey; löd = read as/state a text (different senses).');
+    expect(disclosure).not.toMatch(/^Both .* are correct\.$/);
+  });
+
+  it('falls back to the generic "Both ... are correct." line for a free-variant pair with no alternatesNote (unchanged #123 behavior)', async () => {
+    vi.resetModules();
+    vi.doMock('@/data/verbData', async () => {
+      const actual = await vi.importActual<typeof import('@/data/verbData')>('@/data/verbData');
+      return {
+        ...actual,
+        VERB_DATA: [
+          ...actual.VERB_DATA,
+          {
+            cefr: 'A2',
+            infinitive: 'free-variant-fixture',
+            imperativ: 'x',
+            presens: 'x',
+            preteritum: 'primary-form',
+            supinum: 'x',
+            grupp: '2a',
+            alternates: { preteritum: ['alt-form'] },
+            // deliberately no alternatesNote
+          },
+        ],
+      };
+    });
+
+    const { getAlternatesDisclosure: getAlternatesDisclosureMocked } = await import('@/lib/verbs');
+
+    expect(getAlternatesDisclosureMocked('free-variant-fixture', 'preteritum')).toBe(
+      'Both primary-form and alt-form are correct.',
+    );
+  });
+});
+
+// Issue #43/C2 (docs/learning/2026-08-08-verb-data-conventions.md): a
+// lemma's `note` field may name an archaic or colloquial variant
+// (e.g. "taga" for "ta", "giva" for "ge"), but that variant must never
+// join the accepted-answer set -- it is recognition-only prose, not a
+// stored form. Regression guard for the exact defect #43 rules out: before
+// this convention, an annotated lemma like "ta (el. taga)" risked the
+// parenthetical leaking into what the app accepts or displays.
+describe('note field never widens the accepted-answer set (issue #43/C2)', () => {
+  it.each([
+    ['ta', 'taga'],
+    ['ge', 'giva'],
+  ] as const)(
+    'VERB_DATA flags a "%s" -> "%s" note, but "%s" is never among any accepted answer for "%s"',
+    (infinitive, archaicVariant) => {
+      const row = VERB_DATA.find((v) => v.infinitive === infinitive);
+      expect(row).toBeDefined();
+      expect(row?.note).toMatch(new RegExp(archaicVariant, 'i'));
+
+      for (const form of ALL_FORMS) {
+        const accepted = getAcceptedAnswers(infinitive, form).map((a) => a.trim().toLowerCase());
+        expect(accepted).not.toContain(archaicVariant.toLowerCase());
+        expect(isAcceptedAnswer(infinitive, form, archaicVariant)).toBe(false);
+      }
+    },
+  );
+
+  // General invariant, not just the two named rows above: no row's `note`
+  // field is ever consulted by getAcceptedAnswers/getAlternateForms. Those
+  // two functions only ever read `presens`/`preteritum`/`supinum`/
+  // `imperativ`/`alternates` off VERB_DATA (see src/lib/verbs.ts) and never
+  // `note`, but this pins that contract at the behavior level: every row's
+  // accepted-answer set for every form is a subset of that row's own
+  // primary + alternates fields, independent of what its `note` says.
+  it("never lets any row's note text appear as an accepted answer for a form it was not stored on", () => {
+    for (const verb of VERB_DATA) {
+      if (!verb.note) continue;
+      const storedValues = new Set(
+        [verb.infinitive, verb.presens, verb.preteritum, verb.supinum, verb.imperativ]
+          .filter((v): v is string => !!v)
+          .map((v) => v.toLowerCase()),
+      );
+      storedValues.add('(not available)');
+      for (const alts of Object.values(verb.alternates ?? {})) {
+        for (const alt of alts as string[]) storedValues.add(alt.toLowerCase());
+      }
+      for (const form of ALL_FORMS) {
+        for (const answer of getAcceptedAnswers(verb.infinitive, form)) {
+          expect(storedValues.has(answer.toLowerCase())).toBe(true);
+        }
+      }
+    }
   });
 });

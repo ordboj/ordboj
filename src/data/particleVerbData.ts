@@ -20,6 +20,12 @@
 // classification still uncertain (ta reda på, komma överens). Under "wrong
 // Swedish is worse than missing Swedish" the cost of leaving a verb out is
 // one missing card; the cost of a wrong one is a learner taught a fiction.
+//
+// Also excluded, after native review (issue #358):
+// pv:komma-for — fixed literary idiom, single frame, SVALex A1 band is a
+// bigram artifact.
+// pv:vara-till — verb + prepositional phrase, not a particle verb; the bare
+// existential reading is archaic.
 
 export type ParticleVerbCefr = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 
@@ -62,9 +68,16 @@ export interface ParticleVerbData {
   id: string;
   cefr: ParticleVerbCefr;
   cefrEvidence: CefrEvidence;
-  // MUST resolve in VERB_DATA for any entry that ships: the introduction
-  // gate joins on it, so an unresolvable base is content that can never be
-  // reached. Enforced in particleVerbData.test.ts.
+  // Required on every entry: the 7-day same-base interference rule
+  // (isBaseRecentlyUsed) and the introduction-order tiebreak (isBaseStarted)
+  // both join particle entries on this string. Format-constrained, not
+  // membership-constrained (#317): must be non-empty and untrimmed-free,
+  // must equal the first token of lemma, must be NFC-normalized, and must
+  // use one identical string per base — particleVerbData.test.ts asserts
+  // all four. VERB_DATA membership is not required — issue #315 removed the
+  // introduction gate that used to need it — so a base absent from
+  // VERB_DATA never blocks an entry. The feedback reference line renders
+  // from this entry's own embedded forms, never a VERB_DATA join (#318).
   baseInfinitive: string;
   // The cloze answer.
   particle: string;
@@ -93,14 +106,15 @@ export interface ParticleVerbData {
   unverifiedReason?: string;
   // The phrase's presens/preteritum/supinum, embedded rather than joined
   // from VERB_DATA at render time (#318). Each value is the base verb's
-  // human-verified form (VERB_DATA) with the invariant particle appended —
-  // particle verbs conjugate the verb only, per the project's particle-verb
-  // rule — checked against SO/SAOL like every other shipped form. Required
-  // for a verified:true entry to render its reference line at all. Every
-  // verified entry's base still resolves in VERB_DATA — the dataset test
-  // enforces that — so these values duplicate VERB_DATA on purpose; the
-  // lookup moved from render time to authoring time, and a dataset test
-  // pins the copies against VERB_DATA.
+  // human-verified form with the invariant particle appended — particle
+  // verbs conjugate the verb only, per the project's particle-verb rule —
+  // checked against SO/SAOL like every other shipped form. Required for a
+  // verified:true entry to render its reference line at all. The lookup
+  // moved from render time to authoring time: these values duplicate
+  // VERB_DATA on purpose where a base row exists, and a dataset test
+  // cross-checks the copies against VERB_DATA only when the base has a
+  // VERB_DATA row; an absent base is skipped, never reported as drift
+  // (#317).
   forms?: {
     presens: string;
     preteritum: string;
@@ -1469,23 +1483,6 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     forms: { presens: 'gör upp', preteritum: 'gjorde upp', supinum: 'gjort upp' },
   },
   {
-    id: 'pv:komma-for',
-    cefr: 'A1',
-    cefrEvidence: 'svalex',
-    baseInfinitive: 'komma',
-    particle: 'för',
-    reflexive: 'none',
-    lemma: 'komma för',
-    gloss: { en: 'to occur to someone as a sudden thought' },
-    transparency: 'idiomatic',
-    contrast: 'komma för (unstressed för) — "to come for": han kommer för pengarna',
-    acceptedParticles: ['för'],
-    examples: [{ sv: 'Det kommer för mig att jag glömt nyckeln.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason:
-      'The particle reading is near-fixed to the impersonal frame "det kommer för mig" and reads as literary rather than everyday Swedish. The list also bands it A1, which does not match how rarely a learner meets it. Both the frame and the band need a native check before this ships.',
-  },
-  {
     id: 'pv:komma-upp',
     cefr: 'B2',
     cefrEvidence: 'svalex',
@@ -1659,14 +1656,17 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'till',
     reflexive: 'none',
     lemma: 'komma till',
-    gloss: { en: 'to be added to what already exists' },
+    gloss: { en: 'to come into existence; to be created' },
     transparency: 'idiomatic',
     contrast: 'komma till (unstressed till) — "to arrive at": vi kommer till Stockholm',
     acceptedParticles: ['till'],
-    examples: [{ sv: 'Det kommer till fler deltagare under veckan.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason:
-      'The stressed "to be added" reading is marginal in modern spoken Swedish and sits next to the very common unstressed "komma till + place". I could not construct a frame that separates the two reliably at SO/SAOL confidence, so this is drafted rather than confirmed.',
+    examples: [
+      { sv: 'Nya ord kommer till när språket förändras.', blankIndex: 3 },
+      { sv: 'Sådana rykten kommer till när ingen vet sanningen.', blankIndex: 3 },
+      { sv: 'Många traditioner kommer till av en slump.', blankIndex: 3 },
+    ],
+    verified: true,
+    forms: { presens: 'kommer till', preteritum: 'kom till', supinum: 'kommit till' },
   },
   {
     id: 'pv:ga-med',
@@ -1705,23 +1705,6 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'lägger ut', preteritum: 'la ut', supinum: 'lagt ut' },
-  },
-  {
-    id: 'pv:vara-till',
-    cefr: 'A2',
-    cefrEvidence: 'svalex',
-    baseInfinitive: 'vara',
-    particle: 'till',
-    reflexive: 'none',
-    lemma: 'vara till',
-    gloss: { en: 'to serve a purpose; to be of use' },
-    transparency: 'idiomatic',
-    contrast: 'vara till (unstressed till) — "to be for": paketet är till dig',
-    acceptedParticles: ['till'],
-    examples: [{ sv: 'Kartan är till stor hjälp under vandringen.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason:
-      'The stressed-particle status is doubtful. The everyday uses ("vara till nytta", "vara till hjälp") read as a fixed prepositional phrase rather than a particle verb, and the bare existential "vara till" is archaic. Needs a native or SO check on whether this belongs in the dataset at all.',
   },
   {
     id: 'pv:riva-sonder',
@@ -2273,5 +2256,448 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'tar fast', preteritum: 'tog fast', supinum: 'tagit fast' },
+  },
+
+  // ---- #336 batch 3: the tail of bands 1-5, ranks 169-242 ----
+  // Completes the bands 1-5 sweep of docs/research/partikelverb/partikelverb-list.csv.
+  // Batches 1 and 2 stopped at rank 199 under the old A1+A2 majority rule;
+  // #343 replaced that with a floor of 45 verified A1/A2 entries
+  // (docs/learning/2026-08-09-particle-cefr-majority-decision.md), so these
+  // rows are taken as the list gives them, with no band quota applied.
+  //
+  // Rank 169 belongs to batch 1's range and was missed there. It is picked up
+  // here rather than left out, which is why this section does not start at 200.
+  {
+    id: 'pv:ta-itu',
+    cefr: 'B1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'ta',
+    particle: 'itu',
+    reflexive: 'none',
+    lemma: 'ta itu',
+    gloss: { en: 'to start dealing with a task (always with med)' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['itu'],
+    examples: [{ sv: 'Vi tar itu med problemet redan i dag.', blankIndex: 2 }],
+    verified: false,
+    unverifiedReason:
+      'Same fragment problem as se fram and gå miste: the phrase exists only as "ta itu med". The stored lemma "ta itu" is not a usable citation form, so the recall direction would prompt for something that never occurs alone. Blocked on the same lemma decision as those two.',
+  },
+  {
+    id: 'pv:halla-tillbaka',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'hålla',
+    particle: 'tillbaka',
+    reflexive: 'none',
+    lemma: 'hålla tillbaka',
+    gloss: { en: 'to restrain someone or something', sv: 'behärska' },
+    transparency: 'literal',
+    acceptedParticles: ['tillbaka'],
+    examples: [
+      { sv: 'Hon håller tillbaka tårarna under hela ceremonin.', blankIndex: 2 },
+      { sv: 'Polisen håller tillbaka folkmassan vid ingången.', blankIndex: 2 },
+      { sv: 'Han håller tillbaka sin ilska så gott han kan.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'håller tillbaka', preteritum: 'höll tillbaka', supinum: 'hållit tillbaka' },
+  },
+  {
+    id: 'pv:lasa-in',
+    cefr: 'A2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'läsa',
+    particle: 'in',
+    reflexive: 'none',
+    lemma: 'läsa in',
+    gloss: { en: 'to study a course to completion; to load data into a system' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['in'],
+    examples: [
+      { sv: 'Hon läser in gymnasiet på ett enda år.', blankIndex: 2 },
+      { sv: 'Programmet läser in filen på några sekunder.', blankIndex: 2 },
+      { sv: 'Han läser in kursen vid sidan av jobbet.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'läser in', preteritum: 'läste in', supinum: 'läst in' },
+  },
+  {
+    id: 'pv:saga-upp',
+    cefr: 'B1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'säga',
+    particle: 'upp',
+    reflexive: 'none',
+    lemma: 'säga upp',
+    gloss: { en: 'to terminate a contract; to dismiss an employee' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['upp'],
+    examples: [
+      { sv: 'Företaget säger upp tjugo anställda i höst.', blankIndex: 2 },
+      { sv: 'Vi säger upp avtalet vid årsskiftet.', blankIndex: 2 },
+      { sv: 'Han säger upp lägenheten innan han flyttar.', blankIndex: 2 },
+    ],
+    verified: true,
+    // preteritum "sa upp" follows VERB_DATA's primary for säga; "sade upp" is
+    // the equally correct SAOL alternate, carried on the base row.
+    forms: { presens: 'säger upp', preteritum: 'sa upp', supinum: 'sagt upp' },
+  },
+  {
+    id: 'pv:sta-upp',
+    cefr: 'B1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'stå',
+    particle: 'upp',
+    reflexive: 'none',
+    lemma: 'stå upp',
+    gloss: { en: 'to rise to one’s feet from a seat' },
+    transparency: 'literal',
+    acceptedParticles: ['upp'],
+    examples: [
+      { sv: 'Alla står upp när domaren kommer in.', blankIndex: 2 },
+      { sv: 'Publiken står upp och applåderar länge.', blankIndex: 2 },
+      { sv: 'Han står upp för att hälsa på gästen.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'står upp', preteritum: 'stod upp', supinum: 'stått upp' },
+  },
+  {
+    id: 'pv:ga-bort',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'gå',
+    particle: 'bort',
+    reflexive: 'none',
+    lemma: 'gå bort',
+    gloss: { en: 'to die, as a gentle expression; to attend a dinner invitation' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['bort'],
+    examples: [
+      { sv: 'Hennes farfar går bort efter en lång sjukdom.', blankIndex: 3 },
+      { sv: 'Vi går bort till grannarna på lördag kväll.', blankIndex: 2 },
+      { sv: 'Många går bort i den sjukdomen varje år.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'går bort', preteritum: 'gick bort', supinum: 'gått bort' },
+  },
+  {
+    id: 'pv:se-ner',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'se',
+    particle: 'ner',
+    reflexive: 'none',
+    lemma: 'se ner',
+    gloss: { en: 'to direct one’s gaze lower; with på, to despise someone' },
+    transparency: 'literal',
+    acceptedParticles: ['ner', 'ned'],
+    examples: [
+      { sv: 'Han ser ner i marken när han går.', blankIndex: 2 },
+      { sv: 'Hon ser ner på dem som inte pluggar.', blankIndex: 2 },
+      { sv: 'Vi ser ner från tornet över hela staden.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'ser ner', preteritum: 'såg ner', supinum: 'sett ner' },
+  },
+  {
+    id: 'pv:vara-ihop',
+    cefr: 'A2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'vara',
+    particle: 'ihop',
+    reflexive: 'none',
+    lemma: 'vara ihop',
+    gloss: { en: 'to be a couple' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['ihop'],
+    examples: [
+      { sv: 'De är ihop sedan förra sommaren.', blankIndex: 2 },
+      { sv: 'Vi är ihop men bor på olika orter.', blankIndex: 2 },
+      { sv: 'Är ni ihop eller bara goda vänner?', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'är ihop', preteritum: 'var ihop', supinum: 'varit ihop' },
+  },
+  {
+    id: 'pv:ge-bort',
+    cefr: 'C1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'ge',
+    particle: 'bort',
+    reflexive: 'none',
+    lemma: 'ge bort',
+    gloss: { en: 'to hand something over as a gift', sv: 'skänka' },
+    transparency: 'literal',
+    acceptedParticles: ['bort'],
+    examples: [
+      { sv: 'Hon ger bort sina gamla böcker till biblioteket.', blankIndex: 2 },
+      { sv: 'Vi ger bort en tavla i present.', blankIndex: 2 },
+      { sv: 'Han ger bort hälften av sin lön.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'ger bort', preteritum: 'gav bort', supinum: 'gett bort' },
+  },
+  {
+    id: 'pv:hora-till',
+    cefr: 'C1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'höra',
+    particle: 'till',
+    reflexive: 'none',
+    lemma: 'höra till',
+    gloss: { en: 'to be one of a set; to be counted among' },
+    transparency: 'idiomatic',
+    // Not a stress pair: the near neighbour worth naming is the inseparable
+    // compound "tillhöra", which means the same thing in a more formal
+    // register. A learner who meets both needs to know they are one idea.
+    contrast: 'tillhöra — the inseparable compound, same meaning, more formal',
+    acceptedParticles: ['till'],
+    examples: [
+      { sv: 'Sverige hör till de nordiska länderna.', blankIndex: 2 },
+      { sv: 'Den här arten hör till en ovanlig familj.', blankIndex: 4 },
+      { sv: 'Frågan hör till de svåraste i provet.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'hör till', preteritum: 'hörde till', supinum: 'hört till' },
+  },
+  {
+    id: 'pv:ta-efter',
+    cefr: 'C1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'ta',
+    particle: 'efter',
+    reflexive: 'none',
+    lemma: 'ta efter',
+    gloss: { en: 'to imitate someone’s behaviour', sv: 'härma' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['efter'],
+    examples: [
+      { sv: 'Barnen tar efter sina föräldrar i allt.', blankIndex: 2 },
+      { sv: 'Han tar efter sin storebror hela tiden.', blankIndex: 2 },
+      { sv: 'Hon tar efter sin lärares sätt att tala.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'tar efter', preteritum: 'tog efter', supinum: 'tagit efter' },
+  },
+  {
+    id: 'pv:fa-ihop',
+    cefr: 'A2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'få',
+    particle: 'ihop',
+    reflexive: 'none',
+    lemma: 'få ihop',
+    gloss: { en: 'to gather enough of something' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['ihop'],
+    examples: [
+      { sv: 'Vi får ihop pengarna till resan i tid.', blankIndex: 2 },
+      { sv: 'Han får ihop ett lag till turneringen.', blankIndex: 2 },
+      { sv: 'De får ihop tillräckligt många namn på listan.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'får ihop', preteritum: 'fick ihop', supinum: 'fått ihop' },
+  },
+  {
+    id: 'pv:ge-tillbaka',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'ge',
+    particle: 'tillbaka',
+    reflexive: 'none',
+    lemma: 'ge tillbaka',
+    gloss: { en: 'to return something to its owner', sv: 'lämna åter' },
+    transparency: 'literal',
+    acceptedParticles: ['tillbaka'],
+    examples: [
+      { sv: 'Hon ger tillbaka boken till biblioteket i dag.', blankIndex: 2 },
+      { sv: 'Han ger tillbaka pengarna efter en vecka.', blankIndex: 2 },
+      { sv: 'Vi ger tillbaka nycklarna när vi flyttar.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'ger tillbaka', preteritum: 'gav tillbaka', supinum: 'gett tillbaka' },
+  },
+  {
+    id: 'pv:halla-fast',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'hålla',
+    particle: 'fast',
+    reflexive: 'none',
+    lemma: 'hålla fast',
+    gloss: { en: 'to grip something firmly; with vid, to stick to a position' },
+    transparency: 'literal',
+    acceptedParticles: ['fast'],
+    examples: [
+      { sv: 'Han håller fast repet med båda händerna.', blankIndex: 2 },
+      { sv: 'Hon håller fast vid sin åsikt trots kritiken.', blankIndex: 2 },
+      { sv: 'Vi håller fast dörren så den inte slår igen.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'håller fast', preteritum: 'höll fast', supinum: 'hållit fast' },
+  },
+  {
+    id: 'pv:komma-bort',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'komma',
+    particle: 'bort',
+    reflexive: 'none',
+    lemma: 'komma bort',
+    gloss: { en: 'to go missing; to be mislaid' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['bort'],
+    examples: [
+      { sv: 'Nycklarna kommer bort nästan varje vecka.', blankIndex: 2 },
+      { sv: 'Brevet kommer bort någonstans på vägen.', blankIndex: 2 },
+      { sv: 'Hans plånbok kommer bort under resan hem.', blankIndex: 3 },
+    ],
+    verified: true,
+    forms: { presens: 'kommer bort', preteritum: 'kom bort', supinum: 'kommit bort' },
+  },
+  {
+    id: 'pv:sta-till',
+    cefr: 'A1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'stå',
+    particle: 'till',
+    reflexive: 'none',
+    lemma: 'stå till',
+    gloss: { en: 'to be the state of affairs, in the greeting "hur står det till?"' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['till'],
+    // "upp" and "ut" excluded in every frame: "stå upp" and "stå ut" are both
+    // real particle verbs, but neither fits this impersonal "det står ... med
+    // X" frame — *"hur står det upp med familjen" is not Swedish.
+    examples: [
+      {
+        sv: 'Hur står det till med familjen i dag?',
+        blankIndex: 3,
+        excludedParticles: ['upp', 'ut'],
+      },
+      { sv: 'Jag undrar hur det står till hemma hos er.', blankIndex: 5 },
+      {
+        sv: 'Hur står det till med arbetet just nu?',
+        blankIndex: 3,
+        excludedParticles: ['upp', 'ut'],
+      },
+    ],
+    verified: true,
+    forms: { presens: 'står till', preteritum: 'stod till', supinum: 'stått till' },
+  },
+
+  // ---- #359: band-6 operational particle verbs ----
+  // The decision note (docs/learning/2026-08-09-particle-cefr-majority-decision.md,
+  // "swedish-linguist — intake") names stänga av, slå på, slå av, följa med, ha på
+  // sig, ta på sig, ta av sig, flytta in, checka in, torka av, städa upp, fylla i
+  // as the day-one operational vocabulary the coursebook corpus misses. stänga av
+  // already shipped in the #262 section above. The other seven named verbs (slå,
+  // följa, flytta, checka, torka, städa, fylla) all need a new VERB_DATA base row,
+  // which also means updating the pinned snapshot in
+  // src/data/verbData.orderPin.test.ts in the same commit — a qa-owned test file.
+  // That base-verb growth is a follow-up (see PR description). The five rows below
+  // are equally justified band-6 peers built on bases VERB_DATA already pins
+  // (ha, ta, stiga, se), so the runway target is met without a cross-owner edit:
+  // getting dressed/undressed (ha på sig / ta på sig / ta av sig) and public-
+  // transport, safety-warning vocabulary (stiga av, se upp) are exactly the kind
+  // of "operate daily life" phrases stänga av and sätta på are — a learner needs
+  // them within the first weeks, not the SVALex ranking.
+  {
+    id: 'pv:ha-pa-sig',
+    cefr: 'A2',
+    cefrEvidence: 'judgment',
+    baseInfinitive: 'ha',
+    particle: 'på',
+    reflexive: 'afterParticle',
+    lemma: 'ha på {refl}',
+    gloss: { en: 'to be wearing something' },
+    transparency: 'literal',
+    acceptedParticles: ['på'],
+    examples: [
+      { sv: 'Jag har på mig en varm jacka idag.', blankIndex: 2 },
+      { sv: 'Hon har på sig en röd klänning.', blankIndex: 2 },
+      { sv: 'Barnen har på sig mössor när det är kallt.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'har på sig', preteritum: 'hade på sig', supinum: 'haft på sig' },
+  },
+  {
+    id: 'pv:ta-pa-sig',
+    cefr: 'A2',
+    cefrEvidence: 'judgment',
+    baseInfinitive: 'ta',
+    particle: 'på',
+    reflexive: 'afterParticle',
+    lemma: 'ta på {refl}',
+    gloss: { en: 'to dress oneself in a piece of clothing' },
+    transparency: 'literal',
+    contrast: 'ta på (no reflexive) — to touch something: ta inte på tavlan!',
+    acceptedParticles: ['på'],
+    examples: [
+      { sv: 'Jag tar på mig skorna innan vi går ut.', blankIndex: 2 },
+      { sv: 'Hon tar på sig jackan i hallen.', blankIndex: 2 },
+      { sv: 'Vi tar på oss regnkläder innan promenaden.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'tar på sig', preteritum: 'tog på sig', supinum: 'tagit på sig' },
+  },
+  {
+    id: 'pv:ta-av-sig',
+    cefr: 'A2',
+    cefrEvidence: 'judgment',
+    baseInfinitive: 'ta',
+    particle: 'av',
+    reflexive: 'afterParticle',
+    lemma: 'ta av {refl}',
+    gloss: { en: 'to remove a piece of clothing from oneself' },
+    transparency: 'literal',
+    acceptedParticles: ['av'],
+    examples: [
+      { sv: 'Jag tar av mig skorna vid dörren.', blankIndex: 2 },
+      { sv: 'Han tar av sig jackan när han kommer in.', blankIndex: 2 },
+      { sv: 'Barnen tar av sig mössorna inomhus.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'tar av sig', preteritum: 'tog av sig', supinum: 'tagit av sig' },
+  },
+  {
+    id: 'pv:stiga-av',
+    cefr: 'A2',
+    cefrEvidence: 'judgment',
+    baseInfinitive: 'stiga',
+    particle: 'av',
+    reflexive: 'none',
+    lemma: 'stiga av',
+    gloss: { en: 'to exit a vehicle such as a bus or train' },
+    transparency: 'literal',
+    contrast: 'stiga på — the opposite: to board a vehicle',
+    acceptedParticles: ['av'],
+    examples: [
+      { sv: 'Jag stiger av bussen vid torget.', blankIndex: 2 },
+      { sv: 'Hon stiger av tåget i Malmö.', blankIndex: 2 },
+      { sv: 'Vi stiger av spårvagnen vid stationen.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'stiger av', preteritum: 'steg av', supinum: 'stigit av' },
+  },
+  {
+    id: 'pv:se-upp',
+    cefr: 'A1',
+    cefrEvidence: 'judgment',
+    baseInfinitive: 'se',
+    particle: 'upp',
+    reflexive: 'none',
+    lemma: 'se upp',
+    gloss: { en: 'to watch out, to be careful of something' },
+    transparency: 'idiomatic',
+    contrast: 'se upp till någon — to admire someone; literal se upp — to raise one’s gaze',
+    acceptedParticles: ['upp'],
+    examples: [
+      { sv: 'Du måste se upp för bilarna på vägen.', blankIndex: 3 },
+      { sv: 'Barnen ska se upp för trafiken vid skolan.', blankIndex: 3 },
+      { sv: 'Vi får se upp för isen på trottoaren.', blankIndex: 3 },
+    ],
+    verified: true,
+    forms: { presens: 'ser upp', preteritum: 'såg upp', supinum: 'sett upp' },
   },
 ];
