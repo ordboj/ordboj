@@ -16,6 +16,7 @@ import {
 } from '@/lib/srsProviders';
 import { getVerbs } from '@/lib/verbs';
 import { buildParticleSitting, countParticleReviewsDue } from '@/lib/particleQueue';
+import { createCoalescedJsonWriter, type CoalescedJsonWriter } from '@/lib/storage';
 
 // How the learner produced the answer. Bundled here (rather than added as a
 // second boolean later) because the hint-reporting change from
@@ -407,19 +408,32 @@ export function useSrsProgress(cefrLevels?: string[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Save to localStorage
+  // The coalesced writer for this store (see src/lib/storage.ts): created
+  // once on mount, disposed on unmount. Disposing flushes any pending value
+  // synchronously, so an answer recorded just before navigation away is not
+  // lost; the writer also flushes itself on pagehide and on
+  // visibilitychange -> hidden.
+  const writerRef = useRef<CoalescedJsonWriter | null>(null);
+
+  useEffect(() => {
+    const writer = createCoalescedJsonWriter(STORAGE_KEY);
+    writerRef.current = writer;
+    return () => {
+      writer.dispose();
+      writerRef.current = null;
+    };
+  }, []);
+
+  // Save to localStorage. The writer coalesces a burst of answers into one
+  // write per window and evaluates serializeStore only at flush, so the
+  // per-answer cost does not grow with the size of the store (issue #253).
+  // It also swallows a failed write (quota, storage disabled) instead of
+  // throwing, so the in-memory session survives without a try/catch here.
   useEffect(() => {
     if (!isLoading && !isReadOnly) {
-      try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          serializeStore(srsStates, derivableIdsRef.current, Date.now()),
-        );
-      } catch (e) {
-        // Quota or storage failure: keep the in-memory session alive; the
-        // next successful write persists the full current state anyway.
-        console.error('Failed to save SRS data', e);
-      }
+      writerRef.current?.schedule(() =>
+        serializeStore(srsStates, derivableIdsRef.current, Date.now()),
+      );
     }
   }, [srsStates, isLoading, isReadOnly]);
 
