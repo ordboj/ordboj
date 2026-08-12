@@ -1295,18 +1295,21 @@ describe('issue #369 - top-12 base verbs for particle-verb unblocking (PR #382)'
     },
   );
 
-  it('adds exactly these 12 infinitives to VERB_DATA, no more, no fewer', () => {
-    const present = EXPECTED_NEW_ROWS.filter((row) =>
-      VERB_DATA.some((v) => v.infinitive === row.infinitive),
-    );
-    expect(present).toHaveLength(12);
+  it('adds VERB_DATA.length === 56 + 12, with the last 12 infinitives equal to EXPECTED_NEW_ROWS in order', () => {
+    expect(VERB_DATA).toHaveLength(56 + 12);
+    const lastTwelve = VERB_DATA.slice(-12).map((v) => v.infinitive);
+    expect(lastTwelve).toEqual(EXPECTED_NEW_ROWS.map((row) => row.infinitive));
   });
 
-  it('assigns none of the 12 new rows a `note` or `alternates` field: none of these forms are documented as having a variant', () => {
+  it('assigns none of the 12 new rows an `alternates` field, and only `dra` a `note` field for its archaic variant', () => {
     for (const expected of EXPECTED_NEW_ROWS) {
       const row = VERB_DATA.find((v) => v.infinitive === expected.infinitive);
-      expect(row?.note).toBeUndefined();
       expect(row?.alternates).toBeUndefined();
+      if (expected.infinitive === 'dra') {
+        expect(row?.note).toMatch(/draga/);
+      } else {
+        expect(row?.note).toBeUndefined();
+      }
     }
   });
 
