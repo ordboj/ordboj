@@ -9,6 +9,13 @@ Lead decision on the tracking issue. Ranks are preserved, so the rank
 column has gaps. Headline counts in the prose (1069, 569, 415/654)
 describe the original measurement and are kept as the historical record.
 
+Revision 2026-08-12: the human review of those 16 is complete (ruling on
+issue #330). 14 are confirmed as real Swedish, 6 of them with a corrected
+gloss; 2 are excluded for good and move to section 4.7. Section 4.8 carries
+the full decision table. This revision records the ruling only — it restores
+no row to the table or the CSV, so the file still holds 1052 entries. Putting
+the 14 confirmed rows back is a separate, lead-gated change.
+
 ## Method
 
 Two independent sources, combined. Neither is complete on its own, and that
@@ -45,8 +52,8 @@ lemma contains its own stated particle, there are no duplicate lemmas, and all
 143 base verbs are real Swedish verbs. Character-level corruption is therefore
 **absent**, not merely unlikely. What that check cannot catch is a
 semantically wrong entry that still looks like Swedish, so I verified the
-entries against my own knowledge as well — see sections 4.8 and 4.9 for the
-two I rejected and the sixteen since removed pending human review.
+entries against my own knowledge as well — see sections 4.7 and 4.8 for the
+four rejected outright and the sixteen that went to human review.
 
 _Copyright._ Source C is in copyright. This file records **facts only**:
 which verb combines with which particle. Every gloss is reformulated in my own
@@ -118,8 +125,9 @@ I did not pad to reach a target. **94 corpus rows that would have filled slots
 are deliberately excluded** — too rare to teach (`hägna in`, `knåpa ihop`,
 `tufsa till`, `rationalisera bort`), not particle verbs at all (`bero på`,
 `titta på`), or not confidently glossable. All 94 are listed in section 4.3,
-so the cuts are auditable rather than silent. Two source-C entries are rejected
-outright (4.7) and sixteen more are removed pending human review (4.8).
+so the cuts are auditable rather than silent. Four source-C entries are rejected
+outright (4.7) and sixteen more were removed for human review (4.8); that review
+is now complete and confirmed 14 of them.
 
 **Spelling variants are not separate entries.** Swedish writes several
 particles two ways: `ner`/`ned`, `igång`/`i gång`, `iväg`/`i väg`. SVALex
@@ -1708,44 +1716,76 @@ is.
 The remaining nine reflexives in band 6 carry a Wiktionary-attested position
 and can be populated directly.
 
-### 4.7 Source C: rejected outright (2)
+### 4.7 Source C: rejected outright (4)
 
 Forms I cannot confirm exist in Swedish at all. Not included at any
 confidence level.
 
-| Rejected        | Source gloss                    | Why                                                                                                                             |
-| --------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `klappa igenom` | collapse physically from strain | `klappa ihop` is the standard form and is separately present in the source. This looks like an extraction artifact, not a word. |
-| `bena ur`       | remove the bones from           | `bena ut` (untangle, analyse) is standard and is also separately present. I cannot confirm an _ur_ variant meaning "debone".    |
+| Rejected        | Source gloss                    | Why                                                                                                                                                                                                                                                    |
+| --------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `klappa igenom` | collapse physically from strain | `klappa ihop` is the standard form and is separately present in the source. This looks like an extraction artifact, not a word.                                                                                                                        |
+| `bena ur`       | remove the bones from           | `bena ut` (untangle, analyse) is standard and is also separately present. I cannot confirm an _ur_ variant meaning "debone".                                                                                                                           |
+| `gå i`          | be believed                     | Human review 2026-08-12 (#330): the standard verb for this sense is `gå på` (_låta sig luras_). The _i_ form is a book or OCR slip. The other `gå i` senses ("get into (water)", "fit into") are not particle-verb senses and do not rescue the entry. |
+| `ladda in`      | shovel in (food)                | Human review 2026-08-12 (#330): the attested verb is `lassa in`. `ladda`/`lassa` confusion.                                                                                                                                                            |
 
-Both are the same failure shape: a real particle verb sitting next to a
+All four are the same failure shape: a real particle verb sitting next to a
 near-identical form that I cannot attest. That is what a scanned-source OCR
 pipeline
-would be expected to produce if it produced anything, and two out of 834 is a
+would be expected to produce if it produced anything, and four out of 834 is a
 low rate.
 
-### 4.8 Source C: removed pending human review (16)
+The last two entered this section on 2026-08-12, promoted from section 4.8 by
+the human review ruling on issue #330. They are permanent exclusions, not
+restorable ones.
+
+### 4.8 Source C: human review complete — 14 confirmed, 2 excluded (16)
 
 These were in band 9, each flagged **NEEDS HUMAN CHECK** inline. Revision
 2026-08-09: removed from the table and the CSV by lead decision, pending
-human review. They are listed here so the omission stays visible; any of
-them can be restored once confirmed.
+human review (PR #338). Revision 2026-08-12: the human review is **done** —
+ruling on issue #330, sources SAOB, Synonymer.se, WordReference, Cambridge,
+Livsmedelsverket and gu.se. No `NEEDS HUMAN CHECK` flag is open any more.
 
-Two are cases where I dispute the source's gloss rather than the entry:
+The ruling confirms 14 of the 16 as real Swedish and excludes 2. My earlier
+doubts are overturned where the table below says so; read the ruling, not the
+doubt, as the current position.
 
-- **`dra omkring`** — glossed "scatter about, make a mess of things". I read
-  this as "to roam, to wander about". The source gloss looks like it belongs
-  to a different verb.
-- **`frysa om`** — glossed "freeze again". I read _om_ here as the body-part
-  construction (`jag fryser om fötterna` — my feet are cold), not repetition.
+**Confirmed, no change to the entry (8).** The original gloss stands.
 
-The rest I simply cannot attest: `komma upp sig` (the standard order is
-`komma sig upp`), `falla ut med`, `slå av sig`, `prata omkull`, `ladda in`,
-`lysa ut` (the standard term is the compound `utlysa`), `resa upp` (the
-"spend money travelling" sense), `gå i` (the "be believed" sense), `säga om`
-(the "object to" sense), `nötas av` (deponent base), `snappa till sig`
-(identical gloss to `snappa åt sig`, so one of the pair is likely wrong),
-`kränga till`, `stråla ut` (the "impersonal" tag looks wrong), `binda åt`.
+| Entry             | Ruling                                                                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `slå av sig`      | Real: "go flat" (a drink). Synonymer.se — _bli avslagen_.                                                                                                                |
+| `binda åt`        | Real. SAOB — _knyta hårdare_.                                                                                                                                            |
+| `kränga till`     | Real. SAOB — _spårvagnen kränger till_.                                                                                                                                  |
+| `lysa ut`         | Real and contemporary — _lysa ut två doktorandplatser_ (gu.se). The compound `utlysa` does not displace it.                                                              |
+| `nötas av`        | Real. It is the **s-passive of `nöta`, not a deponent**. My "deponent base" note was wrong. `nöta` conjugates normally; do not add `nötas` to `VERB_DATA` as a deponent. |
+| `prata omkull`    | Real. SAOB records _omkullpratad_.                                                                                                                                       |
+| `snappa till sig` | Real. SAOB records it. `till sig` and `åt sig` differ in nuance, so the pair is not a duplicate.                                                                         |
+| `stråla ut`       | Real. The **"(impersonal)" tag is removed** — it was wrong. Not one of the 19 in section 4.9.                                                                            |
+
+**Confirmed, gloss corrected (6).** The entry is real; the stored meaning must
+change before it is used.
+
+| Entry           | Old gloss                                           | Corrected gloss and note                                                                                                                                           |
+| --------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `komma upp sig` | rise socially or professionally                     | Sense stands (SAOB). The canonical order is **`komma sig upp`** — prefer that as the headword.                                                                     |
+| `säga om`       | say again; object to                                | **"say again" only** (SAOB — _upprepa_). The "object to" sense is `säga emot` and is dropped from this entry.                                                      |
+| `dra omkring`   | scatter about, make a mess of things                | **"roam, wander about"** (SAOB — _färdas/resa omkring_). The book gloss was wrong; my reading was right.                                                           |
+| `falla ut med`  | yield as a result (e.g. a win)                      | **"result in"**. Weak headword — teach it through `falla ut` instead.                                                                                              |
+| `frysa om`      | freeze again                                        | **"refreeze"** — the book was right and I was wrong (Livsmedelsverket — _frysa om mat_). `frysa om fötterna` is a separate body-part construction, not this entry. |
+| `resa upp`      | raise upright; travel north; spend money travelling | **"raise upright"**. The "spend money travelling" sense is real (SAOB) but colloquial and low priority.                                                            |
+
+**Excluded permanently (2).** Both moved to section 4.7 with their reason:
+`gå i` "be believed" (the standard verb is `gå på`) and `ladda in` "shovel in
+(food)" (the attested verb is `lassa in`). They are not restorable.
+
+**Restoration status.** The 14 confirmed entries are **still absent** from the
+table and from `partikelverb-list.csv` in this repo — PR #338 removed all 16
+rows and this revision does not put any row back. Restoring them is a separate,
+lead-gated change: it re-adds 14 rows at their preserved ranks (566, 620, 693,
+741, 793, 839, 850, 905, 926, 943, 957, 963, 1003, 1030), drops the
+`NEEDS HUMAN CHECK` flag, and applies the six corrected glosses above. Until
+that happens, this section is the only record of the ruling.
 
 ### 4.9 Impersonal particle verbs — a class the data model has no slot for (19)
 
@@ -1764,6 +1804,12 @@ Recommendation: an `impersonal?: boolean` flag, and exclude impersonal entries
 from any automatically templated frame. I have not added the flag to the list
 because it is a data-model decision, but the 19 are identifiable by the
 "(impersonal)" tag in their gloss.
+
+Source C marks 19, but one of those marks is wrong: the human review ruling of
+2026-08-12 (#330) strips the impersonal tag from `stråla ut` (section 4.8).
+Whoever restores that entry must not carry the tag back with it. The tag count
+in the CSV is lower again, because several of the 19 sit in rows that other
+sections of this list already exclude.
 
 ### 4.10 Deponent base verbs (4)
 
