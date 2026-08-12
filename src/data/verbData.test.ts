@@ -368,7 +368,7 @@ describe('swedish_verbs.csv - mojibake guard', () => {
   // mojibake (double-encoded UTF-8) and stray dotless-i / lookalike
   // characters without flagging legitimate punctuation.
   it('contains no character outside printable ASCII and Swedish letters', () => {
-    const csvPath = join(here, '..', '..', 'public', 'data', 'swedish_verbs.csv');
+    const csvPath = join(here, '..', '..', 'docs', 'verb-data', 'candidates.csv');
     const csv = readFileSync(csvPath, 'utf-8');
     const offenders = new Set<string>();
     for (const ch of csv) {
@@ -404,7 +404,7 @@ describe('swedish_verbs.csv - issue #125 naive-template conjugation audit (PR #1
   };
 
   function parseCsv(): CsvRow[] {
-    const csvPath = join(here, '..', '..', 'public', 'data', 'swedish_verbs.csv');
+    const csvPath = join(here, '..', '..', 'docs', 'verb-data', 'candidates.csv');
     const csv = readFileSync(csvPath, 'utf-8');
     const lines = csv.split(/\r?\n/).filter(Boolean);
     return lines.slice(1).map((line) => {
@@ -616,7 +616,7 @@ describe('issue #42 - CEFR re-tag (shipped-50 audit, PR #298)', () => {
   type CsvCefrRow = { cefr: string; infinitive: string };
 
   function parseCsvCefr(): CsvCefrRow[] {
-    const csvPath = join(here, '..', '..', 'public', 'data', 'swedish_verbs.csv');
+    const csvPath = join(here, '..', '..', 'docs', 'verb-data', 'candidates.csv');
     const csv = readFileSync(csvPath, 'utf-8');
     const lines = csv.split(/\r?\n/).filter(Boolean);
     return lines.slice(1).map((line) => {
@@ -739,7 +739,7 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
   };
 
   function parseFullCsv(): FullCsvRow[] {
-    const csvPath = join(here, '..', '..', 'public', 'data', 'swedish_verbs.csv');
+    const csvPath = join(here, '..', '..', 'docs', 'verb-data', 'candidates.csv');
     const csv = readFileSync(csvPath, 'utf-8');
     const lines = csv.split(/\r?\n/).filter(Boolean);
     return lines.slice(1).map((line) => {
@@ -1129,7 +1129,7 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
   // row splits into exactly 8 fields, so a future note with an embedded
   // comma fails loudly here instead of shifting every field after it.
   it('every CSV data row splits into exactly 8 comma-separated fields (no unescaped comma in `note`)', () => {
-    const csvPath = join(here, '..', '..', 'public', 'data', 'swedish_verbs.csv');
+    const csvPath = join(here, '..', '..', 'docs', 'verb-data', 'candidates.csv');
     const csv = readFileSync(csvPath, 'utf-8');
     const lines = csv.split(/\r?\n/).filter(Boolean);
     const offenders = lines.slice(1).filter((line) => line.split(',').length !== 8);
@@ -1140,7 +1140,7 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
   // future edit can't silently drop or rename it out from under every test
   // in this describe block.
   it('the CSV header names 8 columns ending in "note"', () => {
-    const csvPath = join(here, '..', '..', 'public', 'data', 'swedish_verbs.csv');
+    const csvPath = join(here, '..', '..', 'docs', 'verb-data', 'candidates.csv');
     const csv = readFileSync(csvPath, 'utf-8');
     const header = csv.split(/\r?\n/)[0]!.split(',');
     expect(header).toEqual([

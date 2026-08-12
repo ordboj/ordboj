@@ -31,9 +31,9 @@ src/
   components/ui shadcn/ui primitives
   hooks/        useSettings, useSrsProgress
   lib/          srs.ts (SM-2), verbs.ts (conjugation + lookup), speech.ts
-  data/         verbData.ts (hardcoded verb table)
-public/
-  data/         swedish_verbs.csv (source data the verb table was generated from)
+  data/         verbData.ts (single source of truth for shipped verb data)
+docs/
+  verb-data/    candidates.csv (promotion queue, not shipped)
 ```
 
 ## Data model

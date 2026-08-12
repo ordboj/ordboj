@@ -4,12 +4,13 @@
 // preteritum, supinum) of BOTH verb data sources for characters that cannot
 // occur in a Swedish verb form:
 //
-//   public/data/swedish_verbs.csv  — source of record
-//   src/data/verbData.ts           — the table that actually ships to users
+//   docs/verb-data/candidates.csv  — promotion queue, not shipped (issue #21)
+//   src/data/verbData.ts           — the single source of truth; ships to users
 //
-// verbData.ts is checked too because it is what the app reads at runtime; a
-// corrupt form there reaches a learner immediately, whereas a corrupt CSV row
-// only reaches one once it is promoted.
+// verbData.ts is checked because it is what the app reads at runtime; a
+// corrupt form there reaches a learner immediately. candidates.csv is
+// checked too because a corrupt queue row becomes a corrupt learner-facing
+// row one promotion later.
 //
 // This catches two defect classes seen in the real data:
 //
@@ -20,12 +21,21 @@
 //      as-is, and Swedish verbs are not capitalised. Allowing A-Z is what let
 //      those two rows sit in the file undetected, so A-Z is NOT allowed here.
 //
+// Beyond the charset check, this script also enforces the structural rules
+// from the #21 decision note (docs/product/2026-08-08-verb-source-of-truth-decision.md,
+// R4/R5): no CSV under public/, no non-test src/ reference to either CSV
+// filename, no duplicate infinitive inside VERB_DATA, and the VERB_DATA
+// row-count pin. See checkNoPublicCsv, checkNoSrcCsvReferences and
+// checkVerbDataInvariants below.
+//
 // Run:  node scripts/validate-verb-forms.mjs [file ...]
-// With no arguments it checks both default files above.
+// With no arguments it checks both default files above, plus the
+// structural checks, which always run regardless of arguments.
 // Exits non-zero and prints every offending row/field if it finds anything
 // outside the allowed set.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 
 // Lowercase Swedish letters plus é (loanwords such as "idé"), and the
 // punctuation the data legitimately uses: space (particle and reflexive verbs,
@@ -36,7 +46,96 @@ const ALLOWED = /^[a-zåäöé \/\-.()]*$/;
 
 const FORM_FIELDS = ['infinitive', 'imperativ', 'presens', 'preteritum', 'supinum'];
 
-const DEFAULT_FILES = ['public/data/swedish_verbs.csv', 'src/data/verbData.ts'];
+const DEFAULT_FILES = ['docs/verb-data/candidates.csv', 'src/data/verbData.ts'];
+
+// R4 (decision note section 4, hard gate on #8): VERB_DATA's row count is
+// pinned so no PR can silently extend the table before issue #8 (stable
+// SRS ids) resolves the index-based-id corruption risk. The decision note
+// (written 2026-08-08) recorded 51 rows at drafting time, but PR #265 had
+// already appended six rows to 56 by the time this check landed (#280) —
+// the gate was convention-only until now and did not stop that merge. The
+// pin below reflects the actual row count as of #280, not the stale 51
+// figure, so it fails on any FURTHER growth rather than failing
+// permanently on rows that already shipped.
+// Remove this assertion (and VERB_DATA_ROW_COUNT_PIN) in the same PR that
+// closes #8.
+const VERB_DATA_ROW_COUNT_PIN = 56;
+
+// Files that are allowed to reference a verb-data CSV filename by name:
+// this script itself, and any test file (qa owns fixtures that legitimately
+// read the CSV to check it, e.g. src/data/verbData.test.ts).
+const CSV_FILENAMES = ['swedish_verbs.csv', 'candidates.csv'];
+
+function isTestPath(path) {
+  const segments = path.split(/[\\/]/);
+  return /\.test\.(ts|tsx|js|jsx)$/.test(path) || segments.includes('test');
+}
+
+// Lists every regular file under dir, recursively. Returns [] if dir does
+// not exist (public/data/ is expected to be gone after #280).
+function listFiles(dir) {
+  if (!existsSync(dir)) return [];
+  const out = [];
+  for (const entry of readdirSync(dir, { recursive: true })) {
+    const full = join(dir, entry);
+    if (statSync(full).isFile()) out.push(full.split('\\').join('/'));
+  }
+  return out;
+}
+
+// R5.1 — a *.csv reappearing under public/ would ship again in the bundle;
+// public/data/swedish_verbs.csv moved to docs/verb-data/candidates.csv (#280)
+// and must never come back.
+function checkNoPublicCsv() {
+  return listFiles('public')
+    .filter((f) => f.toLowerCase().endsWith('.csv'))
+    .map(
+      (f) =>
+        `${f}: a CSV file exists under public/ — verb data must not ship in the bundle (issue #21 R1/R2, #280)`,
+    );
+}
+
+// R5.2 — no non-test file under src/ may reference either CSV filename;
+// verbData.ts is the only source of truth the app may read (R1).
+function checkNoSrcCsvReferences() {
+  const violations = [];
+  for (const file of listFiles('src')) {
+    if (isTestPath(file)) continue;
+    const text = readFileSync(file, 'utf8');
+    for (const name of CSV_FILENAMES) {
+      if (text.includes(name)) {
+        violations.push(
+          `${file}: references "${name}" — src/ (non-test) code must not read the verb-data CSV; verbData.ts is the only source of truth (issue #21 R1)`,
+        );
+      }
+    }
+  }
+  return violations;
+}
+
+// R5.3 + R4 — duplicate infinitives inside VERB_DATA silently shadow each
+// other at every find()-by-infinitive lookup in src/lib/verbs.ts, and the
+// row-count pin blocks table growth until #8 closes.
+function checkVerbDataInvariants(records) {
+  const violations = [];
+  const seenAt = new Map();
+  for (const { line, infinitive } of records) {
+    if (!infinitive) continue;
+    if (seenAt.has(infinitive)) {
+      violations.push(
+        `src/data/verbData.ts:${line}: duplicate infinitive "${infinitive}" (first seen at line ${seenAt.get(infinitive)}) — every lookup in src/lib/verbs.ts is find() by infinitive`,
+      );
+    } else {
+      seenAt.set(infinitive, line);
+    }
+  }
+  if (records.length !== VERB_DATA_ROW_COUNT_PIN) {
+    violations.push(
+      `src/data/verbData.ts: VERB_DATA has ${records.length} row(s), pinned to exactly ${VERB_DATA_ROW_COUNT_PIN} until issue #8 (stable SRS ids) closes — no append/delete allowed before then`,
+    );
+  }
+  return violations;
+}
 
 // Minimal RFC 4180 field splitter: honours double-quoted fields and escaped
 // ("") quotes. The data has no quoted fields today, but splitting on a bare
@@ -136,6 +235,10 @@ function parseVerbDataTs(text, file) {
   const structural = [];
 
   for (let i = 0; i < lines.length; i++) {
+    // A `//` comment line can mention a form field in prose (e.g. the
+    // säga alternates note above the row it documents) and false-match
+    // TS_FIELD; skip comment lines so they are not counted as rows.
+    if (lines[i].trim().startsWith('//')) continue;
     const matches = [...lines[i].matchAll(TS_FIELD)];
     if (matches.length === 0) continue;
     const row = {};
@@ -165,6 +268,10 @@ function main() {
 
   const violations = [];
   const structural = [];
+  // Plain-string findings from the structural repo-wide checks (R5), kept
+  // separate from `structural` (which is per-parsed-file {file,line,message}
+  // objects) because these are not about one file's own contents.
+  const extraMessages = [];
   let total = 0;
 
   for (const path of targets) {
@@ -183,11 +290,23 @@ function main() {
         }
       }
     }
+
+    if (path.endsWith('verbData.ts')) {
+      extraMessages.push(...checkVerbDataInvariants(parsed.records));
+    }
   }
 
-  if (structural.length > 0 || violations.length > 0) {
+  // R5.1/R5.2 are repo-wide invariants, not about the parsed targets, so
+  // they always run regardless of which files were passed on the CLI.
+  extraMessages.push(...checkNoPublicCsv());
+  extraMessages.push(...checkNoSrcCsvReferences());
+
+  if (structural.length > 0 || violations.length > 0 || extraMessages.length > 0) {
     for (const s of structural) {
       console.error(`${s.file}:${s.line}: ${s.message}`);
+    }
+    for (const m of extraMessages) {
+      console.error(m);
     }
     if (violations.length > 0) {
       console.error(`\nFound ${violations.length} form field(s) with disallowed characters:\n`);
