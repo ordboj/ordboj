@@ -2293,7 +2293,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     preposition: 'med',
     examples: [
       { sv: 'Vi tar itu med problemet redan i dag.', blankIndex: 2 },
-      { sv: 'Regeringen tar itu med problemet snart.', blankIndex: 2 },
+      { sv: 'Regeringen tar itu med arbetslösheten i höst.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'tar itu med', preteritum: 'tog itu med', supinum: 'tagit itu med' },
