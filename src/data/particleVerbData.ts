@@ -20,6 +20,12 @@
 // classification still uncertain (ta reda på, komma överens). Under "wrong
 // Swedish is worse than missing Swedish" the cost of leaving a verb out is
 // one missing card; the cost of a wrong one is a learner taught a fiction.
+//
+// Also excluded, after native review (issue #358):
+// pv:komma-for — fixed literary idiom, single frame, SVALex A1 band is a
+// bigram artifact.
+// pv:vara-till — verb + prepositional phrase, not a particle verb; the bare
+// existential reading is archaic.
 
 export type ParticleVerbCefr = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 
@@ -1477,23 +1483,6 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     forms: { presens: 'gör upp', preteritum: 'gjorde upp', supinum: 'gjort upp' },
   },
   {
-    id: 'pv:komma-for',
-    cefr: 'A1',
-    cefrEvidence: 'svalex',
-    baseInfinitive: 'komma',
-    particle: 'för',
-    reflexive: 'none',
-    lemma: 'komma för',
-    gloss: { en: 'to occur to someone as a sudden thought' },
-    transparency: 'idiomatic',
-    contrast: 'komma för (unstressed för) — "to come for": han kommer för pengarna',
-    acceptedParticles: ['för'],
-    examples: [{ sv: 'Det kommer för mig att jag glömt nyckeln.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason:
-      'The particle reading is near-fixed to the impersonal frame "det kommer för mig" and reads as literary rather than everyday Swedish. The list also bands it A1, which does not match how rarely a learner meets it. Both the frame and the band need a native check before this ships.',
-  },
-  {
     id: 'pv:komma-upp',
     cefr: 'B2',
     cefrEvidence: 'svalex',
@@ -1667,14 +1656,17 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'till',
     reflexive: 'none',
     lemma: 'komma till',
-    gloss: { en: 'to be added to what already exists' },
+    gloss: { en: 'to come into existence; to be created' },
     transparency: 'idiomatic',
     contrast: 'komma till (unstressed till) — "to arrive at": vi kommer till Stockholm',
     acceptedParticles: ['till'],
-    examples: [{ sv: 'Det kommer till fler deltagare under veckan.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason:
-      'The stressed "to be added" reading is marginal in modern spoken Swedish and sits next to the very common unstressed "komma till + place". I could not construct a frame that separates the two reliably at SO/SAOL confidence, so this is drafted rather than confirmed.',
+    examples: [
+      { sv: 'Nya ord kommer till när språket förändras.', blankIndex: 3 },
+      { sv: 'Sådana rykten kommer till när ingen vet sanningen.', blankIndex: 3 },
+      { sv: 'Många traditioner kommer till av en slump.', blankIndex: 3 },
+    ],
+    verified: true,
+    forms: { presens: 'kommer till', preteritum: 'kom till', supinum: 'kommit till' },
   },
   {
     id: 'pv:ga-med',
@@ -1713,23 +1705,6 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'lägger ut', preteritum: 'la ut', supinum: 'lagt ut' },
-  },
-  {
-    id: 'pv:vara-till',
-    cefr: 'A2',
-    cefrEvidence: 'svalex',
-    baseInfinitive: 'vara',
-    particle: 'till',
-    reflexive: 'none',
-    lemma: 'vara till',
-    gloss: { en: 'to serve a purpose; to be of use' },
-    transparency: 'idiomatic',
-    contrast: 'vara till (unstressed till) — "to be for": paketet är till dig',
-    acceptedParticles: ['till'],
-    examples: [{ sv: 'Kartan är till stor hjälp under vandringen.', blankIndex: 2 }],
-    verified: false,
-    unverifiedReason:
-      'The stressed-particle status is doubtful. The everyday uses ("vara till nytta", "vara till hjälp") read as a fixed prepositional phrase rather than a particle verb, and the bare existential "vara till" is archaic. Needs a native or SO check on whether this belongs in the dataset at all.',
   },
   {
     id: 'pv:riva-sonder',
