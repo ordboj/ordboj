@@ -62,12 +62,16 @@ export interface ParticleVerbData {
   id: string;
   cefr: ParticleVerbCefr;
   cefrEvidence: CefrEvidence;
-  // Required, and format-constrained, not membership-constrained (#317).
-  // Must be non-empty and untrimmed-free, must equal the first token of
-  // lemma, must be NFC-normalized, and must use one identical string per
-  // base. particleVerbData.test.ts asserts all four. VERB_DATA membership
-  // is not required. The feedback reference line renders from this entry's
-  // own embedded forms, never a VERB_DATA join (#318).
+  // Required on every entry: the 7-day same-base interference rule
+  // (isBaseRecentlyUsed) and the introduction-order tiebreak (isBaseStarted)
+  // both join particle entries on this string. Format-constrained, not
+  // membership-constrained (#317): must be non-empty and untrimmed-free,
+  // must equal the first token of lemma, must be NFC-normalized, and must
+  // use one identical string per base — particleVerbData.test.ts asserts
+  // all four. VERB_DATA membership is not required — issue #315 removed the
+  // introduction gate that used to need it — so a base absent from
+  // VERB_DATA never blocks an entry. The feedback reference line renders
+  // from this entry's own embedded forms, never a VERB_DATA join (#318).
   baseInfinitive: string;
   // The cloze answer.
   particle: string;
@@ -100,9 +104,11 @@ export interface ParticleVerbData {
   // verbs conjugate the verb only, per the project's particle-verb rule —
   // checked against SO/SAOL like every other shipped form. Required for a
   // verified:true entry to render its reference line at all. The lookup
-  // moved from render time to authoring time. A dataset test cross-checks
-  // these copies against VERB_DATA only when the base has a VERB_DATA row;
-  // an absent base is skipped, never reported as drift (#317).
+  // moved from render time to authoring time: these values duplicate
+  // VERB_DATA on purpose where a base row exists, and a dataset test
+  // cross-checks the copies against VERB_DATA only when the base has a
+  // VERB_DATA row; an absent base is skipped, never reported as drift
+  // (#317).
   forms?: {
     presens: string;
     preteritum: string;
