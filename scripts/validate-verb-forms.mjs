@@ -24,9 +24,11 @@
 // Beyond the charset check, this script also enforces the structural rules
 // from the #21 decision note (docs/product/2026-08-08-verb-source-of-truth-decision.md,
 // R4/R5): no CSV under public/, no non-test src/ reference to either CSV
-// filename, no duplicate infinitive inside VERB_DATA, and the VERB_DATA
-// row-count pin. See checkNoPublicCsv, checkNoSrcCsvReferences and
-// checkVerbDataInvariants below.
+// filename, and no duplicate infinitive inside VERB_DATA. See
+// checkNoPublicCsv, checkNoSrcCsvReferences and checkVerbDataInvariants
+// below. The row-count pin that used to live here was removed in #369/#382
+// once issue #8 (stable SRS ids) closed; VERB_DATA may grow and shrink
+// freely now.
 //
 // Run:  node scripts/validate-verb-forms.mjs [file ...]
 // With no arguments it checks both default files above, plus the
@@ -47,19 +49,6 @@ const ALLOWED = /^[a-zåäöé \/\-.()]*$/;
 const FORM_FIELDS = ['infinitive', 'imperativ', 'presens', 'preteritum', 'supinum'];
 
 const DEFAULT_FILES = ['docs/verb-data/candidates.csv', 'src/data/verbData.ts'];
-
-// R4 (decision note section 4, hard gate on #8): VERB_DATA's row count is
-// pinned so no PR can silently extend the table before issue #8 (stable
-// SRS ids) resolves the index-based-id corruption risk. The decision note
-// (written 2026-08-08) recorded 51 rows at drafting time, but PR #265 had
-// already appended six rows to 56 by the time this check landed (#280) —
-// the gate was convention-only until now and did not stop that merge. The
-// pin below reflects the actual row count as of #280, not the stale 51
-// figure, so it fails on any FURTHER growth rather than failing
-// permanently on rows that already shipped.
-// Remove this assertion (and VERB_DATA_ROW_COUNT_PIN) in the same PR that
-// closes #8.
-const VERB_DATA_ROW_COUNT_PIN = 56;
 
 // Files that are allowed to reference a verb-data CSV filename by name:
 // this script itself, and any test file (qa owns fixtures that legitimately
@@ -128,11 +117,6 @@ function checkVerbDataInvariants(records) {
     } else {
       seenAt.set(infinitive, line);
     }
-  }
-  if (records.length !== VERB_DATA_ROW_COUNT_PIN) {
-    violations.push(
-      `src/data/verbData.ts: VERB_DATA has ${records.length} row(s), pinned to exactly ${VERB_DATA_ROW_COUNT_PIN} until issue #8 (stable SRS ids) closes — no append/delete allowed before then`,
-    );
   }
   return violations;
 }
