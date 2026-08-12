@@ -1008,8 +1008,8 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
   // the comparison logic (array equality of an ordered id list) was checked
   // against a deliberately reordered fixture outside this suite to confirm
   // it is not a tautology.
-  it('AC8: VERB_DATA has exactly the pinned 56 rows, in the pinned order', () => {
-    expect(VERB_DATA).toHaveLength(56);
+  it('AC8: VERB_DATA has exactly the pinned 68 rows, in the pinned order', () => {
+    expect(VERB_DATA).toHaveLength(68);
     expect(VERB_DATA.map((v) => v.infinitive)).toEqual([
       'vara',
       'ha',
@@ -1067,6 +1067,18 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
       'hälsa',
       'bygga',
       'ställa',
+      'slå',
+      'dra',
+      'köra',
+      'arbeta',
+      'hänga',
+      'sitta',
+      'falla',
+      'kasta',
+      'bryta',
+      'åka',
+      'plocka',
+      'titta',
     ]);
   });
 
@@ -1154,4 +1166,177 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
       'note',
     ]);
   });
+});
+
+// Issue #369 (PR #382): top-12 base verbs appended to unblock 161
+// particle-verb entries (#330). Pins the exact conjugated forms shipped for
+// each new row, independent of the generic character/grupp-membership
+// checks above, which would pass on a plausible-looking but linguistically
+// wrong form (e.g. a wrong preteritum still made of valid Swedish letters).
+// A silently wrong form here teaches the learner something false.
+describe('issue #369 - top-12 base verbs for particle-verb unblocking (PR #382)', () => {
+  const EXPECTED_NEW_ROWS = [
+    {
+      cefr: 'A1',
+      infinitive: 'slå',
+      imperativ: 'slå',
+      presens: 'slår',
+      preteritum: 'slog',
+      supinum: 'slagit',
+      grupp: '4',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'dra',
+      imperativ: 'dra',
+      presens: 'drar',
+      preteritum: 'drog',
+      supinum: 'dragit',
+      grupp: '4',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'köra',
+      imperativ: 'kör',
+      presens: 'kör',
+      preteritum: 'körde',
+      supinum: 'kört',
+      grupp: '2a',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'arbeta',
+      imperativ: 'arbeta',
+      presens: 'arbetar',
+      preteritum: 'arbetade',
+      supinum: 'arbetat',
+      grupp: '1',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'hänga',
+      imperativ: 'häng',
+      presens: 'hänger',
+      preteritum: 'hängde',
+      supinum: 'hängt',
+      grupp: '2a',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'sitta',
+      imperativ: 'sitt',
+      presens: 'sitter',
+      preteritum: 'satt',
+      supinum: 'suttit',
+      grupp: '4',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'falla',
+      imperativ: 'fall',
+      presens: 'faller',
+      preteritum: 'föll',
+      supinum: 'fallit',
+      grupp: '4',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'kasta',
+      imperativ: 'kasta',
+      presens: 'kastar',
+      preteritum: 'kastade',
+      supinum: 'kastat',
+      grupp: '1',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'bryta',
+      imperativ: 'bryt',
+      presens: 'bryter',
+      preteritum: 'bröt',
+      supinum: 'brutit',
+      grupp: '4',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'åka',
+      imperativ: 'åk',
+      presens: 'åker',
+      preteritum: 'åkte',
+      supinum: 'åkt',
+      grupp: '2b',
+    },
+    {
+      cefr: 'A2',
+      infinitive: 'plocka',
+      imperativ: 'plocka',
+      presens: 'plockar',
+      preteritum: 'plockade',
+      supinum: 'plockat',
+      grupp: '1',
+    },
+    {
+      cefr: 'A1',
+      infinitive: 'titta',
+      imperativ: 'titta',
+      presens: 'tittar',
+      preteritum: 'tittade',
+      supinum: 'tittat',
+      grupp: '1',
+    },
+  ] as const;
+
+  it.each(EXPECTED_NEW_ROWS)(
+    'pins the exact stored forms for "$infinitive" (cefr/imperativ/presens/preteritum/supinum/grupp)',
+    (expected) => {
+      const row = VERB_DATA.find((v) => v.infinitive === expected.infinitive);
+      expect(row).toBeDefined();
+      expect(row).toMatchObject(expected);
+    },
+  );
+
+  it('adds VERB_DATA.length === 56 + 12, with the last 12 infinitives equal to EXPECTED_NEW_ROWS in order', () => {
+    expect(VERB_DATA).toHaveLength(56 + 12);
+    const lastTwelve = VERB_DATA.slice(-12).map((v) => v.infinitive);
+    expect(lastTwelve).toEqual(EXPECTED_NEW_ROWS.map((row) => row.infinitive));
+  });
+
+  it('assigns none of the 12 new rows an `alternates` field, and only `dra` a `note` field for its archaic variant', () => {
+    for (const expected of EXPECTED_NEW_ROWS) {
+      const row = VERB_DATA.find((v) => v.infinitive === expected.infinitive);
+      expect(row?.alternates).toBeUndefined();
+      if (expected.infinitive === 'dra') {
+        expect(row?.note).toMatch(/draga/);
+      } else {
+        expect(row?.note).toBeUndefined();
+      }
+    }
+  });
+
+  // Cross-check against docs/verb-data/candidates.csv: every new base verb
+  // already has a candidate row there (from the historical 1537-row CSV),
+  // so the TS conjugated forms and CEFR tag must not contradict it. This
+  // does not require byte-identical CSV rows (the CSV's imperativ column is
+  // still blank for several of these, matching the long-standing #132
+  // imperativ-audit gap that TS alone fills in) but the CEFR and the four
+  // conjugated forms shared by both files must agree.
+  it.each(EXPECTED_NEW_ROWS)(
+    'CEFR and conjugated forms for "$infinitive" do not contradict its docs/verb-data/candidates.csv candidate row',
+    (expected) => {
+      const csvPath = join(here, '..', '..', 'docs', 'verb-data', 'candidates.csv');
+      const csv = readFileSync(csvPath, 'utf-8');
+      const lines = csv.split(/\r?\n/).filter(Boolean);
+      const csvRow = lines
+        .slice(1)
+        .map((line) => line.split(','))
+        .find(([, , infinitive]) => infinitive === expected.infinitive);
+
+      expect(csvRow).toBeDefined();
+      const [cefr, , , , presens, preteritum, supinum] = csvRow!;
+      expect(cefr).toBe(expected.cefr);
+      expect(presens).toBe(expected.presens);
+      expect(preteritum).toBe(expected.preteritum);
+      expect(supinum).toBe(expected.supinum);
+    },
+  );
 });
