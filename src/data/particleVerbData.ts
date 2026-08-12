@@ -448,10 +448,30 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to abandon an effort; to surrender' },
     transparency: 'idiomatic',
     acceptedParticles: ['upp'],
+    // "bort" and "ut" excluded in the first two frames only. Both "ge bort"
+    // and "ge ut" are obligatorily transitive, and in those two frames the
+    // blank is followed by a prepositional phrase with no object anywhere in
+    // the clause, so the substitution leaves the verb with nothing to give:
+    // *"Han ger bort efter tre timmar" and *"Vi ger aldrig ut trots alla
+    // problem" are ungrammatical, not merely odd. The third frame does supply
+    // an object ("sin plats"), where the argument collapses — "ge bort sin
+    // plats" is perfectly good Swedish — so that frame stays unannotated
+    // rather than carrying an exclusion that would mark correct Swedish
+    // wrong. "av" is deliberately not used: this corpus has only the
+    // reflexive "ge {refl} av" (pv:ge-sig-av), so a bare "av" option would
+    // test a lemma the learner was never taught.
     examples: [
-      { sv: 'Han ger upp efter tre timmar av hårt arbete.', blankIndex: 2 },
+      {
+        sv: 'Han ger upp efter tre timmar av hårt arbete.',
+        blankIndex: 2,
+        excludedParticles: ['bort', 'ut'],
+      },
       // Adverb between verb and particle: another word-order frame.
-      { sv: 'Vi ger aldrig upp trots alla svåra problem.', blankIndex: 3 },
+      {
+        sv: 'Vi ger aldrig upp trots alla svåra problem.',
+        blankIndex: 3,
+        excludedParticles: ['bort', 'ut'],
+      },
       { sv: 'Hon ger upp sin plats i tävlingen.', blankIndex: 2 },
     ],
     verified: true,
@@ -2582,15 +2602,23 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'idiomatic',
     acceptedParticles: ['till'],
     // "upp" and "ut" excluded in every frame: "stå upp" and "stå ut" are both
-    // real particle verbs, but neither fits this impersonal "det står ... med
-    // X" frame — *"hur står det upp med familjen" is not Swedish.
+    // real particle verbs, but neither takes the impersonal expletive "det"
+    // subject these frames all have — *"hur står det upp med familjen" and
+    // *"hur det står ut hemma hos er" are not Swedish. "stå upp" needs an
+    // animate subject that can rise, and "stå ut" needs "med" plus what is
+    // endured. The third frame is subordinate rather than a question, but the
+    // expletive frame is identical, so the same exclusion holds.
     examples: [
       {
         sv: 'Hur står det till med familjen i dag?',
         blankIndex: 3,
         excludedParticles: ['upp', 'ut'],
       },
-      { sv: 'Jag undrar hur det står till hemma hos er.', blankIndex: 5 },
+      {
+        sv: 'Jag undrar hur det står till hemma hos er.',
+        blankIndex: 5,
+        excludedParticles: ['upp', 'ut'],
+      },
       {
         sv: 'Hur står det till med arbetet just nu?',
         blankIndex: 3,
