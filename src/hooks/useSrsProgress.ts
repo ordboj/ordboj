@@ -310,7 +310,10 @@ export type PracticeItem = ConjugationItem;
 // `cefrLevels` filter semantics (see createConjugationProvider): `undefined`
 // means "no filter, all verbs in scope"; any array - including `[]` - is an
 // explicit selection and is honored exactly, so an empty selection matches
-// zero verbs rather than silently falling back to "all verbs".
+// zero verbs rather than silently falling back to "all verbs". #350: the
+// same selection also scopes particle *introductions* (getParticleSitting)
+// but never particle due reviews or recall unlocks — see
+// buildParticleSitting.
 export function useSrsProgress(cefrLevels?: string[]) {
   const [srsStates, setSrsStates] = useState<Record<string, SrsState>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -484,9 +487,15 @@ export function useSrsProgress(cefrLevels?: string[]) {
   // state so a caller decides when the queue is snapshotted — a sitting
   // recomputed mid-session would reshuffle under the learner's feet, which
   // is the bug PR #122 fixed for the conjugation deck.
+  // #350: the same cefrLevels selection that scopes conjugation items above
+  // also scopes which particle verbs are offered as new introductions —
+  // never which ones are due for review. See
+  // docs/learning/2026-08-09-particle-cefr-majority-decision.md, "The
+  // residual risk, named".
   const getParticleSitting = useCallback(
-    (particleDailyGoal: number) => buildParticleSitting({ srsStates, particleDailyGoal }),
-    [srsStates],
+    (particleDailyGoal: number) =>
+      buildParticleSitting({ srsStates, particleDailyGoal, cefrLevels }),
+    [srsStates, cefrLevels],
   );
 
   const particleReviewsDue = useMemo(() => countParticleReviewsDue(srsStates), [srsStates]);

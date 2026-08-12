@@ -91,6 +91,14 @@ interface BuildOptions {
   // Injected so tests are deterministic. Defaults to Fisher-Yates.
   shuffle?: <T>(items: T[]) => T[];
   entries?: ParticleVerbData[];
+  // #350 / docs/learning/2026-08-09-particle-cefr-majority-decision.md,
+  // "The residual risk, named": applies only to introduction candidates.
+  // Same semantics as useSrsProgress's conjugation filter — `undefined` is
+  // "no filter, all bands in scope"; any array, including `[]`, is honored
+  // exactly. Due reviews and recall unlocks are never filtered: they are
+  // schedules for verbs the learner already met, and filtering them would
+  // orphan items the learner has a schedule for.
+  cefrLevels?: string[];
 }
 
 function fisherYates<T>(items: T[]): T[] {
@@ -223,6 +231,7 @@ export function buildParticleSitting({
   now = Date.now(),
   shuffle = fisherYates,
   entries = getVerifiedParticleVerbs(),
+  cefrLevels,
 }: BuildOptions): ParticleSitting {
   // Due reviews are never gated on the conjugation store: once an item has
   // been introduced, its schedule is the only thing that decides whether it
@@ -288,9 +297,16 @@ export function buildParticleSitting({
 
   const introductions: ParticleSittingCard[] = [];
   const newPerParticle = new Map<string, number>();
+  // #350: the cefrLevels setting narrows which *new* verbs are offered, so a
+  // learner who wants to stay at a level never meets a higher band as an
+  // introduction. `isBaseRecentlyUsed` below still checks against the full
+  // `entries`, not this narrowed list: interference is a fact about the
+  // whole corpus, not about what is currently offered.
+  const introductionCandidates =
+    cefrLevels === undefined ? entries : entries.filter((entry) => cefrLevels.includes(entry.cefr));
   // Issue #316: introduction order only. Due reviews and recall unlocks
   // above still iterate `entries` in its own (corpus) order, untouched.
-  for (const entry of orderForIntroduction(entries, srsStates)) {
+  for (const entry of orderForIntroduction(introductionCandidates, srsStates)) {
     if (remaining <= 0) break;
     if (srsStates[particleItemId(entry.id, 'cloze')]) continue;
     if (isBaseRecentlyUsed(entry, srsStates, entries)) continue;
