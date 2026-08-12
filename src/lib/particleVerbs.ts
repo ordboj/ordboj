@@ -228,6 +228,11 @@ const PARTICLE_CORE_SENSE: Record<string, string> = {
   // "an" is the honest exception: it survives in a handful of fixed phrases
   // and carries no productive sense to teach. Saying so beats inventing one.
   an: 'mostly fossilised, surviving in a few fixed phrases',
+  // Added for #376: "miste" and "itu" are the same kind of fossilised
+  // exception as "an" — each occurs only in a few fixed phrases and
+  // carries no productive sense of its own to teach.
+  miste: 'fossilised, surviving in a few fixed phrases such as "gå miste om"',
+  itu: 'fossilised, meaning "in two", surviving in a few fixed phrases',
 };
 
 export function getParticleCoreSense(particle: string): string | null {

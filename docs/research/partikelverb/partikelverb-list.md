@@ -9,6 +9,15 @@ Lead decision on the tracking issue. Ranks are preserved, so the rank
 column has gaps. Headline counts in the prose (1069, 569, 415/654)
 describe the original measurement and are kept as the historical record.
 
+Revision 2026-08-12: the human review of those 16 is complete (ruling on
+issue #330). 14 are confirmed as real Swedish, 6 of them with a corrected
+gloss; 2 are excluded for good and move to section 4.7. Section 4.8 carries
+the full decision table. **The 14 confirmed entries are restored** to the
+table and to the CSV at their original ranks, with the corrected glosses and
+an empty flag column, so the list now holds **1066 entries** and no
+`NEEDS HUMAN CHECK` flag is open. `trycka på` stays out: it was never part of
+the 16 and its own removal decision stands.
+
 ## Method
 
 Two independent sources, combined. Neither is complete on its own, and that
@@ -45,8 +54,8 @@ lemma contains its own stated particle, there are no duplicate lemmas, and all
 143 base verbs are real Swedish verbs. Character-level corruption is therefore
 **absent**, not merely unlikely. What that check cannot catch is a
 semantically wrong entry that still looks like Swedish, so I verified the
-entries against my own knowledge as well — see sections 4.8 and 4.9 for the
-two I rejected and the sixteen since removed pending human review.
+entries against my own knowledge as well — see sections 4.7 and 4.8 for the
+four rejected outright and the sixteen that went to human review.
 
 _Copyright._ Source C is in copyright. This file records **facts only**:
 which verb combines with which particle. Every gloss is reformulated in my own
@@ -118,8 +127,9 @@ I did not pad to reach a target. **94 corpus rows that would have filled slots
 are deliberately excluded** — too rare to teach (`hägna in`, `knåpa ihop`,
 `tufsa till`, `rationalisera bort`), not particle verbs at all (`bero på`,
 `titta på`), or not confidently glossable. All 94 are listed in section 4.3,
-so the cuts are auditable rather than silent. Two source-C entries are rejected
-outright (4.7) and sixteen more are removed pending human review (4.8).
+so the cuts are auditable rather than silent. Four source-C entries are rejected
+outright (4.7) and sixteen more were removed for human review (4.8); that review
+is now complete, confirmed 14 of them, and put those 14 back in the list.
 
 **Spelling variants are not separate entries.** Swedish writes several
 particles two ways: `ner`/`ned`, `igång`/`i gång`, `iväg`/`i väg`. SVALex
@@ -839,6 +849,7 @@ handling in the data model (section 3.6).
 | 563  | komma om           | komma   | om       | overtake                                                                                                                 | B1   | plain    |
 | 564  | komma runt         | komma   | runt     | get around (an obstacle or problem)                                                                                      | B1   | plain    |
 | 565  | komma sig upp      | komma   | upp      | advance in life                                                                                                          | B1   | refl     |
+| 566  | komma upp sig      | komma   | upp      | rise socially or professionally                                                                                          | B1   | refl     |
 | 567  | känna på           | känna   | på       | try out what something feels like                                                                                        | B1   | plain    |
 | 568  | ligga av sig       | ligga   | av       | get rusty from disuse                                                                                                    | B1   | refl     |
 | 569  | ligga bakom        | ligga   | bakom    | be behind, be the cause of                                                                                               | B1   | plain    |
@@ -892,6 +903,7 @@ handling in the data model (section 3.6).
 | 617  | säga efter         | säga    | efter    | repeat after someone                                                                                                     | B1   | plain    |
 | 618  | säga emot          | säga    | emot     | contradict, object                                                                                                       | B1   | plain    |
 | 619  | säga ifrån         | säga    | ifrån    | speak up in protest                                                                                                      | B1   | plain    |
+| 620  | säga om            | säga    | om       | say again                                                                                                                | C1   | plain    |
 | 621  | säga till om       | säga    | till     | have authority over                                                                                                      | B1   | v+p+prep |
 | 622  | sätta av           | sätta   | av       | drop off (a passenger); set aside (money); dash off                                                                      | B2   | plain    |
 | 623  | sätta efter        | sätta   | efter    | set off in pursuit                                                                                                       | B1   | plain    |
@@ -964,6 +976,7 @@ handling in the data model (section 3.6).
 | 690  | dra ihop sig       | dra     | ihop     | contract; be approaching (impersonal, e.g. storm)                                                                        | C1   | refl     |
 | 691  | dra in på          | dra     | in       | cut down on                                                                                                              | B1   | v+p+prep |
 | 692  | dra ner på         | dra     | ner      | cut back on                                                                                                              | B1   | v+p+prep |
+| 693  | dra omkring        | dra     | omkring  | roam, wander about                                                                                                       | B1   | plain    |
 | 694  | dra på             | dra     | på       | pull on (clothing, with effort); speed up; carry (an illness) around                                                     | B1   | plain    |
 | 695  | dra sig fram       | dra     | fram     | scrape by financially                                                                                                    | B1   | refl     |
 | 696  | dra sig tillbaka   | dra     | tillbaka | retreat, move away; retire from activity                                                                                 | B1   | refl     |
@@ -1011,6 +1024,7 @@ handling in the data model (section 3.6).
 | 738  | slå an             | slå     | an       | strike (a chord)                                                                                                         | B1   | plain    |
 | 739  | slå an på          | slå     | an       | appeal to, charm                                                                                                         | B1   | v+p+prep |
 | 740  | slå av på          | slå     | av       | ease off (the pace)                                                                                                      | B1   | v+p+prep |
+| 741  | slå av sig         | slå     | av       | go flat (a drink)                                                                                                        | B1   | refl     |
 | 742  | slå bort           | slå     | bort     | knock away; pour off; brush aside (criticism)                                                                            | B1   | plain    |
 | 743  | slå i              | slå     | i        | hammer in; bump (a toe); pour into; make someone believe a lie                                                           | B1   | plain    |
 | 744  | slå ifrån          | slå     | ifrån    | switch off (power)                                                                                                       | B1   | plain    |
@@ -1062,6 +1076,7 @@ handling in the data model (section 3.6).
 | 790  | binda in           | binda   | in       | bind (books) in hard covers                                                                                              | B2   | plain    |
 | 791  | binda upp          | binda   | upp      | tie up high (hair, plants)                                                                                               | C1   | plain    |
 | 792  | binda upp sig      | binda   | upp      | commit oneself                                                                                                           | B2   | refl     |
+| 793  | binda åt           | binda   | åt       | tie tightly                                                                                                              | B2   | plain    |
 | 794  | bita av            | bita    | av       | bite off; cut someone short rudely                                                                                       | B2   | plain    |
 | 795  | bita ifrån         | bita    | ifrån    | defend oneself sharply in words                                                                                          | B2   | refl     |
 | 796  | bjuda emot         | bjuda   | emot     | be repugnant, feel distasteful (impersonal)                                                                              | C1   | plain    |
@@ -1107,6 +1122,7 @@ handling in the data model (section 3.6).
 | 836  | falla på           | falla   | på       | set in (darkness, an urge)                                                                                               | B2   | plain    |
 | 837  | falla undan        | falla   | undan    | stop resisting, give in (to)                                                                                             | B2   | plain    |
 | 838  | falla ut           | falla   | ut       | fall out; turn out, develop                                                                                              | B2   | plain    |
+| 839  | falla ut med       | falla   | ut       | result in                                                                                                                | B2   | v+p+prep |
 | 840  | fara på            | fara    | på       | attack fiercely                                                                                                          | B2   | plain    |
 | 841  | fara upp           | fara    | upp      | jump up abruptly                                                                                                         | B2   | plain    |
 | 842  | fara ut mot        | fara    | ut       | lash out verbally at                                                                                                     | B2   | v+p+prep |
@@ -1117,6 +1133,7 @@ handling in the data model (section 3.6).
 | 847  | flyga upp          | flyga   | upp      | fly up; jump up abruptly; fly open (a door)                                                                              | B2   | plain    |
 | 848  | flyta in           | flyta   | in       | float in; come in steadily (money)                                                                                       | B2   | plain    |
 | 849  | fresta på          | fresta  | på       | be a strain, be taxing                                                                                                   | B2   | plain    |
+| 850  | frysa om           | frysa   | om       | refreeze                                                                                                                 | B2   | plain    |
 | 851  | frysa på           | frysa   | på       | turn much colder, freeze over (weather)                                                                                  | B2   | plain    |
 | 852  | frysa till         | frysa   | till     | freeze to ice                                                                                                            | C1   | plain    |
 | 853  | frysa ut           | frysa   | ut       | ostracize, freeze out socially                                                                                           | B2   | plain    |
@@ -1171,6 +1188,7 @@ handling in the data model (section 3.6).
 | 902  | kosta på           | kosta   | på       | invest money in; be taxing (impersonal)                                                                                  | C1   | plain    |
 | 903  | kränga av sig      | kränga  | av       | pull off (clothes) hastily                                                                                               | B2   | refl     |
 | 904  | kränga på sig      | kränga  | på       | pull on (clothes) hastily                                                                                                | B2   | refl     |
+| 905  | kränga till        | kränga  | till     | lurch, heel over briefly                                                                                                 | B2   | plain    |
 | 906  | kännas vid         | kännas  | vid      | acknowledge, own up to                                                                                                   | B2   | plain    |
 | 908  | ladda om           | ladda   | om       | reload                                                                                                                   | B2   | plain    |
 | 909  | ladda ur           | ladda   | ur       | discharge (a battery)                                                                                                    | B2   | plain    |
@@ -1190,6 +1208,7 @@ handling in the data model (section 3.6).
 | 923  | lura ur            | lura    | ur       | coax (secrets) out by trickery                                                                                           | B2   | plain    |
 | 924  | lura ut            | lura    | ut       | entice someone out; figure out                                                                                           | B2   | plain    |
 | 925  | lysa upp           | lysa    | upp      | light up (a room); brighten (a face)                                                                                     | B2   | plain    |
+| 926  | lysa ut            | lysa    | ut       | shine out; advertise (a vacancy)                                                                                         | B2   | plain    |
 | 927  | låsa sig ute       | låsa    | ute      | lock oneself out                                                                                                         | B2   | refl     |
 | 928  | låsa upp           | låsa    | upp      | unlock                                                                                                                   | B2   | plain    |
 | 929  | lämna av           | lämna   | av       | drop off, deliver                                                                                                        | B2   | plain    |
@@ -1206,6 +1225,7 @@ handling in the data model (section 3.6).
 | 940  | måla ut            | måla    | ut       | portray negatively                                                                                                       | B2   | plain    |
 | 941  | mäta ut            | mäta    | ut       | measure out a position; seize property for debt                                                                          | B2   | plain    |
 | 942  | nöta in            | nöta    | in       | drill in by repetition                                                                                                   | B2   | plain    |
+| 943  | nötas av           | nöta    | av       | wear through by friction                                                                                                 | B2   | plain    |
 | 944  | ordna in           | ordna   | in       | arrange into a system                                                                                                    | B2   | plain    |
 | 945  | ordna om           | ordna   | om       | rearrange                                                                                                                | B2   | plain    |
 | 946  | ordna upp          | ordna   | upp      | put in order, sort out                                                                                                   | B2   | plain    |
@@ -1219,11 +1239,13 @@ handling in the data model (section 3.6).
 | 954  | plöja upp          | plöja   | upp      | plough up (a field)                                                                                                      | B2   | plain    |
 | 955  | prata av sig       | prata   | av       | unburden oneself by talking                                                                                              | B2   | refl     |
 | 956  | prata bort         | prata   | bort     | chat away (time); talk someone's objections aside                                                                        | B2   | plain    |
+| 957  | prata omkull       | prata   | omkull   | talk someone into submission                                                                                             | B2   | plain    |
 | 958  | prata på           | prata   | på       | keep on talking                                                                                                          | B2   | plain    |
 | 959  | pröva på           | pröva   | på       | get a taste of, experience                                                                                               | B2   | plain    |
 | 960  | pröva ut           | pröva   | ut       | test until right, calibrate                                                                                              | B2   | plain    |
 | 961  | pyssla om          | pyssla  | om       | tend to, care for                                                                                                        | B2   | plain    |
 | 962  | reda upp           | reda    | upp      | straighten out (a tangled situation)                                                                                     | B2   | plain    |
+| 963  | resa upp           | resa    | upp      | raise upright; travel north                                                                                              | B2   | plain    |
 | 964  | rikta in sig på    | rikta   | in       | aim for, set one's sights on                                                                                             | B2   | refl     |
 | 965  | rusta ner          | rusta   | ner      | disarm, reduce armaments                                                                                                 | B2   | plain    |
 | 966  | rusta upp          | rusta   | upp      | rearm; renovate                                                                                                          | B2   | plain    |
@@ -1263,6 +1285,7 @@ handling in the data model (section 3.6).
 | 1000 | smälla ihop        | smälla  | ihop     | slam shut; concoct (an excuse)                                                                                           | B2   | plain    |
 | 1001 | smälla till        | smälla  | till     | swat, strike                                                                                                             | B2   | plain    |
 | 1002 | smälla upp         | smälla  | upp      | throw up (buildings) quickly                                                                                             | B2   | plain    |
+| 1003 | snappa till sig    | snappa  | till     | snatch up                                                                                                                | B2   | refl     |
 | 1004 | snappa upp         | snappa  | upp      | pick up (news) by chance                                                                                                 | B2   | plain    |
 | 1005 | snappa åt sig      | snappa  | åt       | snatch up                                                                                                                | B2   | refl     |
 | 1006 | spåra ur           | spåra   | ur       | derail (a train); degenerate (a discussion)                                                                              | B2   | plain    |
@@ -1289,6 +1312,7 @@ handling in the data model (section 3.6).
 | 1027 | stryka under       | stryka  | under    | underline; emphasize                                                                                                     | B2   | plain    |
 | 1028 | stryka ut          | stryka  | ut       | spread out evenly (paint); erase                                                                                         | B2   | plain    |
 | 1029 | stråla samman      | stråla  | samman   | converge from different directions                                                                                       | B2   | plain    |
+| 1030 | stråla ut          | stråla  | ut       | radiate outward from a point                                                                                             | C1   | plain    |
 | 1031 | stöta bort         | stöta   | bort     | push away, repel (people)                                                                                                | B2   | plain    |
 | 1032 | stöta ihop med     | stöta   | ihop     | run into unexpectedly                                                                                                    | B2   | v+p+prep |
 | 1033 | stöta på           | stöta   | på       | bump into (a person); prompt, remind; make a pass at                                                                     | B2   | plain    |
@@ -1708,44 +1732,86 @@ is.
 The remaining nine reflexives in band 6 carry a Wiktionary-attested position
 and can be populated directly.
 
-### 4.7 Source C: rejected outright (2)
+### 4.7 Source C: rejected outright (4)
 
 Forms I cannot confirm exist in Swedish at all. Not included at any
 confidence level.
 
-| Rejected        | Source gloss                    | Why                                                                                                                             |
-| --------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `klappa igenom` | collapse physically from strain | `klappa ihop` is the standard form and is separately present in the source. This looks like an extraction artifact, not a word. |
-| `bena ur`       | remove the bones from           | `bena ut` (untangle, analyse) is standard and is also separately present. I cannot confirm an _ur_ variant meaning "debone".    |
+| Rejected        | Source gloss                    | Why                                                                                                                                                                                                                                                    |
+| --------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `klappa igenom` | collapse physically from strain | `klappa ihop` is the standard form and is separately present in the source. This looks like an extraction artifact, not a word.                                                                                                                        |
+| `bena ur`       | remove the bones from           | `bena ut` (untangle, analyse) is standard and is also separately present. I cannot confirm an _ur_ variant meaning "debone".                                                                                                                           |
+| `gå i`          | be believed                     | Human review 2026-08-12 (#330): the standard verb for this sense is `gå på` (_låta sig luras_). The _i_ form is a book or OCR slip. The other `gå i` senses ("get into (water)", "fit into") are not particle-verb senses and do not rescue the entry. |
+| `ladda in`      | shovel in (food)                | Human review 2026-08-12 (#330): the attested verb is `lassa in`. `ladda`/`lassa` confusion.                                                                                                                                                            |
 
-Both are the same failure shape: a real particle verb sitting next to a
+All four are the same failure shape: a real particle verb sitting next to a
 near-identical form that I cannot attest. That is what a scanned-source OCR
 pipeline
-would be expected to produce if it produced anything, and two out of 834 is a
+would be expected to produce if it produced anything, and four out of 834 is a
 low rate.
 
-### 4.8 Source C: removed pending human review (16)
+The last two entered this section on 2026-08-12, promoted from section 4.8 by
+the human review ruling on issue #330. They are permanent exclusions, not
+restorable ones.
+
+### 4.8 Source C: human review complete — 14 confirmed, 2 excluded (16)
 
 These were in band 9, each flagged **NEEDS HUMAN CHECK** inline. Revision
 2026-08-09: removed from the table and the CSV by lead decision, pending
-human review. They are listed here so the omission stays visible; any of
-them can be restored once confirmed.
+human review (PR #338). Revision 2026-08-12: the human review is **done** —
+ruling on issue #330, sources SAOB, Synonymer.se, WordReference, Cambridge,
+Livsmedelsverket and gu.se. No `NEEDS HUMAN CHECK` flag is open any more.
 
-Two are cases where I dispute the source's gloss rather than the entry:
+The ruling confirms 14 of the 16 as real Swedish and excludes 2. My earlier
+doubts are overturned where the table below says so; read the ruling, not the
+doubt, as the current position.
 
-- **`dra omkring`** — glossed "scatter about, make a mess of things". I read
-  this as "to roam, to wander about". The source gloss looks like it belongs
-  to a different verb.
-- **`frysa om`** — glossed "freeze again". I read _om_ here as the body-part
-  construction (`jag fryser om fötterna` — my feet are cold), not repetition.
+**Confirmed, no change to the entry (8).** The original gloss stands.
 
-The rest I simply cannot attest: `komma upp sig` (the standard order is
-`komma sig upp`), `falla ut med`, `slå av sig`, `prata omkull`, `ladda in`,
-`lysa ut` (the standard term is the compound `utlysa`), `resa upp` (the
-"spend money travelling" sense), `gå i` (the "be believed" sense), `säga om`
-(the "object to" sense), `nötas av` (deponent base), `snappa till sig`
-(identical gloss to `snappa åt sig`, so one of the pair is likely wrong),
-`kränga till`, `stråla ut` (the "impersonal" tag looks wrong), `binda åt`.
+| Entry             | Ruling                                                                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `slå av sig`      | Real: "go flat" (a drink). Synonymer.se — _bli avslagen_.                                                                                                                |
+| `binda åt`        | Real. SAOB — _knyta hårdare_.                                                                                                                                            |
+| `kränga till`     | Real. SAOB — _spårvagnen kränger till_.                                                                                                                                  |
+| `lysa ut`         | Real and contemporary — _lysa ut två doktorandplatser_ (gu.se). The compound `utlysa` does not displace it.                                                              |
+| `nötas av`        | Real. It is the **s-passive of `nöta`, not a deponent**. My "deponent base" note was wrong. `nöta` conjugates normally; do not add `nötas` to `VERB_DATA` as a deponent. |
+| `prata omkull`    | Real. SAOB records _omkullpratad_.                                                                                                                                       |
+| `snappa till sig` | Real. SAOB records it. `till sig` and `åt sig` differ in nuance, so the pair is not a duplicate.                                                                         |
+| `stråla ut`       | Real. The **"(impersonal)" tag is removed** — it was wrong. Not one of the 19 in section 4.9.                                                                            |
+
+**Confirmed, gloss corrected (6).** The entry is real; the stored meaning must
+change before it is used.
+
+| Entry           | Old gloss                                           | Corrected gloss and note                                                                                                                                           |
+| --------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `komma upp sig` | rise socially or professionally                     | Sense stands (SAOB). The canonical order is **`komma sig upp`** — prefer that as the headword.                                                                     |
+| `säga om`       | say again; object to                                | **"say again" only** (SAOB — _upprepa_). The "object to" sense is `säga emot` and is dropped from this entry.                                                      |
+| `dra omkring`   | scatter about, make a mess of things                | **"roam, wander about"** (SAOB — _färdas/resa omkring_). The book gloss was wrong; my reading was right.                                                           |
+| `falla ut med`  | yield as a result (e.g. a win)                      | **"result in"**. Weak headword — teach it through `falla ut` instead.                                                                                              |
+| `frysa om`      | freeze again                                        | **"refreeze"** — the book was right and I was wrong (Livsmedelsverket — _frysa om mat_). `frysa om fötterna` is a separate body-part construction, not this entry. |
+| `resa upp`      | raise upright; travel north; spend money travelling | **"raise upright"**. The "spend money travelling" sense is real (SAOB) but colloquial and low priority.                                                            |
+
+**Excluded permanently (2).** Both moved to section 4.7 with their reason:
+`gå i` "be believed" (the standard verb is `gå på`) and `ladda in` "shovel in
+(food)" (the attested verb is `lassa in`). They are not restorable.
+
+**Restoration status: done.** PR #338 had removed all 16 rows. The ruling
+overturns that removal for the 14 confirmed ones, so they are back in the table
+and in `partikelverb-list.csv` at their original ranks — 566, 620, 693, 741,
+793, 839, 850, 905, 926, 943, 957, 963, 1003 and 1030. Each carries the
+corrected gloss above and an empty `flag` column. The list holds 1066 entries.
+
+Three details of the restore, so they are not mistaken for drift:
+
+- `nötas av` now stores `nöta` as its `basverb`, not `nötas`. The entry is an
+  s-passive, so the base verb is the plain one. Whoever promotes it must add
+  `nöta` to `VERB_DATA`, not a deponent `nötas`.
+- `resa upp` keeps "travel north" in its gloss. The ruling addressed the
+  disputed money-spending sense only, so the undisputed part of the book gloss
+  stays.
+- `komma upp sig` (566) sits next to `komma sig upp` (565), which was always in
+  the list. They are the same verb in two orders. Only one of the two should
+  ever reach `particleVerbData.ts`, and the ruling says it is `komma sig upp`.
 
 ### 4.9 Impersonal particle verbs — a class the data model has no slot for (19)
 
@@ -1764,6 +1830,12 @@ Recommendation: an `impersonal?: boolean` flag, and exclude impersonal entries
 from any automatically templated frame. I have not added the flag to the list
 because it is a data-model decision, but the 19 are identifiable by the
 "(impersonal)" tag in their gloss.
+
+Source C marks 19, but one of those marks is wrong: the human review ruling of
+2026-08-12 (#330) strips the impersonal tag from `stråla ut` (section 4.8).
+That entry is back in the list at rank 1030 and its gloss carries no tag, so it
+is not one of this class. The tag count in the CSV is lower again, because
+several of the 19 sit in rows that other sections of this list already exclude.
 
 ### 4.10 Deponent base verbs (4)
 
