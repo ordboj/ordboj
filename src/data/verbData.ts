@@ -132,7 +132,7 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "ställa", imperativ: "ställ", presens: "ställer", preteritum: "ställde", supinum: "ställt", grupp: "2a" },
   // Appended for #369: top-12 missing base verbs that unblock 161 blocked
   // particle-verb entries (see #330). Forms verified against SAOL/Svenska.se
-  // usage and cross-checked against docs/verb-data/candidates.csv, all high-
+  // usage and cross-checked against the promotion queue (#21), all high-
   // frequency and unambiguous (no vowel-gradation uncertainty). Append-only
   // -- existing row order above is frozen by verbData.orderPin.test.ts.
   { cefr: "A1", infinitive: "slå", imperativ: "slå", presens: "slår", preteritum: "slog", supinum: "slagit", grupp: "4" },
@@ -145,6 +145,6 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "A1", infinitive: "kasta", imperativ: "kasta", presens: "kastar", preteritum: "kastade", supinum: "kastat", grupp: "1" },
   { cefr: "A1", infinitive: "bryta", imperativ: "bryt", presens: "bryter", preteritum: "bröt", supinum: "brutit", grupp: "4" },
   { cefr: "A1", infinitive: "åka", imperativ: "åk", presens: "åker", preteritum: "åkte", supinum: "åkt", grupp: "2b" },
-  { cefr: "A2", infinitive: "plocka", imperativ: "plocka", presens: "plockar", preteritum: "plockade", supinum: "plockat", grupp: "1" }, // A2: common but not core-beginner vocabulary, consistent with candidates.csv tag
+  { cefr: "A2", infinitive: "plocka", imperativ: "plocka", presens: "plockar", preteritum: "plockade", supinum: "plockat", grupp: "1" }, // A2: common but not core-beginner vocabulary, consistent with the promotion queue tag
   { cefr: "A1", infinitive: "titta", imperativ: "titta", presens: "tittar", preteritum: "tittade", supinum: "tittat", grupp: "1" },
 ];
