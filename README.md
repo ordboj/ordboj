@@ -2,7 +2,7 @@
 
 > **Hobby project.** I built this to learn and test AI coding tools (Claude Code, multi-agent workflows, and similar). Expect experiments in the commit history and the workflow files — that is part of the point.
 
-A colorful, mobile-friendly web app for practicing Swedish verb conjugations with spaced repetition (SRS). Fun and simple, like Memrise — but focused entirely on Swedish verbs.
+A colorful, mobile-friendly web app for practicing Swedish verb conjugations with spaced repetition (SRS). Fun and simple and focused entirely on Swedish verbs.
 
 ## Features
 
