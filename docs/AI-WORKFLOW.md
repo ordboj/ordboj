@@ -55,6 +55,60 @@ automate the path from a raw idea to a merged pull request. A workflow is
 a JavaScript file that spawns many agents in a fixed order, with loops
 and checks that code controls, not the model.
 
+The diagram shows the full path. Amber nodes are human steps, blue nodes
+are agent steps, pink nodes are review gates, and the green node is the
+goal.
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {
+  "fontFamily": "-apple-system, 'Segoe UI', sans-serif",
+  "fontSize": "14px",
+  "lineColor": "#94A3B8",
+  "textColor": "#334155",
+  "clusterBkg": "#F1F5F9",
+  "clusterBorder": "#CBD5E1",
+  "titleColor": "#334155",
+  "edgeLabelBackground": "#F8FAFC"
+}}}%%
+flowchart TD
+    idea["💡 Human sends a raw idea"]:::human
+
+    subgraph IP["1 · idea-pilot — is it worth building?"]
+        review["Blind value review<br/>3 business owners + UI/UX expert"]:::agent
+        debate["Design critic debate<br/>one rebuttal round"]:::gate
+        verdict{"Verdict"}:::gate
+        tickets["Staff engineer cuts tickets<br/>disjoint owners, parallel-safe"]:::agent
+    end
+
+    subgraph TP["2 · ticket-pilot — build it"]
+        impl["Owner agent implements<br/>on a branch"]:::agent
+        rev["Adversarial review"]:::gate
+        ci["CI watch + repair"]:::agent
+        ready["Ready to merge"]:::agent
+    end
+
+    rejected(["Rejected"]):::stop
+    question["❓ One precise question<br/>for the human"]:::human
+    approve["✅ Human approves in the chat"]:::human
+    merged(["Merged"]):::done
+
+    idea --> review --> debate --> verdict
+    verdict -- "pursue" --> tickets
+    verdict -- "reject" --> rejected
+    verdict -- "needs a human" --> question
+    tickets --> impl --> rev
+    rev -- "rejected, max 2 rounds" --> impl
+    rev -- "approved" --> ci --> ready --> approve --> merged
+
+    style IP fill:#F8FAFC,stroke:#CBD5E1
+    style TP fill:#F8FAFC,stroke:#CBD5E1
+    classDef human fill:#FEF3C7,stroke:#D97706,color:#78350F
+    classDef agent fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A
+    classDef gate fill:#FCE7F3,stroke:#DB2777,color:#831843
+    classDef done fill:#DCFCE7,stroke:#16A34A,color:#14532D
+    classDef stop fill:#E2E8F0,stroke:#64748B,color:#334155
+```
+
 ### 1. `idea-pilot` — is the idea worth building?
 
 The human sends a raw note, for example "what if the app had X?". The
