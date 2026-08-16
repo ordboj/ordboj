@@ -257,6 +257,17 @@ describe('CSV row classification (review file)', () => {
       preteritum: 'kom',
       supinum: 'kommit',
     },
+    // issue #381: presens/preteritum/supinum mechanically match grupp 1
+    // (-ar/-ade/-at), but imperativ is the bare stem ("jämför"), not the
+    // full infinitive a grupp 1 imperativ requires — must not be guessed as
+    // a grupp-1 pass; must fall to needs-check with a bare-stem note
+    {
+      infinitive: 'jämföra',
+      imperativ: 'jämför',
+      presens: 'jämförar',
+      preteritum: 'jämförade',
+      supinum: 'jämförat',
+    },
   ]);
 
   function reviewFileAfterRun(): string {
@@ -341,6 +352,30 @@ describe('CSV row classification (review file)', () => {
     const row = findReviewRow(reviewFileAfterRun(), 'komma');
     expect(row.status).toBe('needs-check');
     expect(row.reasons).toBe('');
+  });
+
+  // Regression test (issue #381): the classifier's blind spot let a row
+  // whose presens/preteritum/supinum mechanically match grupp 1 be reported
+  // as a passing grupp 1 verb even when its own imperativ is the bare stem
+  // (a shape only grupp 2a/2b/3/4 imperativs use), not the full infinitive a
+  // grupp 1 imperativ requires. Must fall to needs-check with an explicit
+  // bare-stem note, never a guessed pass.
+  it('flags a grupp-1-shaped verb whose imperativ is the bare stem as needs-check, not pass (issue #381)', () => {
+    const row = findReviewRow(reviewFileAfterRun(), 'jämföra');
+    expect(row.status).toBe('needs-check');
+    expect(row.status).not.toBe('pass');
+    expect(row.reasons).toContain(
+      'imperativ "jämför" is the bare stem, the grupp 2a/2b/3/4 imperativ shape, not the full infinitive "jämföra" a grupp 1 imperativ requires; grupp needs human verification',
+    );
+  });
+
+  // Paired case (issue #381): a genuine grupp 1 verb whose imperativ IS the
+  // full infinitive ('kalla', asserted 'pass' above) must not be caught by
+  // the bare-stem check — this pins that the new check only fires on a
+  // bare-stem imperativ, not on every grupp-1-shaped row.
+  it('does not over-fire the bare-stem check on a genuine grupp 1 verb (imperativ === infinitive)', () => {
+    const row = findReviewRow(reviewFileAfterRun(), 'kalla');
+    expect(row).toEqual({ grupp: '1', status: 'pass', reasons: '' });
   });
 
   it('never includes a fail or needs-check row anywhere in verbData.ts', () => {
