@@ -78,7 +78,10 @@ npm test          # vitest (unit + component tests)
 
 ## Project management
 
-Tasks and status are tracked in the [Ordböj GitHub Project](https://github.com/orgs/ordboj/projects/1).
+Tasks and status are tracked in [Linear](https://linear.app/ordboj)
+(workspace **Ordboj**, team **Ordboj**). GitHub issues remain open for
+inbound reports; each migrated Linear issue links back to its GitHub
+original.
 
 ## License
 
