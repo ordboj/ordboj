@@ -55,12 +55,12 @@ automate the path from a raw idea to a merged pull request. A workflow is
 a JavaScript file that spawns many agents in a fixed order, with loops
 and checks that code controls, not the model.
 
-The diagram shows the full path. Amber nodes are human steps, blue nodes
-are agent steps, pink nodes are review gates, and the green node is the
-goal.
+The diagram shows the full path. Hexagons are agent roles, with the role
+name on the first line. Amber nodes are human steps, gray boxes are
+automatic steps, and the green node is the goal.
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {
+%%{init: {"theme": "base", "flowchart": {"wrappingWidth": 340}, "themeVariables": {
   "fontFamily": "-apple-system, 'Segoe UI', sans-serif",
   "fontSize": "14px",
   "lineColor": "#94A3B8",
@@ -71,25 +71,25 @@ goal.
   "edgeLabelBackground": "#F8FAFC"
 }}}%%
 flowchart TD
-    idea["💡 Human sends a raw idea"]:::human
+    idea["🧑 Human<br/>sends a raw idea 💡"]:::human
 
     subgraph IP["1 · idea-pilot — is it worth building?"]
-        review["Blind value review<br/>3 business owners + UI/UX expert"]:::agent
-        debate["Design critic attacks<br/>weak arguments"]:::gate
+        review{{"🤖 srs‑engine · swedish‑linguist<br/>learning‑designer · ui‑ux‑expert<br/>blind value review"}}:::agent
+        debate{{"🤖 design‑critic<br/>attacks weak arguments"}}:::critic
         verdict{"Verdict"}:::gate
-        tickets["Staff engineer cuts tickets<br/>disjoint owners, parallel-safe"]:::agent
+        tickets{{"🤖 staff‑engineer<br/>cuts parallel-safe tickets"}}:::agent
     end
 
     subgraph TP["2 · ticket-pilot — build it"]
-        impl["Owner agent implements<br/>on a branch"]:::agent
-        rev["Adversarial review"]:::gate
-        ci["CI watch + repair"]:::agent
-        ready["Ready to merge"]:::agent
+        impl{{"🤖 owning agent<br/>implements on a branch"}}:::agent
+        rev{{"🤖 reviewer<br/>adversarial review"}}:::critic
+        ci["CI watch + repair"]:::step
+        ready["Ready to merge"]:::step
     end
 
     rejected(["Rejected"]):::stop
-    question["❓ One precise question<br/>for the human"]:::human
-    approve["✅ Human approves in the chat"]:::human
+    question["🧑 Human<br/>answers one precise question ❓"]:::human
+    approve["🧑 Human<br/>approves in the chat ✅"]:::human
     merged(["Merged"]):::done
 
     idea --> review --> debate
@@ -106,7 +106,9 @@ flowchart TD
     style TP fill:#F8FAFC,stroke:#CBD5E1
     classDef human fill:#FEF3C7,stroke:#D97706,color:#78350F
     classDef agent fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A
+    classDef critic fill:#FCE7F3,stroke:#DB2777,color:#831843
     classDef gate fill:#FCE7F3,stroke:#DB2777,color:#831843
+    classDef step fill:#F1F5F9,stroke:#94A3B8,color:#334155
     classDef done fill:#DCFCE7,stroke:#16A34A,color:#14532D
     classDef stop fill:#E2E8F0,stroke:#64748B,color:#334155
 ```
