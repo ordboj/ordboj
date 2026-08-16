@@ -4,6 +4,10 @@ node_modules
 package-lock.json
 src/components/ui
 
+# Vendored third-party skills (JuliusBrussee/caveman, AminBlg/SimpleEnglish);
+# kept byte-identical to upstream, not reformatted.
+.claude/skills
+
 # verbData.ts uses a deliberate one-object-per-line layout; qa's source-text
 # parser in verbData.test.ts matches `infinitive: "..."` and `grupp:` on the
 # same line. Prettier's multi-line object formatting breaks that parser.
