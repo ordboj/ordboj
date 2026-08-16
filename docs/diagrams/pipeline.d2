@@ -60,7 +60,15 @@ idea: "Human\nsends a raw idea 💡" {class: human}
 
 ip: "1 · idea-pilot — is it worth building?" {
   style: {fill: "#F8FAFC"; stroke: "#CBD5E1"; font-color: "#334155"; border-radius: 8}
-  review: "srs-engine · swedish-linguist\nlearning-designer · ui-ux-expert\n\nblind value review" {class: agent}
+  review: "blind value review" {
+    style: {fill: "#EFF6FF"; stroke: "#93C5FD"; font-color: "#1E3A8A"; border-radius: 8}
+    grid-columns: 2
+    grid-gap: 24
+    srs: "srs-engine" {class: agent}
+    swe: "swedish-linguist" {class: agent}
+    led: "learning-designer" {class: agent}
+    uxp: "ui-ux-expert" {class: agent}
+  }
   debate: "design-critic\n\nattacks weak arguments" {class: critic}
   verdict: "Verdict" {
     shape: diamond
