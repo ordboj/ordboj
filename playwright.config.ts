@@ -2,17 +2,29 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
-// Portability fallback, not an intended pin: a network-restricted sandbox
-// cannot `npx playwright install` a newer Chromium revision when the
-// installed @playwright/test package bumps its expected build id, and the
-// box may only have an older revision pre-provisioned under
-// PLAYWRIGHT_BROWSERS_PATH. Rather than every spec failing to launch a
-// browser at all, fall back to whatever chromium-<rev> build is actually on
-// disk there. On a normally-provisioned host (the version this
-// @playwright/test build expects is already installed) this resolves to
-// that same, correct build, so it changes nothing there — it only matters
-// when the exact expected revision is missing.
+// Portability fallback for one specific, named sandbox — NOT a general
+// browser-cache scan. `PLAYWRIGHT_BROWSERS_PATH` is the standard env var
+// real CI setups use for browser caching, so firing this on its mere
+// presence (the original version of this fallback did, per the #412
+// adversarial review's F2 finding) would let a stale or foreign browser
+// cache on a normal CI host silently pass off the wrong Chromium build as
+// the one @playwright/test actually expects — turning a loud, correct
+// "Executable doesn't exist… run playwright install" failure into a quiet
+// pass against unverified bytes. That is exactly the "never a global/
+// mismatched binary" failure mode the plan's own ticket-pilot integration
+// requirement 5 exists to prevent.
+//
+// Gated behind an explicit opt-in instead: `ORDBOJ_PW_CHROMIUM_FALLBACK=1`,
+// set only by whoever is running this suite on a box where `npx playwright
+// install` cannot reach the network (see docs/qa/e2e-test-plan.md's
+// "Sandbox portability fix" section for the one box this was written for).
+// Unset — the default, on every other host including real CI — this
+// resolves to `undefined` and `use.launchOptions` below is untouched, so
+// Playwright's own resolution and its own correct failure mode are exactly
+// what runs.
 function resolveLocalChromiumExecutable(): string | undefined {
+  if (process.env.ORDBOJ_PW_CHROMIUM_FALLBACK !== '1') return undefined;
+
   const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH;
   if (!browsersPath || !fs.existsSync(browsersPath)) return undefined;
   const revisions = fs
@@ -21,7 +33,18 @@ function resolveLocalChromiumExecutable(): string | undefined {
     .sort((a, b) => Number(b.split('-')[1]) - Number(a.split('-')[1]));
   for (const revision of revisions) {
     const candidate = path.join(browsersPath, revision, 'chrome-linux', 'chrome');
-    if (fs.existsSync(candidate)) return candidate;
+    if (fs.existsSync(candidate)) {
+      // Loud on purpose: this is a version-unverified substitution for
+      // whatever Chromium build @playwright/test actually expects, and a
+      // silent one is exactly what F2 flagged as the risk.
+      console.warn(
+        `\n[playwright.config.ts] ORDBOJ_PW_CHROMIUM_FALLBACK=1: launching ${candidate} ` +
+          `instead of the Chromium revision @playwright/test expects. This is a sandbox-only ` +
+          `escape hatch (no network access to \`playwright install\`), NOT a substitute for a ` +
+          `correctly provisioned browser — do not set this env var in CI.\n`,
+      );
+      return candidate;
+    }
   }
   return undefined;
 }

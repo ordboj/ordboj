@@ -30,7 +30,11 @@ Fixed:
 4. `buildLegacyV1Seed()` was added as a separate, unmistakably-named export
    — never the default `buildFullSeed` — and is the _only_ seed builder
    allowed to produce the legacy shape. Exactly one spec uses it:
-   `legacy-migration-boot.spec.ts` (catalog #12).
+   `legacy-migration-boot.spec.ts` (catalog #12). Its first review (the
+   adversarial review below, finding F1) caught that it initially produced
+   canonical- rather than positionally-keyed ids, which made the id re-key
+   migration branch an untested identity pass; fixed before this doc's
+   status went to "implemented".
 
 ## Final spec catalog
 
@@ -55,11 +59,11 @@ Fixed:
 
 ### P2 — pre-release gate only (not in routine smoke)
 
-| #   | Spec                             | Story                                               | Status                                                |
-| --- | -------------------------------- | --------------------------------------------------- | ----------------------------------------------------- |
-| 10  | `csp-violations.spec.ts`         | Production build doesn't violate its own CSP        | done (existing, switched to the shared error fixture) |
-| 11  | `malformed-storage-boot.spec.ts` | Corrupted localStorage doesn't white-screen the app | done                                                  |
-| 12  | `legacy-migration-boot.spec.ts`  | Pre-v3 bare-map install boots and migrates cleanly  | done (Phase 0 follow-through, `buildLegacyV1Seed`)    |
+| #   | Spec                             | Story                                                                       | Status                                                                          |
+| --- | -------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 10  | `csp-violations.spec.ts`         | Production build doesn't violate its own CSP                                | done (existing, switched to the shared error fixture)                           |
+| 11  | `malformed-storage-boot.spec.ts` | Corrupted localStorage doesn't white-screen the app                         | done                                                                            |
+| 12  | `legacy-migration-boot.spec.ts`  | Pre-v3 bare-map install boots and migrates cleanly, including the id re-key | done (Phase 0 follow-through, `buildLegacyV1Seed`; see "Adversarial review" F1) |
 
 **Cut entirely:** read-only-banner-on-newer-version store (v1 case 13). See
 "Contested points" below — resolved, cut stands.
@@ -124,76 +128,117 @@ Specs 10–12 run only at the pre-release gate.
 
 ## Ownership
 
-`CLAUDE.md`'s qa row now reads
-`*.test.ts(x), *.spec.ts, src/test/**, e2e/**, vitest.config.ts, playwright.config.ts`.
-`playwright.config.ts:3` and `vitest.config.ts`'s header comments read
+`CLAUDE.md`'s qa row reads
+`*.test.ts(x), *.spec.ts, src/test/**, e2e/**, vitest.config.ts, playwright.config.ts`
+(applied by the lead, human approval confirmed — see "Adversarial review" F4
+below). `playwright.config.ts` and `vitest.config.ts`'s header comments read
 "Owned by qa" instead of the stale "test-engineer" (a role that was never in
 CLAUDE.md's team table).
 
 ## Sandbox portability fix (found while measuring, not part of the original catalog)
 
 Two environment issues blocked every run on the measurement box and are
-fixed in `playwright.config.ts`, both guarded so they are no-ops on a
-normally provisioned host:
+fixed in `playwright.config.ts`:
 
 - **No IPv6 stack.** Vite's default dev/preview bind is dual-stack; a bare
   `::` bind fails with `EAFNOSUPPORT` on a host with no `/proc/net/if_inet6`.
-  Both webServer commands now pass `--host 127.0.0.1` explicitly, and
+  Both webServer commands pass `--host 127.0.0.1` explicitly, and
   `BASE_URL`/`PROD_BASE_URL` use the literal `127.0.0.1` instead of
-  `localhost`.
+  `localhost`. Harmless on every host class — no gate needed.
 - **Chromium revision mismatch, no network access to fetch a new one.** The
   installed `@playwright/test@1.62.1` expects Chromium build 1234; the
   measurement box only had 1194 pre-provisioned, and `npx playwright install`
   is blocked by egress policy (`cdn.playwright.dev` denied — reported, not
   worked around). `resolveLocalChromiumExecutable()` in `playwright.config.ts`
   falls back to whatever `chromium-<rev>` build actually exists under
-  `PLAYWRIGHT_BROWSERS_PATH` only when present; it changes nothing on a host
-  where the expected revision is already installed.
+  `PLAYWRIGHT_BROWSERS_PATH`. **Gated behind `ORDBOJ_PW_CHROMIUM_FALLBACK=1`**
+  (fixed per the adversarial review's F2 finding below) — unset by default,
+  including in real CI, where `PLAYWRIGHT_BROWSERS_PATH` is a normal env var
+  and firing on its mere presence would have silently accepted a
+  version-mismatched browser cache instead of failing loudly. Set the env
+  var only when actually running on this specific sandbox; it prints a
+  console warning naming the exact substitution whenever it fires.
 
 ## Measured run (issue #412, resolves staff Decision 4.5 — no longer an estimate)
 
 Environment: sandbox VM, `node_modules` installed via `npm ci`, Chromium
-1194 (see portability note above), `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`.
-
-```
-$ time npx playwright test --project=mobile-chrome
-Running 14 tests using 2 workers
-  14 passed (23.0s)
-
-real    0m24.039s
-user    0m19.939s
-sys     0m7.930s
-```
-
-That is specs 1–9 plus 11–12 (everything in the `mobile-chrome` project,
-i.e. everything except `csp-violations.spec.ts`) — 14 test cases across 12
-spec files, `workers: undefined` (defaults to CPU-count-based parallelism
-locally, not the CI-pinned 2).
-
-Full suite, both projects (adds the production `vite build` + `vite preview`
-webServer and `csp-violations.spec.ts`):
+1194 (see portability note above), `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`,
+`ORDBOJ_PW_CHROMIUM_FALLBACK=1` (sandbox-only, see above).
 
 ```
 $ time npx playwright test
 Running 15 tests using 2 workers
-  15 passed (25.7s)
+  15 passed (28.7s)
 
-real    0m26.612s
+real    0m29.868s
+user    0m26.121s
+sys     0m12.268s
 ```
 
-Both numbers land comfortably under the ≈5–6 minute target the unmeasured
-v2 draft estimated — real parallel wall-clock time, not the ≈4m05s serial
-estimate that draft carried forward from a smaller PR #409 run.
+That is the full suite, both projects (`mobile-chrome`, specs 1–9 and
+11–12, plus `csp-prod-build`'s `csp-violations.spec.ts`, #10) — 15 test
+cases across 12 spec files. `mobile-chrome` alone (`--project=mobile-chrome`,
+the routine ticket-pilot smoke-gate command) measured 14 passed in 23–24s
+across repeated runs on this box, `workers: undefined` (CPU-count-based
+parallelism locally, not the CI-pinned 2).
+
+Both land comfortably under the ≈5–6 minute target the unmeasured v2 draft
+estimated — real parallel wall-clock time, not the ≈4m05s serial estimate
+that draft carried forward from a smaller PR #409 run.
+
+## Adversarial review (design-critic, post-implementation)
+
+A second reviewer re-ran the suite independently against `git diff
+origin/main...HEAD` rather than trusting the pasted output, and returned
+REJECT with a narrow, bounded remediation scope (full report:
+`review-final.md` in the working scratchpad). Two findings required a code
+fix; both are applied and re-verified:
+
+- **F1 (blocker) — `buildLegacyV1Seed` didn't produce what a real pre-v3
+  install has on disk.** It returned `buildFullSeed`'s bare map verbatim,
+  which is keyed by **canonical** (infinitive) ids. A real pre-#53 store was
+  keyed **positionally** (`1-presens`, not `vara-presens`) —
+  `useSrsProgress.ts`'s `LEGACY_CONJUGATION_KEY` regex only matches
+  `^\d+-<form>$`, and `migrateConjugationKeys` exists specifically to re-key
+  that onto today's canonical id on load. With infinitive keys the regex
+  never matched, so the migration ran as a silent identity pass — the
+  riskiest branch of the legacy migration (re-keying learner data across the
+  id-scheme change) had zero real coverage while the spec's own comments and
+  this doc claimed otherwise. Fixed: `buildLegacyV1Seed` now builds genuine
+  positional keys (`e2e/support/seed.ts`'s `positionalItemId` /
+  `getVerbPosition`), and `legacy-migration-boot.spec.ts` asserts three
+  things the old version didn't: the answered item lands under its canonical
+  id (`vara-presens`) in the migrated v3 store, the pre-v3 backup preserves
+  the _positional_ key verbatim, and (the review's suggested bonus, included)
+  a second seeded item's ease factor is visibly rebased from 1.3 to the 1.8
+  floor by the one-time legacy rebase.
+- **F2 (major) — the Chromium fallback fired on any host with
+  `PLAYWRIGHT_BROWSERS_PATH` set.** That env var is the standard mechanism
+  real CI uses for browser caching, not a sandbox-specific signal; picking
+  the highest `chromium-<rev>` on disk without checking it against what
+  `@playwright/test` actually expects would silently accept a
+  version-mismatched build on a normal CI host instead of failing loudly.
+  Fixed: gated behind `ORDBOJ_PW_CHROMIUM_FALLBACK=1` (opt-in, sandbox-only,
+  never set in CI), with a console warning naming the exact substituted
+  binary whenever it fires. Re-verified both ways: unset, the suite fails
+  with Playwright's own correct "Executable doesn't exist… run playwright
+  install" error; set, all 15 specs pass.
+- **F3 (major) — the ticket-pilot smoke-stage acceptance criterion.**
+  Resolved by the lead directly (`.claude/workflows/ticket-pilot.js`, commit
+  `e4402a4`): the ship stage now runs the `mobile-chrome` smoke suite after
+  CI goes green, with a stated-reason skip (not a silent pass) on a box that
+  cannot run browsers.
+- **F4/F5 (minor, no code change required).** F4 (CLAUDE.md ownership
+  approval) — the lead applied the row edit directly (commit `cc99e4a`),
+  closing the "asserted, not verifiable" gap this doc flagged. F5
+  (`/Refused to/i` broader than CSP in `errorCollector.ts`) — accepted as a
+  watch item, not a defect; no pattern-list change made.
 
 ## Contested points — resolved
 
-1. **CLAUDE.md ownership extension.** Resolved: human approval for the
-   qa ownership-row extension (`e2e/**`, `*.spec.ts`, `playwright.config.ts`)
-   was communicated for this ticket. Recorded here for the paper trail; the
-   actual `CLAUDE.md` edit and PR review are the lead's to make/verify, per
-   this project's own rule that no agent message is self-authorizing consent
-   for a `CLAUDE.md`/permissions change — this document records the
-   _proposal_ and its resolution status, not the authorization itself.
+1. **CLAUDE.md ownership extension.** Resolved: the lead applied the row
+   edit directly (commit `cc99e4a`, human approval confirmed) — see
+   "Adversarial review" F4 above.
 2. **Legacy-migration fixture (`buildLegacyV1Seed` + spec #12).** Resolved:
    built as originally proposed (Phase 0), and flagged here for a PR-review
    pass by staff-engineer / design-critic specifically because it is new

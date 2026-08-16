@@ -94,13 +94,49 @@ export function toV3Envelope(items: Record<string, SrsState>): string {
   return JSON.stringify({ version: CURRENT_STORAGE_VERSION, items: stored });
 }
 
+// Anchors the `<n>-<form>` positional key shape one place, mirroring
+// useSrsProgress.ts's own `LEGACY_CONJUGATION_KEY` regex
+// (`^(\d+)-(presens|preteritum|supinum|imperativ)$`). Duplicated rather than
+// imported for the same reason the storage keys above are duplicated: this
+// seeds the on-disk contract a real old build wrote, not an internal that
+// happens to describe it.
+export function positionalItemId(position: number, form: Form): string {
+  return `${position}-${form}`;
+}
+
+// 1-based VERB_DATA position for an infinitive, the same lookup
+// `buildLegacyV1Seed` does internally — exposed so a spec can compute the
+// exact positional key it should expect on disk (e.g. for `vara`) without
+// hardcoding a magic number that would silently go stale if VERB_DATA is
+// ever reordered.
+export async function getVerbPosition(infinitive: string): Promise<number> {
+  const verbs = await getVerbs();
+  const position = verbs.findIndex((verb) => verb.infinitive === infinitive) + 1;
+  if (position <= 0) {
+    throw new Error(`getVerbPosition: "${infinitive}" is not in VERB_DATA`);
+  }
+  return position;
+}
+
 // Deliberate, opt-in exception to toV3Envelope. Builds the pre-v3 on-disk
 // shape: a bare `Record<string, SrsState>`, no `{ version, items }`
-// envelope, `itemId` duplicated inside every value — exactly what every
-// real install still on an old build has on disk, and exactly the shape
-// useSrsProgress.ts's legacy migration path (rebaseLegacyEase,
-// migrateConjugationKeys, the one-shot pre-v3 backup write) exists to
-// upgrade.
+// envelope, `itemId` duplicated inside every value — AND keyed
+// *positionally* (`1-presens`, `12-imperativ`, ...; `n` is 1-based
+// VERB_DATA order), not by infinitive. Positional keys are what every real
+// pre-#53 install actually has on disk: `useSrsProgress.ts`'s
+// `LEGACY_CONJUGATION_KEY` regex only ever matches `^\d+-<form>$`, and
+// `migrateConjugationKeys` exists specifically to re-key `1-presens` onto
+// today's canonical `vara-presens` on load. A seed keyed by infinitive
+// would make that regex never match — the identity pass every earlier
+// version of this helper silently produced — and leave the riskiest branch
+// of the legacy migration (re-keying learner data across the id-scheme
+// change) with zero E2E coverage while still claiming to exercise it. Fixed
+// per the F1 finding in the #412 adversarial review.
+//
+// `overrides` is still keyed by the *canonical* id (e.g. `'vara-presens'`,
+// matching `buildFullSeed`'s own contract and error messages) for a
+// caller's convenience; this function does the position lookup and rekeys
+// the whole map, including the overridden entries, before returning.
 //
 // Named unmistakably and kept separate from buildFullSeed on purpose: this
 // is the *only* seed builder allowed to produce the legacy shape, so the
@@ -111,7 +147,32 @@ export function toV3Envelope(items: Record<string, SrsState>): string {
 export async function buildLegacyV1Seed(
   overrides: Record<string, Partial<SrsState>> = {},
 ): Promise<Record<string, SrsState>> {
-  return buildFullSeed(overrides);
+  const canonical = await buildFullSeed(overrides);
+  const verbs = await getVerbs();
+  const positionByInfinitive = new Map(verbs.map((verb, index) => [verb.infinitive, index + 1]));
+
+  const CANONICAL_ID = /^(.+)-(presens|preteritum|supinum|imperativ)$/;
+  const positional: Record<string, SrsState> = {};
+  for (const [canonicalId, state] of Object.entries(canonical)) {
+    const match = CANONICAL_ID.exec(canonicalId);
+    if (!match) {
+      // Not a conjugation item this helper builds (only buildFullSeed's own
+      // `${verb.id}-${form}` shape reaches here) — keep verbatim rather than
+      // silently dropping unrecognized state.
+      positional[canonicalId] = state;
+      continue;
+    }
+    const [, infinitive, form] = match as [string, string, Form];
+    const position = positionByInfinitive.get(infinitive);
+    if (position === undefined) {
+      positional[canonicalId] = state;
+      continue;
+    }
+    const positionalId = positionalItemId(position, form);
+    positional[positionalId] = { ...state, itemId: positionalId };
+  }
+
+  return positional;
 }
 
 // Particle-mode seed: pins exactly one particle-verb cloze item
