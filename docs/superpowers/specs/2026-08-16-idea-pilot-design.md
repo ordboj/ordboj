@@ -14,14 +14,15 @@ scoped tickets. `idea-pilot` makes this path one repeatable workflow.
 
 ## Decisions (agreed with the human)
 
-1. **Value comes first.** The three business owners (`srs-engine`,
-   `swedish-linguist`, `learning-designer`) judge learner value before anyone
-   discusses requirements or implementation. An idea with no value stops
-   there.
-2. **The team debates.** The owners assess blind and in parallel. The
-   `design-critic` then attacks their reasoning. Challenged owners get one
-   rebuttal round. The debate is bounded: one critique, at most one rebuttal
-   per owner.
+1. **Value comes first.** Four assessors judge value before anyone
+   discusses requirements or implementation: the three business owners
+   (`srs-engine`, `swedish-linguist`, `learning-designer`) judge learner
+   value, and the `ui-ux-expert` judges experience value (flow, mobile
+   ergonomics, cognitive load). An idea with no value stops there.
+2. **The team debates.** The assessors assess blind and in parallel. The
+   `design-critic` then attacks their reasoning. Challenged assessors get
+   one rebuttal round. The debate is bounded: one critique, at most one
+   rebuttal per assessor.
 3. **Fable rules.** A Fable agent acts as the product owner's delegate and
    speaks last: `pursue` with a settled scope, `reject` with a reason, or
    `needs-human` with exactly one precise question. Rejection is a normal
@@ -44,7 +45,7 @@ scoped tickets. `idea-pilot` makes this path one repeatable workflow.
 | Phase       | Who                         | Output                                     |
 | ----------- | --------------------------- | ------------------------------------------ |
 | Intake      | 1 agent                     | distinct ideas, deduped against the board  |
-| Value       | 3 business owners, blind    | worth + rationale + concerns per owner     |
+| Value       | 3 owners + ui-ux, blind     | worth + rationale + concerns per assessor  |
 | Debate      | design-critic (+ rebuttals) | challenges, contested flag, narrowed scope |
 | Verdict     | Fable as product owner      | pursue / reject / needs-human              |
 | Feasibility | staff-engineer              | ticket breakdown with batches and edges    |

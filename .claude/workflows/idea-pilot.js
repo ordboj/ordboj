@@ -1,9 +1,9 @@
 export const meta = {
   name: 'idea-pilot',
   description:
-    'Idea intake pipeline: intake → blind value review by the three business owners → adversarial debate (design-critic) with one bounded rebuttal round → Fable product verdict → staff-engineer feasibility + parallel-safe ticket breakdown → epic + sub-tickets on the GitHub board → handoff where the LEAD asks the human whether to run ticket-pilot on the new tickets',
+    'Idea intake pipeline: intake → blind value review by the three business owners + ui-ux-expert → adversarial debate (design-critic) with one bounded rebuttal round → Fable product verdict → staff-engineer feasibility + parallel-safe ticket breakdown → epic + sub-tickets on the GitHub board → handoff where the LEAD asks the human whether to run ticket-pilot on the new tickets',
   whenToUse:
-    'Turn raw feature ideas / intentions ("should we add X?", "what if Y worked like Z?") into a settled verdict and, when worth it, a ticketed epic on the Ordböj board. args: { ideas: ["free-form note", ...] } — any language, one note per idea, or one string that mixes several ideas (intake splits them). Value comes FIRST: the three business owners (srs-engine, swedish-linguist, learning-designer) judge whether the idea adds learner value before anyone discusses requirements. design-critic attacks weak reasoning; owners get one rebuttal round when contested. Fable gives the verdict per idea: pursue, reject, or needs-human with one precise question. Pursued ideas get a staff-engineer feasibility pass that splits work into tickets with disjoint owners/files so ticket-pilot can run them in parallel; dependent tickets get explicit dependsOn ordering. The workflow creates the epic and sub-issues on the board (Todo) and STOPS there — it never implements. The lead then asks the human whether to launch ticket-pilot with the returned runPlan batches. Roughly 7–10 agents per idea; pass many ideas knowingly.',
+    'Turn raw feature ideas / intentions ("should we add X?", "what if Y worked like Z?") into a settled verdict and, when worth it, a ticketed epic on the Ordböj board. args: { ideas: ["free-form note", ...] } — any language, one note per idea, or one string that mixes several ideas (intake splits them). Value comes FIRST: the three business owners (srs-engine, swedish-linguist, learning-designer) plus the ui-ux-expert judge whether the idea adds learner and experience value before anyone discusses requirements. design-critic attacks weak reasoning; owners get one rebuttal round when contested. Fable gives the verdict per idea: pursue, reject, or needs-human with one precise question. Pursued ideas get a staff-engineer feasibility pass that splits work into tickets with disjoint owners/files so ticket-pilot can run them in parallel; dependent tickets get explicit dependsOn ordering. The workflow creates the epic and sub-issues on the board (Todo) and STOPS there — it never implements. The lead then asks the human whether to launch ticket-pilot with the returned runPlan batches. Roughly 8–12 agents per idea; pass many ideas knowingly.',
   phases: [
     {
       title: 'Intake',
@@ -13,7 +13,7 @@ export const meta = {
     {
       title: 'Value',
       detail:
-        'three business owners judge learner value blind and in parallel — value first, no solution detail yet',
+        'three business owners + ui-ux-expert judge learner and experience value blind and in parallel — value first, no solution detail yet',
     },
     {
       title: 'Debate',
@@ -123,7 +123,8 @@ const VALUE_SCHEMA = {
     concerns: {
       type: 'array',
       items: { type: 'string' },
-      description: 'risks or costs this role sees (pedagogy, data correctness, scheduling)',
+      description:
+        'risks or costs this role sees (pedagogy, data correctness, scheduling, usability)',
     },
     requirements: {
       type: 'array',
@@ -155,7 +156,7 @@ const CRITIQUE_SCHEMA = {
         properties: {
           role: {
             type: 'string',
-            enum: ['srs-engine', 'swedish-linguist', 'learning-designer'],
+            enum: ['srs-engine', 'swedish-linguist', 'learning-designer', 'ui-ux-expert'],
           },
           point: { type: 'string', description: "one concrete attack on that role's reasoning" },
         },
@@ -327,7 +328,7 @@ log(`intake: ${fresh.length} fresh idea(s), ${tracked.length} already tracked`);
 
 // ---------------------------------------------------------------- per-idea pipeline
 
-const OWNERS = ['srs-engine', 'swedish-linguist', 'learning-designer'];
+const ASSESSORS = ['srs-engine', 'swedish-linguist', 'learning-designer', 'ui-ux-expert'];
 
 function ideaBlock(idea) {
   return `Idea: "${idea.title}"
@@ -335,20 +336,21 @@ Summary: ${idea.summary}
 Human's original wording (verbatim): ${idea.original}`;
 }
 
-// Stage 1 — blind value review. The three business owners never see each
-// other's assessment; independent positions make the debate honest.
+// Stage 1 — blind value review. The three business owners plus the ui-ux
+// expert never see each other's assessment; independent positions make the
+// debate honest.
 function runValue(idea) {
   return parallel(
-    OWNERS.map(
+    ASSESSORS.map(
       (role) => () =>
         agent(
-          `You are the ${role} on the Ordböj team, one of the three business owners. A feature idea arrived. Judge its VALUE from your domain before anyone discusses implementation.
+          `You are the ${role} on the Ordböj team, one of the four value assessors (the three business owners plus the UI/UX expert). A feature idea arrived. Judge its VALUE from your domain before anyone discusses implementation.
 
 ${ideaBlock(idea)}
 
 Ground rules:
 - Value first. The only question that matters now: does this make the app teach Swedish verbs better, for real learners, from YOUR domain's point of view? Implementation cost is a concern to list, not the verdict.
-- Read the app before judging: CLAUDE.md, then the source files your role owns. Base the judgement on how the app works today.
+- Read the app before judging: CLAUDE.md, then the parts of the app your role covers — business owners read the source files they own; the UI/UX expert reads the practice-flow pages and components and judges the experience impact (flow, mobile ergonomics, cognitive load). Base the judgement on how the app works today.
 - Be willing to say 'none'. A confidently useless feature wastes the team; do not inflate worth to be agreeable.
 - List requirements ONLY when worth is high or medium, and state them as outcomes ("the learner must ..."), never as implementation ("add a field to ...").
 - openQuestions: only facts you genuinely cannot decide yourself.
@@ -370,7 +372,7 @@ Return only the structured result.`,
 // critique, at most one rebuttal per owner, no second round.
 async function runDebate(idea, assessments) {
   const critique = await agent(
-    `You are the adversarial design critic for Ordböj. Three business owners assessed a feature idea. Attack their reasoning before the product verdict.
+    `You are the adversarial design critic for Ordböj. Four assessors (the three business owners and the UI/UX expert) assessed a feature idea. Attack their reasoning before the product verdict.
 
 ${ideaBlock(idea)}
 
@@ -558,9 +560,9 @@ const results = await pipeline(
   fresh,
   async (idea) => {
     const assessments = await runValue(idea);
-    if (assessments.length < OWNERS.length)
+    if (assessments.length < ASSESSORS.length)
       log(
-        `"${idea.title}": only ${assessments.length}/${OWNERS.length} value assessments returned`,
+        `"${idea.title}": only ${assessments.length}/${ASSESSORS.length} value assessments returned`,
       );
     if (!assessments.length)
       return { idea, status: 'failed', detail: 'no value assessment returned' };
