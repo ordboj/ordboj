@@ -109,6 +109,14 @@ export const VERB_DATA: VerbData[] = [
   // "sa", and because P5 sizes the hint blanks to the primary.
   // #43/C5 category: free variant (same sense, register difference only).
   { cefr: "A1", infinitive: "lägga", imperativ: "lägg", presens: "lägger", preteritum: "la", supinum: "lagt", grupp: "4", alternates: { preteritum: ["lade"] } },
+  // #124 full-table audit (2026-08-13): a scan of every row found exactly
+  // two rows with an empty imperativ and no noNaturalImperativ flag --
+  // "te sig" and "anse". Each row carries its own NEEDS HUMAN CHECK comment;
+  // "te sig" sits earlier in this table. No other row needs a fix.
+  // verbData.test.ts pins this set, so a new unflagged empty row fails CI.
+  // "anse" stays unfilled: the candidate phrase "anse dig varnad" is not
+  // confidently attested, and CLAUDE.md prefers missing Swedish over wrong
+  // Swedish. The human ruling is still open.
   { cefr: "A1", infinitive: "anse", imperativ: "", presens: "anser", preteritum: "ansåg", supinum: "ansett", grupp: "4" }, // NEEDS HUMAN CHECK: formal stative "to deem/consider", prefixed "se" (anser/ansåg/ansett), so the form would be "anse". Morphology is certain, but usage is restricted to fixed formal frames ("anse dig varnad"); whether it is teachable as a bare imperativ needs a human ruling — not guessed
   { cefr: "A1", infinitive: "öva", imperativ: "öva", presens: "övar", preteritum: "övade", supinum: "övat", grupp: "1" },
   { cefr: "A1", infinitive: "handla", imperativ: "handla", presens: "handlar", preteritum: "handlade", supinum: "handlat", grupp: "1" },
