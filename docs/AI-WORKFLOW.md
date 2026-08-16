@@ -75,7 +75,7 @@ flowchart TD
 
     subgraph IP["1 · idea-pilot — is it worth building?"]
         review["Blind value review<br/>3 business owners + UI/UX expert"]:::agent
-        debate["Design critic debate<br/>one rebuttal round"]:::gate
+        debate["Design critic attacks<br/>weak arguments"]:::gate
         verdict{"Verdict"}:::gate
         tickets["Staff engineer cuts tickets<br/>disjoint owners, parallel-safe"]:::agent
     end
@@ -92,7 +92,9 @@ flowchart TD
     approve["✅ Human approves in the chat"]:::human
     merged(["Merged"]):::done
 
-    idea --> review --> debate --> verdict
+    idea --> review --> debate
+    debate -- "contested, one rebuttal round" --> review
+    debate --> verdict
     verdict -- "pursue" --> tickets
     verdict -- "reject" --> rejected
     verdict -- "needs a human" --> question
