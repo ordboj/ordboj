@@ -74,14 +74,14 @@ cost of too-early is the thing R2 already paid for.
 
 **`anse` → B1.** Formal stative "to consider/deem". The everyday verb for
 holding an opinion, `tycka`, is in the table at A1 (`verbData.ts:91`), so R2
-holds. `anse` sits at position 41 of the ~1537-row frequency queue: it is
-core written prose — `anses vara` is in every newspaper — so it takes the
+holds. `anse` sits at rank 40 of the ~1537-row frequency queue (candidates.csv line
+41): it is core written prose — `anses vara` is in every newspaper — so it takes the
 B1 lane, not B2. A learner who reaches B1 reading meets it immediately;
 a beginner drilling `anser/ansåg/ansett` before knowing `tycka` well is
 practising register they cannot yet place.
 
 **`finna` → B1.** Formal counterpart of `hitta` (A1, `verbData.ts:160`), so
-R2 holds. Position 11 in the queue — among the most frequent verbs in
+R2 holds. Rank 10 in the queue (candidates.csv line 11) — among the most frequent verbs in
 written Swedish — which is precisely the frequency-vs-register trap: the
 count is inflated by formal prose and fixed phrases, while spoken beginner
 Swedish uses `hitta`. Core-prose frequency puts it in the B1 lane.
