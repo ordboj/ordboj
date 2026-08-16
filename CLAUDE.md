@@ -101,6 +101,14 @@ Done.
   Never pass `run_in_background: false` for these agents. The lead keeps the
   main chat responsive, dispatches work, and reports results when the task
   notification arrives.
+- **Raw feature ideas go through `idea-pilot`.** When the human sends idea or
+  intention notes ("should we add X?", "what if Y worked like Z?"), the lead
+  launches the `idea-pilot` workflow (`.claude/workflows/idea-pilot.js`) with
+  the notes as `args.ideas` instead of an ad-hoc discussion. The workflow
+  ends at the ticketed epic; the lead then asks the human whether to run
+  `ticket-pilot` with the returned run plan. Exceptions: direct bug reports,
+  questions, and tasks the human already scoped — those do not need the
+  pipeline.
 
 ## Known issues to keep in mind
 
