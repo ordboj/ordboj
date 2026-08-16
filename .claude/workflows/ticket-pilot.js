@@ -41,7 +41,7 @@ export const meta = {
     {
       title: 'Ship',
       detail:
-        'update branch from main, poll CI; CI-red routes back to remediation once; on green return ready-to-merge — the lead merges and updates the board',
+        'update branch from main, poll CI, run the local E2E smoke gate (playwright mobile-chrome); CI-red or smoke-red routes back to remediation once; on green return ready-to-merge — the lead merges and updates the board',
     },
   ],
 };
@@ -620,9 +620,13 @@ gh label create needs-human --repo ${REPO} --color D93F0B --description "agent p
    If no checks appear at all: trigger CI once with an empty commit. Create a fresh worktree, run git checkout -b tmp2 origin/<branch>, then git commit --allow-empty -m "ci: trigger", then git push origin HEAD:<branch>. Poll again. If checks still do not appear: comment, add needs-human to the PR and the issue, and return 'parked'.
 4. If CI is red: read the failing job with gh run view --log-failed. Do not park. Do not edit code. Return status 'ci-red' and put the decisive failing lines in detail. The pipeline routes the failure to a remediation agent.
 5. If CI is green: check that the concluded checks ran on the current head. Compare with headRefOid. Checks from an older head do not count. Poll until the checks of the current head conclude. Do NOT merge.
-6. When the current head is green:
+6. E2E smoke gate (runs after CI is green, before 'ready'). In a fresh worktree checked out at the PR head: run npm ci if node_modules is absent, then run npx playwright test --project=mobile-chrome. Requirements: use the LOCAL Playwright install via npx, never a global binary; the dev server binds port 4173 with strictPort, so make sure no other server holds that port (kill your own leftover servers only). Budget: the suite takes well under 5 minutes; give the command a 10-minute timeout.
+   - If the smoke suite passes: continue to step 7.
+   - If it fails: capture the failing spec names and the decisive error lines. Do not edit code. Do not park. Return status 'ci-red' with those lines in detail — the pipeline routes it to remediation exactly like a red CI check.
+   - If the suite cannot run at all in this environment (browser missing, install blocked): do NOT fail the ticket for that. Note "smoke gate skipped: <reason>" in detail and continue to step 7 — CI remains the authoritative gate.
+7. When the current head is green:
    - Remove stale park labels. Ignore errors: gh pr edit ${r.prNumber} --repo ${REPO} --remove-label needs-human ; gh issue edit ${n} --repo ${REPO} --remove-label needs-human
-7. Return 'ready' with a one-line detail that names the green head SHA. The lead merges, closes issue #${n}, and moves the board item to Done.
+8. Return 'ready' with a one-line detail that names the green head SHA and states the smoke-gate outcome (passed / skipped: <reason>). The lead merges, closes issue #${n}, and moves the board item to Done.
 Do not edit application source. Do not weaken tests.
 When you comment on a PR or issue: keep the comment at most 3 sentences. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.`,
     {

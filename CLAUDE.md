@@ -35,7 +35,7 @@ instead; the lead routes it.
 | `staff-engineer`    | `index.html`, `src/main.tsx`, `src/App.tsx`, `tsconfig*.json`, `eslint.config.js`, `src/lib/utils.ts`                                                            |
 | `devops`            | `vite.config.ts`, `postcss.config.js`, `package.json`, `.github/**`, PWA/manifest/service worker, deploy config                                                  |
 | `frontend-expert`   | `src/pages/**`, `src/components/*.tsx`, `src/hooks/useSettings.ts`, `use-mobile.tsx`, `use-toast.ts`, `src/lib/speech.ts`, `tailwind.config.ts`, `src/index.css` |
-| `qa`                | `*.test.ts(x)`, `src/test/**`, `vitest.config.ts`                                                                                                                |
+| `qa`                | `*.test.ts(x)`, `*.spec.ts`, `src/test/**`, `e2e/**`, `vitest.config.ts`, `playwright.config.ts`                                                                 |
 | `learning-designer` | `docs/learning/**` — decision notes only, no production code                                                                                                     |
 | `product-manager`   | `docs/product/**` — specs and decisions only, no production code                                                                                                 |
 

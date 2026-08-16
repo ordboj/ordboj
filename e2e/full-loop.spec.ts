@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test';
-import { buildSingleDueSeed, SRS_STORAGE_KEY } from './support/seed';
+import { test, expect } from './support/errorCollector';
+import { buildSingleDueSeed, toV3Envelope, SRS_STORAGE_KEY } from './support/seed';
 
 // Full loop: answer a card -> Progress reflects the review.
 //
 // Seeded to exactly one due item so the assertion doesn't depend on which
 // card the shuffle serves first, and sidesteps the known queue-desync bug
-// (#15, see queue-desync-bug-15.spec.ts) which only triggers with 2+ due
+// (#103, see queue-desync-bug-103.spec.ts) which only triggers with 2+ due
 // items in the same session.
 const ITEM_ID = 'vara-presens'; // VERB_DATA[0] = vara, presens = "är"
 const VERB = 'vara';
@@ -19,7 +19,7 @@ test.describe('full loop: practice -> progress', () => {
     const seed = await buildSingleDueSeed(ITEM_ID);
     await context.addInitScript(
       ([key, value]) => window.localStorage.setItem(key, value),
-      [SRS_STORAGE_KEY, JSON.stringify(seed)],
+      [SRS_STORAGE_KEY, toV3Envelope(seed)],
     );
 
     await page.goto('/');

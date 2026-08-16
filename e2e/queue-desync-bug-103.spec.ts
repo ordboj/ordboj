@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { buildFullSeed, SRS_STORAGE_KEY } from './support/seed';
+import { test, expect } from './support/errorCollector';
+import { buildFullSeed, toV3Envelope, SRS_STORAGE_KEY } from './support/seed';
 
 // Regression #103: the practice queue used to reset/reshuffle after every
 // answer.
@@ -31,7 +31,7 @@ test.describe('regression #103: queue no longer desyncs after answering', () => 
     );
     await context.addInitScript(
       ([key, value]) => window.localStorage.setItem(key, value),
-      [SRS_STORAGE_KEY, JSON.stringify(seed)],
+      [SRS_STORAGE_KEY, toV3Envelope(seed)],
     );
 
     await page.goto('/practice');

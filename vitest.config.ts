@@ -2,8 +2,9 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 
-// Separate from vite.config.ts (per test-engineer ownership boundary), but
-// mirrors its resolve.alias so imports behave identically in tests and app.
+// Separate from vite.config.ts (per qa ownership boundary — see CLAUDE.md),
+// but mirrors its resolve.alias so imports behave identically in tests and
+// app.
 export default defineConfig({
   plugins: [react()],
   resolve: {
