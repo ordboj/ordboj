@@ -39,7 +39,6 @@ export interface ErrorCollectorFixtures {
 }
 
 export const test = base.extend<ErrorCollectorFixtures>({
-   
   errorCollectorMatches: [
     async ({ page }, use) => {
       const matches: string[] = [];
