@@ -1008,9 +1008,13 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
   // the comparison logic (array equality of an ordered id list) was checked
   // against a deliberately reordered fixture outside this suite to confirm
   // it is not a tautology.
-  it('AC8: VERB_DATA has exactly the pinned 68 rows, in the pinned order', () => {
-    expect(VERB_DATA).toHaveLength(68);
-    expect(VERB_DATA.map((v) => v.infinitive)).toEqual([
+  // Issue #415 appended 903 verified rows after the pinned 68 (byte-identical,
+  // see verbData.orderPin.test.ts), so the total grew from 68 to 971. The
+  // original 68-row pinned order this test protects is unchanged and still
+  // checked below against the first 68 entries.
+  it('AC8: VERB_DATA has exactly the pinned 971 rows, with the original 68 still first and in the pinned order', () => {
+    expect(VERB_DATA).toHaveLength(971);
+    expect(VERB_DATA.slice(0, 68).map((v) => v.infinitive)).toEqual([
       'vara',
       'ha',
       'kunna',
@@ -1295,10 +1299,15 @@ describe('issue #369 - top-12 base verbs for particle-verb unblocking (PR #382)'
     },
   );
 
-  it('adds VERB_DATA.length === 56 + 12, with the last 12 infinitives equal to EXPECTED_NEW_ROWS in order', () => {
-    expect(VERB_DATA).toHaveLength(56 + 12);
-    const lastTwelve = VERB_DATA.slice(-12).map((v) => v.infinitive);
-    expect(lastTwelve).toEqual(EXPECTED_NEW_ROWS.map((row) => row.infinitive));
+  // Issue #415 appended 903 more verified rows after these 12 (byte-identical
+  // up through the original 68, see verbData.orderPin.test.ts), so these 12
+  // are no longer the *last* 12 rows in VERB_DATA -- they are still rows
+  // 56-67 (0-indexed), the same position PR #382 put them in, with the 903
+  // new rows appended after index 67.
+  it('adds VERB_DATA.length === 56 + 12 + 903, with rows 56-67 equal to EXPECTED_NEW_ROWS in order', () => {
+    expect(VERB_DATA).toHaveLength(56 + 12 + 903);
+    const rows56to67 = VERB_DATA.slice(56, 68).map((v) => v.infinitive);
+    expect(rows56to67).toEqual(EXPECTED_NEW_ROWS.map((row) => row.infinitive));
   });
 
   it('assigns none of the 12 new rows an `alternates` field, and only `dra` a `note` field for its archaic variant', () => {
