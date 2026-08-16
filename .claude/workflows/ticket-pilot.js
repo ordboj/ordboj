@@ -1,9 +1,9 @@
 export const meta = {
   name: 'ticket-pilot',
   description:
-    'Per-ticket pipeline: triage → implement (or adopt existing open PR) → adversarial review → bounded remediation loop → Fable owner-gate for risky/contested merges → CI watch with remediation retry → ready-to-merge handoff; the LEAD merges with the human approval from the chat, then closes issues and moves the board. Park only when the owner-gate cannot decide',
+    'Per-ticket pipeline: triage → implement (or adopt existing open PR) → adversarial review → bounded remediation loop → Fable owner-gate for risky/contested merges → CI watch with remediation retry → ready-to-merge handoff; the LEAD merges with the human approval from the chat, then closes issues and sets the Linear issue to Done. Park only when the owner-gate cannot decide',
   whenToUse:
-    'Run Ordböj board tickets autonomously. args: { tickets: [16, 18, 28] } — GitHub issue numbers in ordboj/ordboj. Re-running a ticket that already has an open PR ADOPTS that PR (remediate → merge) instead of opening a duplicate. "Decide/Spec/Define/Research" tickets produce a merged decision doc, written by Fable acting as product owner. Review rejections get up to 2 remediation rounds on the same branch before anyone considers parking. Risky classes (localStorage schema, verb-data, major bump, cross-owner) are decided by the Fable owner-gate — clear with rationale or park with one precise question — never parked unconditionally. Ship agents never run gh pr merge: a subagent cannot prove human approval to the safety layer, so they return status "ready" and the lead session performs every merge itself (update-branch, merge --squash, close issue, board to Done) under the human approval given in the conversation.',
+    'Run Ordböj backlog tickets autonomously. args: { tickets: [16, 18, 28] } — GitHub issue numbers in ordboj/ordboj. Re-running a ticket that already has an open PR ADOPTS that PR (remediate → merge) instead of opening a duplicate. "Decide/Spec/Define/Research" tickets produce a merged decision doc, written by Fable acting as product owner. Review rejections get up to 2 remediation rounds on the same branch before anyone considers parking. Risky classes (localStorage schema, verb-data, major bump, cross-owner) are decided by the Fable owner-gate — clear with rationale or park with one precise question — never parked unconditionally. Ship agents never run gh pr merge: a subagent cannot prove human approval to the safety layer, so they return status "ready" and the lead session performs every merge itself (update-branch, merge --squash, close issue, Linear issue to Done) under the human approval given in the conversation.',
   phases: [
     {
       title: 'Triage',
@@ -41,7 +41,7 @@ export const meta = {
     {
       title: 'Ship',
       detail:
-        'update branch from main, poll CI; CI-red routes back to remediation once; on green return ready-to-merge — the lead merges and updates the board',
+        'update branch from main, poll CI; CI-red routes back to remediation once; on green return ready-to-merge — the lead merges and updates Linear',
     },
   ],
 };
@@ -622,7 +622,7 @@ gh label create needs-human --repo ${REPO} --color D93F0B --description "agent p
 5. If CI is green: check that the concluded checks ran on the current head. Compare with headRefOid. Checks from an older head do not count. Poll until the checks of the current head conclude. Do NOT merge.
 6. When the current head is green:
    - Remove stale park labels. Ignore errors: gh pr edit ${r.prNumber} --repo ${REPO} --remove-label needs-human ; gh issue edit ${n} --repo ${REPO} --remove-label needs-human
-7. Return 'ready' with a one-line detail that names the green head SHA. The lead merges, closes issue #${n}, and moves the board item to Done.
+7. Return 'ready' with a one-line detail that names the green head SHA. The lead merges, closes issue #${n}, and sets the matching Linear issue to Done.
 Do not edit application source. Do not weaken tests.
 When you comment on a PR or issue: keep the comment at most 3 sentences. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.`,
     {
@@ -881,6 +881,7 @@ log(
 // LEAD: for every 'ready' result, in list order: confirm the human's merge
 // approval from the conversation, then gh pr update-branch, wait for green CI
 // on the new head, gh pr merge --squash --delete-branch, close the issue, and
-// move the board item to Done. Re-update later ready branches after each
-// merge, since main moves under them.
+// set the matching Linear issue (search by title or "Migrated from" link) to
+// Done. Re-update later ready branches after each merge, since main moves
+// under them.
 return summary;
