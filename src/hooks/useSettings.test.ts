@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useSettings, SETTINGS_STORAGE_VERSION } from '@/hooks/useSettings';
+import {
+  useSettings,
+  reloadSettingsFromStorage,
+  SETTINGS_STORAGE_VERSION,
+} from '@/hooks/useSettings';
 
 const STORAGE_KEY = 'swedish-verbs-settings';
 
@@ -387,6 +391,101 @@ describe('issue #137: coercing a stored empty cefrLevels', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.settings.cefrLevels).toEqual(['B1']);
+  });
+});
+
+describe('issue #384: reload settings state after whole-app backup import', () => {
+  it('picks up a direct localStorage write (bypassing updateSettings) once reloadSettingsFromStorage runs, without a remount', async () => {
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // The hook's in-memory cache still holds the defaults at this point.
+    expect(result.current.settings).toEqual(DEFAULTS);
+
+    // Simulate restoreAppStores: a whole-app backup import writes the
+    // settings key straight to localStorage, bypassing updateSettings
+    // entirely (src/lib/backup.ts).
+    const imported = {
+      ...DEFAULTS,
+      practiceMode: 'multiple-choice' as const,
+      dailyGoal: 40,
+      particleDailyGoal: 5,
+      muteAudio: true,
+      cefrLevels: ['B1', 'B2'],
+    };
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: SETTINGS_STORAGE_VERSION, settings: imported }),
+    );
+
+    // Without calling reloadSettingsFromStorage, the mounted hook would keep
+    // showing the stale in-memory snapshot (useSyncExternalStore's
+    // getSnapshot only re-reads storage once, on first hydration).
+    expect(result.current.settings).toEqual(DEFAULTS);
+
+    act(() => {
+      reloadSettingsFromStorage();
+    });
+
+    // The existing hook instance - no remount - now reflects the imported
+    // values.
+    await waitFor(() => expect(result.current.settings).toEqual(imported));
+  });
+
+  it('regression: a later updateSettings call does not revert the other imported fields to their pre-import values', async () => {
+    // This is the actual #384 clobber: before the fix, `currentSettings`
+    // stayed on the pre-import snapshot after a direct localStorage write,
+    // so the next updateSettings() call spread its single changed field
+    // over that stale snapshot and silently reverted every other field the
+    // import had just changed.
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.updateSettings({ dailyGoal: 3, muteAudio: false });
+    });
+    await waitFor(() => expect(result.current.settings.dailyGoal).toBe(3));
+
+    // A whole-app backup import restores settings via a direct localStorage
+    // write, bypassing updateSettings.
+    const imported = {
+      ...DEFAULTS,
+      practiceMode: 'multiple-choice' as const,
+      dailyGoal: 40,
+      particleDailyGoal: 5,
+      muteAudio: true,
+      showExamples: true,
+      cefrLevels: ['B1', 'B2'],
+    };
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: SETTINGS_STORAGE_VERSION, settings: imported }),
+    );
+
+    act(() => {
+      reloadSettingsFromStorage();
+    });
+    await waitFor(() => expect(result.current.settings).toEqual(imported));
+
+    // Now change exactly one field, as a learner tweaking a single
+    // preference right after the import would.
+    act(() => {
+      result.current.updateSettings({ autoplayAudio: false });
+    });
+    await waitFor(() => expect(result.current.settings.autoplayAudio).toBe(false));
+
+    // Every other imported field must survive untouched - none of them
+    // should have reverted to the pre-import (or pre-reload) values.
+    expect(result.current.settings).toEqual({
+      ...imported,
+      autoplayAudio: false,
+    });
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
+    expect(stored).toEqual({
+      version: SETTINGS_STORAGE_VERSION,
+      settings: { ...imported, autoplayAudio: false },
+    });
   });
 });
 
