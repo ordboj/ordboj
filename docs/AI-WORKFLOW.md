@@ -55,62 +55,18 @@ automate the path from a raw idea to a merged pull request. A workflow is
 a JavaScript file that spawns many agents in a fixed order, with loops
 and checks that code controls, not the model.
 
-The diagram shows the full path. Hexagons are agent roles, with the role
-name on the first line. Amber nodes are human steps, gray boxes are
-automatic steps, and the green node is the goal.
+The diagram shows the full path. Person shapes are roles: blue for
+agents, pink for adversarial reviewers, and amber for the human. Gray
+boxes are automatic steps, and the green node is the goal.
 
-```mermaid
-%%{init: {"theme": "base", "flowchart": {"wrappingWidth": 340}, "themeVariables": {
-  "fontFamily": "-apple-system, 'Segoe UI', sans-serif",
-  "fontSize": "14px",
-  "lineColor": "#94A3B8",
-  "textColor": "#334155",
-  "clusterBkg": "#F1F5F9",
-  "clusterBorder": "#CBD5E1",
-  "titleColor": "#334155",
-  "edgeLabelBackground": "#F8FAFC"
-}}}%%
-flowchart TD
-    idea["🧑 Human<br/>sends a raw idea 💡"]:::human
+![Pipeline diagram: from a raw idea, through the idea-pilot and ticket-pilot agent pipelines, to a human-approved merge](diagrams/pipeline.svg)
 
-    subgraph IP["1 · idea-pilot — is it worth building?"]
-        review{{"🤖 srs‑engine · swedish‑linguist<br/>learning‑designer · ui‑ux‑expert<br/>blind value review"}}:::agent
-        debate{{"🤖 design‑critic<br/>attacks weak arguments"}}:::critic
-        verdict{"Verdict"}:::gate
-        tickets{{"🤖 staff‑engineer<br/>cuts parallel-safe tickets"}}:::agent
-    end
+The diagram is a [D2](https://d2lang.com) render. The source is
+[`diagrams/pipeline.d2`](diagrams/pipeline.d2). To render it again after
+a change, run:
 
-    subgraph TP["2 · ticket-pilot — build it"]
-        impl{{"🤖 owning agent<br/>implements on a branch"}}:::agent
-        rev{{"🤖 reviewer<br/>adversarial review"}}:::critic
-        ci["CI watch + repair"]:::step
-        ready["Ready to merge"]:::step
-    end
-
-    rejected(["Rejected"]):::stop
-    question["🧑 Human<br/>answers one precise question ❓"]:::human
-    approve["🧑 Human<br/>approves in the chat ✅"]:::human
-    merged(["Merged"]):::done
-
-    idea --> review --> debate
-    debate -- "contested, one rebuttal round" --> review
-    debate --> verdict
-    verdict -- "pursue" --> tickets
-    verdict -- "reject" --> rejected
-    verdict -- "needs a human" --> question
-    tickets --> impl --> rev
-    rev -- "rejected, max 2 rounds" --> impl
-    rev -- "approved" --> ci --> ready --> approve --> merged
-
-    style IP fill:#F8FAFC,stroke:#CBD5E1
-    style TP fill:#F8FAFC,stroke:#CBD5E1
-    classDef human fill:#FEF3C7,stroke:#D97706,color:#78350F
-    classDef agent fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A
-    classDef critic fill:#FCE7F3,stroke:#DB2777,color:#831843
-    classDef gate fill:#FCE7F3,stroke:#DB2777,color:#831843
-    classDef step fill:#F1F5F9,stroke:#94A3B8,color:#334155
-    classDef done fill:#DCFCE7,stroke:#16A34A,color:#14532D
-    classDef stop fill:#E2E8F0,stroke:#64748B,color:#334155
+```sh
+d2 --layout elk --sketch docs/diagrams/pipeline.d2 docs/diagrams/pipeline.svg
 ```
 
 ### 1. `idea-pilot` — is the idea worth building?

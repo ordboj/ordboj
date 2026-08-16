@@ -1,0 +1,100 @@
+style: {fill: "#FFFFFF"}
+
+direction: down
+
+classes: {
+  human: {
+    shape: c4-person
+    style: {
+      fill: "#FEF3C7"
+      stroke: "#D97706"
+      font-color: "#78350F"
+      border-radius: 8
+    }
+  }
+  agent: {
+    shape: c4-person
+    style: {
+      fill: "#DBEAFE"
+      stroke: "#3B82F6"
+      font-color: "#1E3A8A"
+      border-radius: 8
+    }
+  }
+  critic: {
+    shape: c4-person
+    style: {
+      fill: "#FCE7F3"
+      stroke: "#DB2777"
+      font-color: "#831843"
+      border-radius: 8
+    }
+  }
+  step: {
+    style: {
+      fill: "#F1F5F9"
+      stroke: "#94A3B8"
+      font-color: "#334155"
+      border-radius: 6
+    }
+  }
+  good: {
+    style: {
+      fill: "#DCFCE7"
+      stroke: "#16A34A"
+      font-color: "#14532D"
+      border-radius: 20
+    }
+  }
+  bad: {
+    style: {
+      fill: "#E2E8F0"
+      stroke: "#64748B"
+      font-color: "#334155"
+      border-radius: 20
+    }
+  }
+}
+
+idea: "Human\nsends a raw idea 💡" {class: human}
+
+ip: "1 · idea-pilot — is it worth building?" {
+  style: {fill: "#F8FAFC"; stroke: "#CBD5E1"; font-color: "#334155"; border-radius: 8}
+  review: "srs-engine · swedish-linguist\nlearning-designer · ui-ux-expert\n\nblind value review" {class: agent}
+  debate: "design-critic\n\nattacks weak arguments" {class: critic}
+  verdict: "Verdict" {
+    shape: diamond
+    style: {fill: "#FCE7F3"; stroke: "#DB2777"; font-color: "#831843"}
+  }
+  tickets: "staff-engineer\n\ncuts parallel-safe tickets" {class: agent}
+
+  review -> debate
+  debate -> review: "contested,\none rebuttal round" {style: {stroke: "#DB2777"; font-color: "#831843"; stroke-dash: 3}}
+  debate -> verdict
+  verdict -> tickets: pursue
+}
+
+tp: "2 · ticket-pilot — build it" {
+  style: {fill: "#F8FAFC"; stroke: "#CBD5E1"; font-color: "#334155"; border-radius: 8}
+  impl: "owning agent\n\nimplements on a branch" {class: agent}
+  rev: "reviewer\n\nadversarial review" {class: critic}
+  ci: "CI watch + repair" {class: step}
+  ready: "Ready to merge" {class: step}
+
+  impl -> rev
+  rev -> impl: "rejected,\nmax 2 rounds" {style: {stroke: "#DB2777"; font-color: "#831843"; stroke-dash: 3}}
+  rev -> ci: approved
+  ci -> ready
+}
+
+rejected: "Rejected" {class: bad}
+question: "Human\nanswers one precise question ❓" {class: human}
+approve: "Human\napproves in the chat ✅" {class: human}
+merged: "Merged 🎉" {class: good}
+
+idea -> ip.review
+ip.verdict -> rejected: reject
+ip.verdict -> question: "needs a human"
+ip.tickets -> tp.impl
+tp.ready -> approve
+approve -> merged
