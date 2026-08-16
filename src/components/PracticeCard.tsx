@@ -243,11 +243,29 @@ export function PracticeCard({
     setUserAnswer((prev) => prev.slice(0, -1));
   };
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     // Calculate grade based on correctness
     const grade: Grade = isCorrect ? 5 : 0;
     onAnswer(grade);
-  };
+  }, [isCorrect, onAnswer]);
+
+  // Once feedback is showing, the answer input is unmounted and nothing
+  // holds focus, so a plain Enter press advances to the next card. Guards:
+  // e.repeat ignores a held-down Enter (the same press that submitted the
+  // answer fires its keydown on the Input, not here, but auto-repeat while
+  // still held would land on this listener), and a focused button keeps its
+  // native Enter activation (e.g. "Pronounce answer") instead of skipping
+  // ahead.
+  useEffect(() => {
+    if (!showFeedback) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || e.repeat) return;
+      if (document.activeElement instanceof HTMLButtonElement) return;
+      handleNext();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showFeedback, handleNext]);
 
   const handlePronounce = () => {
     speakSwedish(correctAnswer, muteAudio);
