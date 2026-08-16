@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { buildSingleDueSeed, SRS_STORAGE_KEY } from './support/seed';
+import { test, expect } from './support/errorCollector';
+import { buildSingleDueSeed, toV3Envelope, SRS_STORAGE_KEY } from './support/seed';
 
 // This spec runs only against the production build (see the `csp-prod-build`
 // project + second `webServer` entry in playwright.config.ts, which build
@@ -17,10 +17,16 @@ import { buildSingleDueSeed, SRS_STORAGE_KEY } from './support/seed';
 // browser (not jsdom) is required to observe that, which is why this lives
 // in Playwright rather than the vitest unit guard in
 // src/test/csp-meta.test.ts.
-const CSP_VIOLATION_PATTERN = /Content Security Policy|Refused to/i;
+//
+// The console/pageerror collection itself is the shared errorCollector
+// fixture (e2e/support/errorCollector.ts) — its pattern list already
+// includes the CSP violation signature this spec cares about, generalized
+// across every other spec in the suite (catalog #9's "page-tour" story).
+// This spec keeps its own file only for the production-build webServer/
+// project wiring in playwright.config.ts, not for a separate detection
+// mechanism.
 
 const ITEM_ID = 'vara-presens'; // VERB_DATA[0] = vara, presens = "är"
-const VERB = 'vara';
 const ANSWER = 'är';
 
 test.describe('production build: no CSP violations across the practice loop', () => {
@@ -28,22 +34,10 @@ test.describe('production build: no CSP violations across the practice loop', ()
     page,
     context,
   }) => {
-    const cspViolations: string[] = [];
-    page.on('console', (message) => {
-      if (CSP_VIOLATION_PATTERN.test(message.text())) {
-        cspViolations.push(`[${message.type()}] ${message.text()}`);
-      }
-    });
-    page.on('pageerror', (error) => {
-      if (CSP_VIOLATION_PATTERN.test(error.message)) {
-        cspViolations.push(`[pageerror] ${error.message}`);
-      }
-    });
-
     const seed = await buildSingleDueSeed(ITEM_ID);
     await context.addInitScript(
       ([key, value]) => window.localStorage.setItem(key, value),
-      [SRS_STORAGE_KEY, JSON.stringify(seed)],
+      [SRS_STORAGE_KEY, toV3Envelope(seed)],
     );
 
     await page.goto('/');
@@ -75,6 +69,9 @@ test.describe('production build: no CSP violations across the practice loop', ()
     await page.getByText('Progress', { exact: true }).click();
     await expect(page).toHaveURL(/\/progress$/);
 
-    expect(cspViolations, cspViolations.join('\n')).toEqual([]);
+    // No explicit assertion here: the errorCollectorMatches auto-fixture
+    // asserts an empty match list in its own teardown once this test body
+    // returns, and its pattern list is what used to be CSP_VIOLATION_PATTERN
+    // above.
   });
 });

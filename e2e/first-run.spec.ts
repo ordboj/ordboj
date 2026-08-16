@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/errorCollector';
 
 // First-run user: empty localStorage (Playwright gives every test its own
 // clean browser context, so no seeding needed here — this *is* the "brand
