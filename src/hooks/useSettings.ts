@@ -203,6 +203,25 @@ function updateSettings(newSettings: Partial<Settings>): void {
   for (const listener of listeners) listener();
 }
 
+// Forces the store to re-read localStorage and notifies every subscriber.
+// Needed because writes that bypass `updateSettings` — the whole-app backup
+// restore in src/lib/backup.ts writes STORAGE_KEY directly via `setItem` so
+// it can roll every sibling store back together on failure — leave
+// `currentSettings` holding the pre-import value. Two symptoms follow from
+// that staleness: the Settings screen keeps showing the old choices until a
+// full reload, and the next `updateSettings` call spreads the new field over
+// the stale snapshot, silently reverting every other field the import just
+// changed. The import call site (Settings.tsx's handleImport) calls this
+// right after a successful `importData` to close both gaps.
+export function reloadSettingsFromStorage(): void {
+  const loaded = readStoredSettings();
+  if (JSON.stringify(loaded) !== JSON.stringify(currentSettings)) {
+    currentSettings = loaded;
+  }
+  isHydrated = true;
+  for (const listener of listeners) listener();
+}
+
 export function useSettings() {
   const settings = useSyncExternalStore(subscribe, getSnapshot);
 

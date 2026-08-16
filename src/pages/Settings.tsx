@@ -25,7 +25,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Upload, Trash2 } from 'lucide-react';
-import { useSettings } from '@/hooks/useSettings';
+import { reloadSettingsFromStorage, useSettings } from '@/hooks/useSettings';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import {
   PARTICLE_DAILY_GOAL_MAX,
@@ -80,6 +80,13 @@ export default function Settings() {
         reader.onload = (e) => {
           const content = e.target?.result as string;
           if (importData(content)) {
+            // A whole-app backup restores the settings store by writing
+            // localStorage directly (src/lib/backup.ts), bypassing
+            // updateSettings. Without this, the screen keeps showing the
+            // pre-import settings until a reload, and the next preference
+            // change would spread over that stale snapshot and revert every
+            // other imported field.
+            reloadSettingsFromStorage();
             toast.success('Progress imported successfully!');
           } else {
             toast.error('Failed to import data');
