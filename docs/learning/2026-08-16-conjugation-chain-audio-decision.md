@@ -30,7 +30,7 @@ deferred.
 Two standing rules are unchanged and bound the button too:
 
 - The learner's typed answer is never passed to `speakSwedish` — pronounce
-  controls attach only to real stored forms (red line P4, condition 3,
+  controls attach only to real stored forms (red line P21, condition 3,
   [[2026-08-08-ux-pedagogy-red-lines]]).
 - Wrong Swedish is worse than missing Swedish: with no sv voice available,
   the app stays silent rather than speaking the chain in a wrong-language
@@ -64,7 +64,7 @@ semantics preserve both pacing and the pedagogical payload: undecided.
 
 ### Open question 2 — audio after a wrong answer
 
-The wrong-answer feedback screen is governed by the P4 asymmetry: the
+The wrong-answer feedback screen is governed by the P21 asymmetry: the
 correct form dominates, the error is visually muted, and the evidence that
 makes showing errors safe (Metcalfe 2017; Butterfield & Metcalfe 2001)
 concerns _corrective_ feedback the learner attends to. Auto-playing a
@@ -81,7 +81,7 @@ incorrect answer.
 ### Open question 3 — massed paradigm exposure vs. one-item-per-form scheduling
 
 The SRS schedules each conjugation form of a verb as its own item
-(`srs.ts:279-281`): _tar_ and _tog_ have independent intervals, and the mix
+(`itemIds.ts:16`, `conjugationItemId`): _tar_ and _tog_ have independent intervals, and the mix
 of due items is the scheduler's whole mechanism. Automatic chain playback
 gives the learner a massed re-exposure to all four forms on every single
 card. That is not neutral: if hearing _tog_ on a _tar_ card meaningfully
@@ -141,7 +141,7 @@ call site.
   doubt on mobile, and the button's presence should be revisited, not just
   autoplay.
 - A future per-answer review log (see
-  [[2026-08-13-per-answer-review-log-decision]]) shows no interval
+  `docs/product/2026-08-13-per-answer-review-log-decision.md`) shows no interval
   distortion despite heavy chain use — that would retire question 3 cheaply.
 
 ## Sources
@@ -149,8 +149,8 @@ call site.
 `src/components/PracticeCard.tsx:213-215, 270-289` (current autoplay and
 pronounce paths); `src/hooks/useSettings.ts:10,31,71` (`autoplayAudio`);
 `src/lib/speech.ts`; `src/lib/verbs.ts:186-210` (`generateVerbPattern`);
-`src/lib/srs.ts:279-281` (per-form items). Epic #416 (settled scope and
-critic's cut). [[2026-08-08-ux-pedagogy-red-lines]] P4 and P5. Metcalfe
+`src/lib/itemIds.ts:16` (`conjugationItemId`, per-form items). Epic #416 (settled scope and
+critic's cut). [[2026-08-08-ux-pedagogy-red-lines]] P21 and P5. Metcalfe
 2017, _Learning from Errors_, Annu. Rev. Psychol.; Butterfield & Metcalfe
 2001 (hypercorrection), both as already applied in the red-lines note.
 
