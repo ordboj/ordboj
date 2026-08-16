@@ -1370,14 +1370,71 @@ describe('PracticeCard - multiple-choice distractor policy (#139)', () => {
   });
 
   it('degrades to fewer options rather than leak a cross-group distractor when a grupp-3 target has too few in-group candidates', async () => {
-    // Grupp '3' has exactly three verbs total ("tro", "te sig", "ro") and no
-    // adjacent group (only 2a<->2b are adjacent), so a grupp-'3' target has
-    // at most 2 valid in-group distractors available. The hard group
-    // constraint (P14) means the option list must shrink to 3 total options
-    // (1 correct + 2 distractors), never pad to 4 with a cross-group verb.
+    // Real VERB_DATA no longer exercises this branch on its own (#415 added
+    // "nå"/"uppnå", giving grupp-3 targets 4+ valid in-group candidates), so
+    // this uses a mocked, minimal fixture (same pattern as the "P7" and
+    // "imperativNotApplicable" fixtures above) to force the scarcity the
+    // policy is meant to handle: grupp '3' has no adjacent group (only 2a<->2b
+    // are adjacent), so with only one other grupp-3 verb available, the hard
+    // group constraint (P14) must shrink the option list to 2 total options
+    // (1 correct + 1 distractor) rather than pad with the grupp-'4' and
+    // grupp-'2a' verbs also present in the fixture.
+    vi.resetModules();
+    vi.doMock('@/data/verbData', () => ({
+      VERB_DATA: [
+        {
+          cefr: 'A1',
+          infinitive: 'tro-fixture',
+          imperativ: 'tro-fixture',
+          presens: 'tror-fixture',
+          preteritum: 'trodde-fixture',
+          supinum: 'trott-fixture',
+          grupp: '3',
+        },
+        {
+          // The only other grupp-3 verb in this fixture: the sole valid
+          // in-group distractor candidate.
+          cefr: 'A1',
+          infinitive: 'ro-fixture',
+          imperativ: 'ro-fixture',
+          presens: 'ror-fixture',
+          preteritum: 'rodde-fixture',
+          supinum: 'rott-fixture',
+          grupp: '3',
+        },
+        {
+          // Cross-group (grupp '4', not adjacent to '3'): must never leak in
+          // as a distractor even though it would otherwise be a plausible
+          // pad.
+          cefr: 'A1',
+          infinitive: 'ga-fixture',
+          imperativ: 'ga-fixture',
+          presens: 'gar-fixture',
+          preteritum: 'gick-fixture',
+          supinum: 'gatt-fixture',
+          grupp: '4',
+        },
+        {
+          // Cross-group (grupp '2a', also not adjacent to '3'): same
+          // must-never-leak check from a different group.
+          cefr: 'A1',
+          infinitive: 'anvanda-fixture',
+          imperativ: 'anvand-fixture',
+          presens: 'anvander-fixture',
+          preteritum: 'anvande-fixture',
+          supinum: 'anvant-fixture',
+          grupp: '2a',
+        },
+      ],
+    }));
+
+    const { PracticeCard: MockedPracticeCard } = await import('@/components/PracticeCard');
+    const { getAllConjugatedVerbs: mockedGetAllConjugatedVerbs, getVerbGrupp: mockedGetVerbGrupp } =
+      await import('@/lib/verbs');
+
     renderWithProviders(
-      <PracticeCard
-        infinitive="tro"
+      <MockedPracticeCard
+        infinitive="tro-fixture"
         form="presens"
         mode="multiple-choice"
         showExamples={false}
@@ -1392,16 +1449,20 @@ describe('PracticeCard - multiple-choice distractor policy (#139)', () => {
     });
 
     const optionTexts = screen.getAllByRole('button').map((b) => b.textContent);
-    expect(optionTexts).toHaveLength(3);
-    expect(optionTexts).toContain('tror');
+    expect(optionTexts).toHaveLength(2);
+    expect(optionTexts).toContain('tror-fixture');
 
-    const allVerbs = await getAllConjugatedVerbs();
-    const distractorTexts = optionTexts.filter((t) => t !== 'tror');
+    const allVerbs = await mockedGetAllConjugatedVerbs();
+    const distractorTexts = optionTexts.filter((t) => t !== 'tror-fixture');
+    expect(distractorTexts).toEqual(['ror-fixture']);
     for (const text of distractorTexts) {
       const sourceVerb = allVerbs.find((v) => v.presens === text);
       expect(sourceVerb, `distractor "${text}" should map to a known verb`).toBeDefined();
-      expect(getVerbGrupp(sourceVerb!.infinitive)).toBe('3');
+      expect(mockedGetVerbGrupp(sourceVerb!.infinitive)).toBe('3');
     }
+
+    vi.resetModules();
+    vi.doUnmock('@/data/verbData');
   });
 });
 
