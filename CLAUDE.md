@@ -43,39 +43,35 @@ instead; the lead routes it.
 compose around it. Exception: `devops` may delete unused primitives during
 dependency cleanup, with grep evidence.
 
-## Task tracking — GitHub Projects
+## Task tracking — Linear
 
-All tasks live in the **Ordböj** GitHub Project:
-<https://github.com/orgs/ordboj/projects/1> (project number `1`, owner
-`ordboj`, linked repo `ordboj/ordboj`). Status is tracked there, not in
-chat.
+All tasks live in Linear: workspace **Ordboj**, team **Ordboj**
+(<https://linear.app/ordboj>). Status is tracked there, not in chat.
 
-- Every task an agent defines or receives becomes a GitHub Issue added to
-  the project. Agents report new tasks to the lead; **the lead** creates the
-  issue and project item and moves statuses. Agents do not run `gh` for
-  project management themselves.
-- Issue title: imperative, one line. Body: owner role, acceptance criteria,
-  files touched. Label with the owning role where useful.
+The old GitHub Project board (`orgs/ordboj/projects/1`) is retired. Cloud
+sessions cannot reach the Projects v2 API: the GitHub proxy serves only a
+pinned set of PR-review GraphQL operations and rejects all other GraphQL
+with a 403, for all credentials. Do not try `gh project` or GraphQL for
+task tracking.
 
-Recipes (lead only):
-
-```sh
-# create issue + add to project
-gh issue create --repo ordboj/ordboj --title "..." --body "..."
-gh project item-add 1 --owner ordboj --url <issue-url>
-
-# move status (field/option ids for org project 1)
-gh project item-edit --project-id PVT_kwDOEr3qds4BfuEP \
-  --id <item-id> --field-id PVTSSF_lADOEr3qds4BfuEPzhZ--ms \
-  --single-select-option-id <opt>
-# Todo=f75ad846  In Progress=47fc9ee4  Done=98236657
-
-# find <item-id>
-gh project item-list 1 --owner ordboj --format json
-```
-
-Close the issue (`gh issue close`) when work is verified, then set status
-Done.
+- Every task an agent defines or receives becomes a Linear issue. Agents
+  report new tasks to the lead; **the lead** creates the issue and moves
+  statuses with the Linear MCP tools (`mcp__Linear__save_issue`,
+  `mcp__Linear__list_issues`). Agents do not manage Linear themselves.
+- Issue title: imperative, one line. Description: owner role, acceptance
+  criteria, files touched. Label with the owning role (`role:*`) where
+  useful.
+- Statuses: `Backlog`, `Todo`, `In Progress`, `In Review`, `Done`,
+  `Canceled`, `Duplicate`. Flow: new task → Todo; dispatched → In
+  Progress; verified → Done.
+- GitHub issues stay usable for inbound reports, but the Linear issue is
+  the tracking record. When work tracked by both is verified, set the
+  Linear issue to Done and close the GitHub issue
+  (`mcp__github__issue_write`).
+- History: the open GitHub issues were migrated to Linear on 2026-08-16.
+  Each migrated Linear issue links back to its GitHub original
+  ("Migrated from …"). Issue numbers like `#53` in older docs and PRs
+  refer to the GitHub originals.
 
 ## Lead responsibilities
 
@@ -94,8 +90,8 @@ Done.
   claims without evidence.
 - Data-shape changes to `localStorage` need an explicit migration and the
   human's approval before merge.
-- Keep the GitHub Project current: new task → issue in Todo; dispatched →
-  In Progress; verified → Done.
+- Keep Linear current: new task → issue in Todo; dispatched → In
+  Progress; verified → Done.
 - **Teammates always run in the background.** Every Agent call for a teammate
   uses `run_in_background: true` (the default) and is never awaited inline.
   Never pass `run_in_background: false` for these agents. The lead keeps the
