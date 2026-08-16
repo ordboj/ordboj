@@ -35,7 +35,7 @@ instead; the lead routes it.
 | `staff-engineer`    | `index.html`, `src/main.tsx`, `src/App.tsx`, `tsconfig*.json`, `eslint.config.js`, `src/lib/utils.ts`                                                            |
 | `devops`            | `vite.config.ts`, `postcss.config.js`, `package.json`, `.github/**`, PWA/manifest/service worker, deploy config                                                  |
 | `frontend-expert`   | `src/pages/**`, `src/components/*.tsx`, `src/hooks/useSettings.ts`, `use-mobile.tsx`, `use-toast.ts`, `src/lib/speech.ts`, `tailwind.config.ts`, `src/index.css` |
-| `qa`                | `*.test.ts(x)`, `src/test/**`, `vitest.config.ts`                                                                                                                |
+| `qa`                | `*.test.ts(x)`, `*.spec.ts`, `src/test/**`, `e2e/**`, `vitest.config.ts`, `playwright.config.ts`                                                                 |
 | `learning-designer` | `docs/learning/**` — decision notes only, no production code                                                                                                     |
 | `product-manager`   | `docs/product/**` — specs and decisions only, no production code                                                                                                 |
 
@@ -97,6 +97,14 @@ task tracking.
   Never pass `run_in_background: false` for these agents. The lead keeps the
   main chat responsive, dispatches work, and reports results when the task
   notification arrives.
+- **Raw feature ideas go through `idea-pilot`.** When the human sends idea or
+  intention notes ("should we add X?", "what if Y worked like Z?"), the lead
+  launches the `idea-pilot` workflow (`.claude/workflows/idea-pilot.js`) with
+  the notes as `args.ideas` instead of an ad-hoc discussion. The workflow
+  ends at the ticketed epic; the lead then asks the human whether to run
+  `ticket-pilot` with the returned run plan. Exceptions: direct bug reports,
+  questions, and tasks the human already scoped — those do not need the
+  pipeline.
 
 ## Known issues to keep in mind
 

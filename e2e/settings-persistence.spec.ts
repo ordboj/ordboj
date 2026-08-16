@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { buildSingleDueSeed, SRS_STORAGE_KEY } from './support/seed';
+import { test, expect } from './support/errorCollector';
+import { buildSingleDueSeed, toV3Envelope, SRS_STORAGE_KEY } from './support/seed';
 
 // Settings: switching to multiple-choice mode survives a reload, and
 // Practice actually renders that mode afterwards — proving the setting
@@ -11,7 +11,7 @@ test.describe('settings persist across reload', () => {
     const seed = await buildSingleDueSeed(ITEM_ID);
     await context.addInitScript(
       ([key, value]) => window.localStorage.setItem(key, value),
-      [SRS_STORAGE_KEY, JSON.stringify(seed)],
+      [SRS_STORAGE_KEY, toV3Envelope(seed)],
     );
 
     await page.goto('/settings');
