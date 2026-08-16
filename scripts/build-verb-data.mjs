@@ -68,6 +68,17 @@
 // every shipped row that relies on an unmodelled spelling simplification
 // ("vända" -> "vände", "betyda" -> "betytt") would fail the shipped-table
 // gate for being correct Swedish.
+//
+// Issue #381: a mechanical grupp 1 match on presens/preteritum/supinum
+// (-ar/-ade/-at) is cross-checked against the row's OWN imperativ in
+// classifyCore. Grupp 1's imperativ is always the full infinitive ("spara"
+// -> "spara"); grupp 2a/2b/3/4 use the bare stem instead ("höra" -> "hör").
+// When a row's presens/pret/sup match grupp 1 but its imperativ is the bare
+// stem, a grupp 2a/2b reading is also internally consistent with that same
+// row, so grupp 1 cannot be claimed mechanically — it falls to the residual
+// bucket, needs-check, same as any other unmodelled shape. This is the
+// classifier blind spot #371 found: CSV rows like "jämföra" (imperativ
+// "jämför", presens "jämförar") previously scored a false 'pass' as grupp 1.
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -223,7 +234,13 @@ function isCoherentDeponens({ inf, pres, pret, sup }) {
 const DEPONENS_NOTE =
   'deponens-shaped (infinitive and all three forms end in "s") but the s-forms do not agree on one stem the way a regular grupp 1/2 deponens does; grupp needs human verification';
 
-function classifyCore({ inf, pres, pret, sup }) {
+// Issue #381: marker substring shared by the grupp-1-vs-bare-stem-imperativ
+// note (see classifyCore) and the summary count printed in main(), so the
+// check has a visible line in `npm run build:verb-data:check` output instead
+// of only showing up as a pass -> needs-check count delta.
+const GRUPP1_BARE_STEM_MARKER = 'grupp 2a/2b/3/4 imperativ shape';
+
+function classifyCore({ inf, pres, pret, sup }, imp) {
   if (
     inf.length > 1 &&
     inf.endsWith('s') &&
@@ -276,6 +293,26 @@ function classifyCore({ inf, pres, pret, sup }) {
           };
         }
       }
+      if (pretSupSignal === '1') {
+        // Issue #381: a grupp 1 imperativ is always the full infinitive
+        // ("spara" -> imperativ "spara"), never the bare stem — grupp
+        // 2a/2b/3/4 use the bare stem instead ("höra" -> "hör"). The
+        // presens/preteritum/supinum -ar/-ade/-at match alone is not enough
+        // to claim grupp 1 when the row's OWN imperativ is the bare stem: a
+        // grupp 2a/2b reading is then also internally consistent with this
+        // exact row, so the grupp cannot be claimed mechanically. Falls to
+        // the residual bucket, needs-check, never a guessed pass — this is
+        // the "jämföra" CSV shape from #371/#381: presens "jämförar"
+        // matches grupp 1 mechanically, but imperativ "jämför" is the bare
+        // stem, not the full infinitive "jämföra".
+        if (imp !== '' && imp === stem && imp !== inf) {
+          return {
+            grupp: '4',
+            contradiction: null,
+            note: `imperativ "${imp}" is the bare stem, the ${GRUPP1_BARE_STEM_MARKER}, not the full infinitive "${inf}" a grupp 1 imperativ requires; grupp needs human verification`,
+          };
+        }
+      }
       return { grupp: pretSupSignal, contradiction: null, note: null };
     }
     // Neither a full regular match nor an unambiguous cross-field
@@ -307,7 +344,12 @@ function classifyAndValidate(infinitive, imperativ, presens, preteritum, supinum
   const emptyImperativ = (imperativ ?? '').trim() === '';
 
   const core = splitParticle(infinitive, presens, preteritum, supinum);
-  const classified = classifyCore(core);
+  // Raw (un-particle-stripped) imperativ on purpose: a particle verb's
+  // imperativ carries the particle too ("ring upp" -> "ring upp"), so it can
+  // never accidentally equal the particle-stripped `stem` compared inside
+  // classifyCore's grupp-1-vs-bare-stem check below — that check is a no-op
+  // for particle verbs by construction, not by a separate guard.
+  const classified = classifyCore(core, imperativ);
   const { contradiction, note } = classified;
   // An unconfirmed particle means the forms were never reduced to one verb,
   // so nothing about them is reportable — not even the residual grupp 4.
@@ -591,6 +633,15 @@ function main() {
   const csvCounts = { pass: 0, 'needs-check': 0, fail: 0 };
   for (const r of reviewRows) csvCounts[r.status]++;
 
+  // Issue #381: rows where a grupp 1 mechanical match (-ar/-ade/-at) is
+  // undercut by the row's own bare-stem imperativ — a grupp 2a/2b reading is
+  // then also internally consistent, so these can only be needs-check, never
+  // pass. Counted separately so the check has a visible line in
+  // `npm run build:verb-data:check` output, not just a pass-count delta.
+  const grupp1BareStemAmbiguous = reviewRows.filter((r) =>
+    r.reasons.includes(GRUPP1_BARE_STEM_MARKER),
+  ).length;
+
   const reviewCsv = [
     'line,cefr,infinitive,grupp,status,reasons',
     ...reviewRows.map(
@@ -762,6 +813,10 @@ function main() {
   console.log(
     `CSV audit: ${csvRows.length} rows — ${csvCounts.pass} pass, ${csvCounts['needs-check']} needs-check, ${csvCounts.fail} fail.` +
       ` Review file: ${REVIEW_PATH}${checkOnly ? ' (not written, --check)' : ''}`,
+  );
+  console.log(
+    `  of which ${grupp1BareStemAmbiguous} row(s) are grupp 1 (-ar/-ade/-at) matches undercut by a bare-stem` +
+      ` imperativ (issue #381: a grupp 2a/2b reading is also consistent, so these are needs-check, not pass).`,
   );
   console.log(
     `Shipped table: ${parsed.blocks.length} rows, 0 validator failures. Promotion candidates: ${promotions.length} requested, ${promotedRows.length} passed, ${promotionFailures.length} rejected.`,
