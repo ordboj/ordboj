@@ -233,6 +233,10 @@ const PARTICLE_CORE_SENSE: Record<string, string> = {
   // carries no productive sense of its own to teach.
   miste: 'fossilised, surviving in a few fixed phrases such as "gå miste om"',
   itu: 'fossilised, meaning "in two", surviving in a few fixed phrases',
+  // Added for #372, to unblock "fylla i". Distinct from "in": "i" marks
+  // entering data into a bounded space such as a form's blanks, not
+  // physically moving into a place.
+  i: 'often entering something into a bounded space, such as a form',
 };
 
 export function getParticleCoreSense(particle: string): string | null {
