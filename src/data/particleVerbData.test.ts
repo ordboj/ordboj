@@ -453,11 +453,11 @@ describe('particle verb dataset - discrimination-variant gate depth (#386/#387/#
     return frames;
   }
 
-  it('certifies exactly 14 frames across exactly 5 distinct base verbs at the ruled 2-lure depth', () => {
+  it('certifies exactly 17 frames across exactly 6 distinct base verbs at the ruled 2-lure depth', () => {
     const frames = certifiedFrames();
     const distinctBases = new Set(frames.map((frame) => frame.base));
-    expect(frames.length).toBe(14);
-    expect(distinctBases.size).toBe(5);
+    expect(frames.length).toBe(17);
+    expect(distinctBases.size).toBe(6);
   });
 
   it('clears the #386 build gate (at least 8 certified frames across at least 5 distinct bases)', () => {
@@ -481,6 +481,22 @@ describe('particle verb dataset - discrimination answer key (#386/#389)', () => 
     return [entry.acceptedParticles[0]!, ...excluded.slice(0, 2)];
   }
 
+  // Every 2-element combination of an example's excludedParticles, so a
+  // rotating lure window (docs/learning/2026-08-12-sentence-completion-
+  // distractors.md) is exercised, not only the first two entries in the
+  // array. Today no frame carries more than 2 lures, so this is a forward
+  // guard: it stays vacuous-safe (one combination) until a frame gets a
+  // third lure, and then it is already checking every pair.
+  function excludedPairs(excluded: string[]): Array<[string, string]> {
+    const pairs: Array<[string, string]> = [];
+    for (let i = 0; i < excluded.length; i++) {
+      for (let j = i + 1; j < excluded.length; j++) {
+        pairs.push([excluded[i]!, excluded[j]!]);
+      }
+    }
+    return pairs;
+  }
+
   it('intersects acceptedParticles in exactly one member for every certified frame', () => {
     const offenders: string[] = [];
     for (const entry of PARTICLE_VERB_DATA) {
@@ -489,12 +505,14 @@ describe('particle verb dataset - discrimination answer key (#386/#389)', () => 
       for (const example of entry.examples) {
         const excluded = example.excludedParticles ?? [];
         if (excluded.length < 2) continue;
-        const options = optionSet(entry, excluded);
-        const hits = options.filter((option) => accepted.has(option.toLowerCase()));
-        if (hits.length !== 1) {
-          offenders.push(
-            `${entry.id}: "${example.sv}" -> options ${JSON.stringify(options)} intersect acceptedParticles ${hits.length} times`,
-          );
+        for (const [first, second] of excludedPairs(excluded)) {
+          const options = optionSet(entry, [first, second]);
+          const hits = options.filter((option) => accepted.has(option.toLowerCase()));
+          if (hits.length !== 1) {
+            offenders.push(
+              `${entry.id}: "${example.sv}" -> options ${JSON.stringify(options)} intersect acceptedParticles ${hits.length} times`,
+            );
+          }
         }
       }
     }
@@ -527,14 +545,28 @@ describe('particle verb dataset - cross-entry excluded-particle hazard (#389)', 
 
   // Isolates one entry's own source text between its opening `  {` and
   // closing `  },`, so the comment search below never reads a neighbouring
-  // entry's comment as this entry's justification.
+  // entry's comment as this entry's justification. The dataset convention
+  // writes a justification comment directly on the line(s) immediately
+  // above the opening `  {`, so after locating the brace this also walks
+  // backwards and folds in every contiguous `//` comment line above it.
+  // It stops at the first non-comment line -- a blank line, or the
+  // previous entry's `  },` -- so it never widens into a neighbour's body.
   function extractEntryBlock(text: string, id: string): string {
     const idIndex = text.indexOf(`id: '${id}',`);
     if (idIndex === -1) return '';
     const blockStart = text.lastIndexOf('\n  {\n', idIndex);
     const blockEnd = text.indexOf('\n  },\n', idIndex);
     if (blockStart === -1 || blockEnd === -1) return '';
-    return text.slice(blockStart, blockEnd);
+
+    let extendedStart = blockStart;
+    while (extendedStart > 0) {
+      const lineStart = text.lastIndexOf('\n', extendedStart - 1) + 1;
+      const line = text.slice(lineStart, extendedStart);
+      if (!line.trim().startsWith('//')) break;
+      extendedStart = lineStart === 0 ? 0 : lineStart - 1;
+    }
+
+    return text.slice(extendedStart, blockEnd);
   }
 
   // A justification is a `//` comment inside the entry's own block that
@@ -564,6 +596,22 @@ describe('particle verb dataset - cross-entry excluded-particle hazard (#389)', 
       "      { sv: 'y', blankIndex: 0, excludedParticles: ['ut'] },",
       '    ],',
       '  },',
+      '  // "in" excluded because it lands on a same-base collision.',
+      '  {',
+      "    id: 'pv:fake-verb-3',",
+      '    examples: [',
+      "      { sv: 'z', blankIndex: 0, excludedParticles: ['in'] },",
+      '    ],',
+      '  },',
+      '',
+      '  // "ner" excluded, but separated from the entry by a blank line.',
+      '',
+      '  {',
+      "    id: 'pv:fake-verb-4',",
+      '    examples: [',
+      "      { sv: 'w', blankIndex: 0, excludedParticles: ['ner'] },",
+      '    ],',
+      '  },',
       '',
     ].join('\n');
 
@@ -581,6 +629,29 @@ describe('particle verb dataset - cross-entry excluded-particle hazard (#389)', 
     it('reports no justification when the entry carries no matching comment', () => {
       const block = extractEntryBlock(fixture, 'pv:fake-verb-2');
       expect(hasJustifyingComment(block, 'ut')).toBe(false);
+    });
+
+    it("captures a comment written directly above the entry's opening brace", () => {
+      // The dataset convention: the justification comment lives above `  {`,
+      // not inside the block. pv:fake-verb-3's comment must be captured, and
+      // it must not attach to pv:fake-verb-2 above it (stopped by that
+      // entry's own `  },`).
+      const block = extractEntryBlock(fixture, 'pv:fake-verb-3');
+      expect(hasJustifyingComment(block, 'in')).toBe(true);
+    });
+
+    it('does not capture a comment separated from the entry by a blank line', () => {
+      const block = extractEntryBlock(fixture, 'pv:fake-verb-4');
+      expect(hasJustifyingComment(block, 'ner')).toBe(false);
+    });
+
+    it("does not let a comment leak forward across the previous entry's closing `  },`", () => {
+      // pv:fake-verb-3's leading comment (quoting "in") sits directly above
+      // its own brace, immediately after pv:fake-verb-2's `  },`. It must
+      // not be read as justification for pv:fake-verb-2.
+      const block = extractEntryBlock(fixture, 'pv:fake-verb-2');
+      expect(hasJustifyingComment(block, 'in')).toBe(false);
+      expect(block).not.toContain('same-base collision');
     });
   });
 
