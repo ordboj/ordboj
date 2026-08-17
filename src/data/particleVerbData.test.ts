@@ -668,7 +668,7 @@ describe('particle verb dataset - cross-entry excluded-particle hazard (#389)', 
     }
   }
 
-  const hazards: Array<{ id: string; particle: string }> = [];
+  const hazards: Array<{ id: string; sv: string; particle: string }> = [];
   for (const entry of PARTICLE_VERB_DATA) {
     for (const example of entry.examples) {
       for (const excluded of example.excludedParticles ?? []) {
@@ -676,14 +676,75 @@ describe('particle verb dataset - cross-entry excluded-particle hazard (#389)', 
           acceptedByBaseParticle.get(`${entry.baseInfinitive}|${excluded.toLowerCase()}`) ?? []
         ).filter((id) => id !== entry.id);
         if (owners.length > 0) {
-          hazards.push({ id: entry.id, particle: excluded });
+          hazards.push({ id: entry.id, sv: example.sv, particle: excluded });
         }
       }
     }
   }
 
+  // The dedupe key used to be `${id}|${particle}`, which discards the frame:
+  // one comment on the entry justified every frame under it, so a mutation
+  // that added a fresh hazard to an already-justified entry (e.g. #389's
+  // pv:ge-upp regression) passed silently. This pins the exact 40 frame-level
+  // hazard triples (14 distinct id/particle pairs) as of this commit. Adding
+  // a new entry here needs a swedish-linguist review of that specific frame,
+  // not only a comment naming the particle -- the review is what confirms
+  // the exclusion is correct Swedish, this list only proves it was reviewed.
+  const KNOWN_HAZARDS: readonly string[] = [
+    'pv:bli-av | Festen blir av även om det regnar. | kvar',
+    'pv:bli-av | Festen blir av även om det regnar. | över',
+    'pv:bli-av | Mötet blir av på torsdag som planerat. | kvar',
+    'pv:bli-av | Mötet blir av på torsdag som planerat. | över',
+    'pv:bli-av | Resan blir av trots det dåliga vädret. | kvar',
+    'pv:bli-av | Resan blir av trots det dåliga vädret. | över',
+    'pv:ge-upp | Han ger upp efter tre timmar av hårt arbete. | bort',
+    'pv:ge-upp | Han ger upp efter tre timmar av hårt arbete. | ut',
+    'pv:ge-upp | Vi ger aldrig upp trots alla svåra problem. | bort',
+    'pv:ge-upp | Vi ger aldrig upp trots alla svåra problem. | ut',
+    'pv:komma-ihag | Han kommer ihåg alla telefonnummer utan att skriva. | fram',
+    'pv:komma-ihag | Han kommer ihåg alla telefonnummer utan att skriva. | in',
+    'pv:komma-ihag | Jag kommer ihåg hennes namn från förra året. | fram',
+    'pv:komma-ihag | Jag kommer ihåg hennes namn från förra året. | in',
+    'pv:komma-ihag | Vi kommer ihåg den dagen mycket tydligt. | fram',
+    'pv:komma-ihag | Vi kommer ihåg den dagen mycket tydligt. | in',
+    'pv:lagga-ner | De lägger ner projektet efter många problem. | in',
+    'pv:lagga-ner | De lägger ner projektet efter många problem. | upp',
+    'pv:lagga-ner | Företaget lägger ner fabriken i slutet av året. | in',
+    'pv:lagga-ner | Företaget lägger ner fabriken i slutet av året. | upp',
+    'pv:lagga-ner | Kommunen lägger ner två skolor nästa år. | in',
+    'pv:lagga-ner | Kommunen lägger ner två skolor nästa år. | upp',
+    'pv:plocka-undan | Barnen plockar undan efter middagen varje kväll. | bort',
+    'pv:plocka-undan | Barnen plockar undan efter middagen varje kväll. | upp',
+    'pv:plocka-undan | Hon plockar undan i köket medan kaffet kokar. | bort',
+    'pv:plocka-undan | Hon plockar undan i köket medan kaffet kokar. | upp',
+    'pv:plocka-undan | Jag plockar undan i vardagsrummet innan gästerna kommer. | bort',
+    'pv:plocka-undan | Jag plockar undan i vardagsrummet innan gästerna kommer. | upp',
+    'pv:se-om | Han ser om avsnittet en gång till. | ut',
+    'pv:se-om | Jag ser om matchen på tv i kväll. | ut',
+    'pv:se-om | Vi ser om filmen eftersom den var så bra. | ut',
+    'pv:sta-till | Hur står det till med arbetet just nu? | upp',
+    'pv:sta-till | Hur står det till med arbetet just nu? | ut',
+    'pv:sta-till | Hur står det till med familjen i dag? | upp',
+    'pv:sta-till | Hur står det till med familjen i dag? | ut',
+    'pv:sta-till | Jag undrar hur det står till hemma hos er. | upp',
+    'pv:sta-till | Jag undrar hur det står till hemma hos er. | ut',
+    'pv:ta-slut | Filmen tar slut efter ungefär två timmar. | bort',
+    'pv:ta-slut | Mjölken tar slut innan veckan är över. | bort',
+    'pv:ta-slut | Pengarna tar slut i mitten av månaden. | bort',
+  ];
+
   it('finds at least one cross-entry hazard, so the check below is not vacuous', () => {
     expect(hazards.length).toBeGreaterThan(0);
+  });
+
+  it('pins the exact cross-entry hazard set per frame, not merely per entry', () => {
+    // A per-entry dedupe key hides a hazard on a second frame of an already
+    // -commented entry. Pinning the exact frame-level set closes that gap:
+    // any new or removed hazard, on any frame, moves this pin on purpose.
+    const actual = hazards
+      .map((hazard) => `${hazard.id} | ${hazard.sv} | ${hazard.particle}`)
+      .sort();
+    expect(actual).toEqual([...KNOWN_HAZARDS]);
   });
 
   it('gives every cross-entry hazard an explicit comment naming the particle', () => {
@@ -701,6 +762,24 @@ describe('particle verb dataset - cross-entry excluded-particle hazard (#389)', 
       }
     }
     expect(unjustified).toEqual([]);
+  });
+
+  it('regression #389: the third pv:ge-upp frame carries no excludedParticles', () => {
+    // src/data/particleVerbData.ts documents, in the comment on the pv:ge-upp
+    // entry, that this third frame ("Hon ger upp sin plats i tävlingen.")
+    // must stay unannotated: "ge upp" and "ge bort" are both real, correct
+    // Swedish for this sentence, so excluding "bort" here would mark a
+    // correct answer wrong. A per-entry hazard guard cannot catch this,
+    // because the entry's other two frames already carry a justifying
+    // comment for "bort"/"ut" -- only a per-frame check (see the KNOWN_HAZARDS
+    // pin above) fails when this frame picks up excludedParticles it must not
+    // have.
+    const entry = PARTICLE_VERB_DATA.find((candidate) => candidate.id === 'pv:ge-upp')!;
+    const thirdFrame = entry.examples.find(
+      (example) => example.sv === 'Hon ger upp sin plats i tävlingen.',
+    )!;
+    expect(thirdFrame).toBeDefined();
+    expect(thirdFrame.excludedParticles ?? []).toEqual([]);
   });
 });
 
