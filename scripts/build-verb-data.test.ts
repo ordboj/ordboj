@@ -268,6 +268,25 @@ describe('CSV row classification (review file)', () => {
       preteritum: 'jämförade',
       supinum: 'jämförat',
     },
+    // issue #381: a particle verb whose bare-verb core has the same
+    // bare-stem-imperativ defect as "jämföra" — the particle stripping must
+    // not hide the bare-stem check from firing
+    {
+      infinitive: 'skriva upp',
+      imperativ: 'skriv upp',
+      presens: 'skrivar upp',
+      preteritum: 'skrivade upp',
+      supinum: 'skrivat upp',
+    },
+    // issue #381 paired case: a genuine grupp 1 particle verb (imperativ is
+    // the full infinitive) must not be caught by the bare-stem check
+    {
+      infinitive: 'tacka nej',
+      imperativ: 'tacka nej',
+      presens: 'tackar nej',
+      preteritum: 'tackade nej',
+      supinum: 'tackat nej',
+    },
   ]);
 
   function reviewFileAfterRun(): string {
@@ -375,6 +394,26 @@ describe('CSV row classification (review file)', () => {
   // bare-stem imperativ, not on every grupp-1-shaped row.
   it('does not over-fire the bare-stem check on a genuine grupp 1 verb (imperativ === infinitive)', () => {
     const row = findReviewRow(reviewFileAfterRun(), 'kalla');
+    expect(row).toEqual({ grupp: '1', status: 'pass', reasons: '' });
+  });
+
+  // Regression test (issue #381): the bare-stem check must still fire after
+  // the particle is stripped, not just on bare (particle-less) infinitives —
+  // otherwise a particle verb with a bare-stem core imperativ would slip
+  // through as a guessed grupp 1 pass.
+  it('flags a particle verb with a bare-stem core imperativ as needs-check, not pass (issue #381)', () => {
+    const row = findReviewRow(reviewFileAfterRun(), 'skriva upp');
+    expect(row.status).toBe('needs-check');
+    expect(row.status).not.toBe('pass');
+    expect(row.reasons).toContain('is the bare stem, the grupp 2a/2b/3/4 imperativ shape');
+  });
+
+  // Paired case (issue #381): a genuine grupp 1 particle verb whose imperativ
+  // IS the full infinitive must not be caught by the bare-stem check — pins
+  // that the check only fires on a bare-stem imperativ, not on every
+  // particle verb.
+  it('does not over-fire on a genuine grupp 1 particle verb', () => {
+    const row = findReviewRow(reviewFileAfterRun(), 'tacka nej');
     expect(row).toEqual({ grupp: '1', status: 'pass', reasons: '' });
   });
 
