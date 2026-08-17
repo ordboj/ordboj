@@ -2921,18 +2921,19 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   },
 
   // ---- Wave C: band 5 + band 6 A1/A2, issue #396 ----
-  // Every band-5 row (SVALex 1 ≤ freq < 3) of
-  // docs/research/partikelverb/partikelverb-list.csv plus every
-  // judgment-ordered band-6 row tagged A1 or A2, minus the rows already
-  // shipped above and minus the five excluded below. Band 5 carries
+  // Drawn from band-5 rows (SVALex 1 ≤ freq < 3) of
+  // docs/research/partikelverb/partikelverb-list.csv plus band-6 rows tagged
+  // A1 or A2. This is NOT complete coverage of those two bands: 14 of the
+  // 112 candidate rows are not here, and every one of them is named below
+  // rather than left to be inferred from a diff. Band 5 carries
   // cefrEvidence 'svalex' with the CSV band it came from; band 6 carries
   // 'judgment', the convention the #359 and #372 blocks use, because band 6
   // is the research list's own editorial ordering and has no SVALex row.
-  // Every base below already has a VERB_DATA row, so each embedded forms
-  // value is that shipped row's form plus the invariant particle (#318); no
-  // VERB_DATA edit was needed or made.
+  // Every base that did ship below already has a VERB_DATA row, so each
+  // embedded forms value is that shipped row's form plus the invariant
+  // particle (#318); no VERB_DATA edit was needed or made.
   //
-  // Excluded from this wave rather than guessed:
+  // (a) Excluded on linguistic or naming grounds rather than guessed:
   // - "ta reda på" (rank 259): this file's own header already names it as a
   //   classification that stays uncertain. Nothing here changes that.
   // - "låsa in" (rank 184): its ASCII-folded id, pv:lasa-in, is already
@@ -2945,6 +2946,24 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   //   real, but I could not write three everyday frames for either that I
   //   can vouch for as natural, and an unnatural frame teaches the wrong
   //   thing just as surely as a wrong form does.
+  //
+  // (b) Dropped only because the base verb has no VERB_DATA row: "slappna
+  // av" (197), "vika ihop" (214), "bädda in" (218), "piffa upp" (226),
+  // "bry sig om" (261). That is not a valid reason under #317 — VERB_DATA
+  // membership stopped being a constraint on baseInfinitive, and the
+  // embedded `forms` are the authoritative strings — so these five are
+  // coverage debt, not exclusions. They are the open half of the #317 gate
+  // question (does an entry whose base is absent from VERB_DATA ship with
+  // forms alone, or does the base row get added first?) and are tracked in
+  // ORD-72 rather than silently skipped here.
+  //
+  // (c) Removed in remediation round 1 (PR #448 review) and moved to
+  // ORD-72: "plocka undan" (189) and "plocka fram" (236) — every natural
+  // frame admits "bort"/"upp" or collides with the shipped "ta fram";
+  // "ringa tillbaka" (282) — no natural frame I can write excludes the
+  // equally correct "ringa upp"; "vara tillbaka" — copula plus predicative
+  // adverbial versus particle verb is unresolved, the same ground on which
+  // this file's header already excludes "vara till".
   {
     id: 'pv:packa-in',
     cefr: 'A1',
@@ -2953,13 +2972,18 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'packa in',
-    gloss: { en: 'to place items inside a bag or a box' },
+    // Round 1 review: the packing-a-suitcase frames this entry used to carry
+    // ("packar in kläderna i väskan") are at least as idiomatic with "ner",
+    // and the gloss then collided with stoppa in. Narrowed to the enclosing
+    // sense — wrapping something up — where "in" is the only fit and no
+    // other shipped entry competes.
+    gloss: { en: 'to wrap something up inside paper or a blanket' },
     transparency: 'literal',
     acceptedParticles: ['in'],
     examples: [
-      { sv: 'Jag packar in kläderna i den stora väskan.', blankIndex: 2 },
       { sv: 'Hon packar in presenten i fint papper.', blankIndex: 2 },
-      { sv: 'Vi packar in maten i kylväskan före resan.', blankIndex: 2 },
+      { sv: 'Jag packar in boken i brunt omslagspapper.', blankIndex: 2 },
+      { sv: 'Vi packar in barnen i varma filtar och sjalar.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'packar in', preteritum: 'packade in', supinum: 'packat in' },
@@ -2972,13 +2996,16 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'skjuta in',
-    gloss: { en: 'to insert something into a narrow space' },
+    // Round 1 review: the third frame used to be the figurative "skjuta in
+    // en kommentar" on an entry declared literal. Replaced with a literal
+    // frame; the figurative sense is a separate reading, not a bonus example.
+    gloss: { en: 'to shove something so that it slides into place' },
     transparency: 'literal',
     acceptedParticles: ['in'],
     examples: [
       { sv: 'Han skjuter in lådan under sängen.', blankIndex: 2 },
       { sv: 'Vi skjuter in brevet under dörren.', blankIndex: 2 },
-      { sv: 'Hon skjuter in en kommentar mitt i samtalet.', blankIndex: 2 },
+      { sv: 'Jag skjuter in stolen under bordet efter maten.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'skjuter in', preteritum: 'sköt in', supinum: 'skjutit in' },
@@ -2991,13 +3018,16 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'med',
     reflexive: 'none',
     lemma: 'hinna med',
-    gloss: { en: 'to reach a bus or train before it leaves' },
+    // Round 1 review: the old gloss covered only the vehicle sense. The
+    // research list glosses it "to have time for, to make it to", and the
+    // third frame below is the "have time for" half.
+    gloss: { en: 'to have time for something; to reach a bus before it leaves' },
     transparency: 'idiomatic',
     acceptedParticles: ['med'],
     examples: [
       { sv: 'Jag hinner med bussen om jag springer nu.', blankIndex: 2 },
       { sv: 'Hon hinner med tåget trots den sena starten.', blankIndex: 2 },
-      { sv: 'Vi hinner med filmen om vi åker direkt.', blankIndex: 2 },
+      { sv: 'Jag hinner inte med allt arbete före semestern.', blankIndex: 3 },
     ],
     verified: true,
     forms: { presens: 'hinner med', preteritum: 'hann med', supinum: 'hunnit med' },
@@ -3029,13 +3059,17 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'ihop',
     reflexive: 'none',
     lemma: 'samla ihop',
-    gloss: { en: 'to gather scattered things into one place' },
+    // Round 1 review: the papers and money frames were "samla in" territory
+    // — that is the standard collocation for collecting submissions and
+    // donations. These frames are physical gathering of scattered objects,
+    // where "in" does not fit.
+    gloss: { en: 'to bring scattered things together into one pile' },
     transparency: 'literal',
     acceptedParticles: ['ihop'],
     examples: [
-      { sv: 'Läraren samlar ihop alla papper efter provet.', blankIndex: 2 },
+      { sv: 'Barnen samlar ihop de utspridda legobitarna på golvet.', blankIndex: 2 },
       { sv: 'Jag samlar ihop mina saker innan jag går.', blankIndex: 2 },
-      { sv: 'Vi samlar ihop pengar till en present.', blankIndex: 2 },
+      { sv: 'Vi samlar ihop grenarna i en stor hög.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'samlar ihop', preteritum: 'samlade ihop', supinum: 'samlat ihop' },
@@ -3050,6 +3084,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'skynda på',
     gloss: { en: 'to make haste, to move faster' },
     transparency: 'literal',
+    // A `ja ⚠` row in the research list: the same string takes an object,
+    // and then it is someone else being hurried, not the speaker.
+    contrast: 'skynda på någon — with an object: to urge someone else to hurry',
     acceptedParticles: ['på'],
     examples: [
       { sv: 'Vi skyndar på för att hinna med bussen.', blankIndex: 2 },
@@ -3107,7 +3144,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'gräva ner',
     gloss: { en: 'to place something in a hole and cover it with soil' },
     transparency: 'literal',
-    acceptedParticles: ['ner'],
+    // "ned" is the same word in its formal spelling, the treatment every
+    // other ner entry in this file already gets (see pv:ga-ner).
+    acceptedParticles: ['ner', 'ned'],
     examples: [
       { sv: 'Vi gräver ner lökarna i jorden på hösten.', blankIndex: 2 },
       { sv: 'Hunden gräver ner benet i trädgården.', blankIndex: 2 },
@@ -3124,11 +3163,16 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'ner',
     reflexive: 'none',
     lemma: 'sitta ner',
-    gloss: { en: 'to stay seated for a while' },
+    // Round 1 review: "Kan vi sitta ner och prata" is 'sit down', not 'stay
+    // seated', so the old first frame contradicted the gloss. Gloss now
+    // states the sense both readings share — being seated rather than
+    // standing — and the first frame is unambiguously durative.
+    gloss: { en: 'to be seated rather than standing' },
     transparency: 'literal',
-    acceptedParticles: ['ner'],
+    // "ned" is the same word in its formal spelling (see pv:ga-ner).
+    acceptedParticles: ['ner', 'ned'],
     examples: [
-      { sv: 'Kan vi sitta ner och prata en stund?', blankIndex: 3 },
+      { sv: 'Publiken sitter ner under hela föreställningen.', blankIndex: 2 },
       { sv: 'Vi sitter ner en stund innan mötet börjar.', blankIndex: 2 },
       { sv: 'Jag sitter ner och vilar efter den långa promenaden.', blankIndex: 2 },
     ],
@@ -3164,11 +3208,17 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'hugga in',
     gloss: { en: 'to start eating a meal eagerly' },
     transparency: 'idiomatic',
+    // Round 1 review asked for the `på` pattern to be declared or the entry
+    // dropped. It is not declared in the `preposition` field, because that
+    // field is for phrases that never occur without it and "hugg in!" stands
+    // perfectly well alone — the third frame shows exactly that. The pattern
+    // is stated here instead, where it is a note rather than a false claim.
+    contrast: 'hugga in på maten — what is eaten takes på, but "hugg in!" also stands alone',
     acceptedParticles: ['in'],
     examples: [
       { sv: 'Vi hugger in på maten så fort den kommer.', blankIndex: 2 },
       { sv: 'Barnen hugger in på tårtan direkt efter sången.', blankIndex: 2 },
-      { sv: 'Han hugger in på frukosten efter träningen.', blankIndex: 2 },
+      { sv: 'Han hugger in så fort tallriken står på bordet.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'hugger in', preteritum: 'högg in', supinum: 'huggit in' },
@@ -3183,7 +3233,13 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'skrämma bort',
     gloss: { en: 'to frighten an animal so that it flees' },
     transparency: 'literal',
-    acceptedParticles: ['bort'],
+    // Round 1 review: "skrämma iväg" is an equally standard synonym in every
+    // one of these frames, and "iväg" ships as a particle in this same wave.
+    // Grading it wrong would mark correct Swedish wrong, so both the cloze
+    // and the recall direction accept it (the pv:sla-pa / pv:satta-pa
+    // precedent).
+    acceptedParticles: ['bort', 'iväg'],
+    acceptedRecall: ['skrämma bort', 'skrämma iväg'],
     examples: [
       { sv: 'Hunden skrämmer bort fåglarna från trädgården.', blankIndex: 2 },
       { sv: 'Ljudet skrämmer bort rådjuren från åkern.', blankIndex: 2 },
@@ -3253,25 +3309,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       supinum: 'kastat tillbaka',
     },
   },
-  {
-    id: 'pv:plocka-undan',
-    cefr: 'B1',
-    cefrEvidence: 'svalex',
-    baseInfinitive: 'plocka',
-    particle: 'undan',
-    reflexive: 'none',
-    lemma: 'plocka undan',
-    gloss: { en: 'to tidy items into their proper places' },
-    transparency: 'literal',
-    acceptedParticles: ['undan'],
-    examples: [
-      { sv: 'Vi plockar undan tallrikarna efter middagen.', blankIndex: 2 },
-      { sv: 'Jag plockar undan leksakerna innan gästerna kommer.', blankIndex: 2 },
-      { sv: 'Hon plockar undan verktygen när arbetet är klart.', blankIndex: 2 },
-    ],
-    verified: true,
-    forms: { presens: 'plockar undan', preteritum: 'plockade undan', supinum: 'plockat undan' },
-  },
+  // "plocka undan" (rank 189) was here and is removed in remediation round 1
+  // → ORD-72: every everyday frame for it also admits "bort" (and often
+  // "upp"), which this wave ships on the same base verb, so the cloze would
+  // mark correct Swedish wrong. Splitting it from "plocka bort" needs a
+  // decision about how close two entries on one base may sit, not another
+  // frame rewrite.
   {
     id: 'pv:koppla-ihop',
     cefr: 'B1',
@@ -3304,7 +3347,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['upp'],
     examples: [
       { sv: 'Katten kryper upp i soffan varje kväll.', blankIndex: 2 },
-      { sv: 'Jag kryper upp i sängen med en bok.', blankIndex: 2 },
+      // Round 1 review: "kryper ner i sängen med en bok" is at least as
+      // idiomatic as "upp", so that frame is replaced by one where the
+      // movement is unambiguously upward.
+      { sv: 'Jag kryper upp på loftet där det är varmt.', blankIndex: 2 },
       { sv: 'Barnen kryper upp i knät hos mormor.', blankIndex: 2 },
     ],
     verified: true,
@@ -3342,7 +3388,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['ut'],
     examples: [
       { sv: 'Hon vilar ut efter en lång arbetsvecka.', blankIndex: 2 },
-      { sv: 'Jag vilar ut ordentligt innan nästa arbetsvecka.', blankIndex: 2 },
+      { sv: 'Jag vilar ut ordentligt under de lediga dagarna.', blankIndex: 2 },
       { sv: 'Vi vilar ut i stugan över helgen.', blankIndex: 2 },
     ],
     verified: true,
@@ -3380,7 +3426,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['upp'],
     examples: [
       { sv: 'Jag drar upp rullgardinen när jag vaknar.', blankIndex: 2 },
-      { sv: 'Hon drar upp blixtlåset på jackan.', blankIndex: 2 },
+      // Round 1 review: a bare "drar upp blixtlåset" is equally good with
+      // "ner". "ända till hakan" fixes the direction.
+      { sv: 'Hon drar upp blixtlåset ända till hakan.', blankIndex: 2 },
       { sv: 'Han drar upp hinken ur brunnen.', blankIndex: 2 },
     ],
     verified: true,
@@ -3437,7 +3485,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['upp'],
     examples: [
       { sv: 'Hon plockar upp nyckeln från golvet.', blankIndex: 2 },
-      { sv: 'Jag plockar upp skräpet i parken.', blankIndex: 2 },
+      // Round 1 review: "plockar bort skräpet i parken" is equally correct,
+      // and pv:plocka-bort ships in this same wave. A frame about coins that
+      // fell on the floor admits only "upp".
+      { sv: 'Jag plockar upp mynten som ramlade ur fickan.', blankIndex: 2 },
       { sv: 'Barnen plockar upp sina vantar från snön.', blankIndex: 2 },
     ],
     verified: true,
@@ -3451,13 +3502,18 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'stoppa in',
-    gloss: { en: 'to push something into a pocket or a bag' },
+    // Round 1 review: pocket and bag frames are at least as idiomatic with
+    // "ner" ("stoppar ner boken i väskan"), so all three are replaced by
+    // slot-and-opening frames, where a downward reading is unavailable and
+    // "in" is the only fit. The narrowed gloss also stops this entry from
+    // shadowing packa in and skjuta in.
+    gloss: { en: 'to push a card or a key into a slot' },
     transparency: 'literal',
     acceptedParticles: ['in'],
     examples: [
-      { sv: 'Han stoppar in nyckeln i fickan.', blankIndex: 2 },
-      { sv: 'Jag stoppar in boken i väskan.', blankIndex: 2 },
-      { sv: 'Hon stoppar in brevet i kuvertet.', blankIndex: 2 },
+      { sv: 'Han stoppar in nyckeln i låset på ytterdörren.', blankIndex: 2 },
+      { sv: 'Jag stoppar in kortet i kortläsaren vid kassan.', blankIndex: 2 },
+      { sv: 'Hon stoppar in ett brev i den smala springan.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'stoppar in', preteritum: 'stoppade in', supinum: 'stoppat in' },
@@ -3491,7 +3547,8 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'slå ner',
     gloss: { en: 'of lightning, to strike the ground' },
     transparency: 'literal',
-    acceptedParticles: ['ner'],
+    // "ned" is the same word in its formal spelling (see pv:ga-ner).
+    acceptedParticles: ['ner', 'ned'],
     examples: [
       { sv: 'Blixten slår ner i det höga trädet.', blankIndex: 2 },
       { sv: 'Åskan slår ner nära huset varje sommar.', blankIndex: 2 },
@@ -3577,6 +3634,15 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     forms: { presens: 'springer fram', preteritum: 'sprang fram', supinum: 'sprungit fram' },
   },
   {
+    // Id folding hazard, flagged in round 1 review and kept deliberately:
+    // "fälla" folds to "falla", the same ASCII string as the unrelated verb
+    // "falla" (pv:falla-ihop, earlier in this same wave). No collision
+    // exists today — the two ids differ in their particle — and a renamed id
+    // would have to invent a disambiguation convention this file does not
+    // have; where folding actually collided ("låsa in" vs the shipped "läsa
+    // in") the wave note above excludes the entry instead of inventing one.
+    // The hazard is real for a future "fälla ihop" or "falla upp", which is
+    // why it is written down here rather than left to be rediscovered.
     id: 'pv:falla-upp',
     cefr: 'C1',
     cefrEvidence: 'svalex',
@@ -3589,7 +3655,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['upp'],
     examples: [
       { sv: 'Hon fäller upp paraplyet när regnet börjar.', blankIndex: 2 },
-      { sv: 'Jag fäller upp sätet i bilen.', blankIndex: 2 },
+      // Round 1 review: "fäller ner sätet i bilen" is equally correct, so
+      // that frame is replaced by one whose following clause fixes the
+      // direction.
+      { sv: 'Jag fäller upp skärmen och loggar in på datorn.', blankIndex: 2 },
       { sv: 'Han fäller upp kragen mot den kalla vinden.', blankIndex: 2 },
     ],
     verified: true,
@@ -3680,13 +3749,17 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'samman',
     reflexive: 'none',
     lemma: 'hänga samman',
-    gloss: { en: 'to be linked as parts of one whole' },
+    // Round 1 review: in neutral register "hänga ihop" is the default and
+    // these frames were all neutral, so the card graded the commoner word
+    // wrong. Frames are now formal-register, the same treatment
+    // pv:satta-samman gets, and the gloss says so.
+    gloss: { en: 'to belong together as parts of one whole, in formal register' },
     transparency: 'idiomatic',
     acceptedParticles: ['samman'],
     examples: [
-      { sv: 'De två frågorna hänger samman på ett tydligt sätt.', blankIndex: 4 },
-      { sv: 'Priset och kvaliteten hänger samman i den här branschen.', blankIndex: 4 },
-      { sv: 'Allt hänger samman med hur vi planerar arbetet.', blankIndex: 2 },
+      { sv: 'De två frågorna hänger samman i utredningens analys.', blankIndex: 4 },
+      { sv: 'Priset och kvaliteten hänger samman enligt rapportens slutsats.', blankIndex: 4 },
+      { sv: 'Besluten hänger samman med regeringens långsiktiga strategi.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'hänger samman', preteritum: 'hängde samman', supinum: 'hängt samman' },
@@ -3710,25 +3783,13 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'lagar till', preteritum: 'lagade till', supinum: 'lagat till' },
   },
-  {
-    id: 'pv:plocka-fram',
-    cefr: 'B2',
-    cefrEvidence: 'svalex',
-    baseInfinitive: 'plocka',
-    particle: 'fram',
-    reflexive: 'none',
-    lemma: 'plocka fram',
-    gloss: { en: 'to fetch several things and lay them ready' },
-    transparency: 'literal',
-    acceptedParticles: ['fram'],
-    examples: [
-      { sv: 'Jag plockar fram tallrikar och glas till middagen.', blankIndex: 2 },
-      { sv: 'Hon plockar fram verktygen ur lådan.', blankIndex: 2 },
-      { sv: 'Vi plockar fram böckerna inför provet.', blankIndex: 2 },
-    ],
-    verified: true,
-    forms: { presens: 'plockar fram', preteritum: 'plockade fram', supinum: 'plockat fram' },
-  },
+  // "plocka fram" (rank 236) was here and is removed in remediation round 1
+  // → ORD-72: its gloss is a paraphrase of the shipped "ta fram" ("to get
+  // something out and ready to use") and its table-laying frames duplicated
+  // "ställa fram" below. Three entries competing for one recall prompt is a
+  // dataset problem, not a frame problem: whether they become one entry with
+  // acceptedRecall across all three phrases, or two with sharper glosses, is
+  // a decision to take once rather than by adding a third near-twin here.
   {
     id: 'pv:stryka-over',
     cefr: 'B2',
@@ -3739,11 +3800,14 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'stryka över',
     gloss: { en: 'to draw a line through written text' },
     transparency: 'literal',
+    // Round 1 review: all three frames were equally good with "under"
+    // (stryka under = to underline), so each now carries a clause that only
+    // the crossing-out reading satisfies.
     acceptedParticles: ['över'],
     examples: [
-      { sv: 'Läraren stryker över det felstavade ordet.', blankIndex: 2 },
-      { sv: 'Jag stryker över namnet på listan.', blankIndex: 2 },
-      { sv: 'Hon stryker över meningen med en penna.', blankIndex: 2 },
+      { sv: 'Läraren stryker över ordet så att det inte syns.', blankIndex: 2 },
+      { sv: 'Jag stryker över namnet som inte längre gäller.', blankIndex: 2 },
+      { sv: 'Hon stryker över den gamla adressen på kuvertet.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'stryker över', preteritum: 'strök över', supinum: 'strukit över' },
@@ -3796,7 +3860,8 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'hugga ner',
     gloss: { en: 'to fell a tree with an axe or a saw' },
     transparency: 'literal',
-    acceptedParticles: ['ner'],
+    // "ned" is the same word in its formal spelling (see pv:ga-ner).
+    acceptedParticles: ['ner', 'ned'],
     examples: [
       { sv: 'De hugger ner det stora trädet i trädgården.', blankIndex: 2 },
       { sv: 'Bonden hugger ner björken vid vägen.', blankIndex: 2 },
@@ -3872,7 +3937,8 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'sätta {refl} ner',
     gloss: { en: 'to take a seat at a table or on a chair' },
     transparency: 'literal',
-    acceptedParticles: ['ner'],
+    // "ned" is the same word in its formal spelling (see pv:ga-ner).
+    acceptedParticles: ['ner', 'ned'],
     examples: [
       { sv: 'Vi sätter oss ner vid bordet och äter.', blankIndex: 3 },
       { sv: 'Jag sätter mig ner en stund och vilar.', blankIndex: 3 },
@@ -3895,7 +3961,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['på'],
     examples: [
       { sv: 'Vi stiger på tåget i sista minuten.', blankIndex: 2 },
-      { sv: 'Hon stiger på bussen vid torget.', blankIndex: 2 },
+      // Round 1 review: "stiger av bussen vid torget" is equally correct and
+      // pv:stiga-av ships. The added clause only fits boarding.
+      { sv: 'Hon stiger på bussen och söker en ledig plats.', blankIndex: 2 },
       { sv: 'Passagerarna stiger på planet efter kontrollen.', blankIndex: 2 },
     ],
     verified: true,
@@ -3911,6 +3979,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'fylla på',
     gloss: { en: 'to add more of something to a container' },
     transparency: 'literal',
+    // A `ja ⚠` row in the research list. The near neighbour a learner
+    // actually confuses it with is the shipped pv:fylla-i.
+    contrast: 'fylla i — the near neighbour: to complete a form, not to top up a container',
     acceptedParticles: ['på'],
     examples: [
       { sv: 'Jag fyller på vatten i flaskan före löpturen.', blankIndex: 2 },
@@ -3930,6 +4001,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'lägga på',
     gloss: { en: 'to end a telephone call' },
     transparency: 'idiomatic',
+    // A `ja ⚠` row: stress minimal pair 5 in the research list. Stressed på
+    // ends a call; unstressed på just places an object somewhere.
+    contrast: 'lägga på (unstressed på) — "to place on top": han lägger boken på bordet',
     acceptedParticles: ['på'],
     examples: [
       { sv: 'Hon lägger på luren efter det korta samtalet.', blankIndex: 2 },
@@ -3949,7 +4023,14 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'gå av',
     gloss: { en: 'to snap in two, to break apart' },
     transparency: 'idiomatic',
-    acceptedParticles: ['av'],
+    // A `ja ⚠` row: with a vehicle the same string is the everyday "get off".
+    contrast: 'gå av bussen — with a vehicle the same phrase means to get off, like stiga av',
+    // Round 1 review: "sönder" is correct Swedish in all three frames
+    // (kedjan/snöret/grenen går sönder) and pv:ga-sonder ships, so the cloze
+    // accepts it — the skriva ner precedent. Recall stays single-answer:
+    // "gå av" is specifically snapping in two, which is what the gloss asks
+    // for, and "gå sönder" is its own entry with its own broader gloss.
+    acceptedParticles: ['av', 'sönder'],
     examples: [
       { sv: 'Kedjan går av mitt under cykelturen.', blankIndex: 2 },
       { sv: 'Snöret går av när jag drar hårt.', blankIndex: 2 },
@@ -3970,7 +4051,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['bort'],
     examples: [
-      { sv: 'Servitören plockar bort tallrikarna från bordet.', blankIndex: 2 },
+      // Round 1 review: clearing plates admits "undan" and "upp" just as
+      // well. Taking one thing out of a dish does not.
+      { sv: 'Han plockar bort löken från sin tallrik.', blankIndex: 2 },
       { sv: 'Jag plockar bort de vissna bladen från plantan.', blankIndex: 2 },
       { sv: 'Hon plockar bort en post ur listan.', blankIndex: 2 },
     ],
@@ -3985,7 +4068,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'fram',
     reflexive: 'none',
     lemma: 'ställa fram',
-    gloss: { en: 'to set dishes on a table ready for a meal' },
+    // Kept deliberately narrow: "ta fram" (shipped) is the general "get
+    // something out and ready"; this entry is specifically putting things
+    // out on the table, which is what "ställa" (place standing) contributes.
+    gloss: { en: 'to put dishes and food out on the table before a meal' },
     transparency: 'literal',
     acceptedParticles: ['fram'],
     examples: [
@@ -4004,7 +4090,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'ihop',
     reflexive: 'none',
     lemma: 'packa ihop',
-    gloss: { en: 'to gather one’s belongings together to leave' },
+    // Distinguished from samla ihop (bringing scattered things into one
+    // pile) and from the shipped få ihop (managing to gather enough): this
+    // one is the packing-up that ends an activity.
+    gloss: { en: 'to fold and pack one’s things when leaving' },
     transparency: 'literal',
     acceptedParticles: ['ihop'],
     examples: [
@@ -4028,31 +4117,22 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['ut'],
     examples: [
       { sv: 'Vi checkar ut från hotellet före klockan tolv.', blankIndex: 2 },
-      { sv: 'Hon checkar ut tidigt på söndagsmorgonen.', blankIndex: 2 },
+      // Round 1 review: "checkar in tidigt på söndagsmorgonen" is equally
+      // correct, and pv:checka-in ships. Three nights already spent at the
+      // hotel rule the arrival reading out.
+      { sv: 'Hon checkar ut efter tre nätter på hotellet.', blankIndex: 2 },
       { sv: 'Jag checkar ut och lämnar nyckeln i receptionen.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'checkar ut', preteritum: 'checkade ut', supinum: 'checkat ut' },
   },
-  {
-    id: 'pv:ringa-tillbaka',
-    cefr: 'A2',
-    cefrEvidence: 'judgment',
-    baseInfinitive: 'ringa',
-    particle: 'tillbaka',
-    reflexive: 'none',
-    lemma: 'ringa tillbaka',
-    gloss: { en: 'to return someone’s phone call' },
-    transparency: 'literal',
-    acceptedParticles: ['tillbaka'],
-    examples: [
-      { sv: 'Jag ringer tillbaka så fort mötet är slut.', blankIndex: 2 },
-      { sv: 'Läkaren ringer tillbaka senare under eftermiddagen.', blankIndex: 2 },
-      { sv: 'Kan du ringa tillbaka om en timme?', blankIndex: 3 },
-    ],
-    verified: true,
-    forms: { presens: 'ringer tillbaka', preteritum: 'ringde tillbaka', supinum: 'ringt tillbaka' },
-  },
+  // "ringa tillbaka" (rank 282) was here and is removed in remediation round
+  // 1 → ORD-72: in every frame I can write and vouch for as natural, "ringa
+  // upp" is also correct Swedish, so the cloze marks a defensible answer
+  // wrong. Making "upp" an accepted answer is not the fix either — it is a
+  // different act (placing a call, not returning one) and would teach the
+  // two as interchangeable. The entry needs a frame device this wave does
+  // not have.
   {
     id: 'pv:skicka-tillbaka',
     cefr: 'A2',
@@ -4067,7 +4147,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Hon skickar tillbaka tröjan som var för liten.', blankIndex: 2 },
       { sv: 'Jag skickar tillbaka paketet redan i morgon.', blankIndex: 2 },
-      { sv: 'Vi skickar tillbaka blanketten till myndigheten.', blankIndex: 2 },
+      // Round 1 review: "skickar in blanketten till myndigheten" is the
+      // standard phrase for submitting a form, and pv:skicka-in ships with
+      // exactly that frame. Returning faulty goods admits only "tillbaka".
+      { sv: 'Vi skickar tillbaka de trasiga skorna till butiken.', blankIndex: 2 },
     ],
     verified: true,
     forms: {
@@ -4086,9 +4169,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'komma ner',
     gloss: { en: 'to arrive at a lower floor or level' },
     transparency: 'literal',
-    acceptedParticles: ['ner'],
+    // "ned" is the same word in its formal spelling (see pv:ga-ner).
+    acceptedParticles: ['ner', 'ned'],
     examples: [
-      { sv: 'Jag kommer ner om ungefär fem minuter.', blankIndex: 2 },
+      // Round 1 review: "kommer upp/tillbaka om fem minuter" fits the old
+      // frame just as well. Naming the ground floor rules both out.
+      { sv: 'Jag kommer ner till bottenvåningen med hissen.', blankIndex: 2 },
       { sv: 'Hon kommer ner för trappan med väskan.', blankIndex: 2 },
       { sv: 'Barnen kommer ner till frukosten klockan åtta.', blankIndex: 2 },
     ],
@@ -4152,25 +4238,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'hoppar upp', preteritum: 'hoppade upp', supinum: 'hoppat upp' },
   },
-  {
-    id: 'pv:vara-tillbaka',
-    cefr: 'A2',
-    cefrEvidence: 'judgment',
-    baseInfinitive: 'vara',
-    particle: 'tillbaka',
-    reflexive: 'none',
-    lemma: 'vara tillbaka',
-    gloss: { en: 'to be present again after an absence' },
-    transparency: 'literal',
-    acceptedParticles: ['tillbaka'],
-    examples: [
-      { sv: 'Jag är tillbaka på kontoret på måndag.', blankIndex: 2 },
-      { sv: 'Hon är tillbaka i skolan efter sjukdomen.', blankIndex: 2 },
-      { sv: 'Vi är tillbaka hemma före midnatt.', blankIndex: 2 },
-    ],
-    verified: true,
-    forms: { presens: 'är tillbaka', preteritum: 'var tillbaka', supinum: 'varit tillbaka' },
-  },
+  // "vara tillbaka" was here and is removed in remediation round 1 →
+  // ORD-72: whether this is a particle verb at all, or a copula with a
+  // predicative adverbial, is unresolved. This file's header already
+  // excludes "vara till" on exactly that ground, and shipping "vara
+  // tillbaka" while excluding "vara till" would be the dataset contradicting
+  // itself. The classification decision comes first; the entry can follow.
   {
     id: 'pv:fa-tillbaka',
     cefr: 'A2',
