@@ -214,10 +214,12 @@ describe('#246: mixed legacy + pv: key round trip', () => {
     expect(result.current.srsStates[freshKey]!.itemId).toBe(freshKey);
   });
 
-  it('records the same schedule whichever modality is reported, in v1', async () => {
-    // modality is plumb-and-ignore: the parameter is accepted so credit can
-    // later attach to how an item was answered, but no branch ships yet, so
-    // src/lib/srs.ts stays untouched.
+  it('credits a first-ever correct choice answer the same schedule but no ease reward, unlike typed (#388)', async () => {
+    // modality now branches in src/lib/srs.ts (#388): a correct choice
+    // (recognition) answer advances repetitions and intervalDays exactly
+    // like typed on the very first review (both land on intervalDays 1,
+    // the max(1, ...) floor), but earns no ease reward, so the two paths
+    // diverge on easeFactor alone.
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -233,7 +235,10 @@ describe('#246: mixed legacy + pv: key round trip', () => {
     const typed = result.current.srsStates[typedKey]!;
     const choice = result.current.srsStates[choiceKey]!;
     expect(choice.repetitions).toBe(typed.repetitions);
+    expect(choice.repetitions).toBe(1);
     expect(choice.intervalDays).toBe(typed.intervalDays);
-    expect(choice.easeFactor).toBe(typed.easeFactor);
+    expect(choice.intervalDays).toBe(1);
+    expect(typed.easeFactor).toBe(2.55);
+    expect(choice.easeFactor).toBe(2.5);
   });
 });

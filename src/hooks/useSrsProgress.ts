@@ -8,6 +8,7 @@ import {
   isSrsState,
   isStoredSrsState,
   Grade,
+  type AnswerModality,
 } from '@/lib/srs';
 import {
   createConjugationProvider,
@@ -26,10 +27,10 @@ import {
 } from '@/lib/backup';
 import { particleItemId } from '@/lib/itemIds';
 
-// How the learner produced the answer. Bundled here (rather than added as a
-// second boolean later) because the hint-reporting change from
-// docs/learning/lapse-handling.md needs the same payload.
-export type AnswerModality = 'typed' | 'choice';
+// How the learner produced the answer. The type moved to src/lib/srs.ts when
+// the scheduler started branching on it (#388); re-exported here so existing
+// importers keep working.
+export type { AnswerModality } from '@/lib/srs';
 
 // Both keys are defined once, in src/lib/backup.ts, so the backup path and
 // the hook cannot drift apart on where the irreplaceable data lives.
@@ -573,22 +574,17 @@ export function useSrsProgress(cefrLevels?: string[]) {
     return dueItems;
   }, [srsStates, conjugationProvider]);
 
-  // Record answer.
-  //
-  // `modality` is recorded and never branched on in v1 — deliberately. The
-  // policy it will eventually drive is written down (a correct multiple-choice
-  // answer earns no ease and a capped interval multiplier, because scheduling
-  // recognition success at production intervals is how the scheduler comes to
-  // believe a learner knows something they cannot produce; see
-  // docs/learning/particle-verb-practice.md). Taking the parameter now means
-  // the credit will attach to how an item *was* answered rather than to
-  // whatever the settings say later, so switching modes can never
-  // retroactively reinterpret history. Shipping no branch on it keeps
-  // "the scheduler needs zero changes" literally true.
+  // Record answer. `modality` is passed through to the scheduler, which
+  // branches on it since #388: a correct choice answer earns no ease and a
+  // capped interval multiplier, because scheduling recognition success at
+  // production intervals is how the scheduler comes to believe a learner
+  // knows something they cannot produce (see
+  // docs/learning/2026-08-08-discrimination-exercise.md). The credit
+  // attaches to how the item *was* answered, so switching modes can never
+  // retroactively reinterpret history.
   const recordAnswer = (itemId: string, grade: Grade, modality: AnswerModality = 'typed') => {
-    void modality;
     const currentState = srsStates[itemId] || initializeSrsState(itemId);
-    const newState = calculateNextReview(currentState, grade);
+    const newState = calculateNextReview(currentState, grade, modality);
     setSrsStates((prev) => ({
       ...prev,
       [itemId]: newState,
