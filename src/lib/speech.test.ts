@@ -1,6 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { ConjugatedVerb } from './verbs';
-import { SKRIVA, MISSLYCKAS, TE_SIG, KUNNA } from '@/test/conjugationFixtures';
+import {
+  SKRIVA,
+  TALA,
+  FARDAS,
+  MISSLYCKAS,
+  TE_SIG,
+  KUNNA,
+  ANSE,
+  ALL_FIXTURES,
+} from '@/test/conjugationFixtures';
 
 // speech.ts keeps its "has stopSpeaking() invalidated me?" state in a
 // module-level `cancelToken` variable. vi.resetModules() plus a fresh
@@ -412,7 +421,22 @@ describe('buildConjugationUtterance (#453)', () => {
     expect(buildConjugationUtterance(SKRIVA)).toBe('skriva, skriver, skrev, skrivit, skriv');
   });
 
-  it('retains the deponent "-s" ending in every included form — misslyckas', async () => {
+  it('joins infinitive, presens, preteritum, supinum, imperativ in that order with ", " — tala', async () => {
+    const { buildConjugationUtterance } = await importSpeech();
+
+    expect(buildConjugationUtterance(TALA)).toBe('tala, talar, talade, talat, tala');
+  });
+
+  it('retains the deponent "-s" ending in every included form — färdas', async () => {
+    const { buildConjugationUtterance } = await importSpeech();
+
+    expect(buildConjugationUtterance(FARDAS)).toBe('färdas, färdas, färdades, färdats, färdas');
+  });
+
+  // Extra case, not a fixture-table row: MISSLYCKAS is a second deponent
+  // verb, checked here for the every-form-ends-in-"s" property that FARDAS
+  // above does not separately assert.
+  it('retains the deponent "-s" ending in every included form — misslyckas (extra deponent case)', async () => {
     const { buildConjugationUtterance } = await importSpeech();
 
     const result = buildConjugationUtterance(MISSLYCKAS);
@@ -426,6 +450,12 @@ describe('buildConjugationUtterance (#453)', () => {
     const { buildConjugationUtterance } = await importSpeech();
 
     expect(buildConjugationUtterance(TE_SIG)).toBe('te sig, ter sig, tedde sig, tett sig');
+  });
+
+  it('drops only the unavailable (sentinel) imperativ, second sentinel case — anse', async () => {
+    const { buildConjugationUtterance } = await importSpeech();
+
+    expect(buildConjugationUtterance(ANSE)).toBe('anse, anser, ansåg, ansett');
   });
 
   it('excludes a form whose raw value is an empty string', async () => {
@@ -473,5 +503,20 @@ describe('buildConjugationUtterance (#453)', () => {
       imperativ: '(not available)',
     };
     expect(buildConjugationUtterance(nothingSpeakable)).toBe('');
+  });
+
+  // Drift guard: conjugationFixtures.ts hand-transcribes these rows from
+  // src/data/verbData.ts. Without this check an edit to verbData.ts (or a
+  // transcription slip) could diverge from the fixtures silently — every
+  // other test above only ever compares a fixture against itself.
+  it.each(ALL_FIXTURES)('fixture $infinitive matches conjugateVerb()', async (fixture) => {
+    const { conjugateVerb } = await import('./verbs');
+    expect(await conjugateVerb(fixture.infinitive)).toMatchObject({
+      infinitive: fixture.infinitive,
+      presens: fixture.presens,
+      preteritum: fixture.preteritum,
+      supinum: fixture.supinum,
+      imperativ: fixture.imperativ,
+    });
   });
 });

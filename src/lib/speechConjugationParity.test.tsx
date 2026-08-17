@@ -9,7 +9,7 @@ import {
   SV_VOICE,
   type SpeechSynthesisMockHandle,
 } from '@/test/speechMock';
-import { SKRIVA, TE_SIG, KUNNA } from '@/test/conjugationFixtures';
+import { SKRIVA, TE_SIG, KUNNA, ANSE } from '@/test/conjugationFixtures';
 import type { ConjugatedVerb, Form } from '@/lib/verbs';
 
 // Issue #456: src/lib/speech.ts's buildConjugationUtterance (#453) and
@@ -37,7 +37,11 @@ import type { ConjugatedVerb, Form } from '@/lib/verbs';
 // where two different forms share the same literal text (e.g. a deponent
 // verb whose infinitive, presens and imperativ can coincide) would let a
 // set-of-values comparison silently pass even if one of those forms were
-// wrongly dropped, so MISSLYCKAS is intentionally not used here.
+// wrongly dropped, so MISSLYCKAS is intentionally not used here. TALA and
+// FARDAS stay out for the same duplicate-string reason: TALA's imperativ
+// equals its infinitive ("tala"), and FARDAS is a deponent verb like
+// MISSLYCKAS whose infinitive, presens and imperativ all coincide
+// ("färdas").
 
 let speech: SpeechSynthesisMockHandle;
 
@@ -107,6 +111,7 @@ describe('buildConjugationUtterance / PracticeCard availability parity (#456)', 
   it.each([
     ['skriva (every form available)', SKRIVA],
     ['te sig (sentinel-excluded imperativ)', TE_SIG],
+    ['anse (sentinel-excluded imperativ)', ANSE],
     ['kunna (imperativNotApplicable-excluded imperativ)', KUNNA],
   ] as const)(
     "%s: buildConjugationUtterance's included forms equal what PracticeCard renders as speakable",

@@ -36,10 +36,10 @@ export const MISSLYCKAS: ConjugatedVerb = {
 
 // verbData.ts:87 - multi-word reflexive phrase (grupp 3). imperativ is
 // stored empty in VERB_DATA but is NOT flagged imperativNotApplicable (see
-// CLAUDE.md's "te sig"/"anse" note: intentionally empty pending human
-// review, not grammatically absent), so conjugateVerb() falls back to the
-// "(not available)" sentinel for it — the generic empty/sentinel exclusion
-// rule, not the imperativNotApplicable one.
+// the isFormUnavailable comment in src/components/PracticeCard.tsx:30-42:
+// intentionally empty pending human review, not grammatically absent), so
+// conjugateVerb() falls back to the "(not available)" sentinel for it — the
+// generic empty/sentinel exclusion rule, not the imperativNotApplicable one.
 export const TE_SIG: ConjugatedVerb = {
   id: 'te sig',
   infinitive: 'te sig',
@@ -60,3 +60,48 @@ export const KUNNA: ConjugatedVerb = {
   imperativ: '(not available)',
   imperativNotApplicable: true,
 };
+
+// verbData.ts:120 - full regular paradigm, grupp 1. imperativ equals the
+// infinitive verbatim (a grupp-1 pattern, not a sentinel or fallback).
+export const TALA: ConjugatedVerb = {
+  id: 'tala',
+  infinitive: 'tala',
+  presens: 'talar',
+  preteritum: 'talade',
+  supinum: 'talat',
+  imperativ: 'tala',
+};
+
+// verbData.ts:806 - deponent verb (grupp 1), same "-s" pattern as
+// MISSLYCKAS. Not used by the parity suite for the same duplicate-string
+// reason: infinitive, presens and imperativ all share the literal string
+// "färdas", which collapses a set-of-values comparison.
+export const FARDAS: ConjugatedVerb = {
+  id: 'färdas',
+  infinitive: 'färdas',
+  presens: 'färdas',
+  preteritum: 'färdades',
+  supinum: 'färdats',
+  imperativ: 'färdas',
+};
+
+// verbData.ts:112 - stative verb (grupp 4). imperativ is stored empty in
+// VERB_DATA but is NOT flagged imperativNotApplicable (see the
+// isFormUnavailable comment in src/components/PracticeCard.tsx:30-42),
+// so conjugateVerb() falls back to the "(not available)" sentinel for it —
+// a second sentinel-excluded-imperativ case alongside TE_SIG, with every
+// available form a distinct string.
+export const ANSE: ConjugatedVerb = {
+  id: 'anse',
+  infinitive: 'anse',
+  presens: 'anser',
+  preteritum: 'ansåg',
+  supinum: 'ansett',
+  imperativ: '(not available)',
+};
+
+// Every frozen fixture row, for the drift guard in speech.test.ts: each
+// fixture's forms must match what conjugateVerb() derives from the live
+// src/data/verbData.ts row, so a hand-transcription error or an upstream
+// data edit fails loudly instead of drifting silently.
+export const ALL_FIXTURES = [SKRIVA, TALA, FARDAS, MISSLYCKAS, TE_SIG, KUNNA, ANSE];
