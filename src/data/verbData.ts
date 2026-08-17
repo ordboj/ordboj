@@ -1088,10 +1088,16 @@ export const VERB_DATA: VerbData[] = [
   // CEFR evidence convention for this batch: each band is the SVALex-derived
   // band of the particle phrase the row serves (docs/research/svalex/
   // partikelverb_cefr_draft.csv, the same derivation particleVerbData.ts
-  // uses), because in current Swedish every one of these bare verbs is met
-  // almost only inside that phrase. Where the promotion-queue CSV carries a
-  // different band for the bare lemma, the divergence is named on the row
-  // rather than left implicit.
+  // uses). For slappna, piffa, tråka and bry that is close to a lexical
+  // fact — the bare verb is barely used outside its phrase. "vika" and
+  // "bädda" are the exceptions and the claim is weaker for them: both are
+  // ordinary verbs on their own ("vika ett papper", "bädda sängen") and
+  // "vika" takes several other particles (vika av, vika undan, vika ut), so
+  // their bands are a judgment that the phrase band is the better estimate
+  // of when a learner meets the verb, not an observation that no other use
+  // exists. Where the promotion-queue CSV carries a different band for the
+  // bare lemma, the divergence is named on the row rather than left
+  // implicit.
   { cefr: "B1", infinitive: "slappna", imperativ: "slappna", presens: "slappnar", preteritum: "slappnade", supinum: "slappnat", grupp: "1" }, // regular grupp 1 (SAOL slappna/slappnar/slappnade/slappnat, imperativ slappna). B1 from SVALex slappna+av=b1; the promotion-queue CSV tags the bare lemma C1, which understates it — the forms this row teaches are the ones a learner meets in the everyday "slappna av"
   // "vika": strong verb, avljud i/e/i (viker/vek/vikit), same pattern as the
   // shipped riva/rev/rivit and skriva/skrev/skrivit. Supinum "vikt" is the
@@ -1113,9 +1119,13 @@ export const VERB_DATA: VerbData[] = [
   // bo/tro/nå pattern (bry+r, bry+dde, bry+tt), not an -er present. Forms
   // per SAOL: bry/bryr/brydde/brytt, imperativ "bry" ("bry dig inte om
   // det!"), which is attested and therefore filled rather than left empty.
-  // A2 by judgment: no CSV row for the bare lemma, and the phrase it lives
-  // in ("bry sig om") is banded A2 in docs/research/partikelverb/
-  // partikelverb-list.csv. That phrase is deliberately NOT a particle-verb
+  // A2, diverging from the promotion-queue CSV, which carries no bare "bry"
+  // row but does carry the reflexive lemma "bry sig" at A1 (same forms plus
+  // the pronoun). Re-tagged down to A2 for the same reason as the rest of
+  // this batch: the phrase this verb actually lives in, "bry sig om", is
+  // banded A2 in docs/research/partikelverb/partikelverb-list.csv, and it is
+  // an everyday but not core-beginner phrase — A1 in the queue CSV overtags
+  // it. That phrase is deliberately NOT a particle-verb
   // entry — see the ORD-72 note in particleVerbData.ts — but the verb still
   // conjugates and belongs here.
   { cefr: "A2", infinitive: "bry", imperativ: "bry", presens: "bryr", preteritum: "brydde", supinum: "brytt", grupp: "3", note: "bry is used almost only reflexively, as bry sig (om något). Recognition only: the reflexive pronoun is not part of the stored forms." },

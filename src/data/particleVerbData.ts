@@ -4826,6 +4826,15 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   // "plocka upp" are transitive and need a direct object. All three frames
   // below are object-less, which is why "bort" and "upp" are excluded rather
   // than merely unintended.
+  // Round 2 review: "ihop" was weighed as a fourth candidate and rejected
+  // for all three frames. The shipped pv:plocka-ihop is transitive in each
+  // of its own frames ("plockar ihop mina saker / leksakerna /
+  // utrustningen"), and its one object-less colloquial reading is "pack up
+  // in order to leave", which contradicts every frame here — nobody tidies
+  // the living room before the guests arrive in order to leave. Recorded as
+  // prose rather than added to excludedParticles: that field means a form
+  // actively confirmed impossible, and a colloquial reading I have not
+  // confirmed against a reference does not meet that bar.
   {
     id: 'pv:plocka-undan',
     cefr: 'B1',
@@ -5882,18 +5891,26 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'av',
     reflexive: 'none',
     lemma: 'slappna av',
-    // Distinguished from the shipped vila ut ("to recover fully by
-    // resting"): that is recuperation over time, this is the release of
-    // tension itself.
-    gloss: { en: 'to let go of tension and become calm' },
+    // Round 2 review: the first gloss ("to let go of tension and become
+    // calm") was answerable by the shipped koppla av ("to unwind and let go
+    // of stress"), which would fail a learner who typed correct Swedish.
+    // Cross-listing the two in acceptedRecall — the stänga av/slå av
+    // treatment — would be dishonest here: those two name one identical act
+    // on a device, whereas koppla av is mental (disconnecting from work,
+    // "koppla av med en bok") and slappna av is bodily (letting muscles go
+    // slack, "slappna av i axlarna", which koppla av cannot express). Two
+    // senses, so the fix is two glosses that say which is which, and frames
+    // that show the bodily reading. Also distinct from vila ut ("to recover
+    // fully by resting"), which is recuperation over time.
+    gloss: { en: 'to release the tension in your body and go loose' },
     transparency: 'idiomatic',
     // Bare "slappna" (to go slack) is marginal in modern Swedish; "av" is
     // the only particle this verb takes in the everyday sense, so no other
     // candidate had to be weighed for these frames.
     acceptedParticles: ['av'],
     examples: [
-      { sv: 'Jag slappnar av i soffan efter en lång dag.', blankIndex: 2 },
-      { sv: 'Hon slappnar av när musiken börjar spela.', blankIndex: 2 },
+      { sv: 'Jag slappnar av i axlarna när massagen börjar.', blankIndex: 2 },
+      { sv: 'Hon slappnar av i hela kroppen när musiken spelar.', blankIndex: 2 },
       { sv: 'Vi slappnar av i bastun varje fredagskväll.', blankIndex: 2 },
     ],
     verified: true,
@@ -5919,7 +5936,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Jag viker ihop tvätten och lägger den i lådan.', blankIndex: 2 },
       { sv: 'Hon viker ihop kartan efter vandringen.', blankIndex: 2 },
-      { sv: 'Vi viker ihop stolarna och bär in dem.', blankIndex: 2 },
+      // Round 2 review: the third frame folded "stolarna", which contradicts
+      // this entry's cloth-and-paper gloss and is the natural home of
+      // "fälla ihop" instead. Replaced with a textile.
+      { sv: 'Vi viker ihop servetterna till middagen på lördag.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'viker ihop', preteritum: 'vek ihop', supinum: 'vikit ihop' },
@@ -5932,7 +5952,15 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'bädda in',
-    gloss: { en: 'to tuck a child under the covers at bedtime' },
+    // Round 2 review: "to tuck a child under the covers at bedtime"
+    // described "bädda ner" and the (unshipped) "stoppa om" just as well —
+    // the frame comment below conceded as much. The gloss now names the
+    // enclosure the particle contributes, which is what separates it from
+    // "bädda ner" (putting someone to bed at all) and from "bädda om"
+    // (changing the bedding). Deliberately not the packa in wording ("to
+    // wrap something up inside paper or a blanket"): that entry wraps an
+    // object, this one closes bedding around a person going to sleep.
+    gloss: { en: 'to tuck the duvet closely around someone who is going to sleep' },
     transparency: 'idiomatic',
     acceptedParticles: ['in'],
     // All three frames name the covering with a following "i"-phrase on
@@ -5941,8 +5969,8 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     // the only fit.
     examples: [
       { sv: 'Jag bäddar in barnen i varma täcken.', blankIndex: 2 },
-      { sv: 'Hon bäddar in dottern i en mjuk filt.', blankIndex: 2 },
-      { sv: 'Vi bäddar in bebisen i en tjock pläd.', blankIndex: 2 },
+      { sv: 'Hon bäddar in dottern i täcket och säger godnatt.', blankIndex: 2 },
+      { sv: 'Vi bäddar in bebisen i filten inför natten.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'bäddar in', preteritum: 'bäddade in', supinum: 'bäddat in' },
