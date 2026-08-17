@@ -71,6 +71,23 @@ export interface ParticleVerbData {
   // because ids become localStorage keys, and a NFC/NFD normalization
   // mismatch on å/ä/ö would silently orphan a learner's progress. Display
   // strings keep their diacritics. Append-only: renaming one is a migration.
+  //
+  // The simple fold is lossy (å, ä and a all fold to "a"), so two different
+  // verbs can want the same id. Staff-engineer decision, adopted as the
+  // convention for the whole namespace:
+  //   1. Default: the documented simple ASCII fold, as above.
+  //   2. On collision with an id that already exists, the NEW entry uses
+  //      digraph transliteration instead (å→aa, ä→ae, ö→oe), and the
+  //      incumbent keeps its id forever — because changing a shipped id is
+  //      a progress migration, and the entry that happened to land first
+  //      must never pay for an entry authored later. First case: "läsa in"
+  //      holds pv:lasa-in (#336), so "låsa in" ships as pv:laasa-in.
+  //      Only the id folds; baseInfinitive and lemma keep their diacritics.
+  //   3. Byte-identical homographs, which digraphs cannot separate, fall
+  //      back to a semantic suffix and need staff-engineer review. No entry
+  //      needs this today; do not invent one without that review.
+  // Rule 2 is deliberately not applied retroactively: no existing id
+  // changes, so no stored progress key changes.
   id: string;
   cefr: ParticleVerbCefr;
   cefrEvidence: CefrEvidence;
@@ -4413,6 +4430,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   // - "låsa in" (rank 184): its ASCII-folded id, pv:lasa-in, is already
   //   taken by "läsa in" (#336). Picking a disambiguated id is a naming
   //   convention decision for the id namespace, not a linguistic one.
+  //   Settled under ORD-72: the digraph rule at the `id` field gives the
+  //   new entry pv:laasa-in, and it ships in the block at the end of this
+  //   file. No longer an exclusion.
   // - "köra slut på" (rank 194): the idiom I can verify with full
   //   confidence is "göra slut på"; the register of the "köra" variant I
   //   cannot.
@@ -5849,8 +5869,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   //   puts it in the "plain verb + preposition (titta på TV, bero på)" class
   //   the header excludes. Its base verb still ships in VERB_DATA, since
   //   "bry" conjugates like any other verb; only the particle entry is out.
-  // - "låsa in" (rank 184) — still out, unchanged: its id collision with
-  //   "läsa in" is an id-namespace decision tracked separately.
+  //
+  // "låsa in" (rank 184) is authored here too, on the staff-engineer id
+  // decision recorded at the `id` field above: the collision with the
+  // shipped pv:lasa-in ("läsa in") is resolved by giving the new entry the
+  // digraph id pv:laasa-in and leaving the incumbent untouched.
   {
     id: 'pv:slappna-av',
     cefr: 'B1',
@@ -5970,5 +5993,36 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'tråkar ut', preteritum: 'tråkade ut', supinum: 'tråkat ut' },
+  },
+  {
+    // Digraph id per rule 2 at the `id` field: pv:lasa-in belongs to "läsa
+    // in" and keeps it. Base "låsa" was already in VERB_DATA (grupp 2b,
+    // låser/låste/låst — voiceless s-stem, so -te), so the embedded forms
+    // below are cross-checked against it by the dataset test rather than
+    // skipped.
+    id: 'pv:laasa-in',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'låsa',
+    particle: 'in',
+    reflexive: 'none',
+    lemma: 'låsa in',
+    // Nothing in common with pv:lasa-in ("to study a course to completion;
+    // to load data into a system") beyond the particle — which is the point
+    // of shipping both: the pair is a minimal one for a learner, separated
+    // only by the vowel of the base verb.
+    gloss: { en: 'to shut a person or a valuable object behind a locked door' },
+    transparency: 'literal',
+    // "låsa upp" reverses the action and "låsa fast" needs something to
+    // fasten the object to, so neither fits a frame whose object ends up
+    // inside a room, a cupboard or a safe.
+    acceptedParticles: ['in'],
+    examples: [
+      { sv: 'Vakten låser in fångarna klockan nio varje kväll.', blankIndex: 2 },
+      { sv: 'Vi låser in verktygen i skåpet över natten.', blankIndex: 2 },
+      { sv: 'Hon låser in passet i kassaskåpet före resan.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'låser in', preteritum: 'låste in', supinum: 'låst in' },
   },
 ];
