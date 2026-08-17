@@ -26,6 +26,12 @@ function waitForVoices(): Promise<SpeechSynthesisVoice[]> {
 
   return new Promise((resolve) => {
     let settled = false;
+    // Assigned after the listener is registered below, so a synchronous
+    // voiceschanged dispatch during addEventListener does not read this
+    // before it is initialized.
+    // eslint-disable-next-line prefer-const
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const previous = synth.onvoiceschanged;
 
     const onVoicesChanged = () => finish(synth.getVoices());
 
@@ -34,14 +40,14 @@ function waitForVoices(): Promise<SpeechSynthesisVoice[]> {
         synth.removeEventListener('voiceschanged', onVoicesChanged);
       }
       if (synth.onvoiceschanged === onVoicesChanged) {
-        synth.onvoiceschanged = null;
+        synth.onvoiceschanged = previous;
       }
     };
 
     const finish = (voices: SpeechSynthesisVoice[]) => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
+      if (timer !== undefined) clearTimeout(timer);
       cleanup();
       resolve(voices);
     };
@@ -49,10 +55,13 @@ function waitForVoices(): Promise<SpeechSynthesisVoice[]> {
     if (typeof synth.addEventListener === 'function') {
       synth.addEventListener('voiceschanged', onVoicesChanged);
     } else {
-      synth.onvoiceschanged = onVoicesChanged;
+      synth.onvoiceschanged = function (this: SpeechSynthesis, event: Event) {
+        previous?.call(this, event);
+        onVoicesChanged();
+      };
     }
 
-    const timer = setTimeout(() => finish(synth.getVoices()), VOICE_WAIT_TIMEOUT_MS);
+    timer = setTimeout(() => finish(synth.getVoices()), VOICE_WAIT_TIMEOUT_MS);
   });
 }
 
@@ -83,7 +92,9 @@ export function speakSwedish(text: string, muted: boolean = false): void {
     speechSynthesis.speak(utterance);
   };
 
-  waitForVoices().then(trySpeak);
+  void waitForVoices()
+    .then(trySpeak)
+    .catch(() => {});
 }
 
 // Cancels any in-progress or queued speech, and invalidates speakSwedish()
