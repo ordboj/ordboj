@@ -72,7 +72,7 @@
 // Issue #381: a mechanical grupp 1 match on presens/preteritum/supinum
 // (-ar/-ade/-at) is cross-checked against the row's OWN imperativ in
 // classifyCore. Grupp 1's imperativ is always the full infinitive ("spara"
-// -> "spara"); grupp 2a/2b/3/4 use the bare stem instead ("höra" -> "hör").
+// -> "spara"); grupp 2a/2b/4 use the bare stem instead ("höra" -> "hör").
 // When a row's presens/pret/sup match grupp 1 but its imperativ is the bare
 // stem, a grupp 2a/2b reading is also internally consistent with that same
 // row, so grupp 1 cannot be claimed mechanically — it falls to the residual
@@ -238,7 +238,7 @@ const DEPONENS_NOTE =
 // note (see classifyCore) and the summary count printed in main(), so the
 // check has a visible line in `npm run build:verb-data:check` output instead
 // of only showing up as a pass -> needs-check count delta.
-const GRUPP1_BARE_STEM_MARKER = 'grupp 2a/2b/3/4 imperativ shape';
+const GRUPP1_BARE_STEM_MARKER = 'grupp 2a/2b/4 imperativ shape';
 
 function classifyCore({ inf, pres, pret, sup }, imp) {
   if (
@@ -296,7 +296,7 @@ function classifyCore({ inf, pres, pret, sup }, imp) {
       if (pretSupSignal === '1') {
         // Issue #381: a grupp 1 imperativ is always the full infinitive
         // ("spara" -> imperativ "spara"), never the bare stem — grupp
-        // 2a/2b/3/4 use the bare stem instead ("höra" -> "hör"). The
+        // 2a/2b/4 use the bare stem instead ("höra" -> "hör"). The
         // presens/preteritum/supinum -ar/-ade/-at match alone is not enough
         // to claim grupp 1 when the row's OWN imperativ is the bare stem: a
         // grupp 2a/2b reading is then also internally consistent with this
@@ -308,6 +308,7 @@ function classifyCore({ inf, pres, pret, sup }, imp) {
         if (imp !== '' && imp === stem && imp !== inf) {
           return {
             grupp: '4',
+            mechanicalGrupp: '1',
             contradiction: null,
             note: `imperativ "${imp}" is the bare stem, the ${GRUPP1_BARE_STEM_MARKER}, not the full infinitive "${inf}" a grupp 1 imperativ requires; grupp needs human verification`,
           };
@@ -357,19 +358,26 @@ function classifyAndValidate(infinitive, imperativ, presens, preteritum, supinum
   const grupp = core.particleConfirmed ? classified.grupp : null;
   if (contradiction) reasons.push(`contradiction: ${contradiction}`);
 
+  // Issue #381 remediation: the bare-stem downgrade must not hide a
+  // declared-grupp contradiction on a shipped row. The mechanical
+  // -ar/-ade/-at match still contradicts a declared 2a/2b/3.
+  const mechanicalGruppForDeclared = core.particleConfirmed
+    ? (classified.mechanicalGrupp ?? classified.grupp)
+    : null;
+
   // Residual '4' means "matched no mechanical pattern", which is not
   // evidence that a declared grupp is wrong — every shipped row relying on
   // an unmodelled spelling simplification lands there. Only a positive
   // grupp 1/2a/2b/3 match can contradict a declared grupp.
   if (
     declaredGrupp !== undefined &&
-    grupp !== null &&
-    grupp !== 'deponens' &&
-    grupp !== '4' &&
-    declaredGrupp !== grupp
+    mechanicalGruppForDeclared !== null &&
+    mechanicalGruppForDeclared !== 'deponens' &&
+    mechanicalGruppForDeclared !== '4' &&
+    declaredGrupp !== mechanicalGruppForDeclared
   ) {
     reasons.push(
-      `contradiction: row declares grupp "${declaredGrupp}" but forms match grupp "${grupp}"`,
+      `contradiction: row declares grupp "${declaredGrupp}" but forms match grupp "${mechanicalGruppForDeclared}"`,
     );
   }
 
