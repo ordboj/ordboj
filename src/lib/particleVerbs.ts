@@ -237,6 +237,10 @@ const PARTICLE_CORE_SENSE: Record<string, string> = {
   // entering data into a bounded space such as a form's blanks, not
   // physically moving into a place.
   i: 'often entering something into a bounded space, such as a form',
+  // Added for #396 (wave C), to unblock "gå iväg". Distinct from "bort":
+  // "iväg" is about the departure itself, the moment of setting off, not
+  // about being elsewhere afterwards.
+  iväg: 'often setting off, leaving the place one is at',
 };
 
 export function getParticleCoreSense(particle: string): string | null {
