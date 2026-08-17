@@ -680,8 +680,10 @@ export function useSrsProgress(cefrLevels?: string[]) {
   // sibling stores restore successfully, persistNow's flush can itself fail
   // on quota (the writer swallows the error by contract), leaving the
   // stores restored while the schedule lives only in memory until the next
-  // successful flush. Closing it needs the writer to report flush success,
-  // which is a src/lib/storage.ts API change.
+  // successful flush. Closing it needs importData to act on the writer's
+  // flush result. createCoalescedJsonWriter now reports that through its
+  // optional onFlushResult callback (added for the answer log, issue #403);
+  // wiring it into persistNow is a separate change.
   const importData = (jsonString: string) => {
     // Refuse until the load effect has resolved. Before that point
     // isReadOnly is not yet decided, canonicalVerbIdsRef is still [] (so
