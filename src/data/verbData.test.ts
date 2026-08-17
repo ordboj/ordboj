@@ -1011,11 +1011,13 @@ describe('issue #43 - verb-data conventions (PR #279/#360)', () => {
   // Issue #415 appended 903 verified rows after the pinned 68 (byte-identical,
   // see verbData.orderPin.test.ts), so the total grew from 68 to 971, and
   // #372 appended the `checka` base row for a total of 972, then #399
-  // appended the `växa` base row for a total of 973. The original
-  // 68-row pinned order this test protects is unchanged and still checked
-  // below against the first 68 entries.
-  it('AC8: VERB_DATA has exactly the pinned 973 rows, with the original 68 still first and in the pinned order', () => {
-    expect(VERB_DATA).toHaveLength(973);
+  // appended the `växa` base row for a total of 973. ORD-72 wave C then
+  // appended 6 more base rows (slappna, vika, bädda, piffa, bry, tråka)
+  // for a total of 979. The original 68-row pinned order this test
+  // protects is unchanged and still checked below against the first 68
+  // entries.
+  it('AC8: VERB_DATA has exactly the pinned 979 rows, with the original 68 still first and in the pinned order', () => {
+    expect(VERB_DATA).toHaveLength(979);
     expect(VERB_DATA.slice(0, 68).map((v) => v.infinitive)).toEqual([
       'vara',
       'ha',
@@ -1306,9 +1308,11 @@ describe('issue #369 - top-12 base verbs for particle-verb unblocking (PR #382)'
   // are no longer the *last* 12 rows in VERB_DATA -- they are still rows
   // 56-67 (0-indexed), the same position PR #382 put them in, with the 903
   // new rows appended after index 67. #372 appended one more row (`checka`)
-  // after the 903, and #399 appended one more after that (`växa`).
-  it('adds VERB_DATA.length === 56 + 12 + 903 + 1 + 1, with rows 56-67 equal to EXPECTED_NEW_ROWS in order', () => {
-    expect(VERB_DATA).toHaveLength(56 + 12 + 903 + 1 + 1);
+  // after the 903, and #399 appended one more after that (`växa`). ORD-72
+  // wave C then appended 6 more base rows (slappna, vika, bädda, piffa,
+  // bry, tråka) after `växa`.
+  it('adds VERB_DATA.length === 56 + 12 + 903 + 1 + 1 + 6, with rows 56-67 equal to EXPECTED_NEW_ROWS in order', () => {
+    expect(VERB_DATA).toHaveLength(56 + 12 + 903 + 1 + 1 + 6);
     const rows56to67 = VERB_DATA.slice(56, 68).map((v) => v.infinitive);
     expect(rows56to67).toEqual(EXPECTED_NEW_ROWS.map((row) => row.infinitive));
   });
