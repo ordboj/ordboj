@@ -7,6 +7,7 @@ import { ParticleVerbCard } from '@/components/ParticleVerbCard';
 import { ReadOnlyBanner } from '@/components/ReadOnlyBanner';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
+import { useAnswerLog } from '@/hooks/useAnswerLog';
 import { buildFreeParticlePractice, type ParticleSittingCard } from '@/lib/particleQueue';
 import type { Grade } from '@/lib/srs';
 
@@ -20,6 +21,7 @@ export default function PracticeParticles() {
   const { getParticleSitting, recordAnswer, srsStates, isLoading, isReadOnly } = useSrsProgress(
     settings.cefrLevels,
   );
+  const { logAnswer } = useAnswerLog();
 
   const [cards, setCards] = useState<ParticleSittingCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -88,6 +90,29 @@ export default function PracticeParticles() {
       // choice does not apply, and safe distractors would each need a human
       // to confirm the wrong particle is impossible in that exact sentence.
       recordAnswer(card.itemId, grade, 'typed');
+      // Diagnostic only (docs/product/2026-08-13-per-answer-review-log-decision.md,
+      // section 2): cloze answers only, not recall — no falsifier reads
+      // recall data yet. The try/catch below guarantees logAnswer is
+      // fire-and-forget at this call site: a log failure can never block
+      // this practice flow. examples.length > 0 guards against a NaN frame
+      // index for a malformed entry. selectExample (src/lib/particleVerbs.ts)
+      // already throws first on such an entry today, so this branch cannot
+      // fire on shipped data — the guard is defence against a future entry
+      // that reaches this card some other way.
+      if (card.kind === 'cloze' && card.entry.examples.length > 0) {
+        const repetitions = srsStates[card.itemId]?.repetitions ?? 0;
+        try {
+          logAnswer({
+            i: card.itemId,
+            m: 'typed',
+            k: grade === 5,
+            f: repetitions % card.entry.examples.length,
+          });
+        } catch {
+          // Swallowed intentionally: a diagnostic sink must never block
+          // practice flow.
+        }
+      }
     }
     advance();
   };
