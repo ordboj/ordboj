@@ -5,12 +5,14 @@ import {
   type CoalescedJsonWriter,
 } from '@/lib/storage';
 import {
+  ANSWER_LOG_CLEAR_EVENT,
   ANSWER_LOG_STORAGE_KEY,
   appendAnswerLogEntry,
   halveAnswerLog,
   parseAnswerLogPayload,
   serializeAnswerLog,
   type AnswerLogEntry,
+  type AnswerLogEntryInput,
 } from '@/lib/answerLog';
 
 // The per-answer diagnostic log's write path.
@@ -68,6 +70,7 @@ export function useAnswerLog() {
   }, []);
 
   useEffect(() => {
+    let replaced = false;
     try {
       const raw = localStorage.getItem(ANSWER_LOG_STORAGE_KEY);
       if (raw !== null) {
@@ -79,6 +82,11 @@ export function useAnswerLog() {
           disabledRef.current = true;
         } else {
           entriesRef.current = parsed.entries;
+          // Acceptance criterion 5: a corrupt payload (unparseable JSON, not
+          // an object, missing/invalid version, or entries not an array)
+          // does not stay on disk unchanged — it is replaced with a fresh
+          // v1 envelope below, once the writer exists.
+          replaced = parsed.replaced;
         }
       }
     } catch (e) {
@@ -94,7 +102,27 @@ export function useAnswerLog() {
       onFlushResult,
     );
     writerRef.current = writer;
+
+    if (replaced) {
+      writer.schedule(() => serializeAnswerLog([]));
+      writer.flush();
+    }
+
+    // The SRS hook and this hook are mounted independently, so a returned
+    // clear function is not enough (decision section 6): resetProgress and
+    // importData delete ANSWER_LOG_STORAGE_KEY from useSrsProgress.ts and
+    // announce it, and every mounted instance of this hook must drop its
+    // own in-memory buffer, or the next logAnswer would write the deleted
+    // entries straight back to localStorage.
+    const onCleared = () => {
+      entriesRef.current = [];
+      consecutiveFailuresRef.current = 0;
+      writerRef.current?.cancelPending();
+    };
+    window.addEventListener(ANSWER_LOG_CLEAR_EVENT, onCleared);
+
     return () => {
+      window.removeEventListener(ANSWER_LOG_CLEAR_EVENT, onCleared);
       writer.dispose();
       writerRef.current = null;
     };
@@ -103,9 +131,12 @@ export function useAnswerLog() {
     // re-read storage over in-memory entries.
   }, [onFlushResult]);
 
-  const logAnswer = useCallback((entry: Omit<AnswerLogEntry, 't'>, now: number = Date.now()) => {
+  const logAnswer = useCallback((entry: AnswerLogEntryInput, now: number = Date.now()) => {
     if (disabledRef.current) return;
-    entriesRef.current = appendAnswerLogEntry(entriesRef.current, { ...entry, t: now });
+    entriesRef.current = appendAnswerLogEntry(entriesRef.current, {
+      ...entry,
+      t: now,
+    } as AnswerLogEntry);
     writerRef.current?.schedule(() => serializeAnswerLog(entriesRef.current));
   }, []);
 

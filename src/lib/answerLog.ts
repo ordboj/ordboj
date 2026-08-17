@@ -29,19 +29,61 @@ export const ANSWER_LOG_VERSION = 1;
 // windows (the largest needs ~250 entries); 500 covers it with headroom.
 export const ANSWER_LOG_CAP = 500;
 
+// Fired on the window after the log's stored key is deleted (resetProgress,
+// importData in useSrsProgress.ts), so every mounted useAnswerLog instance
+// clears its own in-memory buffer too. Needed because the SRS hook and the
+// answer-log hook are mounted independently: a returned clear function from
+// useAnswerLog would only reach a caller that already holds that hook's
+// instance, and useSrsProgress does not. Decision section 6 requires
+// resetProgress to clear the in-memory buffer, not just the stored key.
+export const ANSWER_LOG_CLEAR_EVENT = 'ordboj:answer-log-cleared';
+
+export function announceAnswerLogCleared(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(new Event(ANSWER_LOG_CLEAR_EVENT));
+  } catch {
+    // Best-effort, matching every other cross-boundary call in this file:
+    // a browser that cannot dispatch a custom event has bigger problems
+    // than one hook's in-memory buffer staying stale for a session.
+  }
+}
+
 export type AnswerModality = 'typed' | 'choice';
 
 // One entry per graded answer on a particle cloze item. Field-by-field
 // justification, and the rejected fields, are decision section 2.
-export interface AnswerLogEntry {
+//
+// A discriminated union on `m`: a typed entry cannot carry `l` or `p` in the
+// type system, matching the runtime rule that those fields only ever exist
+// on a choice entry.
+interface AnswerLogEntryBase {
   t: number; // epoch ms, when the answer was graded
   i: string; // item id, e.g. "pv:komma-ihag:cloze"
-  m: AnswerModality;
   k: boolean; // correct
   f: number; // example index within the entry (the frame)
-  l?: string[]; // choice only: the lure particles presented
-  p?: string | null; // choice only: the lure tapped, or null when correct
 }
+
+export interface TypedAnswerLogEntry extends AnswerLogEntryBase {
+  m: 'typed';
+}
+
+export interface ChoiceAnswerLogEntry extends AnswerLogEntryBase {
+  m: 'choice';
+  l: string[]; // the lure particles presented
+  p: string | null; // the lure tapped, or null when correct
+}
+
+export type AnswerLogEntry = TypedAnswerLogEntry | ChoiceAnswerLogEntry;
+
+// The caller-facing shape for logAnswer (useAnswerLog.ts): everything an
+// entry needs except `t`, which the hook stamps at call time. Written as an
+// explicit union of the two member omissions, not `Omit<AnswerLogEntry,
+// 't'>` — TypeScript's `Omit` is not distributive, so applied directly to a
+// union it collapses to the members' common keys (`i`, `k`, `f`, `m`) and
+// silently drops `l`/`p`, which would let a caller pass a choice entry
+// missing its lures and type-check anyway.
+export type AnswerLogEntryInput = Omit<TypedAnswerLogEntry, 't'> | Omit<ChoiceAnswerLogEntry, 't'>;
 
 export interface AnswerLogEnvelope {
   version: typeof ANSWER_LOG_VERSION;
@@ -97,13 +139,17 @@ export function isAnswerLogEntry(value: unknown): value is AnswerLogEntry {
   if (entry.m !== 'typed' && entry.m !== 'choice') return false;
   if (typeof entry.k !== 'boolean') return false;
   if (!isFiniteNumber(entry.f)) return false;
-  if (
-    entry.l !== undefined &&
-    !(Array.isArray(entry.l) && entry.l.every((lure) => typeof lure === 'string'))
-  ) {
-    return false;
+  if (entry.m === 'choice') {
+    if (!(Array.isArray(entry.l) && entry.l.every((lure) => typeof lure === 'string'))) {
+      return false;
+    }
+    if (entry.p !== null && typeof entry.p !== 'string') return false;
+  } else {
+    // typed: neither field belongs on this shape, tolerating only an
+    // explicit absence, not a stray value a hand-edited file might carry.
+    if (entry.l !== undefined) return false;
+    if (entry.p !== undefined) return false;
   }
-  if (entry.p !== undefined && entry.p !== null && typeof entry.p !== 'string') return false;
   return true;
 }
 
@@ -116,6 +162,16 @@ export interface AnswerLogParseResult {
   // diagnostics. `entries` is always [] in this case; the caller must not
   // use it.
   newerVersion: boolean;
+  // True when the payload itself was unreadable: JSON.parse threw, the
+  // parsed value was not an object, `version` was missing or invalid, or
+  // `entries` was not an array. Distinct from an individual entry failing
+  // isAnswerLogEntry — a partially-readable log is not "replaced" (decision
+  // section 1's "diagnostic, not progress" applies at the entry level, not
+  // the envelope level). Never true together with `newerVersion`. The
+  // caller (useAnswerLog.ts) uses this to satisfy acceptance criterion 5:
+  // corrupt bytes on disk are overwritten with a fresh v1 envelope rather
+  // than left as-is.
+  replaced: boolean;
 }
 
 // Parses a stored answer-log payload. Never throws: an unparseable payload,
@@ -128,26 +184,31 @@ export function parseAnswerLogPayload(raw: string): AnswerLogParseResult {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return { entries: [], newerVersion: false };
+    return { entries: [], newerVersion: false, replaced: true };
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return { entries: [], newerVersion: false };
+    return { entries: [], newerVersion: false, replaced: true };
   }
   const envelope = parsed as { version?: unknown; entries?: unknown };
   const version = envelope.version;
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
-    return { entries: [], newerVersion: false };
+    return { entries: [], newerVersion: false, replaced: true };
   }
   // Checked before the entries-shape guard below: a newer build's payload
   // must be left alone whatever shape its entries are, since this build has
   // no basis to judge them (decision section 4).
   if (version > ANSWER_LOG_VERSION) {
-    return { entries: [], newerVersion: true };
+    return { entries: [], newerVersion: true, replaced: false };
   }
   if (!Array.isArray(envelope.entries)) {
-    return { entries: [], newerVersion: false };
+    return { entries: [], newerVersion: false, replaced: true };
   }
-  return { entries: envelope.entries.filter(isAnswerLogEntry), newerVersion: false };
+  const valid = envelope.entries.filter(isAnswerLogEntry);
+  // A stored log written before the cap shrank, or hand-edited past it, must
+  // not load past ANSWER_LOG_CAP in memory. FIFO: keep the newest, drop the
+  // oldest, consistent with appendAnswerLogEntry's steady-state eviction.
+  const kept = valid.length > ANSWER_LOG_CAP ? valid.slice(valid.length - ANSWER_LOG_CAP) : valid;
+  return { entries: kept, newerVersion: false, replaced: false };
 }
 
 // --- The three analysis functions -----------------------------------------
@@ -188,7 +249,7 @@ export function perFrameAccuracy(entries: AnswerLogEntry[]): FrameAccuracy[] {
   >();
   for (const entry of entries) {
     if (entry.m !== 'choice') continue;
-    const key = `${entry.i} ${entry.f}`;
+    const key = `${entry.i} ${entry.f}`;
     const bucket = buckets.get(key) ?? { itemId: entry.i, frame: entry.f, correct: 0, total: 0 };
     bucket.total += 1;
     if (entry.k) bucket.correct += 1;
@@ -223,9 +284,12 @@ export function perLureShare(entries: AnswerLogEntry[]): LureShare[] {
     { itemId: string; frame: number; lure: string; chosen: number; appearances: number }
   >();
   for (const entry of entries) {
-    if (entry.m !== 'choice' || !entry.l) continue;
-    for (const lure of entry.l) {
-      const key = `${entry.i} ${entry.f} ${lure}`;
+    if (entry.m !== 'choice') continue;
+    // A lure repeated within one entry's `l` must count once per entry, not
+    // once per occurrence — `appearances` is "how many answers this lure
+    // competed on", not "how many times the string appears in the array".
+    for (const lure of new Set(entry.l)) {
+      const key = `${entry.i} ${entry.f} ${lure}`;
       const bucket = buckets.get(key) ?? {
         itemId: entry.i,
         frame: entry.f,

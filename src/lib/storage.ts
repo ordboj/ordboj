@@ -86,6 +86,13 @@ export interface CoalescedJsonWriter {
   schedule(serialize: () => string): void;
   // Write any pending value immediately.
   flush(): void;
+  // Drop any pending value without writing it. For a caller whose store was
+  // just deleted out from under it (the answer log after resetProgress or
+  // importData clears ANSWER_LOG_STORAGE_KEY): the pending producer still
+  // serialises the pre-clear buffer, and calling flush() here would write
+  // those bytes straight back. cancelPending() discards them instead, so
+  // the deleted key stays deleted until the next real schedule().
+  cancelPending(): void;
   // Flush, then stop listening. Losing a pending answer on unmount would be
   // the exact data loss this module exists to prevent, so dispose writes.
   dispose(): void;
@@ -158,6 +165,14 @@ export function createCoalescedJsonWriter(
     },
 
     flush,
+
+    cancelPending() {
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      pending = null;
+    },
 
     dispose() {
       if (disposed) return;

@@ -26,7 +26,7 @@ import {
   restoreAppStores,
 } from '@/lib/backup';
 import { particleItemId } from '@/lib/itemIds';
-import { ANSWER_LOG_STORAGE_KEY } from '@/lib/answerLog';
+import { ANSWER_LOG_STORAGE_KEY, announceAnswerLogCleared } from '@/lib/answerLog';
 
 // How the learner produced the answer. The type moved to src/lib/srs.ts when
 // the scheduler started branching on it (#388); re-exported here so existing
@@ -752,6 +752,11 @@ export function useSrsProgress(cefrLevels?: string[]) {
     } catch (e) {
       console.error('Failed to clear the answer log after import', e);
     }
+    // The stored key is gone, but any mounted useAnswerLog instance still
+    // holds the pre-import entries in memory and would write them straight
+    // back on the next logAnswer. Tell it to drop its buffer too (decision
+    // section 6).
+    announceAnswerLogCleared();
     return true;
   };
 
@@ -773,6 +778,10 @@ export function useSrsProgress(cefrLevels?: string[]) {
     // history of exactly the practice the learner just asked to delete
     // (decision doc section 6, PR #311's "reset means reset" principle).
     localStorage.removeItem(ANSWER_LOG_STORAGE_KEY);
+    // Same reasoning as importData above: the stored key is gone, but a
+    // mounted useAnswerLog instance still has the pre-reset entries in
+    // memory until it hears this.
+    announceAnswerLogCleared();
   };
 
   return {
