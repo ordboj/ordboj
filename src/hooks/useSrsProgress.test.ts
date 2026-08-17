@@ -1829,3 +1829,67 @@ describe('exportData does not carry the answer log (issue #403)', () => {
     expect(exported).not.toContain('pv:should-not-export');
   });
 });
+
+describe('a throwing answer-log write does not stop the progress store persisting (issue #403, criterion 6)', () => {
+  it('keeps recordAnswer persisting to swedish-verbs-srs-progress when the co-mounted answer log write throws quota exceeded', async () => {
+    // Only the answer-log key is made to throw. The progress store writes
+    // through the same setItem, so a real setItem is required for every
+    // other key or this test would prove nothing about the two stores being
+    // independent.
+    const real = Storage.prototype.setItem;
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+      this: Storage,
+      key: string,
+      value: string,
+    ) {
+      if (key === ANSWER_LOG_STORAGE_KEY) {
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      }
+      real.call(this, key, value);
+    });
+
+    try {
+      // Mounted together, exactly like two independent components in the
+      // real app (same pattern as "resetProgress clears the answer log
+      // too" above).
+      const logHook = renderHook(() => useAnswerLog());
+
+      const { result } = renderHook(() => useSrsProgress());
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(() => {
+        act(() => {
+          logHook.result.current.logAnswer({
+            i: 'pv:quota-during-answer',
+            m: 'typed',
+            k: true,
+            f: 0,
+          });
+          result.current.recordAnswer('1-presens', 5);
+        });
+        // Force the log's pending write to actually hit the throwing
+        // setItem now, inside this act/expect, rather than leaving it
+        // armed on the real 500ms coalesced-writer timer (this suite only
+        // fakes Date, so vi.advanceTimersByTime would not fire it).
+        logHook.unmount();
+      }).not.toThrow();
+
+      // The progress store's own write is still on its real 500ms timer;
+      // wait for it to land rather than asserting on a stale snapshot.
+      await settlePersistence(reflectsRecordedAnswer(1));
+
+      const storedProgress = localStorage.getItem(STORAGE_KEY);
+      expect(storedProgress).not.toBeNull();
+      const parsedProgress = JSON.parse(storedProgress as string) as {
+        items?: Record<string, { repetitions?: number }>;
+      };
+      expect(parsedProgress.items?.['1-presens']?.repetitions).toBe(1);
+
+      // The log write never reached disk: real.call was never invoked for
+      // this key, so it stays exactly as unset as it started.
+      expect(localStorage.getItem(ANSWER_LOG_STORAGE_KEY)).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
