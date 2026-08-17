@@ -376,7 +376,7 @@ describe('CSV row classification (review file)', () => {
   // Regression test (issue #381): the classifier's blind spot let a row
   // whose presens/preteritum/supinum mechanically match grupp 1 be reported
   // as a passing grupp 1 verb even when its own imperativ is the bare stem
-  // (a shape only grupp 2a/2b/3/4 imperativs use), not the full infinitive a
+  // (a shape only grupp 2a/2b/4 imperativs use), not the full infinitive a
   // grupp 1 imperativ requires. Must fall to needs-check with an explicit
   // bare-stem note, never a guessed pass.
   it('flags a grupp-1-shaped verb whose imperativ is the bare stem as needs-check, not pass (issue #381)', () => {
@@ -384,7 +384,7 @@ describe('CSV row classification (review file)', () => {
     expect(row.status).toBe('needs-check');
     expect(row.status).not.toBe('pass');
     expect(row.reasons).toContain(
-      'imperativ "jämför" is the bare stem, the grupp 2a/2b/3/4 imperativ shape, not the full infinitive "jämföra" a grupp 1 imperativ requires; grupp needs human verification',
+      'imperativ "jämför" is the bare stem, the grupp 2a/2b/4 imperativ shape, not the full infinitive "jämföra" a grupp 1 imperativ requires; grupp needs human verification',
     );
   });
 
@@ -405,7 +405,7 @@ describe('CSV row classification (review file)', () => {
     const row = findReviewRow(reviewFileAfterRun(), 'skriva upp');
     expect(row.status).toBe('needs-check');
     expect(row.status).not.toBe('pass');
-    expect(row.reasons).toContain('is the bare stem, the grupp 2a/2b/3/4 imperativ shape');
+    expect(row.reasons).toContain('is the bare stem, the grupp 2a/2b/4 imperativ shape');
   });
 
   // Paired case (issue #381): a genuine grupp 1 particle verb whose imperativ
@@ -428,6 +428,19 @@ describe('CSV row classification (review file)', () => {
     for (const bad of ['bakva', 'väka', 'hoppa', 'vimla', 'ringa bort']) {
       expect(verbDataText).not.toContain(`infinitive: "${bad}"`);
     }
+  });
+
+  // Regression test (issue #381): the CSV-audit summary line must surface
+  // the bare-stem-ambiguous count so a human reviewing build output sees it
+  // without opening the review file. This fixture's csv carries "jämföra"
+  // (and "skriva upp"), both grupp-1-shaped rows undercut by a bare-stem
+  // imperativ.
+  it('reports the bare-stem-ambiguous count in the summary output', () => {
+    setupFixture(csv, buildVerbDataTs([VALID_SHIPPED_ROW]));
+    const result = run();
+    expect(result.stdout).toContain(
+      'row(s) are grupp 1 (-ar/-ade/-at) matches undercut by a bare-stem imperativ',
+    );
   });
 });
 
@@ -490,6 +503,31 @@ describe('shipped verbData.ts validation gate', () => {
     const result = run(['--check']);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('row declares grupp "2b" but forms match grupp "1"');
+  });
+
+  // Regression test (issue #381 remediation round 2): a shipped row whose
+  // presens/preteritum/supinum mechanically match grupp 1 must still fail
+  // the declared-grupp contradiction check even when its own bare-stem
+  // imperativ would otherwise soften an unclassified row to needs-check.
+  // The bare-stem downgrade is a classifier hint for the CSV audit, not an
+  // excuse to let a wrong declared grupp ship silently.
+  it('fails the build when a shipped row declares grupp "2a" but forms mechanically match grupp "1", even with a bare-stem imperativ', () => {
+    setupFixture(
+      trivialCsv,
+      buildVerbDataTs([
+        verbRow({
+          infinitive: 'jämföra',
+          imperativ: 'jämför',
+          presens: 'jämförar',
+          preteritum: 'jämförade',
+          supinum: 'jämförat',
+          grupp: '2a',
+        }),
+      ]),
+    );
+    const result = run(['--check']);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('row declares grupp "2a" but forms match grupp "1"');
   });
 
   it('fails the build when grupp is omitted without a NEEDS HUMAN REVIEW comment', () => {
