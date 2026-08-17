@@ -26,6 +26,7 @@ import {
   restoreAppStores,
 } from '@/lib/backup';
 import { particleItemId } from '@/lib/itemIds';
+import { ANSWER_LOG_STORAGE_KEY, announceAnswerLogCleared } from '@/lib/answerLog';
 
 // How the learner produced the answer. The type moved to src/lib/srs.ts when
 // the scheduler started branching on it (#388); re-exported here so existing
@@ -679,8 +680,10 @@ export function useSrsProgress(cefrLevels?: string[]) {
   // sibling stores restore successfully, persistNow's flush can itself fail
   // on quota (the writer swallows the error by contract), leaving the
   // stores restored while the schedule lives only in memory until the next
-  // successful flush. Closing it needs the writer to report flush success,
-  // which is a src/lib/storage.ts API change.
+  // successful flush. Closing it needs importData to act on the writer's
+  // flush result. createCoalescedJsonWriter now reports that through its
+  // optional onFlushResult callback (added for the answer log, issue #403);
+  // wiring it into persistNow is a separate change.
   const importData = (jsonString: string) => {
     // Refuse until the load effect has resolved. Before that point
     // isReadOnly is not yet decided, canonicalVerbIdsRef is still [] (so
@@ -742,6 +745,20 @@ export function useSrsProgress(cefrLevels?: string[]) {
     quarantinedItemsRef.current = {};
     setSrsStates(imported);
     persistNow(imported);
+    // The restored schedule describes answers the diagnostic log's entries
+    // do not agree with; a log that disagrees with the store is worse than
+    // an empty one (decision doc section 6). Best-effort: the log is
+    // disposable, so a failure here does not fail the import.
+    try {
+      localStorage.removeItem(ANSWER_LOG_STORAGE_KEY);
+    } catch (e) {
+      console.error('Failed to clear the answer log after import', e);
+    }
+    // The stored key is gone, but any mounted useAnswerLog instance still
+    // holds the pre-import entries in memory and would write them straight
+    // back on the next logAnswer. Tell it to drop its buffer too (decision
+    // section 6).
+    announceAnswerLogCleared();
     return true;
   };
 
@@ -759,6 +776,14 @@ export function useSrsProgress(cefrLevels?: string[]) {
     setSrsStates({});
     persistNow({});
     localStorage.removeItem(LEGACY_BACKUP_KEY);
+    // "Reset all progress" means reset: the answer log is a per-answer
+    // history of exactly the practice the learner just asked to delete
+    // (decision doc section 6, PR #311's "reset means reset" principle).
+    localStorage.removeItem(ANSWER_LOG_STORAGE_KEY);
+    // Same reasoning as importData above: the stored key is gone, but a
+    // mounted useAnswerLog instance still has the pre-reset entries in
+    // memory until it hears this.
+    announceAnswerLogCleared();
   };
 
   return {
