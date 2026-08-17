@@ -6,6 +6,7 @@ import {
   renderLemma,
   getPhraseForms,
   isAcceptedRecall,
+  getParticleCoreSense,
 } from '@/lib/particleVerbs';
 import { PARTICLE_ID_PREFIX } from '@/lib/itemIds';
 
@@ -466,6 +467,44 @@ describe('particle verb dataset - #359 band-6 operational particle verbs', () =>
       return found!.gloss.en.toLowerCase();
     });
     expect(new Set(glosses).size).toBe(glosses.length);
+  });
+});
+
+describe('particle verb dataset - #372 remaining #359 band-6 particle verbs', () => {
+  // Pins the eight remaining #359 band-6 entries #372 authored: each entry
+  // resolves to a VERB_DATA base row, ships verified:true, and lands in
+  // A1/A2 so it counts toward the runway target above, the same shape as
+  // the #359 block pins its five entries by id.
+  const ISSUE_372_IDS = [
+    'pv:sla-pa',
+    'pv:sla-av',
+    'pv:folja-med',
+    'pv:flytta-in',
+    'pv:checka-in',
+    'pv:torka-av',
+    'pv:stada-upp',
+    'pv:fylla-i',
+  ];
+
+  it('ships every #372 entry verified, in A1/A2, with a base VERB_DATA already pinned', () => {
+    for (const id of ISSUE_372_IDS) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      expect(found!.verified, `${id} is not verified`).toBe(true);
+      expect(['A1', 'A2'], `${id} cefr "${found!.cefr}" is not A1/A2`).toContain(found!.cefr);
+      expect(
+        BASE_INFINITIVES.has(found!.baseInfinitive),
+        `${id} base "${found!.baseInfinitive}" does not resolve in VERB_DATA`,
+      ).toBe(true);
+    }
+  });
+
+  it('gives the "i" particle a core sense for fylla i (#372)', () => {
+    // #372 added the "i" entry to PARTICLE_CORE_SENSE to unblock "fylla i";
+    // a missing or empty core sense would leave that particle's reference
+    // hint unrenderable in the UI.
+    expect(getParticleCoreSense('i')).toEqual(expect.any(String));
+    expect(getParticleCoreSense('i')).not.toBeNull();
   });
 });
 
