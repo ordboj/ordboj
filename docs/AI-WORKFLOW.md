@@ -55,20 +55,20 @@ automate the path from a raw idea to a merged pull request. A workflow is
 a JavaScript file that spawns many agents in a fixed order, with loops
 and checks that code controls, not the model.
 
-The diagram shows the full path as a loop around one human. Person
-shapes are roles: blue for agents, pink for adversarial reviewers, and
-amber for the human. Dashed amber edges are the points where the
-pipelines stop and ask the human. Gray boxes are automatic steps, and
-the green node is the goal.
+The diagram shows the full path as one circle. The human sits in the
+center of the loop. Blue nodes are agents, pink nodes are adversarial
+reviewers, and gray boxes are automatic steps. Dashed amber spokes are
+the points where an agent stops and asks the human. The green edge at
+the top closes the loop: a merged change makes room for the next idea.
 
-![Pipeline diagram: from a raw idea, through the idea-pilot and ticket-pilot agent pipelines, to a human-approved merge](diagrams/pipeline.svg)
+![Pipeline diagram: a circle of agent stages around the human, from a raw idea to a human-approved merge](diagrams/pipeline.svg)
 
-The diagram is a [D2](https://d2lang.com) render. The source is
-[`diagrams/pipeline.d2`](diagrams/pipeline.d2). To render it again after
-a change, run:
+A small Python script generates the diagram. The source is
+[`diagrams/build_pipeline_svg.py`](diagrams/build_pipeline_svg.py). To
+render it again after a change, run:
 
 ```sh
-d2 --layout dagre --sketch docs/diagrams/pipeline.d2 docs/diagrams/pipeline.svg
+python3 docs/diagrams/build_pipeline_svg.py
 ```
 
 ### 1. `idea-pilot` — is the idea worth building?
