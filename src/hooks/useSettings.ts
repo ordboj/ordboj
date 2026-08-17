@@ -9,6 +9,11 @@ export interface Settings {
   showExamples: boolean;
   autoplayAudio: boolean;
   muteAudio: boolean;
+  // Opt-in: when true, opening a verb's details reads every form aloud
+  // without the learner tapping anything. Off by default because unprompted
+  // audio on a phone (in a quiet room, at bedtime) is a worse default than a
+  // silent screen the learner chooses to make noisy.
+  autoReadAllForms: boolean;
   dailyGoal: number;
   // Particle practice is time the learner is *adding*, so it gets its own
   // budget rather than quietly eating the conjugation one. Stored
@@ -30,6 +35,7 @@ const DEFAULT_SETTINGS: Settings = {
   showExamples: false,
   autoplayAudio: true,
   muteAudio: false,
+  autoReadAllForms: false,
   dailyGoal: 20,
   // Twelve, not fifty: additional time on top of an existing commitment, and
   // the standing rule is a number the median learner hits on a bad day. About
@@ -52,6 +58,14 @@ const STORAGE_KEY = 'swedish-verbs-settings';
 // units change, a rename — is undetectable in the bare shape: the old value
 // and the new value are both just a number, and the app would apply the
 // wrong reading silently. The version field is what lets that be noticed.
+//
+// #455's autoReadAllForms stays on version 1: it is a brand-new, purely
+// additive key, so a legacy bare payload or a v1 envelope that predates it
+// is missing the key entirely, and the DEFAULT_SETTINGS merge in
+// parseStoredSettings already fills that gap with `false` — the same path
+// that has always absorbed added and removed keys. The rule stays: a change
+// that *reinterprets* what an existing key means bumps this to 2 and ships
+// a migration function; a change that only adds a new key does not.
 export const SETTINGS_STORAGE_VERSION = 1;
 
 // Shape validation for the stored payload. `looseObject` is deliberate: a key
@@ -70,6 +84,7 @@ const settingsSchema = z.looseObject({
   showExamples: z.boolean(),
   autoplayAudio: z.boolean(),
   muteAudio: z.boolean(),
+  autoReadAllForms: z.boolean(),
   dailyGoal: z.int().check(z.positive()),
   particleDailyGoal: z.int().check(z.positive()),
   // Non-empty carries the #137 guard: a stored empty selection must not
