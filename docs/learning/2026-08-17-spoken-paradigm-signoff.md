@@ -9,29 +9,42 @@ production file. It is filed in `docs/learning/` next to its twin, the
 
 ## Verdict
 
-**Approve.** Every string the modal hands to `speakSwedish` matches the
-frozen expectation character for character. The `', '` join at rate 0.85
+**Approve.** Every paradigm string the modal hands to `speakSwedish` matches the
+frozen expectation character for character. The per-form pronounce
+buttons speak single stored forms and are outside the #454 fixture
+table. The `', '` join at rate 0.85
 is confirmed as a paradigm list. The #455 Settings copy contains no
 Swedish-language or grammatical-terminology error. No defect is filed.
 
 ## What was examined
 
 The #453/#455/#456/#457 stack is not yet merged to `main`, so this
-sign-off binds to the exact commits below. If any of them changes before
-merge, the approval is void and the sign-off returns to
-`swedish-linguist`.
+sign-off binds to the exact commits below. If the builder, the verb rows or the
+Settings copy change before merge, the approval is void and the sign-off
+returns to `swedish-linguist`. A pure rebase of `bb51074` onto the #453
+stack does not void it.
 
 - Implementation: `e7a3c7b` (tip of `ticket/457-verbdetails-pronounce-all`,
-  on top of `main` at `085f772`). This commit carries the whole stack:
+  on top of `main` at `085f772` (main has since advanced to `2abc7e8`; the
+  two added commits, `233eeb5` and `2abc7e8`, are docs and comment-only
+  and change no `VERB_DATA` field)). This commit carries the whole stack:
   `buildConjugationUtterance` and the settle callback in
   `src/lib/speech.ts` (#453), the `autoReadAllForms` setting and its
   Settings row (#455), and the modal wiring in
   `src/components/VerbDetailsModal.tsx` (#457).
 - Test contract: `bb51074` (tip of
-  `ticket/456-utterance-builder-settle-callback`), which pins the fixture
-  strings in `src/lib/speech.test.ts`.
-- Frozen fixtures: `df85848` (tip of `docs/454-spoken-paradigm-freeze`,
-  PR #461), the [[2026-08-17-spoken-paradigm-rules]] table.
+  `ticket/456-utterance-builder-settle-callback`), which pins fixture
+  strings in `src/lib/speech.test.ts`. That branch sits directly on
+  `main` at `085f772` and does not carry #453's implementation, so 17 of
+  its 27 speech tests fail there ("buildConjugationUtterance is not a
+  function"). It must be rebased onto the #453 stack before it merges.
+  This sign-off does not depend on it: check 1 ran the builder from
+  `e7a3c7b` directly.
+- Frozen fixtures: `df85848` on `docs/454-spoken-paradigm-freeze` (PR
+  #461), the [[2026-08-17-spoken-paradigm-rules]] table. That branch tip
+  is now `87bb2f3`, a merge of main; the freeze note's text is byte
+  identical at both commits, so the pin holds. PR #461 must merge before
+  or with this note, or the wikilink resolves to nothing on `main`.
 
 Method: the exact pipeline the modal runs — `getAllConjugatedVerbs()`
 from `src/lib/verbs.ts` into `buildConjugationUtterance()` from
@@ -74,7 +87,7 @@ Point by point against the frozen rules:
   end at the supinum — the unreviewed gap stays inaudible, exactly as
   the freeze note requires.
 - **No sentinel anywhere**: a sweep of every row in `VERB_DATA`
-  (600+ utterances) found no `(not available)` in any produced string.
+  (979 rows, 979 utterances) found no `(not available)` in any produced string.
   The `getAllConjugatedVerbs()` substitution of the sentinel for empty
   forms is caught by the builder's `isFormUnavailable` check in every
   case.
@@ -122,12 +135,18 @@ shown and not read, so copy and behavior agree. No change requested.
 
 ## Observations for the lead (informational, no block)
 
-- qa's deponent fixture in `speech.test.ts` is misslyckas
-  (`misslyckas, misslyckas, misslyckades, misslyckats, misslyckas`),
-  not färdas from the #454 table. The two are linguistically equivalent
-  — five parts, `-s` in every part — so the test contract is satisfied.
-  Adding färdas as a second pinned deponent is optional hardening and
-  qa's call; this sign-off ran färdas directly regardless.
+- qa pins four of the six #454 fixtures in `speech.test.ts`: skriva,
+  te sig and kunna verbatim, plus misslyckas
+  (`misslyckas, misslyckas, misslyckades, misslyckats, misslyckas`) in
+  place of the table's färdas. tala, anse and färdas are not pinned.
+  misslyckas and färdas are linguistically equivalent — five parts, `-s`
+  in every part — so the deponent contract is satisfied. Adding färdas,
+  tala and anse is optional hardening and qa's call; this sign-off ran
+  all six directly regardless, and all six pass.
+- #455 adds `autoReadAllForms` to the `swedish-verbs-settings` store,
+  which CLAUDE.md records as still unversioned. That is a storage-schema
+  question for `staff-engineer`, not a linguistic one, and this note does
+  not rule on it.
 - This sign-off is the pre-merge linguistic gate for the stack. It says
   nothing about the React wiring itself (effect keying, stop control,
   unmount safety) — that remains `staff-engineer` and qa territory.
