@@ -6,8 +6,8 @@ any code exists, freeze the linguistic rules for the spoken paradigm and
 publish the fixture table of exact expected utterance strings. Owner:
 `swedish-linguist`. `docs/learning/**` is `learning-designer`'s directory
 (CLAUDE.md file-ownership table); this note is filed there as a
-linguistic ruling with `learning-designer` co-signing. The lead confirms
-the placement or moves the file. This note is the ruling; it edits no
+linguistic ruling. `learning-designer` has not co-signed it. The lead
+confirms the placement or moves the file. This note is the ruling; it edits no
 production file.
 
 ## The frozen rules
@@ -140,4 +140,6 @@ surface, not the practice-card autoplay this note leaves alone; confirm
 in writing that the deferral in
 [[2026-08-16-conjugation-chain-audio-decision]] does not reach it before
 batch 3 starts.
-Lead — no verbData.ts defects to route; batch 3 may start.
+Lead — no verbData.ts defects to route, so batch 3 is unblocked on data.
+Batch 3 still waits for the `learning-designer` confirmation above and for
+the #453 / ORD-76 acceptance-text correction.
