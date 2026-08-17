@@ -2790,7 +2790,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Jag slår av tv:n innan jag somnar.', blankIndex: 2 },
       { sv: 'Hon slår av lampan innan hon lämnar rummet.', blankIndex: 2 },
-      { sv: 'Vi slår av datorn efter arbetsdagen är slut.', blankIndex: 2 },
+      { sv: 'Vi slår av datorn efter att arbetsdagen är slut.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'slår av', preteritum: 'slog av', supinum: 'slagit av' },
@@ -2807,7 +2807,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['med'],
     examples: [
-      { sv: 'Jag följer med er till stationen imorgon.', blankIndex: 2 },
+      { sv: 'Jag följer med er till stationen i morgon.', blankIndex: 2 },
       { sv: 'Hon följer med oss på utflykten i helgen.', blankIndex: 2 },
       { sv: 'Följer du med mig på promenaden?', blankIndex: 2 },
     ],
