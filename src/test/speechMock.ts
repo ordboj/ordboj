@@ -17,7 +17,7 @@
 //   beforeEach(() => { speech = installSpeechSynthesisMock(); });
 //   afterEach(() => { speech.uninstall(); });
 //   ...
-//   expect(speech.speakCalls).toEqual([{ text: 'testar', lang: 'sv-SE', voice: 'Alva' }]);
+//   expect(speech.speakCalls).toMatchObject([{ text: 'testar', lang: 'sv-SE', voice: 'Alva' }]);
 
 /** Minimal shape of SpeechSynthesisVoice that src/lib/speech.ts reads. */
 export interface FakeSpeechVoice {
@@ -34,6 +34,14 @@ export interface SpeakCall {
   lang: string;
   /** The chosen voice's `name`, or null if no voice was assigned. */
   voice: string | null;
+  /** Shared sequence number with cancelCalls; lower seq happened first. */
+  seq: number;
+}
+
+/** One recorded speechSynthesis.cancel() call, in call order. */
+export interface CancelCall {
+  /** Shared sequence number with speakCalls; lower seq happened first. */
+  seq: number;
 }
 
 function makeVoice(name: string, lang: string): FakeSpeechVoice {
@@ -68,21 +76,32 @@ class FakeSpeechSynthesisUtterance {
   }
 }
 
+/** Handler shape accepted by onvoiceschanged and addEventListener('voiceschanged', ...). */
+type VoicesChangedHandler = (event?: Event) => void;
+
+/** Marker used to detect an already-installed fake (see the double-install guard below). */
+const SPEECH_MOCK_TAG = '__isSpeechMock';
+
 export interface SpeechSynthesisMockHandle {
   /** Every speak() call so far, in order. Mutated in place; read freely. */
   readonly speakCalls: SpeakCall[];
-  /** One entry per cancel() call so far. Check `.length` for the count. */
-  readonly cancelCalls: number[];
+  /** Every cancel() call so far, in order. Mutated in place; read freely. */
+  readonly cancelCalls: CancelCall[];
   /** Replace the voice list getVoices() returns, without firing voiceschanged. */
   setVoices(voices: FakeSpeechVoice[]): void;
   /**
    * Simulates the async "voices arrived later" case: sets the voice list
-   * and then invokes the currently-registered onvoiceschanged handler (or
-   * a listener added via addEventListener('voiceschanged', ...)), matching
-   * how loadVoices() in src/lib/speech.ts awaits that callback.
+   * and then invokes both the currently-registered onvoiceschanged handler
+   * and every listener added via addEventListener('voiceschanged', ...),
+   * matching how loadVoices() in src/lib/speech.ts awaits that callback.
    */
   fireVoicesChanged(voices: FakeSpeechVoice[]): void;
-  /** Clears the recorded call log (speakCalls, cancelCalls) without uninstalling. */
+  /**
+   * Clears the recorded call log (speakCalls, cancelCalls, the shared
+   * sequence counter), restores the voice list to what installation started
+   * with, and clears the onvoiceschanged handler and any addEventListener
+   * listeners. Does not uninstall.
+   */
   reset(): void;
   /** Restores window.speechSynthesis / window.SpeechSynthesisUtterance to their pre-install state. */
   uninstall(): void;
@@ -92,10 +111,23 @@ export interface SpeechSynthesisMockHandle {
  * Installs a fake window.speechSynthesis (and window.SpeechSynthesisUtterance)
  * for the duration of a test file / test. Call `.uninstall()` (e.g. from
  * afterEach) to restore whatever was there before.
+ *
+ * Throws if a fake installed by this function is already in place: install
+ * without a matching uninstall() would otherwise capture the first fake as
+ * the "original" and leave a fake installed after the second uninstall().
  */
 export function installSpeechSynthesisMock(
   initialVoices: FakeSpeechVoice[] = [],
 ): SpeechSynthesisMockHandle {
+  const existing = (
+    window as unknown as { speechSynthesis?: { [SPEECH_MOCK_TAG]?: boolean } }
+  ).speechSynthesis;
+  if (existing?.[SPEECH_MOCK_TAG]) {
+    throw new Error(
+      'installSpeechSynthesisMock() called while a mock is already installed; call uninstall() on the previous handle first.',
+    );
+  }
+
   const hadSpeechSynthesis = 'speechSynthesis' in window;
   const originalSpeechSynthesis = hadSpeechSynthesis
     ? (window as unknown as { speechSynthesis: unknown }).speechSynthesis
@@ -106,11 +138,14 @@ export function installSpeechSynthesisMock(
     : undefined;
 
   let voices: FakeSpeechVoice[] = [...initialVoices];
-  let onvoiceschanged: (() => void) | null = null;
+  let onvoiceschanged: VoicesChangedHandler | null = null;
+  const voiceschangedListeners = new Set<VoicesChangedHandler>();
+  let seq = 0;
   const speakCalls: SpeakCall[] = [];
-  const cancelCalls: number[] = [];
+  const cancelCalls: CancelCall[] = [];
 
   const fakeSpeechSynthesis = {
+    [SPEECH_MOCK_TAG]: true,
     speaking: false,
     pending: false,
     paused: false,
@@ -120,28 +155,35 @@ export function installSpeechSynthesisMock(
         text: utterance.text,
         lang: utterance.lang,
         voice: utterance.voice ? utterance.voice.name : null,
+        seq: seq++,
       });
     },
     cancel: () => {
-      cancelCalls.push(cancelCalls.length);
+      cancelCalls.push({ seq: seq++ });
     },
     pause: () => {},
     resume: () => {},
     addEventListener: (type: string, handler: EventListener) => {
       if (type === 'voiceschanged') {
-        onvoiceschanged = handler as unknown as () => void;
+        voiceschangedListeners.add(handler as unknown as VoicesChangedHandler);
       }
     },
     removeEventListener: (type: string, handler: EventListener) => {
-      if (type === 'voiceschanged' && onvoiceschanged === (handler as unknown as () => void)) {
-        onvoiceschanged = null;
+      if (type === 'voiceschanged') {
+        voiceschangedListeners.delete(handler as unknown as VoicesChangedHandler);
       }
     },
-    dispatchEvent: () => true,
+    dispatchEvent: (event: Event) => {
+      if (event.type === 'voiceschanged') {
+        onvoiceschanged?.(event);
+        voiceschangedListeners.forEach((listener) => listener(event));
+      }
+      return true;
+    },
     get onvoiceschanged() {
       return onvoiceschanged;
     },
-    set onvoiceschanged(handler: (() => void) | null) {
+    set onvoiceschanged(handler: VoicesChangedHandler | null) {
       onvoiceschanged = handler;
     },
   };
@@ -165,11 +207,17 @@ export function installSpeechSynthesisMock(
     },
     fireVoicesChanged(next: FakeSpeechVoice[]) {
       voices = [...next];
-      onvoiceschanged?.();
+      const event = new Event('voiceschanged');
+      onvoiceschanged?.(event);
+      voiceschangedListeners.forEach((listener) => listener(event));
     },
     reset() {
       speakCalls.length = 0;
       cancelCalls.length = 0;
+      seq = 0;
+      voices = [...initialVoices];
+      onvoiceschanged = null;
+      voiceschangedListeners.clear();
     },
     uninstall() {
       if (hadSpeechSynthesis) {
