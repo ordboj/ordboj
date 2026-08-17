@@ -427,6 +427,362 @@ describe('particle verb dataset - excludedParticles (#318)', () => {
   });
 });
 
+describe('particle verb dataset - discrimination-variant gate depth (#386/#387/#389)', () => {
+  // docs/learning/2026-08-12-sentence-completion-distractors.md, "Ambiguity"
+  // item 4: "A frame qualifies as certified only when verified === true and
+  // excludedParticles.length >= 2; the certified-frame count and the
+  // distinct-base count are computed, not asserted by hand." This computes
+  // both and pins the exact numbers, so a data change moves the gate on
+  // purpose rather than by accident, and the build-gate floor from the same
+  // note (>= 8 frames across >= 5 bases) is checked independently of the
+  // exact pin.
+  const CERTIFIED_DEPTH = 2;
+  const BUILD_GATE_FRAMES = 8;
+  const BUILD_GATE_BASES = 5;
+
+  function certifiedFrames(): Array<{ id: string; base: string }> {
+    const frames: Array<{ id: string; base: string }> = [];
+    for (const entry of PARTICLE_VERB_DATA) {
+      if (!entry.verified) continue;
+      for (const example of entry.examples) {
+        if ((example.excludedParticles?.length ?? 0) >= CERTIFIED_DEPTH) {
+          frames.push({ id: entry.id, base: entry.baseInfinitive });
+        }
+      }
+    }
+    return frames;
+  }
+
+  it('certifies exactly 17 frames across exactly 6 distinct base verbs at the ruled 2-lure depth', () => {
+    const frames = certifiedFrames();
+    const distinctBases = new Set(frames.map((frame) => frame.base));
+    expect(frames.length).toBe(17);
+    expect(distinctBases.size).toBe(6);
+  });
+
+  it('clears the #386 build gate (at least 8 certified frames across at least 5 distinct bases)', () => {
+    const frames = certifiedFrames();
+    const distinctBases = new Set(frames.map((frame) => frame.base));
+    expect(frames.length).toBeGreaterThanOrEqual(BUILD_GATE_FRAMES);
+    expect(distinctBases.size).toBeGreaterThanOrEqual(BUILD_GATE_BASES);
+  });
+});
+
+describe('particle verb dataset - discrimination answer key (#386/#389)', () => {
+  // The rendered option set the ruling defines (docs/learning/
+  // 2026-08-12-sentence-completion-distractors.md): acceptedParticles[0] —
+  // the only accepted particle ever rendered as an option — plus 2 lures
+  // taken from excludedParticles. It must intersect acceptedParticles in
+  // exactly one member. A builder that instead rendered every accepted
+  // spelling would put "lägga ner" and "lägga ned" on screen as two
+  // separate options and mark one of them wrong; that is the failure this
+  // check exists to catch.
+  function optionSet(entry: (typeof PARTICLE_VERB_DATA)[number], excluded: string[]): string[] {
+    return [entry.acceptedParticles[0]!, ...excluded.slice(0, 2)];
+  }
+
+  // Every 2-element combination of an example's excludedParticles, so a
+  // rotating lure window (docs/learning/2026-08-12-sentence-completion-
+  // distractors.md) is exercised, not only the first two entries in the
+  // array. Today no frame carries more than 2 lures, so this is a forward
+  // guard: it stays vacuous-safe (one combination) until a frame gets a
+  // third lure, and then it is already checking every pair.
+  function excludedPairs(excluded: string[]): Array<[string, string]> {
+    const pairs: Array<[string, string]> = [];
+    for (let i = 0; i < excluded.length; i++) {
+      for (let j = i + 1; j < excluded.length; j++) {
+        pairs.push([excluded[i]!, excluded[j]!]);
+      }
+    }
+    return pairs;
+  }
+
+  it('intersects acceptedParticles in exactly one member for every certified frame', () => {
+    const offenders: string[] = [];
+    for (const entry of PARTICLE_VERB_DATA) {
+      if (!entry.verified) continue;
+      const accepted = new Set(entry.acceptedParticles.map((particle) => particle.toLowerCase()));
+      for (const example of entry.examples) {
+        const excluded = example.excludedParticles ?? [];
+        if (excluded.length < 2) continue;
+        for (const [first, second] of excludedPairs(excluded)) {
+          const options = optionSet(entry, [first, second]);
+          const hits = options.filter((option) => accepted.has(option.toLowerCase()));
+          if (hits.length !== 1) {
+            offenders.push(
+              `${entry.id}: "${example.sv}" -> options ${JSON.stringify(options)} intersect acceptedParticles ${hits.length} times`,
+            );
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('pins the lägga ner / lägga ned two-spelling case: the rendered options never include "ned"', () => {
+    const entry = PARTICLE_VERB_DATA.find((candidate) => candidate.id === 'pv:lagga-ner')!;
+    expect(entry.acceptedParticles).toEqual(['ner', 'ned']);
+    const certifiedFrame = entry.examples.find(
+      (example) => (example.excludedParticles?.length ?? 0) >= 2,
+    )!;
+    const options = optionSet(entry, certifiedFrame.excludedParticles!);
+    expect(options).toEqual(['ner', 'in', 'upp']);
+    expect(options).not.toContain('ned');
+  });
+});
+
+describe('particle verb dataset - cross-entry excluded-particle hazard (#389)', () => {
+  // Mechanical shadow of the "komma på" trap named in ticket #389: an
+  // excludedParticles entry that happens to equal another same-base entry's
+  // accepted particle is not automatically wrong on its own — komma ihåg
+  // legitimately excludes "in" in its own frame even though komma in is a
+  // real, different particle verb — but it is exactly the shape of mistake
+  // that would teach a false negative if a future entry introduced it
+  // without anyone noticing. This does not judge Swedish correctness, which
+  // stays swedish-linguist's call; it only requires that every such case is
+  // named in a comment, the same way every current one already is.
+  const source = readFileSync(join(here, 'particleVerbData.ts'), 'utf-8');
+
+  // Isolates one entry's own source text between its opening `  {` and
+  // closing `  },`, so the comment search below never reads a neighbouring
+  // entry's comment as this entry's justification. The dataset convention
+  // writes a justification comment directly on the line(s) immediately
+  // above the opening `  {`, so after locating the brace this also walks
+  // backwards and folds in every contiguous `//` comment line above it.
+  // It stops at the first non-comment line -- a blank line, or the
+  // previous entry's `  },` -- so it never widens into a neighbour's body.
+  function extractEntryBlock(text: string, id: string): string {
+    const idIndex = text.indexOf(`id: '${id}',`);
+    if (idIndex === -1) return '';
+    const blockStart = text.lastIndexOf('\n  {\n', idIndex);
+    const blockEnd = text.indexOf('\n  },\n', idIndex);
+    if (blockStart === -1 || blockEnd === -1) return '';
+
+    let extendedStart = blockStart;
+    while (extendedStart > 0) {
+      const lineStart = text.lastIndexOf('\n', extendedStart - 1) + 1;
+      const line = text.slice(lineStart, extendedStart);
+      if (!line.trim().startsWith('//')) break;
+      extendedStart = lineStart === 0 ? 0 : lineStart - 1;
+    }
+
+    return text.slice(extendedStart, blockEnd);
+  }
+
+  // A justification is a `//` comment inside the entry's own block that
+  // quotes the excluded particle, matching every hand-written comment
+  // already in the dataset (e.g. `// "in" and "fram" excluded ...`).
+  function hasJustifyingComment(block: string, particle: string): boolean {
+    const commentText = block
+      .split('\n')
+      .filter((line) => line.trim().startsWith('//'))
+      .join('\n');
+    return commentText.includes(`"${particle}"`);
+  }
+
+  describe('extraction helpers, self-tested against a fixture before touching real data', () => {
+    const fixture = [
+      '',
+      '  {',
+      "    id: 'pv:fake-verb',",
+      '    // "bort" excluded because reasons.',
+      '    examples: [',
+      "      { sv: 'x', blankIndex: 0, excludedParticles: ['bort'] },",
+      '    ],',
+      '  },',
+      '  {',
+      "    id: 'pv:fake-verb-2',",
+      '    examples: [',
+      "      { sv: 'y', blankIndex: 0, excludedParticles: ['ut'] },",
+      '    ],',
+      '  },',
+      '  // "in" excluded because it lands on a same-base collision.',
+      '  {',
+      "    id: 'pv:fake-verb-3',",
+      '    examples: [',
+      "      { sv: 'z', blankIndex: 0, excludedParticles: ['in'] },",
+      '    ],',
+      '  },',
+      '',
+      '  // "ner" excluded, but separated from the entry by a blank line.',
+      '',
+      '  {',
+      "    id: 'pv:fake-verb-4',",
+      '    examples: [',
+      "      { sv: 'w', blankIndex: 0, excludedParticles: ['ner'] },",
+      '    ],',
+      '  },',
+      '',
+    ].join('\n');
+
+    it('extracts one entry block without bleeding into its neighbour', () => {
+      const block = extractEntryBlock(fixture, 'pv:fake-verb');
+      expect(block).toContain('pv:fake-verb');
+      expect(block).not.toContain('pv:fake-verb-2');
+    });
+
+    it('finds a quoted justification comment when the entry carries one', () => {
+      const block = extractEntryBlock(fixture, 'pv:fake-verb');
+      expect(hasJustifyingComment(block, 'bort')).toBe(true);
+    });
+
+    it('reports no justification when the entry carries no matching comment', () => {
+      const block = extractEntryBlock(fixture, 'pv:fake-verb-2');
+      expect(hasJustifyingComment(block, 'ut')).toBe(false);
+    });
+
+    it("captures a comment written directly above the entry's opening brace", () => {
+      // The dataset convention: the justification comment lives above `  {`,
+      // not inside the block. pv:fake-verb-3's comment must be captured, and
+      // it must not attach to pv:fake-verb-2 above it (stopped by that
+      // entry's own `  },`).
+      const block = extractEntryBlock(fixture, 'pv:fake-verb-3');
+      expect(hasJustifyingComment(block, 'in')).toBe(true);
+    });
+
+    it('does not capture a comment separated from the entry by a blank line', () => {
+      const block = extractEntryBlock(fixture, 'pv:fake-verb-4');
+      expect(hasJustifyingComment(block, 'ner')).toBe(false);
+    });
+
+    it("does not let a comment leak forward across the previous entry's closing `  },`", () => {
+      // pv:fake-verb-3's leading comment (quoting "in") sits directly above
+      // its own brace, immediately after pv:fake-verb-2's `  },`. It must
+      // not be read as justification for pv:fake-verb-2.
+      const block = extractEntryBlock(fixture, 'pv:fake-verb-2');
+      expect(hasJustifyingComment(block, 'in')).toBe(false);
+      expect(block).not.toContain('same-base collision');
+    });
+  });
+
+  // (base, particle) -> ids of the entries that accept it, so a hazard is
+  // any excludedParticles entry landing on a pair some *other* same-base
+  // entry accepts.
+  const acceptedByBaseParticle = new Map<string, string[]>();
+  for (const entry of PARTICLE_VERB_DATA) {
+    for (const particle of entry.acceptedParticles) {
+      const key = `${entry.baseInfinitive}|${particle.toLowerCase()}`;
+      const ids = acceptedByBaseParticle.get(key) ?? [];
+      ids.push(entry.id);
+      acceptedByBaseParticle.set(key, ids);
+    }
+  }
+
+  const hazards: Array<{ id: string; sv: string; particle: string }> = [];
+  for (const entry of PARTICLE_VERB_DATA) {
+    for (const example of entry.examples) {
+      for (const excluded of example.excludedParticles ?? []) {
+        const owners = (
+          acceptedByBaseParticle.get(`${entry.baseInfinitive}|${excluded.toLowerCase()}`) ?? []
+        ).filter((id) => id !== entry.id);
+        if (owners.length > 0) {
+          hazards.push({ id: entry.id, sv: example.sv, particle: excluded });
+        }
+      }
+    }
+  }
+
+  // The dedupe key used to be `${id}|${particle}`, which discards the frame:
+  // one comment on the entry justified every frame under it, so a mutation
+  // that added a fresh hazard to an already-justified entry (e.g. #389's
+  // pv:ge-upp regression) passed silently. This pins the exact 40 frame-level
+  // hazard triples (14 distinct id/particle pairs) as of this commit. Adding
+  // a new entry here needs a swedish-linguist review of that specific frame,
+  // not only a comment naming the particle -- the review is what confirms
+  // the exclusion is correct Swedish, this list only proves it was reviewed.
+  const KNOWN_HAZARDS: readonly string[] = [
+    'pv:bli-av | Festen blir av även om det regnar. | kvar',
+    'pv:bli-av | Festen blir av även om det regnar. | över',
+    'pv:bli-av | Mötet blir av på torsdag som planerat. | kvar',
+    'pv:bli-av | Mötet blir av på torsdag som planerat. | över',
+    'pv:bli-av | Resan blir av trots det dåliga vädret. | kvar',
+    'pv:bli-av | Resan blir av trots det dåliga vädret. | över',
+    'pv:ge-upp | Han ger upp efter tre timmar av hårt arbete. | bort',
+    'pv:ge-upp | Han ger upp efter tre timmar av hårt arbete. | ut',
+    'pv:ge-upp | Vi ger aldrig upp trots alla svåra problem. | bort',
+    'pv:ge-upp | Vi ger aldrig upp trots alla svåra problem. | ut',
+    'pv:komma-ihag | Han kommer ihåg alla telefonnummer utan att skriva. | fram',
+    'pv:komma-ihag | Han kommer ihåg alla telefonnummer utan att skriva. | in',
+    'pv:komma-ihag | Jag kommer ihåg hennes namn från förra året. | fram',
+    'pv:komma-ihag | Jag kommer ihåg hennes namn från förra året. | in',
+    'pv:komma-ihag | Vi kommer ihåg den dagen mycket tydligt. | fram',
+    'pv:komma-ihag | Vi kommer ihåg den dagen mycket tydligt. | in',
+    'pv:lagga-ner | De lägger ner projektet efter många problem. | in',
+    'pv:lagga-ner | De lägger ner projektet efter många problem. | upp',
+    'pv:lagga-ner | Företaget lägger ner fabriken i slutet av året. | in',
+    'pv:lagga-ner | Företaget lägger ner fabriken i slutet av året. | upp',
+    'pv:lagga-ner | Kommunen lägger ner två skolor nästa år. | in',
+    'pv:lagga-ner | Kommunen lägger ner två skolor nästa år. | upp',
+    'pv:plocka-undan | Barnen plockar undan efter middagen varje kväll. | bort',
+    'pv:plocka-undan | Barnen plockar undan efter middagen varje kväll. | upp',
+    'pv:plocka-undan | Hon plockar undan i köket medan kaffet kokar. | bort',
+    'pv:plocka-undan | Hon plockar undan i köket medan kaffet kokar. | upp',
+    'pv:plocka-undan | Jag plockar undan i vardagsrummet innan gästerna kommer. | bort',
+    'pv:plocka-undan | Jag plockar undan i vardagsrummet innan gästerna kommer. | upp',
+    'pv:se-om | Han ser om avsnittet en gång till. | ut',
+    'pv:se-om | Jag ser om matchen på tv i kväll. | ut',
+    'pv:se-om | Vi ser om filmen eftersom den var så bra. | ut',
+    'pv:sta-till | Hur står det till med arbetet just nu? | upp',
+    'pv:sta-till | Hur står det till med arbetet just nu? | ut',
+    'pv:sta-till | Hur står det till med familjen i dag? | upp',
+    'pv:sta-till | Hur står det till med familjen i dag? | ut',
+    'pv:sta-till | Jag undrar hur det står till hemma hos er. | upp',
+    'pv:sta-till | Jag undrar hur det står till hemma hos er. | ut',
+    'pv:ta-slut | Filmen tar slut efter ungefär två timmar. | bort',
+    'pv:ta-slut | Mjölken tar slut innan veckan är över. | bort',
+    'pv:ta-slut | Pengarna tar slut i mitten av månaden. | bort',
+  ];
+
+  it('finds at least one cross-entry hazard, so the check below is not vacuous', () => {
+    expect(hazards.length).toBeGreaterThan(0);
+  });
+
+  it('pins the exact cross-entry hazard set per frame, not merely per entry', () => {
+    // A per-entry dedupe key hides a hazard on a second frame of an already
+    // -commented entry. Pinning the exact frame-level set closes that gap:
+    // any new or removed hazard, on any frame, moves this pin on purpose.
+    const actual = hazards
+      .map((hazard) => `${hazard.id} | ${hazard.sv} | ${hazard.particle}`)
+      .sort();
+    expect(actual).toEqual([...KNOWN_HAZARDS]);
+  });
+
+  it('gives every cross-entry hazard an explicit comment naming the particle', () => {
+    const unjustified: string[] = [];
+    const seen = new Set<string>();
+    for (const hazard of hazards) {
+      const key = `${hazard.id}|${hazard.particle}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const block = extractEntryBlock(source, hazard.id);
+      if (!hasJustifyingComment(block, hazard.particle)) {
+        unjustified.push(
+          `${hazard.id}: excludes "${hazard.particle}", which another same-base entry accepts, with no comment naming it`,
+        );
+      }
+    }
+    expect(unjustified).toEqual([]);
+  });
+
+  it('regression #389: the third pv:ge-upp frame carries no excludedParticles', () => {
+    // src/data/particleVerbData.ts documents, in the comment on the pv:ge-upp
+    // entry, that this third frame ("Hon ger upp sin plats i tävlingen.")
+    // must stay unannotated: "ge upp" and "ge bort" are both real, correct
+    // Swedish for this sentence, so excluding "bort" here would mark a
+    // correct answer wrong. A per-entry hazard guard cannot catch this,
+    // because the entry's other two frames already carry a justifying
+    // comment for "bort"/"ut" -- only a per-frame check (see the KNOWN_HAZARDS
+    // pin above) fails when this frame picks up excludedParticles it must not
+    // have.
+    const entry = PARTICLE_VERB_DATA.find((candidate) => candidate.id === 'pv:ge-upp')!;
+    const thirdFrame = entry.examples.find(
+      (example) => example.sv === 'Hon ger upp sin plats i tävlingen.',
+    )!;
+    expect(thirdFrame).toBeDefined();
+    expect(thirdFrame.excludedParticles ?? []).toEqual([]);
+  });
+});
+
 describe('particle verb dataset - CEFR', () => {
   it('records where every band came from', () => {
     for (const entry of PARTICLE_VERB_DATA) {
