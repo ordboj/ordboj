@@ -16,12 +16,46 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # No `engines` field or .nvmrc in the repo; 22 is the active Node LTS and
-  # matches what's already used locally. Kept in one place so every job
-  # (including the Playwright one) stays in lockstep.
+  # package.json pins `engines.node` to >=20; no .nvmrc. 22 is the active
+  # Node LTS and matches what's already used locally. Kept in one place so
+  # every job (including the Playwright one) stays in lockstep.
   NODE_VERSION: '22'
 
 jobs:
+  # Path-based gating so a docs-only or verb-data-only push doesn't pay for
+  # code jobs, and vice versa. A skipped-via-`if` job still counts as a
+  # passing required check, so this only saves minutes — it doesn't weaken
+  # branch protection. This job itself must stay a required check: if
+  # detection fails, downstream jobs must not silently be treated as green.
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+      verbdata: ${{ steps.filter.outputs.verbdata }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Filter
+        id: filter
+        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.4
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - 'scripts/**'
+              - 'public/**'
+              - 'e2e/**'
+              - '.github/**'
+              - '*'
+            verbdata:
+              - 'docs/verb-data/**'
+
   # Lint, typecheck, unit test and build are independent of each other (none
   # consumes another's output), so they run as separate jobs instead of
   # sequential steps in one job. Each pays its own checkout + npm ci, but
@@ -50,6 +84,8 @@ jobs:
 
   lint:
     name: Lint
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -70,6 +106,8 @@ jobs:
 
   typecheck:
     name: Typecheck
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -100,6 +138,8 @@ jobs:
   # so this job deliberately skips `npm ci` and finishes in seconds.
   validate-verbs:
     name: Validate verb data
+    needs: changes
+    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.verbdata == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -121,6 +161,8 @@ jobs:
   # plain-Node shape as validate-verbs above, so it also skips `npm ci`.
   build-verb-data-check:
     name: Verb data pipeline (check)
+    needs: changes
+    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.verbdata == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -137,8 +179,10 @@ jobs:
 
   test:
     name: Unit tests
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -152,11 +196,20 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      # Single vitest fork's heap gets exhausted by Progress.test.tsx's
+      # ~973-row unvirtualized renders (defect #424), not by parallel forks.
+      # --maxWorkers=1 keeps one jsdom fork alive at a time; the larger
+      # old-space gives that one fork enough heap to survive, with headroom
+      # left for the parent process on the 7 GB private-repo runner.
       - name: Test
-        run: npm test
+        env:
+          NODE_OPTIONS: --max-old-space-size=5120
+        run: npm test -- --maxWorkers=1
 
   build:
     name: Build
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -182,6 +235,8 @@ jobs:
 
   e2e:
     name: E2E (Playwright)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 

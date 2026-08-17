@@ -236,6 +236,10 @@ const PARTICLE_CORE_SENSE: Record<string, string> = {
   // Added for #395, to unblock two band 3-4 entries built on these particles.
   ur: 'often emptying something out, or taking something out of a container',
   ihjäl: 'a result: the action ends in death',
+  // Added for #372, to unblock "fylla i". Distinct from "in": "i" marks
+  // entering data into a bounded space such as a form's blanks, not
+  // physically moving into a place.
+  i: 'often entering something into a bounded space, such as a form',
 };
 
 export function getParticleCoreSense(particle: string): string | null {
