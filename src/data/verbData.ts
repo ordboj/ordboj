@@ -1064,4 +1064,16 @@ export const VERB_DATA: VerbData[] = [
   // table. Forms verified against SAOL. Append-only -- existing row order
   // above is frozen by verbData.orderPin.test.ts.
   { cefr: "A2", infinitive: "checka", imperativ: "checka", presens: "checkar", preteritum: "checkade", supinum: "checkat", grupp: "1" },
+  // Appended for #399: the last of the 8 base verbs originally identified to
+  // unblock band 1-2 particle verbs (docs/research/partikelverb/
+  // partikelverb-list.md, "växa upp" #7 and other band 1-2 rows). The other
+  // 7 (dela, dyka, hjälpa, låna, spela, koppla, lämna) already landed via the
+  // #415 bulk promotion; only "växa" was missing. Forms verified against
+  // SAOL: växa/väx/växer/växte/vuxit, with "växt" the equally standard
+  // supinum alternate (promotion-queue C5: free variant, register difference
+  // only -- both "har vuxit" and "har växt" are current standard Swedish for
+  // the same organic-growth sense; "vuxit" is the more frequent of the two
+  // and is primary). Append-only -- existing row order above is frozen by
+  // verbData.orderPin.test.ts.
+  { cefr: "A1", infinitive: "växa", imperativ: "väx", presens: "växer", preteritum: "växte", supinum: "vuxit", grupp: "4", alternates: { supinum: ["växt"] } },
 ];

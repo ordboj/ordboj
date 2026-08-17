@@ -989,6 +989,7 @@ const PINNED_INFINITIVES: readonly string[] = [
   'beskylla', // 970
   'reparera', // 971
   'checka', // 972
+  'växa', // 973
 ];
 
 describe('VERB_DATA order pin', () => {
