@@ -97,6 +97,14 @@ task tracking.
   Never pass `run_in_background: false` for these agents. The lead keeps the
   main chat responsive, dispatches work, and reports results when the task
   notification arrives.
+- **PR watching is event-driven.** When the lead babysits an open PR (a
+  pilot merge queue, an auto-merge armed PR, or a PR the human asked to
+  watch), it calls `subscribe_pr_activity` for that PR at the start. CI
+  failures, reviews and comments then wake the session as events. The
+  hourly `send_later` check-in stays as a fallback heartbeat only —
+  webhooks can miss CI success and merge-conflict transitions — not as
+  the primary polling loop. Unsubscribe (or let the session end) when the
+  PR is merged or closed.
 - **Raw feature ideas go through `idea-pilot`.** When the human sends idea or
   intention notes ("should we add X?", "what if Y worked like Z?"), the lead
   launches the `idea-pilot` workflow (`.claude/workflows/idea-pilot.js`) with
