@@ -26,6 +26,12 @@
 // bigram artifact.
 // pv:vara-till — verb + prepositional phrase, not a particle verb; the bare
 // existential reading is archaic.
+//
+// Excluded on the same ground, after the ORD-72 review (see the notes at
+// their removal sites and in the "wave C leftovers" block below):
+// "vara tillbaka" — copula plus a predicative locative adverbial, like
+// "vara hemma"; and "bry sig om" — verb + reflexive + preposition, where
+// "om" is licensed by its complement and never incorporates (*ombrydd).
 
 export type ParticleVerbCefr = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 
@@ -4424,6 +4430,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   // question (does an entry whose base is absent from VERB_DATA ship with
   // forms alone, or does the base row get added first?) and are tracked in
   // ORD-72 rather than silently skipped here.
+  // ORD-72 outcome: the base rows were added to VERB_DATA and four of the
+  // five ship in the "wave C leftovers" block at the end of this file
+  // (slappna av, vika ihop, bädda in, piffa upp, plus "tråka ut" from band
+  // 4). "bry sig om" is now an exclusion rather than debt — its "om" is a
+  // preposition, not a particle; the reasoning is with that block.
   //
   // (c) Removed in remediation round 1 (PR #448 review) and moved to
   // ORD-72: "plocka undan" (189) and "plocka fram" (236) — every natural
@@ -4432,6 +4443,13 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   // equally correct "ringa upp"; "vara tillbaka" — copula plus predicative
   // adverbial versus particle verb is unresolved, the same ground on which
   // this file's header already excludes "vara till".
+  // ORD-72 outcome: two of the four are rehabilitated in place (plocka
+  // undan, on object-less frames where the competing particles are
+  // ungrammatical rather than merely unintended; plocka fram, on a gloss
+  // that states what "plocka" contributes and frames that share nothing
+  // with ställa fram). "ringa tillbaka" and "vara tillbaka" stay out, and
+  // the note at each removal site now records what was tried and why it
+  // failed, so the next attempt starts from there instead of from scratch.
   {
     id: 'pv:packa-in',
     cefr: 'A1',
@@ -4777,12 +4795,51 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       supinum: 'kastat tillbaka',
     },
   },
-  // "plocka undan" (rank 189) was here and is removed in remediation round 1
-  // → ORD-72: every everyday frame for it also admits "bort" (and often
-  // "upp"), which this wave ships on the same base verb, so the cloze would
-  // mark correct Swedish wrong. Splitting it from "plocka bort" needs a
-  // decision about how close two entries on one base may sit, not another
-  // frame rewrite.
+  // "plocka undan" was removed in remediation round 1 and is re-added here
+  // under ORD-72. Round 1 was right that every transitive frame ("plockar
+  // undan tallrikarna") also admits "bort" or "upp". The fix is not another
+  // transitive rewrite and not the skrämma bort/iväg synonym treatment
+  // either — "undan" (out of the way, back in its place) and "bort" (removed
+  // altogether) are distinct senses, so accepting both would teach them as
+  // interchangeable. What separates them is syntax: "plocka undan" has an
+  // absolute, object-less use meaning "tidy up", while "plocka bort" and
+  // "plocka upp" are transitive and need a direct object. All three frames
+  // below are object-less, which is why "bort" and "upp" are excluded rather
+  // than merely unintended.
+  {
+    id: 'pv:plocka-undan',
+    cefr: 'B1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'plocka',
+    particle: 'undan',
+    reflexive: 'none',
+    lemma: 'plocka undan',
+    // Distinguished from the shipped städa upp ("to tidy a messy room or
+    // area"): that one is cleaning a space, this one is returning loose
+    // objects to where they belong, which is what "plocka" contributes.
+    gloss: { en: 'to put loose things back in their places after using them' },
+    transparency: 'literal',
+    acceptedParticles: ['undan'],
+    examples: [
+      {
+        sv: 'Jag plockar undan i vardagsrummet innan gästerna kommer.',
+        blankIndex: 2,
+        excludedParticles: ['bort', 'upp'],
+      },
+      {
+        sv: 'Barnen plockar undan efter middagen varje kväll.',
+        blankIndex: 2,
+        excludedParticles: ['bort', 'upp'],
+      },
+      {
+        sv: 'Hon plockar undan i köket medan kaffet kokar.',
+        blankIndex: 2,
+        excludedParticles: ['bort', 'upp'],
+      },
+    ],
+    verified: true,
+    forms: { presens: 'plockar undan', preteritum: 'plockade undan', supinum: 'plockat undan' },
+  },
   {
     id: 'pv:koppla-ihop',
     cefr: 'B1',
@@ -5251,13 +5308,38 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'lagar till', preteritum: 'lagade till', supinum: 'lagat till' },
   },
-  // "plocka fram" (rank 236) was here and is removed in remediation round 1
-  // → ORD-72: its gloss is a paraphrase of the shipped "ta fram" ("to get
-  // something out and ready to use") and its table-laying frames duplicated
-  // "ställa fram" below. Three entries competing for one recall prompt is a
-  // dataset problem, not a frame problem: whether they become one entry with
-  // acceptedRecall across all three phrases, or two with sharper glosses, is
-  // a decision to take once rather than by adding a third near-twin here.
+  // "plocka fram" was removed in remediation round 1 and is re-added here
+  // under ORD-72. The round 1 objection was a gloss/recall collision, not a
+  // frame defect: the old gloss paraphrased "ta fram" and the frames laid a
+  // table like "ställa fram". Both are fixed by naming what "plocka"
+  // actually contributes — retrieving several things one at a time out of
+  // where they are kept — and by dropping the table frames entirely. The
+  // three below all name a purpose the retrieval serves, which is the
+  // reading "fram" carries; no frame mentions a floor or a container, so
+  // "upp" and "ut" have nothing to attach to.
+  {
+    id: 'pv:plocka-fram',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'plocka',
+    particle: 'fram',
+    reflexive: 'none',
+    lemma: 'plocka fram',
+    // Deliberately narrower than ta fram ("to get something out and ready to
+    // use", one object, any manner) and than ställa fram ("to put dishes and
+    // food out on the table before a meal"): this entry is the item-by-item
+    // retrieval of several things from storage.
+    gloss: { en: 'to collect several stored things one at a time so they are ready' },
+    transparency: 'literal',
+    acceptedParticles: ['fram'],
+    examples: [
+      { sv: 'Hon plockar fram alla ingredienser innan hon lagar mat.', blankIndex: 2 },
+      { sv: 'Barnen plockar fram sina pussel när regnet börjar.', blankIndex: 2 },
+      { sv: 'Jag plockar fram varma kläder inför resan norrut.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'plockar fram', preteritum: 'plockade fram', supinum: 'plockat fram' },
+  },
   {
     id: 'pv:stryka-over',
     cefr: 'B2',
@@ -5594,13 +5676,22 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'checkar ut', preteritum: 'checkade ut', supinum: 'checkat ut' },
   },
-  // "ringa tillbaka" (rank 282) was here and is removed in remediation round
-  // 1 → ORD-72: in every frame I can write and vouch for as natural, "ringa
-  // upp" is also correct Swedish, so the cloze marks a defensible answer
-  // wrong. Making "upp" an accepted answer is not the fix either — it is a
-  // different act (placing a call, not returning one) and would teach the
-  // two as interchangeable. The entry needs a frame device this wave does
-  // not have.
+  // "ringa tillbaka" (rank 282) was removed in remediation round 1 and STAYS
+  // OUT after the ORD-72 attempt. In every frame I can write and vouch for
+  // as natural, "ringa upp" is also correct Swedish, so the cloze would mark
+  // a defensible answer wrong. Making "upp" an accepted answer is not the
+  // fix either — it is a different act (placing a call, not returning one)
+  // and would teach the two as interchangeable.
+  // What ORD-72 tried, so the next attempt does not repeat it: the shipped
+  // pv:ringa-upp is transitive in all three of its frames ("ringer upp dig /
+  // kunden / läkaren"), so a frame whose blank is followed by a "till"-PP
+  // rather than an object ("ringer ___ till kunden direkt efter mötet")
+  // narrows the field. It does not close it: object-less "jag ringer upp i
+  // kväll / så snart jag kan" is ordinary spoken Swedish, and "ringa upp
+  // till någon" is attested even if dispreferred. Narrowing is not
+  // excluding, so the entry stays out until a device that actually excludes
+  // "upp" exists — a discrimination exercise built on excludedParticles
+  // would be one, a cloze is not.
   {
     id: 'pv:skicka-tillbaka',
     cefr: 'A2',
@@ -5706,12 +5797,19 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'hoppar upp', preteritum: 'hoppade upp', supinum: 'hoppat upp' },
   },
-  // "vara tillbaka" was here and is removed in remediation round 1 →
-  // ORD-72: whether this is a particle verb at all, or a copula with a
-  // predicative adverbial, is unresolved. This file's header already
-  // excludes "vara till" on exactly that ground, and shipping "vara
-  // tillbaka" while excluding "vara till" would be the dataset contradicting
-  // itself. The classification decision comes first; the entry can follow.
+  // "vara tillbaka" was removed in remediation round 1 and STAYS OUT after
+  // the ORD-72 attempt, which was asked to defend it against the "vara till"
+  // precedent in this file's header. It cannot be defended, and the
+  // classification is no longer merely unresolved — three tests all point
+  // the same way. (1) It is fully compositional: "vara" keeps its copula
+  // meaning and "tillbaka" its ordinary locative meaning, exactly like
+  // "vara hemma" and "vara här", which no one analyses as particle verbs.
+  // (2) A particle incorporates into derived forms — uttråkad, avslappnad,
+  // inbäddad, ihopvikt — and there is no *tillbakavarande / *tillbakavara.
+  // (3) The stress diagnostic does not separate it from the adverbial cases:
+  // "jag är TILLbaka" patterns with "jag är HEMma". So this is a copula plus
+  // a predicative adverbial, which is precisely the ground the header
+  // excludes "vara till" on. Excluded permanently, not deferred.
   {
     id: 'pv:fa-tillbaka',
     cefr: 'A2',
@@ -5730,5 +5828,147 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'får tillbaka', preteritum: 'fick tillbaka', supinum: 'fått tillbaka' },
+  },
+
+  // ---- ORD-72: wave C leftovers ----
+  // The entries wave C (#396) listed under its note (b) as coverage debt
+  // rather than exclusions, now that their base verbs have VERB_DATA rows
+  // (appended in the ORD-72 block of verbData.ts). Bands are the SVALex
+  // rows the file header describes, so every one carries cefrEvidence
+  // 'svalex'; the same bands were given to the new base rows, so the two
+  // files agree on when a learner meets these verbs.
+  //
+  // Not authored here, deliberately:
+  // - "bry sig om" (rank 261) — excluded, not deferred. The research list
+  //   marks its "om" as stressed, but by this file's own criteria it is a
+  //   preposition, not a particle: the phrase is bry + reflexive sig + om
+  //   NP, "om" is licensed by its complement rather than by the verb ("jag
+  //   bryr mig inte" is complete on its own, "bry sig om" never occurs
+  //   without an object), and the particle-incorporation test that gives
+  //   uttråkad, avslappnad, inbäddad and ihopvikt yields no *ombrydd. That
+  //   puts it in the "plain verb + preposition (titta på TV, bero på)" class
+  //   the header excludes. Its base verb still ships in VERB_DATA, since
+  //   "bry" conjugates like any other verb; only the particle entry is out.
+  // - "låsa in" (rank 184) — still out, unchanged: its id collision with
+  //   "läsa in" is an id-namespace decision tracked separately.
+  {
+    id: 'pv:slappna-av',
+    cefr: 'B1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'slappna',
+    particle: 'av',
+    reflexive: 'none',
+    lemma: 'slappna av',
+    // Distinguished from the shipped vila ut ("to recover fully by
+    // resting"): that is recuperation over time, this is the release of
+    // tension itself.
+    gloss: { en: 'to let go of tension and become calm' },
+    transparency: 'idiomatic',
+    // Bare "slappna" (to go slack) is marginal in modern Swedish; "av" is
+    // the only particle this verb takes in the everyday sense, so no other
+    // candidate had to be weighed for these frames.
+    acceptedParticles: ['av'],
+    examples: [
+      { sv: 'Jag slappnar av i soffan efter en lång dag.', blankIndex: 2 },
+      { sv: 'Hon slappnar av när musiken börjar spela.', blankIndex: 2 },
+      { sv: 'Vi slappnar av i bastun varje fredagskväll.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'slappnar av', preteritum: 'slappnade av', supinum: 'slappnat av' },
+  },
+  {
+    id: 'pv:vika-ihop',
+    cefr: 'B1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'vika',
+    particle: 'ihop',
+    reflexive: 'none',
+    lemma: 'vika ihop',
+    gloss: { en: 'to fold a cloth or a paper into a smaller shape' },
+    transparency: 'literal',
+    // "vika upp" (unfold) and "vika ut" (fold outwards) are the real
+    // competitors and both reverse the direction, so neither fits a frame
+    // whose result is something smaller. The formal synonym "vika samman"
+    // is left out of acceptedParticles on the pv:koppla-ihop precedent:
+    // "samman" is a different, register-marked particle, not the "ner"/"ned"
+    // kind of spelling variant.
+    acceptedParticles: ['ihop'],
+    examples: [
+      { sv: 'Jag viker ihop tvätten och lägger den i lådan.', blankIndex: 2 },
+      { sv: 'Hon viker ihop kartan efter vandringen.', blankIndex: 2 },
+      { sv: 'Vi viker ihop stolarna och bär in dem.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'viker ihop', preteritum: 'vek ihop', supinum: 'vikit ihop' },
+  },
+  {
+    id: 'pv:badda-in',
+    cefr: 'B1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'bädda',
+    particle: 'in',
+    reflexive: 'none',
+    lemma: 'bädda in',
+    gloss: { en: 'to tuck a child under the covers at bedtime' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['in'],
+    // All three frames name the covering with a following "i"-phrase on
+    // purpose. Without it, "bädda ner barnen" is equally correct Swedish and
+    // the cloze would punish it; with a covering to be enclosed by, "in" is
+    // the only fit.
+    examples: [
+      { sv: 'Jag bäddar in barnen i varma täcken.', blankIndex: 2 },
+      { sv: 'Hon bäddar in dottern i en mjuk filt.', blankIndex: 2 },
+      { sv: 'Vi bäddar in bebisen i en tjock pläd.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'bäddar in', preteritum: 'bäddade in', supinum: 'bäddat in' },
+  },
+  {
+    id: 'pv:piffa-upp',
+    cefr: 'C1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'piffa',
+    particle: 'upp',
+    reflexive: 'none',
+    lemma: 'piffa upp',
+    gloss: { en: 'to smarten something so that it looks fresher' },
+    transparency: 'idiomatic',
+    // "piffa till" is a standard synonym of "piffa upp" in exactly these
+    // frames — same sense, no register split — so both are accepted in both
+    // directions, on the skrämma bort/iväg and slå på/sätta på precedent.
+    // This is the interchangeable case, unlike plocka undan/bort above,
+    // where the two particles carry different senses.
+    acceptedParticles: ['upp', 'till'],
+    acceptedRecall: ['piffa upp', 'piffa till'],
+    examples: [
+      { sv: 'Vi piffar upp lägenheten inför visningen på söndag.', blankIndex: 2 },
+      { sv: 'Hon piffar upp balkongen med nya blommor.', blankIndex: 2 },
+      { sv: 'Jag piffar upp min gamla cykel med färg.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'piffar upp', preteritum: 'piffade upp', supinum: 'piffat upp' },
+  },
+  {
+    id: 'pv:traka-ut',
+    cefr: 'A2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'tråka',
+    particle: 'ut',
+    reflexive: 'none',
+    lemma: 'tråka ut',
+    gloss: { en: 'to bore someone until they lose interest' },
+    transparency: 'idiomatic',
+    // The base verb takes no other particle in current Swedish ("tråka med"
+    // is obsolete), so "ut" is unique in every frame by lexical fact rather
+    // than by frame design.
+    acceptedParticles: ['ut'],
+    examples: [
+      { sv: 'Föreläsaren tråkar ut studenterna med långa tabeller.', blankIndex: 2 },
+      { sv: 'Filmen tråkar ut publiken redan efter tio minuter.', blankIndex: 2 },
+      { sv: 'Du tråkar ut oss med samma historia igen.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'tråkar ut', preteritum: 'tråkade ut', supinum: 'tråkat ut' },
   },
 ];

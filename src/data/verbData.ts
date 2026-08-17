@@ -1076,4 +1076,48 @@ export const VERB_DATA: VerbData[] = [
   // and is primary). Append-only -- existing row order above is frozen by
   // verbData.orderPin.test.ts.
   { cefr: "A1", infinitive: "växa", imperativ: "väx", presens: "växer", preteritum: "växte", supinum: "vuxit", grupp: "4", alternates: { supinum: ["växt"] } },
+  // Appended for ORD-72 (wave C leftovers, #396 note (b)): the base rows for
+  // five wave-C particle entries whose base was absent from VERB_DATA, plus
+  // "bry". Under #317 an absent base no longer blocks a particle entry, so
+  // these rows are not a gate — they are added because each is a correct
+  // Swedish verb the conjugation deck can teach, and because having the base
+  // row lets the dataset test cross-check the particle entry's embedded
+  // forms instead of skipping them. Append-only -- existing row order above
+  // is frozen by verbData.orderPin.test.ts.
+  //
+  // CEFR evidence convention for this batch: each band is the SVALex-derived
+  // band of the particle phrase the row serves (docs/research/svalex/
+  // partikelverb_cefr_draft.csv, the same derivation particleVerbData.ts
+  // uses), because in current Swedish every one of these bare verbs is met
+  // almost only inside that phrase. Where the promotion-queue CSV carries a
+  // different band for the bare lemma, the divergence is named on the row
+  // rather than left implicit.
+  { cefr: "B1", infinitive: "slappna", imperativ: "slappna", presens: "slappnar", preteritum: "slappnade", supinum: "slappnat", grupp: "1" }, // regular grupp 1 (SAOL slappna/slappnar/slappnade/slappnat, imperativ slappna). B1 from SVALex slappna+av=b1; the promotion-queue CSV tags the bare lemma C1, which understates it — the forms this row teaches are the ones a learner meets in the everyday "slappna av"
+  // "vika": strong verb, avljud i/e/i (viker/vek/vikit), same pattern as the
+  // shipped riva/rev/rivit and skriva/skrev/skrivit. Supinum "vikt" is the
+  // documented free variant alongside "vikit" (promotion-queue CSV note,
+  // C5 category: same sense, register difference only), stored the way the
+  // "växa" row above stores "växt". A weak preteritum "vikte" circulates in
+  // usage; it is NOT stored here, because the repo's source of record lists
+  // only "vek" and I could not confirm it in SAOL — an unattested alternate
+  // would be graded correct, so it stays out until a human confirms it.
+  // The source CSV leaves imperativ empty for this row; that is the CSV's
+  // auto-generation gap, not a claim about Swedish — "vik pappret på mitten"
+  // is ordinary, so the bare stem "vik" is stored. B1 re-tag: the CSV tags
+  // it A1, but "vika" is not core beginner vocabulary, and SVALex has
+  // vika+ihop at b1.
+  { cefr: "B1", infinitive: "vika", imperativ: "vik", presens: "viker", preteritum: "vek", supinum: "vikit", grupp: "4", alternates: { supinum: ["vikt"] } },
+  { cefr: "B1", infinitive: "bädda", imperativ: "bädda", presens: "bäddar", preteritum: "bäddade", supinum: "bäddat", grupp: "1" }, // regular grupp 1, forms exactly as the promotion-queue CSV row. B1 from SVALex bädda+in=b1; the CSV tags the bare lemma C1, which is too high for a verb used daily of making a bed
+  { cefr: "C1", infinitive: "piffa", imperativ: "piffa", presens: "piffar", preteritum: "piffade", supinum: "piffat", grupp: "1" }, // regular grupp 1 (SAOL -ar/-ade/-at), colloquial. C1 from SVALex piffa+upp=c1; no promotion-queue CSV row exists for the bare lemma
+  // "bry": grupp 3, not 2a — the stem is vowel-final, so the forms are the
+  // bo/tro/nå pattern (bry+r, bry+dde, bry+tt), not an -er present. Forms
+  // per SAOL: bry/bryr/brydde/brytt, imperativ "bry" ("bry dig inte om
+  // det!"), which is attested and therefore filled rather than left empty.
+  // A2 by judgment: no CSV row for the bare lemma, and the phrase it lives
+  // in ("bry sig om") is banded A2 in docs/research/partikelverb/
+  // partikelverb-list.csv. That phrase is deliberately NOT a particle-verb
+  // entry — see the ORD-72 note in particleVerbData.ts — but the verb still
+  // conjugates and belongs here.
+  { cefr: "A2", infinitive: "bry", imperativ: "bry", presens: "bryr", preteritum: "brydde", supinum: "brytt", grupp: "3", note: "bry is used almost only reflexively, as bry sig (om något). Recognition only: the reflexive pronoun is not part of the stored forms." },
+  { cefr: "A2", infinitive: "tråka", imperativ: "tråka", presens: "tråkar", preteritum: "tråkade", supinum: "tråkat", grupp: "1" }, // regular grupp 1 (SAOL -ar/-ade/-at). A2 from SVALex tråka+ut=a2; no promotion-queue CSV row for the bare lemma. Used almost only in "tråka ut"
 ];
