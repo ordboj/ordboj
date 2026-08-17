@@ -86,6 +86,13 @@ export interface CoalescedJsonWriter {
   schedule(serialize: () => string): void;
   // Write any pending value immediately.
   flush(): void;
+  // Drop any pending value without writing it. For a caller whose store was
+  // just deleted out from under it (the answer log after resetProgress or
+  // importData clears ANSWER_LOG_STORAGE_KEY): the pending producer still
+  // serialises the pre-clear buffer, and calling flush() here would write
+  // those bytes straight back. cancelPending() discards them instead, so
+  // the deleted key stays deleted until the next real schedule().
+  cancelPending(): void;
   // Flush, then stop listening. Losing a pending answer on unmount would be
   // the exact data loss this module exists to prevent, so dispose writes.
   dispose(): void;
@@ -94,6 +101,15 @@ export interface CoalescedJsonWriter {
 export function createCoalescedJsonWriter(
   key: string,
   delayMs: number = DEFAULT_WRITE_DELAY_MS,
+  // Reports whether the most recent flush's write reached disk. Optional
+  // because the sole consumer at this module's creation (useSrsProgress)
+  // does not need it: a failed progress write is swallowed and retried on
+  // the next schedule() regardless. The answer log
+  // (src/hooks/useAnswerLog.ts) is the first caller that acts differently on
+  // failure — halving its buffer, then disabling itself after a second
+  // consecutive failure — and that policy needs the pass/fail signal that
+  // writeSerialized already computes and previously threw away here.
+  onFlushResult?: (success: boolean) => void,
 ): CoalescedJsonWriter {
   // `null` means nothing is pending.
   let pending: { serialize: () => string } | null = null;
@@ -110,13 +126,15 @@ export function createCoalescedJsonWriter(
     // Cleared before the write: a value that fails on quota is not retried
     // forever, because the next schedule carries the whole store anyway.
     pending = null;
+    let success = false;
     try {
-      writeSerialized(key, serialize());
+      success = writeSerialized(key, serialize());
     } catch (e) {
       // A producer that throws must not take down the timer callback or a
       // pagehide handler; the never-throws contract covers the whole flush.
       console.error(`Failed to serialise ${key}`, e);
     }
+    onFlushResult?.(success);
   };
 
   const canListen = typeof window !== 'undefined' && typeof document !== 'undefined';
@@ -147,6 +165,14 @@ export function createCoalescedJsonWriter(
     },
 
     flush,
+
+    cancelPending() {
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      pending = null;
+    },
 
     dispose() {
       if (disposed) return;

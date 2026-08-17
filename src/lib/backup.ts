@@ -1,4 +1,5 @@
 import type { SrsState } from '@/lib/srs';
+import { ANSWER_LOG_STORAGE_KEY } from '@/lib/answerLog';
 
 // The localStorage key of the SRS progress store. Lives here rather than in
 // useSrsProgress.ts so the backup path and the hook cannot drift apart on
@@ -108,6 +109,12 @@ export function buildAppBackup(
     // The SRS store is the top-level `version`/`items` pair; carrying it
     // twice would let the two copies disagree.
     if (key === SRS_STORAGE_KEY) continue;
+    // The answer log is disposable telemetry, not progress, and the backup
+    // file is the one restore path irreplaceable data has (decision doc
+    // docs/product/2026-08-13-per-answer-review-log-decision.md, section 1
+    // and section 6): it gains nothing from a per-answer history riding
+    // along inside it.
+    if (key === ANSWER_LOG_STORAGE_KEY) continue;
     let raw: string | null = null;
     try {
       raw = storage.getItem(key);
