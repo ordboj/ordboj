@@ -18,13 +18,23 @@ import {
 import { getVerbs } from '@/lib/verbs';
 import { buildParticleSitting, countParticleReviewsDue } from '@/lib/particleQueue';
 import { createCoalescedJsonWriter, type CoalescedJsonWriter } from '@/lib/storage';
+import {
+  SRS_STORAGE_KEY,
+  PRE_V3_SRS_BACKUP_KEY,
+  buildAppBackup,
+  readAppBackup,
+  restoreAppStores,
+} from '@/lib/backup';
+import { particleItemId } from '@/lib/itemIds';
 
 // How the learner produced the answer. The type moved to src/lib/srs.ts when
 // the scheduler started branching on it (#388); re-exported here so existing
 // importers keep working.
 export type { AnswerModality } from '@/lib/srs';
 
-const STORAGE_KEY = 'swedish-verbs-srs-progress';
+// Both keys are defined once, in src/lib/backup.ts, so the backup path and
+// the hook cannot drift apart on where the irreplaceable data lives.
+const STORAGE_KEY = SRS_STORAGE_KEY;
 
 // One-shot copy of the pre-v3 payload, written verbatim before the first v3
 // save. CLAUDE.md calls stored progress irreplaceable and there is no
@@ -32,7 +42,7 @@ const STORAGE_KEY = 'swedish-verbs-srs-progress';
 // same tick leaves nothing to re-run against if a defect surfaces later.
 // Never overwritten once present, so the oldest (pre-migration) copy is the
 // one that survives.
-const LEGACY_BACKUP_KEY = 'swedish-verbs-srs-progress-backup-pre-v3';
+const LEGACY_BACKUP_KEY = PRE_V3_SRS_BACKUP_KEY;
 
 // Storage schema version. Version 1 was the original unversioned blob: a
 // bare Record<string, SrsState> at STORAGE_KEY. Version 2 wraps it in
@@ -170,12 +180,17 @@ function toStoredItems(
 
 function serializeStore(
   items: Record<string, SrsState>,
+  quarantined: Record<string, unknown>,
   derivableIds: Set<string>,
   now: number,
 ): string {
   return JSON.stringify({
     version: STORAGE_VERSION,
-    items: toStoredItems(items, derivableIds, now),
+    // Quarantined entries go back first, verbatim under their original
+    // keys, so a valid state under the same key always wins. Without this,
+    // the next write after a load would delete every entry this build could
+    // not read.
+    items: { ...quarantined, ...toStoredItems(items, derivableIds, now) },
   });
 }
 
@@ -186,27 +201,82 @@ interface ParsedProgress {
   // store written by a *newer* build apart from one this build understands —
   // see the read-only guard in the hook.
   storedVersion?: number;
+  // Entries the load path could not read as a stored SrsState. Held aside
+  // instead of being handed to the scheduler, and written back to storage
+  // verbatim by the save path — see quarantineInvalidItems.
+  quarantined: Record<string, unknown>;
 }
 
-// Accepts either the version-2 envelope or the legacy bare map (from
-// storage or an old export file) and returns the item map, applying the
-// one-time ease rebase to legacy data. Unknown fields on individual items
-// survive via spread; nothing is discarded.
+// Load-path quarantine (issue #251). One entry with a null dueAt or a
+// missing easeFactor used to be enough to poison the whole map: it flowed
+// straight into isDue/calculateNextReview and its neighbours went with it.
+// Malformed entries are now separated out, so the valid siblings load
+// normally.
+//
+// "Quarantined", not "deleted": the entries stay in localStorage untouched
+// (serializeStore writes them back under their original keys), because
+// bytes this build cannot read may still be readable by a later one, and
+// this store is the only copy the learner has. They are simply never
+// scheduled. The validator is isStoredSrsState — v3 items carry no itemId —
+// but when the field *is* present (v1/v2 data) it must equal the map key: a
+// mismatch means the entry would be scheduled under one id and record
+// answers under another.
+//
+// A quarantined id must be skipped by every surface that can serve an id
+// with no in-memory state: eager init (the load effect), getDueItems (a
+// missing key normally means "new, due now" under v3), and the particle
+// sitting (getParticleSitting). Without all three skips, the id gets a
+// fresh state under the same key on first practice, and that fresh state —
+// not the quarantined bytes — wins the `{ ...quarantined, ...items }`
+// spread in serializeStore on the next write.
+function quarantineInvalidItems(items: Record<string, unknown>): {
+  valid: Record<string, SrsState>;
+  quarantined: Record<string, unknown>;
+} {
+  const valid: Record<string, SrsState> = {};
+  const quarantined: Record<string, unknown> = {};
+  for (const [itemId, state] of Object.entries(items)) {
+    if (isStoredSrsState(state) && (state.itemId === undefined || state.itemId === itemId)) {
+      valid[itemId] = state;
+    } else {
+      quarantined[itemId] = state;
+    }
+  }
+  const quarantinedKeys = Object.keys(quarantined);
+  if (quarantinedKeys.length > 0) {
+    console.error(
+      `SRS store: ${quarantinedKeys.length} malformed item(s) quarantined and excluded from ` +
+        `scheduling (kept in storage): ${quarantinedKeys.join(', ')}`,
+    );
+  }
+  return { valid, quarantined };
+}
+
+// Accepts the versioned envelope or the legacy bare map (from storage or an
+// old export file) and returns the item map, applying the one-time ease
+// rebase to legacy data. Unknown fields on individual items survive via
+// spread; nothing is discarded — items that fail validation are quarantined
+// rather than dropped.
 function parseStoredProgress(raw: string): ParsedProgress {
   const parsed = JSON.parse(raw);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return { items: {} };
+    return { items: {}, quarantined: {} };
   }
   if (typeof parsed.version === 'number') {
     // Versioned envelope (this version or newer): take the items as-is.
     const items = parsed.items;
-    return {
-      items: items && typeof items === 'object' && !Array.isArray(items) ? items : {},
-      storedVersion: parsed.version,
-    };
+    const { valid, quarantined } = quarantineInvalidItems(
+      items && typeof items === 'object' && !Array.isArray(items)
+        ? (items as Record<string, unknown>)
+        : {},
+    );
+    return { items: valid, quarantined, storedVersion: parsed.version };
   }
   // Legacy unversioned blob: the bare state map itself.
-  return { items: rebaseLegacyEase(parsed as Record<string, SrsState>) };
+  const { valid, quarantined } = quarantineInvalidItems(
+    rebaseLegacyEase(parsed as Record<string, SrsState>),
+  );
+  return { items: valid, quarantined };
 }
 
 // Import is the only untrusted entry point into the store. Storage reads
@@ -229,16 +299,15 @@ function parseStoredProgress(raw: string): ParsedProgress {
 // Whatever the version, the keys are then run through
 // migrateConjugationKeys: a backup taken before the id-scheme change is
 // still a valid backup and must land on today's keys.
-function parseImportedProgress(
-  raw: string,
+//
+// Takes the already-parsed JSON value (not the raw text) because importData
+// parses once and first routes the value through readAppBackup to decide
+// whether it is a whole-app envelope; both the envelope's progress payload
+// and a bare SRS-only file land here.
+function validateImportedProgress(
+  parsed: unknown,
   canonicalVerbIds: string[],
 ): Record<string, SrsState> | null {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return null;
-  }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return null;
   }
@@ -294,11 +363,16 @@ function parseImportedProgress(
     // silently importing a partial schedule the user cannot see is partial.
     if (itemIdOptional) {
       if (!isStoredSrsState(state)) return null;
-      validated[itemId] = state;
     } else {
       if (!isSrsState(state)) return null;
-      validated[itemId] = state;
     }
+    // When the itemId field is present it must equal the map key (issue
+    // #251 acceptance): an entry filed under a different id than it carries
+    // would be served as one item and written back as another.
+    if (state.itemId !== undefined && state.itemId !== itemId) {
+      return null;
+    }
+    validated[itemId] = state;
   }
 
   const rebased = needsEaseRebase ? rebaseLegacyEase(validated) : validated;
@@ -329,6 +403,10 @@ export function useSrsProgress(cefrLevels?: string[]) {
   // Canonical verb id per VERB_DATA position, captured at load so the
   // synchronous import path can re-key a backup without awaiting getVerbs().
   const canonicalVerbIdsRef = useRef<string[]>([]);
+  // Entries the load path could not read (see quarantineInvalidItems). Kept
+  // in a ref, not in state: they must never reach the scheduler or a
+  // re-render, but every write puts them back on disk exactly as found.
+  const quarantinedItemsRef = useRef<Record<string, unknown>>({});
 
   // The hook owns the store; a provider owns what there is to schedule.
   // Rebuilt only when the level selection changes, so getDueItems' identity
@@ -339,7 +417,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
   useEffect(() => {
     const initializeStates = async () => {
       const stored = localStorage.getItem(STORAGE_KEY);
-      let loaded: ParsedProgress = { items: {} };
+      let loaded: ParsedProgress = { items: {}, quarantined: {} };
 
       if (stored) {
         try {
@@ -395,11 +473,23 @@ export function useSrsProgress(cefrLevels?: string[]) {
 
       const newStates: Record<string, SrsState> = { ...migratedItems };
       for (const itemId of eagerInitIds) {
-        if (!newStates[itemId]) {
+        // A quarantined id is NOT an unseen id. Initializing a fresh state
+        // here would put the id back into the scheduler, and the first
+        // answer recorded against it would overwrite bytes this build could
+        // not read — which is exactly what quarantine exists to prevent.
+        // The item stays unscheduled until a build that can read the entry
+        // loads it. (Quarantined entries stay under their original keys and
+        // are never re-keyed: migrateConjugationKeys must not touch bytes
+        // it cannot read.)
+        if (
+          !newStates[itemId] &&
+          !Object.prototype.hasOwnProperty.call(loaded.quarantined, itemId)
+        ) {
           newStates[itemId] = initializeSrsState(itemId);
         }
       }
 
+      quarantinedItemsRef.current = loaded.quarantined;
       setIsReadOnly(fromNewerBuild);
       setSrsStates(newStates);
       setIsLoading(false);
@@ -436,7 +526,7 @@ export function useSrsProgress(cefrLevels?: string[]) {
   useEffect(() => {
     if (!isLoading && !isReadOnly) {
       writerRef.current?.schedule(() =>
-        serializeStore(srsStates, derivableIdsRef.current, Date.now()),
+        serializeStore(srsStates, quarantinedItemsRef.current, derivableIdsRef.current, Date.now()),
       );
     }
   }, [srsStates, isLoading, isReadOnly]);
@@ -457,6 +547,14 @@ export function useSrsProgress(cefrLevels?: string[]) {
     // state; treating it as "not due" would hide the entire unpractised deck
     // the moment eager initialization goes away.
     const dueItems = available.filter((item) => {
+      // A quarantined id is NOT a new item: its stored bytes exist but are
+      // unreadable to this build. Serving it as new would end in
+      // recordAnswer writing a fresh state under the same key, which wins
+      // the `{ ...quarantined, ...items }` spread in serializeStore and
+      // destroys the bytes quarantine exists to keep.
+      if (Object.prototype.hasOwnProperty.call(quarantinedItemsRef.current, item.itemId)) {
+        return false;
+      }
       const state = srsStates[item.itemId];
       return state === undefined || isDue(state);
     });
@@ -503,25 +601,50 @@ export function useSrsProgress(cefrLevels?: string[]) {
   // docs/learning/2026-08-09-particle-cefr-majority-decision.md, "The
   // residual risk, named".
   const getParticleSitting = useCallback(
-    (particleDailyGoal: number) =>
-      buildParticleSitting({ srsStates, particleDailyGoal, cefrLevels }),
+    (particleDailyGoal: number) => {
+      const sitting = buildParticleSitting({ srsStates, particleDailyGoal, cefrLevels });
+      const quarantined = quarantinedItemsRef.current;
+      if (Object.keys(quarantined).length === 0) return sitting;
+      // A quarantined particle id is NOT an unmet id (issue #251, round 2).
+      // buildParticleSitting reads srsStates, which never contains a
+      // quarantined entry, so a quarantined cloze looks exactly like "verb
+      // never introduced" and would be served as new material; the first
+      // recordAnswer on that card would then overwrite the quarantined
+      // bytes on the next write. Same rule as getDueItems above.
+      const isBlocked = (entryId: string) =>
+        (['cloze', 'recall'] as const).some((kind) =>
+          Object.prototype.hasOwnProperty.call(quarantined, particleItemId(entryId, kind)),
+        );
+      return {
+        ...sitting,
+        cards: sitting.cards.filter((card) => !isBlocked(card.entry.id)),
+        deferredFirstClozes: sitting.deferredFirstClozes.filter((id) => !isBlocked(id)),
+      };
+    },
     [srsStates, cefrLevels],
   );
 
   const particleReviewsDue = useMemo(() => countParticleReviewsDue(srsStates), [srsStates]);
 
-  // Export/Import for backup. The exported payload is the same envelope the
-  // store persists — same version, same sparse item set — so a backup and
-  // the live store cannot describe different things.
+  // Export/Import for backup.
+  //
+  // The file is the whole-app envelope (src/lib/backup.ts): the schedule at
+  // the top level in exactly the `{ version, items }` shape the SRS-only
+  // import path already reads — same version, same sparse item set as the
+  // persisted store, so a backup and the live store cannot describe
+  // different things — plus every other `swedish-verbs-*` store under
+  // `stores`. Settings, and the daily-session/streak/stats stores as they
+  // land, therefore survive a restore instead of silently reverting to
+  // defaults.
+  //
+  // Quarantined entries are deliberately *not* exported: import is
+  // all-or-nothing, so shipping an unreadable entry inside the file would
+  // make the whole backup unimportable. They stay in localStorage.
   const exportData = () => {
-    return JSON.stringify(
-      {
-        version: STORAGE_VERSION,
-        items: toStoredItems(srsStates, derivableIdsRef.current, Date.now()),
-      },
-      null,
-      2,
-    );
+    return buildAppBackup({
+      version: STORAGE_VERSION,
+      items: toStoredItems(srsStates, derivableIdsRef.current, Date.now()),
+    });
   };
 
   // Reset and import are one-shot, user-confirmed actions, so they must not
@@ -537,21 +660,86 @@ export function useSrsProgress(cefrLevels?: string[]) {
     if (isLoading || isReadOnly) return;
     const writer = writerRef.current;
     if (!writer) return;
-    writer.schedule(() => serializeStore(items, derivableIdsRef.current, Date.now()));
+    writer.schedule(() =>
+      serializeStore(items, quarantinedItemsRef.current, derivableIdsRef.current, Date.now()),
+    );
     writer.flush();
   };
 
-  // Accepts both versioned exports and legacy bare-map exports; legacy
-  // imports get the same one-time ease rebase as legacy storage. Anything
-  // that is not a structurally valid backup is rejected: false is returned
-  // (the Settings page raises the error toast) and neither the in-memory
-  // state nor localStorage is touched.
+  // Accepts the whole-app envelope, the crash-boundary backup
+  // (backupVersion 1), versioned SRS-only exports and legacy bare-map
+  // exports; legacy imports get the same one-time ease rebase as legacy
+  // storage, and every accepted shape runs through the same
+  // validation/migration ladder (validateImportedProgress). Anything that
+  // is not a structurally valid backup is rejected: false is returned (the
+  // Settings page raises the error toast) and neither the in-memory state
+  // nor localStorage is touched.
+  //
+  // Known residual gap, documented rather than closed here: after the
+  // sibling stores restore successfully, persistNow's flush can itself fail
+  // on quota (the writer swallows the error by contract), leaving the
+  // stores restored while the schedule lives only in memory until the next
+  // successful flush. Closing it needs the writer to report flush success,
+  // which is a src/lib/storage.ts API change.
   const importData = (jsonString: string) => {
-    const imported = parseImportedProgress(jsonString, canonicalVerbIdsRef.current);
+    // Refuse until the load effect has resolved. Before that point
+    // isReadOnly is not yet decided, canonicalVerbIdsRef is still [] (so
+    // legacy keys would skip re-keying), and persistNow no-ops on its own
+    // isLoading guard — an import accepted here would write the sibling
+    // stores to disk, report success, and then have its in-memory schedule
+    // (and the quarantine ref) clobbered by the load effect completing with
+    // pre-import data.
+    if (isLoading) {
+      console.error('Failed to import data: the stored schedule has not finished loading');
+      return false;
+    }
+
+    // The stored schedule was written by a newer build (#241). Nothing this
+    // hook does is persisted in that state, so restoring the sibling stores
+    // while the schedule silently stays in memory would half-apply the
+    // backup. Refuse instead.
+    if (isReadOnly) {
+      console.error('Failed to import data: the stored schedule was written by a newer build');
+      return false;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(jsonString);
+    } catch {
+      console.error('Failed to import data: not valid JSON');
+      return false;
+    }
+
+    const backup = readAppBackup(parsed);
+    if (backup.kind === 'invalid') {
+      console.error('Failed to import data: not a backup this build can read');
+      return false;
+    }
+
+    const imported = validateImportedProgress(
+      backup.kind === 'envelope' ? backup.progress : parsed,
+      canonicalVerbIdsRef.current,
+    );
     if (imported === null) {
       console.error('Failed to import data: not a valid progress backup');
       return false;
     }
+
+    // Order matters: the sibling stores are written before the schedule is
+    // swapped in, so a failed store write (quota) rolls back inside
+    // restoreAppStores and leaves both the stores and the schedule exactly
+    // as they were.
+    if (backup.kind === 'envelope' && !restoreAppStores(backup.stores)) {
+      console.error('Failed to import data: could not restore the other stores');
+      return false;
+    }
+
+    // An import replaces the store wholesale, which is also the one moment
+    // where carrying unreadable entries forward would be wrong: they belong
+    // to the schedule the learner just replaced. Cleared before persistNow
+    // so the flushed bytes do not carry them either.
+    quarantinedItemsRef.current = {};
     setSrsStates(imported);
     persistNow(imported);
     return true;
@@ -564,6 +752,10 @@ export function useSrsProgress(cefrLevels?: string[]) {
   // a full copy of progress the learner explicitly asked to delete is a
   // silent violation of "reset all progress".
   const resetProgress = () => {
+    // Reset also means the quarantined bytes: the learner asked for all
+    // progress to go, and these are progress. Cleared before persistNow so
+    // the flushed empty store does not carry them.
+    quarantinedItemsRef.current = {};
     setSrsStates({});
     persistNow({});
     localStorage.removeItem(LEGACY_BACKUP_KEY);

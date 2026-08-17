@@ -117,8 +117,12 @@ describe('particle practice flow', () => {
         /Nothing is due right now, and you have already met every particle verb/,
       ),
     ).toBeInTheDocument();
-    // Never a dead end: free practice is offered instead.
-    expect(await screen.findByRole('button', { name: 'Keep practising' })).toBeEnabled();
+    // Never a dead end: free practice is offered instead. The button mounts
+    // disabled and flips enabled once the freePool effect resolves (see the
+    // other two "Keep practising" checks in this file) -- assert after that
+    // settles instead of racing it (issue #378's fix, applied here too).
+    const keepPractising = await screen.findByRole('button', { name: 'Keep practising' });
+    await waitFor(() => expect(keepPractising).toBeEnabled());
     expect(screen.getByRole('button', { name: 'Back to Home' })).toBeInTheDocument();
   });
 

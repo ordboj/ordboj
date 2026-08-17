@@ -35,7 +35,7 @@ instead; the lead routes it.
 | `staff-engineer`    | `index.html`, `src/main.tsx`, `src/App.tsx`, `tsconfig*.json`, `eslint.config.js`, `src/lib/utils.ts`                                                            |
 | `devops`            | `vite.config.ts`, `postcss.config.js`, `package.json`, `.github/**`, PWA/manifest/service worker, deploy config                                                  |
 | `frontend-expert`   | `src/pages/**`, `src/components/*.tsx`, `src/hooks/useSettings.ts`, `use-mobile.tsx`, `use-toast.ts`, `src/lib/speech.ts`, `tailwind.config.ts`, `src/index.css` |
-| `qa`                | `*.test.ts(x)`, `src/test/**`, `vitest.config.ts`                                                                                                                |
+| `qa`                | `*.test.ts(x)`, `*.spec.ts`, `src/test/**`, `e2e/**`, `vitest.config.ts`, `playwright.config.ts`                                                                 |
 | `learning-designer` | `docs/learning/**` — decision notes only, no production code                                                                                                     |
 | `product-manager`   | `docs/product/**` — specs and decisions only, no production code                                                                                                 |
 
@@ -43,39 +43,35 @@ instead; the lead routes it.
 compose around it. Exception: `devops` may delete unused primitives during
 dependency cleanup, with grep evidence.
 
-## Task tracking — GitHub Projects
+## Task tracking — Linear
 
-All tasks live in the **Ordböj** GitHub Project:
-<https://github.com/orgs/ordboj/projects/1> (project number `1`, owner
-`ordboj`, linked repo `ordboj/ordboj`). Status is tracked there, not in
-chat.
+All tasks live in Linear: workspace **Ordboj**, team **Ordboj**
+(<https://linear.app/ordboj>). Status is tracked there, not in chat.
 
-- Every task an agent defines or receives becomes a GitHub Issue added to
-  the project. Agents report new tasks to the lead; **the lead** creates the
-  issue and project item and moves statuses. Agents do not run `gh` for
-  project management themselves.
-- Issue title: imperative, one line. Body: owner role, acceptance criteria,
-  files touched. Label with the owning role where useful.
+The old GitHub Project board (`orgs/ordboj/projects/1`) is retired. Cloud
+sessions cannot reach the Projects v2 API: the GitHub proxy serves only a
+pinned set of PR-review GraphQL operations and rejects all other GraphQL
+with a 403, for all credentials. Do not try `gh project` or GraphQL for
+task tracking.
 
-Recipes (lead only):
-
-```sh
-# create issue + add to project
-gh issue create --repo ordboj/ordboj --title "..." --body "..."
-gh project item-add 1 --owner ordboj --url <issue-url>
-
-# move status (field/option ids for org project 1)
-gh project item-edit --project-id PVT_kwDOEr3qds4BfuEP \
-  --id <item-id> --field-id PVTSSF_lADOEr3qds4BfuEPzhZ--ms \
-  --single-select-option-id <opt>
-# Todo=f75ad846  In Progress=47fc9ee4  Done=98236657
-
-# find <item-id>
-gh project item-list 1 --owner ordboj --format json
-```
-
-Close the issue (`gh issue close`) when work is verified, then set status
-Done.
+- Every task an agent defines or receives becomes a Linear issue. Agents
+  report new tasks to the lead; **the lead** creates the issue and moves
+  statuses with the Linear MCP tools (`mcp__Linear__save_issue`,
+  `mcp__Linear__list_issues`). Agents do not manage Linear themselves.
+- Issue title: imperative, one line. Description: owner role, acceptance
+  criteria, files touched. Label with the owning role (`role:*`) where
+  useful.
+- Statuses: `Backlog`, `Todo`, `In Progress`, `In Review`, `Done`,
+  `Canceled`, `Duplicate`. Flow: new task → Todo; dispatched → In
+  Progress; verified → Done.
+- GitHub issues stay usable for inbound reports, but the Linear issue is
+  the tracking record. When work tracked by both is verified, set the
+  Linear issue to Done and close the GitHub issue
+  (`mcp__github__issue_write`).
+- History: the open GitHub issues were migrated to Linear on 2026-08-16.
+  Each migrated Linear issue links back to its GitHub original
+  ("Migrated from …"). Issue numbers like `#53` in older docs and PRs
+  refer to the GitHub originals.
 
 ## Lead responsibilities
 
@@ -94,13 +90,29 @@ Done.
   claims without evidence.
 - Data-shape changes to `localStorage` need an explicit migration and the
   human's approval before merge.
-- Keep the GitHub Project current: new task → issue in Todo; dispatched →
-  In Progress; verified → Done.
+- Keep Linear current: new task → issue in Todo; dispatched → In
+  Progress; verified → Done.
 - **Teammates always run in the background.** Every Agent call for a teammate
   uses `run_in_background: true` (the default) and is never awaited inline.
   Never pass `run_in_background: false` for these agents. The lead keeps the
   main chat responsive, dispatches work, and reports results when the task
   notification arrives.
+- **PR watching is event-driven.** When the lead babysits an open PR (a
+  pilot merge queue, an auto-merge armed PR, or a PR the human asked to
+  watch), it calls `subscribe_pr_activity` for that PR at the start. CI
+  failures, reviews and comments then wake the session as events. The
+  hourly `send_later` check-in stays as a fallback heartbeat only —
+  webhooks can miss CI success and merge-conflict transitions — not as
+  the primary polling loop. Unsubscribe (or let the session end) when the
+  PR is merged or closed.
+- **Raw feature ideas go through `idea-pilot`.** When the human sends idea or
+  intention notes ("should we add X?", "what if Y worked like Z?"), the lead
+  launches the `idea-pilot` workflow (`.claude/workflows/idea-pilot.js`) with
+  the notes as `args.ideas` instead of an ad-hoc discussion. The workflow
+  ends at the ticketed epic; the lead then asks the human whether to run
+  `ticket-pilot` with the returned run plan. Exceptions: direct bug reports,
+  questions, and tasks the human already scoped — those do not need the
+  pipeline.
 
 ## Known issues to keep in mind
 
