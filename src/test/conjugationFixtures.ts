@@ -22,9 +22,6 @@ export const SKRIVA: ConjugatedVerb = {
 };
 
 // verbData.ts:432 - deponent verb (grupp 1): every form ends in "-s".
-// Not used by the parity suite (infinitive/presens/imperativ all happen to
-// share the literal string "misslyckas", which collapses a set-of-values
-// comparison — see that file's header comment).
 export const MISSLYCKAS: ConjugatedVerb = {
   id: 'misslyckas',
   infinitive: 'misslyckas',
@@ -73,9 +70,7 @@ export const TALA: ConjugatedVerb = {
 };
 
 // verbData.ts:806 - deponent verb (grupp 1), same "-s" pattern as
-// MISSLYCKAS. Not used by the parity suite for the same duplicate-string
-// reason: infinitive, presens and imperativ all share the literal string
-// "färdas", which collapses a set-of-values comparison.
+// MISSLYCKAS.
 export const FARDAS: ConjugatedVerb = {
   id: 'färdas',
   infinitive: 'färdas',

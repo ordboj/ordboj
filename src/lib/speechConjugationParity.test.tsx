@@ -3,13 +3,12 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { PracticeCard } from '@/components/PracticeCard';
-import { buildConjugationUtterance } from '@/lib/speech';
 import {
   installSpeechSynthesisMock,
   SV_VOICE,
   type SpeechSynthesisMockHandle,
 } from '@/test/speechMock';
-import { SKRIVA, TE_SIG, KUNNA, ANSE } from '@/test/conjugationFixtures';
+import { SKRIVA, TALA, FARDAS, MISSLYCKAS, TE_SIG, KUNNA, ANSE } from '@/test/conjugationFixtures';
 import type { ConjugatedVerb, Form } from '@/lib/verbs';
 
 // Issue #456: src/lib/speech.ts's buildConjugationUtterance (#453) and
@@ -30,18 +29,10 @@ import type { ConjugatedVerb, Form } from '@/lib/verbs';
 // against buildConjugationUtterance()'s output for the identical
 // ConjugatedVerb.
 //
-// Comparison is by the *set* of spoken word-forms, not by form key, since
-// PracticeCard's pattern reveal (like the builder) only ever exposes each
-// form's text, not its key. Fixtures are deliberately verbs where every
-// available form is a distinct string (see conjugationFixtures.ts) — a verb
-// where two different forms share the same literal text (e.g. a deponent
-// verb whose infinitive, presens and imperativ can coincide) would let a
-// set-of-values comparison silently pass even if one of those forms were
-// wrongly dropped, so MISSLYCKAS is intentionally not used here. TALA and
-// FARDAS stay out for the same duplicate-string reason: TALA's imperativ
-// equals its infinitive ("tala"), and FARDAS is a deponent verb like
-// MISSLYCKAS whose infinitive, presens and imperativ all coincide
-// ("färdas").
+// Comparison is per-render and ordered, not by set, so a verb with repeated
+// form strings (e.g. a deponent verb whose infinitive, presens and imperativ
+// all coincide) is still covered — a dropped or duplicated form changes the
+// ordered array even when it would not change a set.
 
 let speech: SpeechSynthesisMockHandle;
 
@@ -96,30 +87,35 @@ async function spokenPatternParts(infinitive: string, form: Form): Promise<strin
   return lastCall.text.split(', ');
 }
 
-async function practiceCardAvailableParts(infinitive: string): Promise<Set<string>> {
-  const pair = await spokenPatternParts(infinitive, 'imperativ');
-  const quad = await spokenPatternParts(infinitive, 'presens');
-  return new Set([...pair, ...quad]);
-}
-
-function builderAvailableParts(verb: ConjugatedVerb): Set<string> {
-  const joined = buildConjugationUtterance(verb);
-  return new Set(joined === '' ? [] : joined.split(', '));
+// Derives the same forms PracticeCard's rendered pattern is expected to
+// speak for one quiz form, using the builder's own two exclusion rules
+// (imperativNotApplicable, and an empty or "(not available)" sentinel
+// value) applied directly to the verb — independent of PracticeCard.
+function expectedParts(verb: ConjugatedVerb, forms: Form[]): string[] {
+  return forms
+    .filter((f) => !(f === 'imperativ' && verb.imperativNotApplicable))
+    .map((f) => verb[f] as string)
+    .filter((value) => value !== '' && value !== '(not available)');
 }
 
 describe('buildConjugationUtterance / PracticeCard availability parity (#456)', () => {
   it.each([
     ['skriva (every form available)', SKRIVA],
+    ['tala (imperativ repeats the infinitive)', TALA],
+    ['färdas (deponent, -s in every form)', FARDAS],
+    ['misslyckas (deponent)', MISSLYCKAS],
     ['te sig (sentinel-excluded imperativ)', TE_SIG],
     ['anse (sentinel-excluded imperativ)', ANSE],
     ['kunna (imperativNotApplicable-excluded imperativ)', KUNNA],
   ] as const)(
-    "%s: buildConjugationUtterance's included forms equal what PracticeCard renders as speakable",
+    "%s: PracticeCard renders as speakable exactly what buildConjugationUtterance's rule predicts",
     async (_label, verb) => {
-      const practiceCardParts = await practiceCardAvailableParts(verb.infinitive);
-      const builderParts = builderAvailableParts(verb);
-
-      expect(practiceCardParts).toEqual(builderParts);
+      expect(await spokenPatternParts(verb.infinitive, 'imperativ')).toEqual(
+        expectedParts(verb, ['infinitive', 'imperativ']),
+      );
+      expect(await spokenPatternParts(verb.infinitive, 'presens')).toEqual(
+        expectedParts(verb, ['infinitive', 'presens', 'preteritum', 'supinum']),
+      );
     },
   );
 });

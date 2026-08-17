@@ -511,12 +511,14 @@ describe('buildConjugationUtterance (#453)', () => {
   // other test above only ever compares a fixture against itself.
   it.each(ALL_FIXTURES)('fixture $infinitive matches conjugateVerb()', async (fixture) => {
     const { conjugateVerb } = await import('./verbs');
-    expect(await conjugateVerb(fixture.infinitive)).toMatchObject({
+    const live = await conjugateVerb(fixture.infinitive);
+    expect(live).toMatchObject({
       infinitive: fixture.infinitive,
       presens: fixture.presens,
       preteritum: fixture.preteritum,
       supinum: fixture.supinum,
       imperativ: fixture.imperativ,
     });
+    expect(live.imperativNotApplicable).toBe(fixture.imperativNotApplicable);
   });
 });
