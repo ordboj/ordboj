@@ -1057,6 +1057,13 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "B2", infinitive: "förbruka", imperativ: "förbruka", presens: "förbrukar", preteritum: "förbrukade", supinum: "förbrukat", grupp: "1" },
   { cefr: "B2", infinitive: "beskylla", imperativ: "beskyll", presens: "beskyller", preteritum: "beskyllde", supinum: "beskyllt", grupp: "2a" },
   { cefr: "B2", infinitive: "reparera", imperativ: "reparera", presens: "reparerar", preteritum: "reparerade", supinum: "reparerat", grupp: "1" },
+  // Appended for #372: base row for "checka", the last of the seven bases
+  // #359's band-6 note named as needing a new VERB_DATA row (slå, följa,
+  // flytta, torka, städa, fylla already shipped via #369/#415). Regular
+  // grupp 1 loanword, same pattern as boka/logga/surfa already in this
+  // table. Forms verified against SAOL. Append-only -- existing row order
+  // above is frozen by verbData.orderPin.test.ts.
+  { cefr: "A2", infinitive: "checka", imperativ: "checka", presens: "checkar", preteritum: "checkade", supinum: "checkat", grupp: "1" },
   // Appended for #399: the last of the 8 base verbs originally identified to
   // unblock band 1-2 particle verbs (docs/research/partikelverb/
   // partikelverb-list.md, "växa upp" #7 and other band 1-2 rows). The other
