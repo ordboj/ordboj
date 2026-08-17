@@ -70,3 +70,11 @@ if (!window.URL.revokeObjectURL) {
     value: vi.fn(),
   });
 }
+
+// jsdom does not implement the Web Speech API either (no
+// window.speechSynthesis / SpeechSynthesisUtterance), same as the gaps
+// above. Unlike those, no fake is installed globally here: src/test/
+// speechMock.ts's installSpeechSynthesisMock() is opt-in per file (see its
+// header comment), so suites that never call it keep observing
+// `'speechSynthesis' in window === false`, exactly as before this file
+// existed.
