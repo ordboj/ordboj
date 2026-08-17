@@ -1101,12 +1101,13 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "B1", infinitive: "slappna", imperativ: "slappna", presens: "slappnar", preteritum: "slappnade", supinum: "slappnat", grupp: "1" }, // regular grupp 1 (SAOL slappna/slappnar/slappnade/slappnat, imperativ slappna). B1 from SVALex slappna+av=b1; the promotion-queue CSV tags the bare lemma C1, which understates it — the forms this row teaches are the ones a learner meets in the everyday "slappna av"
   // "vika": strong verb, avljud i/e/i (viker/vek/vikit), same pattern as the
   // shipped riva/rev/rivit and skriva/skrev/skrivit. Supinum "vikt" is the
-  // documented free variant alongside "vikit" (promotion-queue CSV note,
-  // C5 category: same sense, register difference only), stored the way the
-  // "växa" row above stores "växt". A weak preteritum "vikte" circulates in
-  // usage; it is NOT stored here, because the repo's source of record lists
-  // only "vek" and I could not confirm it in SAOL — an unattested alternate
-  // would be graded correct, so it stays out until a human confirms it.
+  // documented free variant alongside "vikit" (SAOL 14 "vikit el./äv. vikt",
+  // and the promotion-queue CSV note, C5 category: same sense, register
+  // difference only), stored the way the "växa" row above stores "växt".
+  // Preteritum is "vek", full stop: ORD-74 settled the weak "vikte" as a
+  // negative result, not an open question. SAOL 14 and SO give "vek" only,
+  // and sv.wiktionary's talk page marks "vikte" as talspråklig/nonstandard.
+  // It must never be graded correct, so it is not an alternate here.
   // The source CSV leaves imperativ empty for this row; that is the CSV's
   // auto-generation gap, not a claim about Swedish — "vik pappret på mitten"
   // is ordinary, so the bare stem "vik" is stored. B1 re-tag: the CSV tags
