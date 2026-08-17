@@ -55,9 +55,11 @@ automate the path from a raw idea to a merged pull request. A workflow is
 a JavaScript file that spawns many agents in a fixed order, with loops
 and checks that code controls, not the model.
 
-The diagram shows the full path. Person shapes are roles: blue for
-agents, pink for adversarial reviewers, and amber for the human. Gray
-boxes are automatic steps, and the green node is the goal.
+The diagram shows the full path as a loop around one human. Person
+shapes are roles: blue for agents, pink for adversarial reviewers, and
+amber for the human. Dashed amber edges are the points where the
+pipelines stop and ask the human. Gray boxes are automatic steps, and
+the green node is the goal.
 
 ![Pipeline diagram: from a raw idea, through the idea-pilot and ticket-pilot agent pipelines, to a human-approved merge](diagrams/pipeline.svg)
 

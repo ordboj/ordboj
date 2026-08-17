@@ -56,7 +56,11 @@ classes: {
   }
 }
 
-idea: "Human\nsends a raw idea 💡" {class: human}
+human: "Human" {
+  class: human
+  width: 200
+  height: 170
+}
 
 ip: "1 · idea-pilot — is it worth building?" {
   style: {fill: "#F8FAFC"; stroke: "#CBD5E1"; font-color: "#334155"; border-radius: 8}
@@ -96,13 +100,11 @@ tp: "2 · ticket-pilot — build it" {
 }
 
 rejected: "Rejected" {class: bad}
-question: "Human\nanswers one precise question ❓" {class: human}
-approve: "Human\napproves in the chat ✅" {class: human}
 merged: "Merged 🎉" {class: good}
 
-idea -> ip.review
+human -> ip.review: "sends a raw idea 💡"
 ip.verdict -> rejected: reject
-ip.verdict -> question: "needs a human"
+ip.verdict -> human: "asks one precise question ❓" {style: {stroke: "#D97706"; font-color: "#78350F"; stroke-dash: 3}}
 ip.tickets -> tp.impl
-tp.ready -> approve
-approve -> merged
+tp.ready -> human: "asks for merge approval" {style: {stroke: "#D97706"; font-color: "#78350F"; stroke-dash: 3}}
+human -> merged: "approves in the chat ✅"
