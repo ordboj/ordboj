@@ -146,6 +146,10 @@ export function selectDiscriminationVariant(
   if (target === undefined) return null;
 
   const optionSet = [target, ...distractors];
+  // The distractor loop above can push fewer than LURES_PER_CARD lures if
+  // the eligible-lure list is shorter than expected. Guard the count here so
+  // the caller never receives a reduced-option card, even in that case.
+  if (optionSet.length !== LURES_PER_CARD + 1) return null;
   // Safety net for a data defect (a lure that is, contrary to
   // certification, also an accepted answer, or a duplicate label): the
   // option set must intersect acceptedParticles in exactly one member, the
@@ -155,8 +159,17 @@ export function selectDiscriminationVariant(
   if (acceptedInSet.length !== 1) return null;
   if (new Set(optionSet).size !== optionSet.length) return null;
 
-  // Option order: labels sorted by localeCompare(..., 'sv'), then rotated
-  // by k % 3.
+  // Option order: particle strings sorted by localeCompare(..., 'sv'), then
+  // rotated by k % 3.
+  //
+  // Known limit: this rotation only guarantees a changing target position
+  // while the option set itself is stable across renders. At more than two
+  // eligible lures, the distractor window above also advances with k, so
+  // the option set changes between renders and the rotation can still repeat
+  // a position (see the render-index table in
+  // docs/learning/2026-08-12-sentence-completion-distractors.md). The
+  // dataset carries at most two eligible lures per frame today, so this
+  // path stays latent — see that same note.
   const sorted = [...optionSet].sort((a, b) => a.localeCompare(b, 'sv'));
   const ordered = rotate(sorted, renderIndex % sorted.length);
 
