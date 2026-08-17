@@ -68,7 +68,7 @@ The diagram is a [D2](https://d2lang.com) render. The source is
 a change, run:
 
 ```sh
-d2 --layout elk --sketch docs/diagrams/pipeline.d2 docs/diagrams/pipeline.svg
+d2 --layout dagre --sketch docs/diagrams/pipeline.d2 docs/diagrams/pipeline.svg
 ```
 
 ### 1. `idea-pilot` — is the idea worth building?

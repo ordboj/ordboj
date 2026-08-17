@@ -88,23 +88,39 @@ ip: "1 · idea-pilot — is it worth building?" {
 
 tp: "2 · ticket-pilot — build it" {
   style: {fill: "#F8FAFC"; stroke: "#CBD5E1"; font-color: "#334155"; border-radius: 8}
+  triage: "triage the ticket" {class: step}
   impl: "owning agent\n\nimplements on a branch" {class: agent}
   rev: "reviewer\n\nadversarial review" {class: critic}
+  risky: "Risky\nchange?" {
+    shape: diamond
+    style: {fill: "#FCE7F3"; stroke: "#DB2777"; font-color: "#831843"}
+  }
+  gate: "owner-gate\n\nclears or parks risky changes" {class: critic}
   ci: "CI watch + repair" {class: step}
   ready: "Ready to merge" {class: step}
 
+  triage -> impl
   impl -> rev
   rev -> impl: "rejected,\nmax 2 rounds" {style: {stroke: "#DB2777"; font-color: "#831843"; stroke-dash: 3}}
-  rev -> ci: approved
-  ci -> ready
+  rev -> risky: approved
+  risky -> ci: no
+  risky -> gate: yes
+  gate -> ci: cleared
+  ci -> impl: "CI fails,\nremediate" {style: {stroke: "#DB2777"; font-color: "#831843"; stroke-dash: 3}}
+  ci -> ready: green
 }
 
 rejected: "Rejected" {class: bad}
 merged: "Merged 🎉" {class: good}
 
+lead: "lead session\n\nmerges the PR" {class: agent}
+
 human -> ip.review: "sends a raw idea 💡"
 ip.verdict -> rejected: reject
 ip.verdict -> human: "asks one precise question ❓" {style: {stroke: "#D97706"; font-color: "#78350F"; stroke-dash: 3}}
-ip.tickets -> tp.impl
+ip.tickets -> tp.triage
+tp.gate -> human: "parks with one precise question" {style: {stroke: "#D97706"; font-color: "#78350F"; stroke-dash: 3}}
 tp.ready -> human: "asks for merge approval" {style: {stroke: "#D97706"; font-color: "#78350F"; stroke-dash: 3}}
-human -> merged: "approves in the chat ✅"
+human -> lead: "approves in the chat ✅"
+lead -> merged
+merged -> human: "next idea 🔁" {style: {stroke: "#16A34A"; font-color: "#14532D"; stroke-dash: 3}}
