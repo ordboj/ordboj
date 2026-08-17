@@ -119,9 +119,8 @@ export interface SpeechSynthesisMockHandle {
 export function installSpeechSynthesisMock(
   initialVoices: FakeSpeechVoice[] = [],
 ): SpeechSynthesisMockHandle {
-  const existing = (
-    window as unknown as { speechSynthesis?: { [SPEECH_MOCK_TAG]?: boolean } }
-  ).speechSynthesis;
+  const existing = (window as unknown as { speechSynthesis?: { [SPEECH_MOCK_TAG]?: boolean } })
+    .speechSynthesis;
   if (existing?.[SPEECH_MOCK_TAG]) {
     throw new Error(
       'installSpeechSynthesisMock() called while a mock is already installed; call uninstall() on the previous handle first.',

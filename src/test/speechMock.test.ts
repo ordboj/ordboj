@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   installSpeechSynthesisMock,
   SV_VOICE,
@@ -33,20 +33,36 @@ describe('speechMock', () => {
     speech = installSpeechSynthesisMock();
   });
 
-  it('records speak() calls in order with text, lang and the sv voice chosen', () => {
+  it('records speak() calls in order with text, lang and the sv voice chosen', async () => {
+    // speakSwedish() resolves the voice list via a promise chain even when
+    // getVoices() already has entries (waitForVoices() short-circuits to
+    // Promise.resolve(immediate) but that still defers trySpeak() to a
+    // microtask), so the speak() call lands asynchronously.
     speech.setVoices([SV_VOICE]);
     speakSwedish('testar', false);
     speakSwedish('provar', false);
+    await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(2));
     expect(speech.speakCalls).toMatchObject([
       { text: 'testar', lang: 'sv-SE', voice: 'Alva' },
       { text: 'provar', lang: 'sv-SE', voice: 'Alva' },
     ]);
   });
 
-  it('records a null voice when only non-sv voices are present', () => {
+  it('makes zero speak() calls when only non-sv voices are present (voice guard)', async () => {
+    // speech.ts's Swedish-voice guard: when the loaded voice list has no
+    // 'sv' voice, speakSwedish() must stay silent rather than speak in a
+    // default-language voice (issue #417/#421). Prove the negative by
+    // giving a later, guaranteed-sv call time to land first: if the guard
+    // were broken and a non-sv speak() call slipped through, it would sit
+    // ahead of the sv one in speakCalls once both resolve.
     speech.setVoices(NON_SV_VOICES);
     speakSwedish('testar', false);
-    expect(speech.speakCalls).toMatchObject([{ text: 'testar', lang: 'sv-SE', voice: null }]);
+
+    speech.setVoices([SV_VOICE]);
+    speakSwedish('sentinel', false);
+    await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(1));
+
+    expect(speech.speakCalls).toMatchObject([{ text: 'sentinel', lang: 'sv-SE', voice: 'Alva' }]);
   });
 
   it("does not record a speak() call when muted, matching speakSwedish's own guard", () => {
@@ -55,13 +71,13 @@ describe('speechMock', () => {
     expect(speech.speakCalls).toEqual([]);
   });
 
-  it('gives cancel() and speak() a shared seq that proves their relative order', () => {
+  it('gives cancel() and speak() a shared seq that proves their relative order', async () => {
     speech.setVoices([SV_VOICE]);
     window.speechSynthesis.cancel();
     speakSwedish('testar', false);
 
+    await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(1));
     expect(speech.cancelCalls).toHaveLength(1);
-    expect(speech.speakCalls).toHaveLength(1);
     expect(speech.cancelCalls[0]!.seq).toBeLessThan(speech.speakCalls[0]!.seq);
   });
 
@@ -91,11 +107,11 @@ describe('speechMock', () => {
     expect(speech.cancelCalls).toHaveLength(2);
   });
 
-  it('reset() clears the call log without uninstalling', () => {
+  it('reset() clears the call log without uninstalling', async () => {
     speech.setVoices([SV_VOICE]);
     speakSwedish('testar', false);
     window.speechSynthesis.cancel();
-    expect(speech.speakCalls).toHaveLength(1);
+    await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(1));
     expect(speech.cancelCalls).toHaveLength(1);
 
     speech.reset();
