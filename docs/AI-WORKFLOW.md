@@ -58,10 +58,8 @@ and checks that code controls, not the model.
 The diagram shows the full path as one circle. The human sits in the
 center of the loop. Blue nodes are agents, pink nodes are adversarial
 reviewers, and gray boxes are automatic steps. Dashed amber spokes are
-the points where an agent stops and asks the human. The Linear node
-sits between the two pipelines: the staff engineer files the tickets
-there, and `ticket-pilot` picks them up. The green edge at the top
-closes the loop: a merged change makes room for the next idea.
+the points where an agent stops and asks the human. The green edge at
+the top closes the loop: a merged change makes room for the next idea.
 
 ![Pipeline diagram: a circle of agent stages around the human, from a raw idea to a human-approved merge](diagrams/pipeline.svg)
 
