@@ -191,7 +191,7 @@ export default function Settings() {
                 </label>
               </div>
               <p className="text-xs text-muted-foreground">
-                When on, opening a verb's details reads every form aloud by itself. That is
+                When on, opening a verb&apos;s details reads every form aloud by itself. That is
                 different from tapping a form to hear just it, and from Autoplay pronunciation
                 above, which only plays audio after you answer a practice question correctly.
               </p>
