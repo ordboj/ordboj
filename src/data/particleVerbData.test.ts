@@ -407,6 +407,212 @@ describe('particle verb dataset - excludedParticles (#318)', () => {
   });
 });
 
+describe('particle verb dataset - discrimination-variant gate depth (#386/#387/#389)', () => {
+  // docs/learning/2026-08-12-sentence-completion-distractors.md, "Ambiguity"
+  // item 4: "A frame qualifies as certified only when verified === true and
+  // excludedParticles.length >= 2; the certified-frame count and the
+  // distinct-base count are computed, not asserted by hand." This computes
+  // both and pins the exact numbers, so a data change moves the gate on
+  // purpose rather than by accident, and the build-gate floor from the same
+  // note (>= 8 frames across >= 5 bases) is checked independently of the
+  // exact pin.
+  const CERTIFIED_DEPTH = 2;
+  const BUILD_GATE_FRAMES = 8;
+  const BUILD_GATE_BASES = 5;
+
+  function certifiedFrames(): Array<{ id: string; base: string }> {
+    const frames: Array<{ id: string; base: string }> = [];
+    for (const entry of PARTICLE_VERB_DATA) {
+      if (!entry.verified) continue;
+      for (const example of entry.examples) {
+        if ((example.excludedParticles?.length ?? 0) >= CERTIFIED_DEPTH) {
+          frames.push({ id: entry.id, base: entry.baseInfinitive });
+        }
+      }
+    }
+    return frames;
+  }
+
+  it('certifies exactly 14 frames across exactly 5 distinct base verbs at the ruled 2-lure depth', () => {
+    const frames = certifiedFrames();
+    const distinctBases = new Set(frames.map((frame) => frame.base));
+    expect(frames.length).toBe(14);
+    expect(distinctBases.size).toBe(5);
+  });
+
+  it('clears the #386 build gate (at least 8 certified frames across at least 5 distinct bases)', () => {
+    const frames = certifiedFrames();
+    const distinctBases = new Set(frames.map((frame) => frame.base));
+    expect(frames.length).toBeGreaterThanOrEqual(BUILD_GATE_FRAMES);
+    expect(distinctBases.size).toBeGreaterThanOrEqual(BUILD_GATE_BASES);
+  });
+});
+
+describe('particle verb dataset - discrimination answer key (#386/#389)', () => {
+  // The rendered option set the ruling defines (docs/learning/
+  // 2026-08-12-sentence-completion-distractors.md): acceptedParticles[0] —
+  // the only accepted particle ever rendered as an option — plus 2 lures
+  // taken from excludedParticles. It must intersect acceptedParticles in
+  // exactly one member. A builder that instead rendered every accepted
+  // spelling would put "lägga ner" and "lägga ned" on screen as two
+  // separate options and mark one of them wrong; that is the failure this
+  // check exists to catch.
+  function optionSet(entry: (typeof PARTICLE_VERB_DATA)[number], excluded: string[]): string[] {
+    return [entry.acceptedParticles[0]!, ...excluded.slice(0, 2)];
+  }
+
+  it('intersects acceptedParticles in exactly one member for every certified frame', () => {
+    const offenders: string[] = [];
+    for (const entry of PARTICLE_VERB_DATA) {
+      if (!entry.verified) continue;
+      const accepted = new Set(entry.acceptedParticles.map((particle) => particle.toLowerCase()));
+      for (const example of entry.examples) {
+        const excluded = example.excludedParticles ?? [];
+        if (excluded.length < 2) continue;
+        const options = optionSet(entry, excluded);
+        const hits = options.filter((option) => accepted.has(option.toLowerCase()));
+        if (hits.length !== 1) {
+          offenders.push(
+            `${entry.id}: "${example.sv}" -> options ${JSON.stringify(options)} intersect acceptedParticles ${hits.length} times`,
+          );
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('pins the lägga ner / lägga ned two-spelling case: the rendered options never include "ned"', () => {
+    const entry = PARTICLE_VERB_DATA.find((candidate) => candidate.id === 'pv:lagga-ner')!;
+    expect(entry.acceptedParticles).toEqual(['ner', 'ned']);
+    const certifiedFrame = entry.examples.find(
+      (example) => (example.excludedParticles?.length ?? 0) >= 2,
+    )!;
+    const options = optionSet(entry, certifiedFrame.excludedParticles!);
+    expect(options).toEqual(['ner', 'in', 'upp']);
+    expect(options).not.toContain('ned');
+  });
+});
+
+describe('particle verb dataset - cross-entry excluded-particle hazard (#389)', () => {
+  // Mechanical shadow of the "komma på" trap named in ticket #389: an
+  // excludedParticles entry that happens to equal another same-base entry's
+  // accepted particle is not automatically wrong on its own — komma ihåg
+  // legitimately excludes "in" in its own frame even though komma in is a
+  // real, different particle verb — but it is exactly the shape of mistake
+  // that would teach a false negative if a future entry introduced it
+  // without anyone noticing. This does not judge Swedish correctness, which
+  // stays swedish-linguist's call; it only requires that every such case is
+  // named in a comment, the same way every current one already is.
+  const source = readFileSync(join(here, 'particleVerbData.ts'), 'utf-8');
+
+  // Isolates one entry's own source text between its opening `  {` and
+  // closing `  },`, so the comment search below never reads a neighbouring
+  // entry's comment as this entry's justification.
+  function extractEntryBlock(text: string, id: string): string {
+    const idIndex = text.indexOf(`id: '${id}',`);
+    if (idIndex === -1) return '';
+    const blockStart = text.lastIndexOf('\n  {\n', idIndex);
+    const blockEnd = text.indexOf('\n  },\n', idIndex);
+    if (blockStart === -1 || blockEnd === -1) return '';
+    return text.slice(blockStart, blockEnd);
+  }
+
+  // A justification is a `//` comment inside the entry's own block that
+  // quotes the excluded particle, matching every hand-written comment
+  // already in the dataset (e.g. `// "in" and "fram" excluded ...`).
+  function hasJustifyingComment(block: string, particle: string): boolean {
+    const commentText = block
+      .split('\n')
+      .filter((line) => line.trim().startsWith('//'))
+      .join('\n');
+    return commentText.includes(`"${particle}"`);
+  }
+
+  describe('extraction helpers, self-tested against a fixture before touching real data', () => {
+    const fixture = [
+      '',
+      '  {',
+      "    id: 'pv:fake-verb',",
+      '    // "bort" excluded because reasons.',
+      '    examples: [',
+      "      { sv: 'x', blankIndex: 0, excludedParticles: ['bort'] },",
+      '    ],',
+      '  },',
+      '  {',
+      "    id: 'pv:fake-verb-2',",
+      '    examples: [',
+      "      { sv: 'y', blankIndex: 0, excludedParticles: ['ut'] },",
+      '    ],',
+      '  },',
+      '',
+    ].join('\n');
+
+    it('extracts one entry block without bleeding into its neighbour', () => {
+      const block = extractEntryBlock(fixture, 'pv:fake-verb');
+      expect(block).toContain('pv:fake-verb');
+      expect(block).not.toContain('pv:fake-verb-2');
+    });
+
+    it('finds a quoted justification comment when the entry carries one', () => {
+      const block = extractEntryBlock(fixture, 'pv:fake-verb');
+      expect(hasJustifyingComment(block, 'bort')).toBe(true);
+    });
+
+    it('reports no justification when the entry carries no matching comment', () => {
+      const block = extractEntryBlock(fixture, 'pv:fake-verb-2');
+      expect(hasJustifyingComment(block, 'ut')).toBe(false);
+    });
+  });
+
+  // (base, particle) -> ids of the entries that accept it, so a hazard is
+  // any excludedParticles entry landing on a pair some *other* same-base
+  // entry accepts.
+  const acceptedByBaseParticle = new Map<string, string[]>();
+  for (const entry of PARTICLE_VERB_DATA) {
+    for (const particle of entry.acceptedParticles) {
+      const key = `${entry.baseInfinitive}|${particle.toLowerCase()}`;
+      const ids = acceptedByBaseParticle.get(key) ?? [];
+      ids.push(entry.id);
+      acceptedByBaseParticle.set(key, ids);
+    }
+  }
+
+  const hazards: Array<{ id: string; particle: string }> = [];
+  for (const entry of PARTICLE_VERB_DATA) {
+    for (const example of entry.examples) {
+      for (const excluded of example.excludedParticles ?? []) {
+        const owners = (
+          acceptedByBaseParticle.get(`${entry.baseInfinitive}|${excluded.toLowerCase()}`) ?? []
+        ).filter((id) => id !== entry.id);
+        if (owners.length > 0) {
+          hazards.push({ id: entry.id, particle: excluded });
+        }
+      }
+    }
+  }
+
+  it('finds at least one cross-entry hazard, so the check below is not vacuous', () => {
+    expect(hazards.length).toBeGreaterThan(0);
+  });
+
+  it('gives every cross-entry hazard an explicit comment naming the particle', () => {
+    const unjustified: string[] = [];
+    const seen = new Set<string>();
+    for (const hazard of hazards) {
+      const key = `${hazard.id}|${hazard.particle}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const block = extractEntryBlock(source, hazard.id);
+      if (!hasJustifyingComment(block, hazard.particle)) {
+        unjustified.push(
+          `${hazard.id}: excludes "${hazard.particle}", which another same-base entry accepts, with no comment naming it`,
+        );
+      }
+    }
+    expect(unjustified).toEqual([]);
+  });
+});
+
 describe('particle verb dataset - CEFR', () => {
   it('records where every band came from', () => {
     for (const entry of PARTICLE_VERB_DATA) {
