@@ -4,7 +4,11 @@
 modal gains a "Pronounce all forms" button and an opt-in auto-read. Before
 any code exists, freeze the linguistic rules for the spoken paradigm and
 publish the fixture table of exact expected utterance strings. Owner:
-`swedish-linguist`. This note is the ruling; it edits no production file.
+`swedish-linguist`. `docs/learning/**` is `learning-designer`'s directory
+(CLAUDE.md file-ownership table); this note is filed there as a
+linguistic ruling with `learning-designer` co-signing. The lead confirms
+the placement or moves the file. This note is the ruling; it edits no
+production file.
 
 ## The frozen rules
 
@@ -32,7 +36,12 @@ publish the fixture table of exact expected utterance strings. Owner:
    substitute the on-screen `' – '`: some voices read the dash aloud
    ("tankstreck") and others drop it silently, which is unverifiable per
    voice. Do not use `'. '`: sentence-final falling intonation after
-   every form slows the chain without adding list clarity.
+   every form slows the chain without adding list clarity. This ruling
+   rests on the separator's grammar, not on a device listening test; the
+   mobile sv-SE check in
+   [[2026-08-16-conjugation-chain-audio-decision]] (unblocking evidence,
+   item 1) has not been run, and a failing check returns this rule to
+   `swedish-linguist`.
 4. **Speak the stored strings verbatim.** For deponent s-verbs the `-s`
    belongs to every form and is not a passive ending (`verbData.ts:806`);
    stripping it would speak a verb that does not exist ("färda"). For
@@ -84,7 +93,19 @@ stays visual (the modal's render guard) and in the data
 
 ## Defect check
 
-None to raise. Every expected string above is producible verbatim from
+**One conflict to raise, not a data defect.** Issue #453 (ORD-76, the
+utterance builder) pins the deponent case as
+`färdas, färdas, färdades, färdats` — four parts. That string is wrong.
+`verbData.ts:806` stores `imperativ: "färdas"`, a non-empty value on a
+row that is not flagged `noNaturalImperativ`, so no filter in rule 2
+removes it. The correct builder output is the five-part
+`färdas, färdas, färdades, färdats, färdas`. Rule 5 (no deduplication)
+keeps the third repeat. The fixture table in this note wins; the lead
+corrects the #453 / ORD-76 acceptance text before that ticket's
+implementation merges. No verbData.ts row needs a change, so batch 3 is
+not blocked on data.
+
+Every expected string above is producible verbatim from
 the current `verbData.ts` rows (skriva:86, tala:120, färdas:806,
 te sig:87, kunna:66, anse:112 — line numbers as of this note). Batch 3
 is not blocked on any data fix.
@@ -114,4 +135,9 @@ deferral this note does not touch).
 
 `frontend-expert` — rules 1–3 and 7 bind the utterance builder.
 `qa` — the fixture table is the test contract for the utterance builder.
+`learning-designer` — the modal's opt-in auto-read (#455 / #457) is a new
+surface, not the practice-card autoplay this note leaves alone; confirm
+in writing that the deferral in
+[[2026-08-16-conjugation-chain-audio-decision]] does not reach it before
+batch 3 starts.
 Lead — no verbData.ts defects to route; batch 3 may start.
