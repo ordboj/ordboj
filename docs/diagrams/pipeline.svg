@@ -1,106 +1,185 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1400" font-family="-apple-system, 'Segoe UI', sans-serif">
-<defs><marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/></marker><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#D97706"/></marker><marker id="mp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#DB2777"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#16A34A"/></marker></defs>
-<rect width="1400" height="1400" fill="#FFFFFF"/>
-<path d="M 481 158 A 585 585 0 0 1 1276 802 L 1059 763 A 365 365 0 0 0 563 362 Z" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1.5" opacity="0.6"/>
-<path d="M 1259 871 A 585 585 0 1 1 144 519 L 353 587 A 365 365 0 1 0 1049 807 Z" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5" opacity="0.6"/>
-<text x="1089" y="220" fill="#1E3A8A" font-size="17" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="1089" dy="0">1 · idea-pilot — is it worth building?</tspan></text>
-<text x="150" y="1043" fill="#334155" font-size="17" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="150" dy="0">2 · ticket-pilot — build it</tspan></text>
-<path d="M 765 235 A 470 470 0 0 1 876 264" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<path d="M 989 330 A 470 470 0 0 1 1060 398" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<path d="M 1129 509 A 470 470 0 0 1 1160 602" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<text x="1172" y="547" fill="#64748B" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="1172" dy="0">pursue</tspan></text>
-<path d="M 1169 733 A 470 470 0 0 1 1152 830" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<path d="M 1099 949 A 470 470 0 0 1 1044 1021" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<path d="M 942 1103 A 470 470 0 0 1 861 1142" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<path d="M 733 1169 A 470 470 0 0 1 643 1166" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<text x="687" y="1196" fill="#64748B" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="687" dy="0">approved</tspan></text>
-<path d="M 516 1133 A 470 470 0 0 1 437 1090" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<text x="463" y="1136" fill="#64748B" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="463" dy="0">yes</tspan></text>
-<path d="M 340 1002 A 470 470 0 0 1 285 921" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<text x="289" y="977" fill="#64748B" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="289" dy="0">cleared</tspan></text>
-<path d="M 240 798 A 470 470 0 0 1 230 700" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<text x="207" y="752" fill="#64748B" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="207" dy="0">green</tspan></text>
-<path d="M 248 570 A 470 470 0 0 1 285 479" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<path d="M 362 374 A 470 470 0 0 1 437 310" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<path d="M 563 251 A 470 470 0 0 1 586 244" fill="none" stroke="#16A34A" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#mg)"/>
-<text x="522" y="184" fill="#16A34A" font-size="14" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="522" dy="0">next idea 🔁</tspan></text>
-<path d="M 539 1046 A 382 382 0 0 1 369 891" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
-<text x="529" y="1008" fill="#64748B" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="529" dy="0">no</tspan></text>
-<path d="M 909 230 Q 846 153 754 189" fill="none" stroke="#DB2777" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#mp)"/>
-<text x="750" y="122" fill="#DB2777" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">contested,</text>
-<text x="750" y="138" fill="#DB2777" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">one rebuttal round</text>
-<path d="M 859 1189 Q 944 1211 980 1131" fill="none" stroke="#DB2777" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#mp)"/>
-<text x="1032" y="1158" fill="#DB2777" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">rejected,</text>
-<text x="1032" y="1174" fill="#DB2777" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">max 2 rounds</text>
-<path d="M 324 868 Q 632 946 901 1034" fill="none" stroke="#DB2777" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#mp)"/>
-<text x="670" y="1011" fill="#DB2777" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">CI fails, remediate</text>
-<line x1="1143" y1="423" x2="1200" y2="388" stroke="#64748B" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
-<rect x="1179" y="342" width="120" height="44" rx="20" fill="#E2E8F0" stroke="#64748B" stroke-width="2"/>
-<text x="1239" y="369" fill="#334155" font-size="14" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="1239" dy="0">Rejected</tspan></text>
-<text x="1192" y="378" fill="#64748B" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="1192" dy="0">reject</tspan></text>
-<line x1="700" y1="582" x2="700" y2="316" stroke="#D97706" stroke-width="2" marker-end="url(#ma)"/>
-<text x="700" y="392" fill="#D97706" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">sends a raw</text>
-<text x="700" y="409" fill="#D97706" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">idea 💡</text>
-<line x1="1046" y1="484" x2="800" y2="637" stroke="#D97706" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ma)"/>
-<text x="959" y="530" fill="#D97706" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">asks one precise</text>
-<text x="959" y="547" fill="#D97706" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">question ❓</text>
-<line x1="427" y1="1003" x2="621" y2="788" stroke="#D97706" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ma)"/>
-<text x="531" y="879" fill="#D97706" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">parks with one</text>
-<text x="531" y="896" fill="#D97706" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">question</text>
-<line x1="296" y1="643" x2="583" y2="684" stroke="#D97706" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ma)"/>
-<text x="403" y="650" fill="#D97706" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">asks for merge</text>
-<text x="403" y="667" fill="#D97706" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">approval</text>
-<line x1="605" y1="631" x2="370" y2="460" stroke="#D97706" stroke-width="2" marker-end="url(#ma)"/>
-<text x="457" y="516" fill="#D97706" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">approves in</text>
-<text x="457" y="533" fill="#D97706" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">the chat ✅</text>
-<rect x="593" y="164" width="214" height="132" rx="12" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-<text x="700" y="186" fill="#1E3A8A" font-size="14" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="700" dy="0">blind value review</tspan></text>
-<circle cx="648" cy="211" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/><path d="M 634 234 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-<text x="648" y="248" fill="#1E3A8A" font-size="10.5" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="648" dy="0">srs-engine</tspan></text>
-<circle cx="752" cy="211" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/><path d="M 738 234 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-<text x="752" y="248" fill="#1E3A8A" font-size="10.5" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="752" dy="0">swedish-linguist</tspan></text>
-<circle cx="648" cy="257" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/><path d="M 634 280 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-<text x="648" y="294" fill="#1E3A8A" font-size="10.5" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="648" dy="0">learning-designer</tspan></text>
-<circle cx="752" cy="257" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/><path d="M 738 280 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-<text x="752" y="294" fill="#1E3A8A" font-size="10.5" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="752" dy="0">ui-ux-expert</tspan></text>
-<rect x="847" y="261" width="176" height="64" rx="12" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
-<circle cx="935" cy="240" r="9" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/><path d="M 921 263 q 0 -13 14 -13 q 14 0 14 13 z" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
-<text x="935" y="285" fill="#831843" font-size="15" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="935" dy="0">design-critic</tspan></text>
-<text x="935" y="305" fill="#831843" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="935" dy="0">attacks weak arguments</tspan></text>
-<polygon points="1099,417 1141,451 1099,485 1057,451" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
-<text x="1099" y="451" fill="#831843" font-size="14" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="1099" dy="0">Verdict</tspan></text>
-<rect x="1081" y="635" width="176" height="64" rx="12" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-<circle cx="1169" cy="614" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/><path d="M 1155 637 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-<text x="1169" y="659" fill="#1E3A8A" font-size="15" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="1169" dy="0">staff-engineer</tspan></text>
-<text x="1169" y="679" fill="#1E3A8A" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="1169" dy="0">cuts parallel-safe tickets</tspan></text>
-<rect x="1054" y="867" width="150" height="48" rx="12" fill="#F1F5F9" stroke="#94A3B8" stroke-width="2"/>
-<text x="1129" y="891" fill="#334155" font-size="14" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="1129" dy="0">triage the ticket</tspan></text>
-<rect x="908" y="1033" width="176" height="64" rx="12" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-<circle cx="996" cy="1012" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/><path d="M 982 1035 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-<text x="996" y="1057" fill="#1E3A8A" font-size="15" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="996" dy="0">owning agent</tspan></text>
-<text x="996" y="1077" fill="#1E3A8A" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="996" dy="0">implements on a branch</tspan></text>
-<rect x="710" y="1128" width="176" height="64" rx="12" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
-<circle cx="798" cy="1107" r="9" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/><path d="M 784 1130 q 0 -13 14 -13 q 14 0 14 13 z" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
-<text x="798" y="1152" fill="#831843" font-size="15" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="798" dy="0">reviewer</tspan></text>
-<text x="798" y="1172" fill="#831843" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="798" dy="0">adversarial review</tspan></text>
-<polygon points="578,1119 635,1154 578,1189 521,1154" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
-<text x="578" y="1154" fill="#831843" font-size="14" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="578" dy="0">Risky change?</tspan></text>
-<rect x="288" y="1017" width="196" height="64" rx="12" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
-<circle cx="386" cy="996" r="9" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/><path d="M 372 1019 q 0 -13 14 -13 q 14 0 14 13 z" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
-<text x="386" y="1041" fill="#831843" font-size="15" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="386" dy="0">owner-gate</tspan></text>
-<text x="386" y="1061" fill="#831843" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="386" dy="0">clears or parks risky changes</tspan></text>
-<rect x="178" y="837" width="160" height="48" rx="12" fill="#F1F5F9" stroke="#94A3B8" stroke-width="2"/>
-<text x="258" y="861" fill="#334155" font-size="14" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="258" dy="0">CI watch + repair</tspan></text>
-<rect x="160" y="611" width="150" height="48" rx="12" fill="#F1F5F9" stroke="#94A3B8" stroke-width="2"/>
-<text x="235" y="635" fill="#334155" font-size="14" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="235" dy="0">Ready to merge</tspan></text>
-<rect x="232" y="392" width="176" height="64" rx="12" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-<circle cx="320" cy="371" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/><path d="M 306 394 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-<text x="320" y="416" fill="#1E3A8A" font-size="15" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="320" dy="0">lead session</tspan></text>
-<text x="320" y="436" fill="#1E3A8A" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="320" dy="0">merges the PR</tspan></text>
-<rect x="429" y="253" width="130" height="50" rx="12" fill="#DCFCE7" stroke="#16A34A" stroke-width="2"/>
-<text x="494" y="278" fill="#14532D" font-size="14" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="494" dy="0">Merged 🎉</tspan></text>
-<circle cx="700.0" cy="700.0" r="96" fill="#FEF3C7" stroke="#D97706" stroke-width="3"/>
-<circle cx="700.0" cy="666" r="22" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/><path d="M 664 722 q 0 -32 36 -32 q 36 0 36 32 z" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
-<text x="700" y="748" fill="#78350F" font-size="18" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif" font-weight="bold"><tspan x="700" dy="0">Human</tspan></text>
-<text x="700" y="770" fill="#78350F" font-size="13" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif"><tspan x="700" dy="0">in the loop</tspan></text>
+  <!-- Hand-drawn. Circle center (700,700), node ring radius 470. -->
+  <defs>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#D97706"/>
+    </marker>
+    <marker id="mp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#DB2777"/>
+    </marker>
+    <marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#16A34A"/>
+    </marker>
+  </defs>
+  <rect width="1400" height="1400" fill="#FFFFFF"/>
+
+  <!-- phase bands (annular sectors), Linear sits in the gap between them -->
+  <path d="M 481 158 A 585 585 0 0 1 1284 731 L 1064 719 A 365 365 0 0 0 563 362 Z"
+        fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1.5" opacity="0.6"/>
+  <path d="M 1212 984 A 585 585 0 0 1 154 490 L 359 569 A 365 365 0 0 0 1019 877 Z"
+        fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5" opacity="0.6"/>
+  <text x="1080" y="213" fill="#1E3A8A" font-size="17" font-weight="bold" text-anchor="middle">1 · idea-pilot — is it worth building?</text>
+  <text x="151" y="1043" fill="#334155" font-size="17" font-weight="bold" text-anchor="middle">2 · ticket-pilot — build it</text>
+
+  <!-- ring flow, clockwise -->
+  <path d="M 765 235 A 470 470 0 0 1 861 258" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 976 320 A 470 470 0 0 1 1038 373" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 1115 480 A 470 470 0 0 1 1147 555" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 1170 684 A 470 470 0 0 1 1165 765" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 1130 891 A 470 470 0 0 1 1099 949" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 1014 1049 A 470 470 0 0 1 963 1090" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 845 1147 A 470 470 0 0 1 765 1165" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 635 1165 A 470 470 0 0 1 555 1147" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 437 1090 A 470 470 0 0 1 386 1049" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 301 949 A 470 470 0 0 1 270 891" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 235 765 A 470 470 0 0 1 230 700" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 248 570 A 470 470 0 0 1 274 501" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <path d="M 345 392 A 470 470 0 0 1 417 324" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <!-- the green edge closes the loop -->
+  <path d="M 500 258 Q 520 210 585 200" fill="none" stroke="#16A34A" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#mg)"/>
+  <text x="498" y="180" fill="#16A34A" font-size="14" font-weight="bold" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">next idea 🔁</text>
+
+  <!-- ring edge labels -->
+  <text x="1157" y="506" fill="#64748B" font-size="13" text-anchor="middle">pursue</text>
+  <text x="1192" y="740" fill="#64748B" font-size="13" text-anchor="middle">files the tickets</text>
+  <text x="1146" y="933" fill="#64748B" font-size="13" text-anchor="middle">picks the next ticket</text>
+  <text x="588" y="1183" fill="#64748B" font-size="13" text-anchor="middle">approved</text>
+  <text x="404" y="1085" fill="#64748B" font-size="13" text-anchor="middle">yes</text>
+  <text x="262" y="933" fill="#64748B" font-size="13" text-anchor="middle">cleared</text>
+  <text x="205" y="735" fill="#64748B" font-size="13" text-anchor="middle">green</text>
+
+  <!-- risky -> ci inner arc, the "no" path -->
+  <path d="M 475 1009 A 382 382 0 0 1 357 867" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#m)"/>
+  <text x="474" y="970" fill="#64748B" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">no</text>
+
+  <!-- rework loops, dashed pink -->
+  <path d="M 909 230 Q 837 151 736 187" fill="none" stroke="#DB2777" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#mp)"/>
+  <text x="843" y="120" fill="#DB2777" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">contested,</text>
+  <text x="843" y="136" fill="#DB2777" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">one rebuttal round</text>
+  <path d="M 754 1212 Q 827 1251 876 1183" fill="none" stroke="#DB2777" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#mp)"/>
+  <text x="833" y="1268" fill="#DB2777" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">rejected,</text>
+  <text x="833" y="1284" fill="#DB2777" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">max 2 rounds</text>
+  <path d="M 313 841 Q 604 936 821 1071" fill="none" stroke="#DB2777" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#mp)"/>
+  <text x="655" y="1010" fill="#DB2777" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">CI fails, remediate</text>
+
+  <!-- reject offshoot -->
+  <line x1="1122" y1="393" x2="1161" y2="365" stroke="#64748B" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
+  <text x="1120" y="345" fill="#64748B" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">reject</text>
+  <rect x="1119" y="330" width="120" height="44" rx="20" fill="#E2E8F0" stroke="#64748B" stroke-width="2" transform="translate(60,0)"/>
+  <text x="1239" y="357" fill="#334155" font-size="14" font-weight="bold" text-anchor="middle">Rejected</text>
+
+  <!-- spokes between the ring and the human -->
+  <line x1="700" y1="582" x2="700" y2="316" stroke="#D97706" stroke-width="2" marker-end="url(#ma)"/>
+  <text x="700" y="394" fill="#D97706" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">sends a raw</text>
+  <text x="700" y="411" fill="#D97706" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">idea 💡</text>
+  <line x1="1030" y1="460" x2="795" y2="631" stroke="#D97706" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ma)"/>
+  <text x="947" y="514" fill="#D97706" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">asks one precise</text>
+  <text x="947" y="531" fill="#D97706" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">question ❓</text>
+  <line x1="387" y1="962" x2="610" y2="776" stroke="#D97706" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ma)"/>
+  <text x="507" y="855" fill="#D97706" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">parks with one</text>
+  <text x="507" y="872" fill="#D97706" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">question</text>
+  <line x1="296" y1="643" x2="583" y2="712" stroke="#D97706" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ma)"/>
+  <text x="403" y="735" fill="#D97706" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">asks for merge</text>
+  <text x="403" y="752" fill="#D97706" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">approval</text>
+  <line x1="601" y1="636" x2="358" y2="478" stroke="#D97706" stroke-width="2" marker-end="url(#ma)"/>
+  <text x="448" y="529" fill="#D97706" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">approves in</text>
+  <text x="448" y="546" fill="#D97706" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="4">the chat ✅</text>
+
+  <!-- ring nodes -->
+  <!-- blind value review, four separate roles -->
+  <rect x="593" y="164" width="214" height="132" rx="12" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <text x="700" y="186" fill="#1E3A8A" font-size="14" font-weight="bold" text-anchor="middle">blind value review</text>
+  <circle cx="648" cy="211" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <path d="M 634 234 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <text x="648" y="248" fill="#1E3A8A" font-size="10.5" font-weight="bold" text-anchor="middle">srs-engine</text>
+  <circle cx="752" cy="211" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <path d="M 738 234 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <text x="752" y="248" fill="#1E3A8A" font-size="10.5" font-weight="bold" text-anchor="middle">swedish-linguist</text>
+  <circle cx="648" cy="257" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <path d="M 634 280 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <text x="648" y="293" fill="#1E3A8A" font-size="10.5" font-weight="bold" text-anchor="middle">learning-designer</text>
+  <circle cx="752" cy="257" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <path d="M 738 280 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <text x="752" y="293" fill="#1E3A8A" font-size="10.5" font-weight="bold" text-anchor="middle">ui-ux-expert</text>
+
+  <!-- design-critic -->
+  <circle cx="920" cy="232" r="9" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <path d="M 906 255 q 0 -13 14 -13 q 14 0 14 13 z" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <rect x="832" y="253" width="176" height="64" rx="12" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <text x="920" y="279" fill="#831843" font-size="15" font-weight="bold" text-anchor="middle">design-critic</text>
+  <text x="920" y="299" fill="#831843" font-size="13" text-anchor="middle">attacks weak arguments</text>
+
+  <!-- verdict -->
+  <polygon points="1080,390 1122,424 1080,458 1038,424" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <text x="1080" y="429" fill="#831843" font-size="14" font-weight="bold" text-anchor="middle">Verdict</text>
+
+  <!-- staff-engineer -->
+  <circle cx="1163" cy="565" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <path d="M 1149 588 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <rect x="1075" y="586" width="176" height="64" rx="12" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <text x="1163" y="612" fill="#1E3A8A" font-size="15" font-weight="bold" text-anchor="middle">staff-engineer</text>
+  <text x="1163" y="632" fill="#1E3A8A" font-size="13" text-anchor="middle">cuts parallel-safe tickets</text>
+
+  <!-- Linear, the task board between the two pipelines -->
+  <rect x="1064" y="798" width="176" height="64" rx="12" fill="#E0E7FF" stroke="#5E6AD2" stroke-width="2"/>
+  <text x="1152" y="824" fill="#3730A3" font-size="15" font-weight="bold" text-anchor="middle">◆ Linear</text>
+  <text x="1152" y="844" fill="#3730A3" font-size="13" text-anchor="middle">tickets: Todo → Done</text>
+
+  <!-- triage -->
+  <rect x="985" y="978" width="150" height="48" rx="12" fill="#F1F5F9" stroke="#94A3B8" stroke-width="2"/>
+  <text x="1060" y="1007" fill="#334155" font-size="14" font-weight="bold" text-anchor="middle">triage the ticket</text>
+
+  <!-- owning agent -->
+  <circle cx="906" cy="1069" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <path d="M 892 1092 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <rect x="818" y="1090" width="176" height="64" rx="12" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <text x="906" y="1116" fill="#1E3A8A" font-size="15" font-weight="bold" text-anchor="middle">owning agent</text>
+  <text x="906" y="1136" fill="#1E3A8A" font-size="13" text-anchor="middle">implements on a branch</text>
+
+  <!-- reviewer -->
+  <circle cx="700" cy="1117" r="9" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <path d="M 686 1140 q 0 -13 14 -13 q 14 0 14 13 z" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <rect x="612" y="1138" width="176" height="64" rx="12" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <text x="700" y="1164" fill="#831843" font-size="15" font-weight="bold" text-anchor="middle">reviewer</text>
+  <text x="700" y="1184" fill="#831843" font-size="13" text-anchor="middle">adversarial review</text>
+
+  <!-- risky change? -->
+  <polygon points="494,1087 575,1122 494,1157 413,1122" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <text x="494" y="1127" fill="#831843" font-size="14" font-weight="bold" text-anchor="middle">Risky change?</text>
+
+  <!-- owner-gate -->
+  <circle cx="340" cy="949" r="9" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <path d="M 326 972 q 0 -13 14 -13 q 14 0 14 13 z" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <rect x="242" y="970" width="196" height="64" rx="12" fill="#FCE7F3" stroke="#DB2777" stroke-width="2"/>
+  <text x="340" y="996" fill="#831843" font-size="15" font-weight="bold" text-anchor="middle">owner-gate</text>
+  <text x="340" y="1016" fill="#831843" font-size="13" text-anchor="middle">clears or parks risky changes</text>
+
+  <!-- CI watch -->
+  <rect x="168" y="806" width="160" height="48" rx="12" fill="#F1F5F9" stroke="#94A3B8" stroke-width="2"/>
+  <text x="248" y="835" fill="#334155" font-size="14" font-weight="bold" text-anchor="middle">CI watch + repair</text>
+
+  <!-- ready to merge -->
+  <rect x="160" y="611" width="150" height="48" rx="12" fill="#F1F5F9" stroke="#94A3B8" stroke-width="2"/>
+  <text x="235" y="640" fill="#334155" font-size="14" font-weight="bold" text-anchor="middle">Ready to merge</text>
+
+  <!-- lead session -->
+  <circle cx="306" cy="391" r="9" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <path d="M 292 414 q 0 -13 14 -13 q 14 0 14 13 z" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <rect x="218" y="412" width="176" height="64" rx="12" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <text x="306" y="438" fill="#1E3A8A" font-size="15" font-weight="bold" text-anchor="middle">lead session</text>
+  <text x="306" y="458" fill="#1E3A8A" font-size="13" text-anchor="middle">merges the PR</text>
+
+  <!-- merged -->
+  <rect x="407" y="264" width="130" height="50" rx="14" fill="#DCFCE7" stroke="#16A34A" stroke-width="2"/>
+  <text x="472" y="295" fill="#14532D" font-size="14" font-weight="bold" text-anchor="middle">Merged 🎉</text>
+
+  <!-- the human, center of the loop -->
+  <circle cx="700" cy="700" r="96" fill="#FEF3C7" stroke="#D97706" stroke-width="3"/>
+  <circle cx="700" cy="666" r="22" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+  <path d="M 664 722 q 0 -32 36 -32 q 36 0 36 32 z" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+  <text x="700" y="748" fill="#78350F" font-size="18" font-weight="bold" text-anchor="middle">Human</text>
+  <text x="700" y="770" fill="#78350F" font-size="13" text-anchor="middle">in the loop</text>
 </svg>
