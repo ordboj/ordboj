@@ -443,16 +443,44 @@ describe('particle verb dataset - #359 band-6 operational particle verbs', () =>
     'pv:se-upp',
   ];
 
-  it('ships every #359 entry verified, in A1/A2, with a base VERB_DATA already pinned', () => {
+  // #441 human ruling: CSV wins over judgment. Of these five, pv:stiga-av and
+  // pv:se-upp were pre-existing entries retagged from cefrEvidence 'judgment'
+  // to 'svalex' with the SVALex CSV band, which moved them out of A1/A2 (to
+  // B1 and B2 respectively). That is the ruling working as intended, not a
+  // #359 regression, so they get an exact-band pin instead of the A1/A2
+  // membership check; the other three #359 entries keep the original clause.
+  const ISSUE_359_A1_A2_IDS = ['pv:ha-pa-sig', 'pv:ta-pa-sig', 'pv:ta-av-sig'];
+  const ISSUE_359_RETAGGED_BANDS: Record<string, string> = {
+    'pv:stiga-av': 'B1',
+    'pv:se-upp': 'B2',
+  };
+
+  it('ships every #359 entry verified, with a base VERB_DATA already pinned', () => {
     for (const id of ISSUE_359_IDS) {
       const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
       expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
       expect(found!.verified, `${id} is not verified`).toBe(true);
-      expect(['A1', 'A2'], `${id} cefr "${found!.cefr}" is not A1/A2`).toContain(found!.cefr);
       expect(
         BASE_INFINITIVES.has(found!.baseInfinitive),
         `${id} base "${found!.baseInfinitive}" does not resolve in VERB_DATA`,
       ).toBe(true);
+    }
+  });
+
+  it('keeps the non-retagged #359 entries in A1/A2', () => {
+    for (const id of ISSUE_359_A1_A2_IDS) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      expect(['A1', 'A2'], `${id} cefr "${found!.cefr}" is not A1/A2`).toContain(found!.cefr);
+    }
+  });
+
+  it('pins the #441 svalex-retagged bands for stiga-av and se-upp', () => {
+    for (const [id, band] of Object.entries(ISSUE_359_RETAGGED_BANDS)) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      expect(found!.cefr, `${id} cefr`).toBe(band);
+      expect(found!.cefrEvidence, `${id} cefrEvidence`).toBe('svalex');
     }
   });
 
