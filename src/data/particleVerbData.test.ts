@@ -503,8 +503,32 @@ describe('particle verb dataset - #372 remaining #359 band-6 particle verbs', ()
     // #372 added the "i" entry to PARTICLE_CORE_SENSE to unblock "fylla i";
     // a missing or empty core sense would leave that particle's reference
     // hint unrenderable in the UI.
-    expect(getParticleCoreSense('i')).toEqual(expect.any(String));
+    expect(getParticleCoreSense('i')).toContain('often');
     expect(getParticleCoreSense('i')).not.toBeNull();
+  });
+
+  it('flags slå på as unstressed to distinguish it from the "strike/hit" sense (round 2)', () => {
+    // Round 2 fix: slå på someone (stressed på, "to hit") is a different verb
+    // from slå på something (unstressed på, "to switch on"). The contrast
+    // note must say so, or a learner cannot tell the two senses apart.
+    const entry = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:sla-pa')!;
+    expect(entry.contrast).toContain('unstressed');
+  });
+
+  it('accepts the cross-synonym recall pair for the two device on/off verb pairs (round 2)', () => {
+    // sätta på/slå på are synonyms for "switch on" (same for stänga av/slå
+    // av, "switch off"). Round 2 gave all four entries acceptedRecall so a
+    // learner who types the synonym is not marked wrong for a collision the
+    // dataset itself creates.
+    const slaPa = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:sla-pa')!;
+    const sattaPa = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:satta-pa')!;
+    expect(isAcceptedRecall(slaPa, 'sätta på')).toBe(true);
+    expect(isAcceptedRecall(sattaPa, 'slå på')).toBe(true);
+
+    const slaAv = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:sla-av')!;
+    const stangaAv = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:stanga-av')!;
+    expect(isAcceptedRecall(slaAv, 'stänga av')).toBe(true);
+    expect(isAcceptedRecall(stangaAv, 'slå av')).toBe(true);
   });
 });
 
