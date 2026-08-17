@@ -13,16 +13,18 @@ and `finna` specifically, and what does a re-tag change for a learner?
 (`src/data/verbData.ts`) and the promotion queue
 (`docs/verb-data/candidates.csv`). Only the `cefr` field moves; forms,
 `grupp`, notes and the open `NEEDS HUMAN CHECK` flag on `anse`'s imperativ
-are untouched. The two-condition test and the destination ladder below are
-the standing policy for every future register re-tag — including the broader
-passes ORD-11 and ORD-67 ask for.
+are untouched. The two-condition test and the ladder decide `anse` and
+`finna` today. They are proposed as the standing criteria for the broader
+passes ORD-11 and ORD-67 ask for, subject to the product-manager
+countersign ORD-67 requires and the human input ORD-11's `needs-human`
+label asks for.
 
 | Parameter                  | Value                                                                 |
 | -------------------------- | --------------------------------------------------------------------- |
 | `anse`                     | A1 → **B1** (formal "consider/deem"; everyday counterpart `tycka` A1) |
 | `finna`                    | A1 → **B1** (formal "find"; everyday counterpart `hitta` A1)          |
 | files that change          | `src/data/verbData.ts`, `docs/verb-data/candidates.csv`, test pins    |
-| localStorage migration     | **none** — no stored field carries a CEFR level                       |
+| localStorage migration     | **none** — no stored field carries a per-verb CEFR level              |
 | storage version bump       | **none** — `STORAGE_VERSION` stays 3                                  |
 | learner on default levels  | no visible change (all six levels selected by default)                |
 | learner scoped to A1/A2    | 7 scheduled items leave the pool; schedules kept, resume on B1        |
@@ -58,8 +60,11 @@ learner actually need this verb first?
 
 - **B1** — the verb is core to ordinary written prose (news, notices,
   narrative): the learner meets it receptively in the first authentic texts
-  B1 reading demands. Evidence: a top-tier position in the frequency queue
-  despite the formal mark.
+  B1 reading demands. Queue rank only shows the verb is frequent enough to
+  meet early; rank alone does not select B1. The core-prose test alone
+  separates the B1 lane from B2: `unna` sits at queue rank 4, above both
+  `anse` (40) and `finna` (10), and still takes B2 because it fails the
+  core-prose test.
 - **B2** — formal or specialized outside core prose; needed for nuance and
   register control, not for reading the newspaper. This is the `unna`/`kapa`
   precedent from #42.
@@ -73,18 +78,19 @@ cost of too-early is the thing R2 already paid for.
 ## Ruling for anse and finna
 
 **`anse` → B1.** Formal stative "to consider/deem". The everyday verb for
-holding an opinion, `tycka`, is in the table at A1 (`verbData.ts:91`), so R2
-holds. `anse` sits at rank 40 of the ~1537-row frequency queue (candidates.csv line
-41): it is core written prose — `anses vara` is in every newspaper — so it takes the
-B1 lane, not B2. A learner who reaches B1 reading meets it immediately;
-a beginner drilling `anser/ansåg/ansett` before knowing `tycka` well is
-practising register they cannot yet place.
+holding an opinion, `tycka`, is in the table at A1 (`verbData.ts:91`), so
+R2 holds. `anse` sits at rank 40 of the ~1537-row frequency queue
+(candidates.csv line 41): it is core written prose — `anses vara` is in
+every newspaper — so it takes the B1 lane, not B2. A learner who reaches B1
+reading meets it immediately; a beginner drilling `anser/ansåg/ansett`
+before knowing `tycka` well is practising register they cannot yet place.
 
 **`finna` → B1.** Formal counterpart of `hitta` (A1, `verbData.ts:160`), so
-R2 holds. Rank 10 in the queue (candidates.csv line 11) — among the most frequent verbs in
-written Swedish — which is precisely the frequency-vs-register trap: the
-count is inflated by formal prose and fixed phrases, while spoken beginner
-Swedish uses `hitta`. Core-prose frequency puts it in the B1 lane.
+R2 holds. Rank 10 in the queue (candidates.csv line 11) — among the most
+frequent verbs in written Swedish — which is precisely the
+frequency-vs-register trap: the count is inflated by formal prose and fixed
+phrases, while spoken beginner Swedish uses `hitta`. Core-prose frequency
+puts it in the B1 lane.
 
 **Why not B2, like `unna` and `kapa`?** Those two fail the core-prose test:
 `unna` lives in one idiomatic frame (`unna sig`) and `kapa` is specialized
@@ -100,10 +106,13 @@ form change.
 
 ## Migration: what a re-tag changes for a learner
 
-**No stored data changes.** The CEFR level lives only in `verbData.ts` and
-`candidates.csv`. SRS progress is keyed by infinitive + form (issue #53) and
-carries no level field; settings store no per-verb data. No migration, no
-`STORAGE_VERSION` bump, no staff-engineer storage review is needed.
+**No stored data changes.** The per-verb CEFR level lives only in
+`verbData.ts` and `candidates.csv`. SRS progress is keyed by infinitive +
+form (issue #53) and carries no level field. The settings store does hold a
+CEFR field, `cefrLevels` in `swedish-verbs-settings`, but it stores a level
+selection, not per-verb data, so its stored value stays valid and needs no
+migration. No migration, no `STORAGE_VERSION` bump, no staff-engineer
+storage review is needed.
 
 **Default settings: nothing visible.** `cefrLevels` defaults to all six
 levels (`useSettings.ts:38`), and conjugation mode has no introduction
@@ -165,7 +174,7 @@ comment in the #42 style naming the counterpart
 
 The register judgments (R1) are `swedish-linguist`'s #284 calls, taken as
 given here, not re-derived. The B1-vs-B2 lane assignment rests on the
-core-prose criterion plus queue positions 11 and 41 as frequency evidence;
+core-prose criterion plus queue ranks 10 and 40 as frequency evidence;
 no external graded lexicon was consulted in this session. The direction —
 formal register defers a verb past the beginner levels when a counterpart
 exists — is standard frequency-first vocabulary sequencing (Nation) applied
@@ -177,6 +186,7 @@ to move (two fields, four pins) if linguist evidence disagrees by one level.
 - `swedish-linguist` + `qa` — the implementation PR above (follow-up ticket
   filed; lead mirrors it to Linear per CLAUDE.md).
 - lead — ORD-11 and ORD-67 should execute against this doc's criteria and
-  ladder; neither needs a new policy note.
-- `product-manager` — nothing: `cefrLevels` semantics are unchanged.
+  ladder once countersigned.
+- `product-manager` — `cefrLevels` semantics are unchanged; ORD-67 needs a
+  product-manager countersign before the ladder governs that broader pass.
 - `srs-engine` — nothing: no scheduler or storage change.
