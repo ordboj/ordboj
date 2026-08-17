@@ -344,12 +344,13 @@ function classifyAndValidate(infinitive, imperativ, presens, preteritum, supinum
   const emptyImperativ = (imperativ ?? '').trim() === '';
 
   const core = splitParticle(infinitive, presens, preteritum, supinum);
-  // Raw (un-particle-stripped) imperativ on purpose: a particle verb's
-  // imperativ carries the particle too ("ring upp" -> "ring upp"), so it can
-  // never accidentally equal the particle-stripped `stem` compared inside
-  // classifyCore's grupp-1-vs-bare-stem check below — that check is a no-op
-  // for particle verbs by construction, not by a separate guard.
-  const classified = classifyCore(core, imperativ);
+  // Issue #381: compare the CORE imperativ, not the raw cell. A particle
+  // verb's imperativ carries the particle ("skriva upp" -> "skriv upp"), so
+  // the raw cell can never equal the particle-stripped `stem` and the
+  // grupp-1-vs-bare-stem check would silently skip every particle row.
+  // Taking the first token restores coverage: "skriv upp" -> "skriv".
+  const impCore = (imperativ ?? '').trim().split(/\s+/)[0] ?? '';
+  const classified = classifyCore(core, impCore);
   const { contradiction, note } = classified;
   // An unconfirmed particle means the forms were never reduced to one verb,
   // so nothing about them is reportable — not even the residual grupp 4.
