@@ -353,6 +353,15 @@ describe('particle core-sense lines', () => {
       .map((shipped) => shipped.particle);
     expect(missing).toEqual([]);
   });
+
+  it('pins the two #395 additions, "ur" and "ihjäl", as non-null (band 3-4 particle verbs)', () => {
+    // Named regression fixture, #262-style: #395 added dricka ur and slå
+    // ihjäl, which needed these two lines to pass the generic check above.
+    // A dropped line reports here by name instead of only failing the
+    // generic sweep on whichever shipped entry happens to use it.
+    expect(getParticleCoreSense('ur')).not.toBeNull();
+    expect(getParticleCoreSense('ihjäl')).not.toBeNull();
+  });
 });
 
 describe('recall eligibility', () => {

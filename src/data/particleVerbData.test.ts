@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { PARTICLE_VERB_DATA } from '@/data/particleVerbData';
 import { VERB_DATA } from '@/data/verbData';
 import {
@@ -12,6 +15,7 @@ import { PARTICLE_ID_PREFIX } from '@/lib/itemIds';
 
 const VERIFIED = PARTICLE_VERB_DATA.filter((entry) => entry.verified);
 const BASE_INFINITIVES = new Set(VERB_DATA.map((verb) => verb.infinitive));
+const here = dirname(fileURLToPath(import.meta.url));
 
 describe('particle verb dataset - ids', () => {
   it('has no duplicate ids', () => {
@@ -440,16 +444,44 @@ describe('particle verb dataset - #359 band-6 operational particle verbs', () =>
     'pv:se-upp',
   ];
 
-  it('ships every #359 entry verified, in A1/A2, with a base VERB_DATA already pinned', () => {
+  // #441 human ruling: CSV wins over judgment. Of these five, pv:stiga-av and
+  // pv:se-upp were pre-existing entries retagged from cefrEvidence 'judgment'
+  // to 'svalex' with the SVALex CSV band, which moved them out of A1/A2 (to
+  // B1 and B2 respectively). That is the ruling working as intended, not a
+  // #359 regression, so they get an exact-band pin instead of the A1/A2
+  // membership check; the other three #359 entries keep the original clause.
+  const ISSUE_359_A1_A2_IDS = ['pv:ha-pa-sig', 'pv:ta-pa-sig', 'pv:ta-av-sig'];
+  const ISSUE_359_RETAGGED_BANDS: Record<string, string> = {
+    'pv:stiga-av': 'B1',
+    'pv:se-upp': 'B2',
+  };
+
+  it('ships every #359 entry verified, with a base VERB_DATA already pinned', () => {
     for (const id of ISSUE_359_IDS) {
       const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
       expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
       expect(found!.verified, `${id} is not verified`).toBe(true);
-      expect(['A1', 'A2'], `${id} cefr "${found!.cefr}" is not A1/A2`).toContain(found!.cefr);
       expect(
         BASE_INFINITIVES.has(found!.baseInfinitive),
         `${id} base "${found!.baseInfinitive}" does not resolve in VERB_DATA`,
       ).toBe(true);
+    }
+  });
+
+  it('keeps the non-retagged #359 entries in A1/A2', () => {
+    for (const id of ISSUE_359_A1_A2_IDS) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      expect(['A1', 'A2'], `${id} cefr "${found!.cefr}" is not A1/A2`).toContain(found!.cefr);
+    }
+  });
+
+  it('pins the #441 svalex-retagged bands for stiga-av and se-upp', () => {
+    for (const [id, band] of Object.entries(ISSUE_359_RETAGGED_BANDS)) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      expect(found!.cefr, `${id} cefr`).toBe(band);
+      expect(found!.cefrEvidence, `${id} cefrEvidence`).toBe('svalex');
     }
   });
 
@@ -655,5 +687,88 @@ describe('particle verb dataset - obligatory trailing preposition (#357/#376)', 
       expect(found!.verified, `${id} is not verified`).toBe(true);
       expect(found!.preposition, `${id} has no preposition`).toBeTruthy();
     }
+  });
+});
+
+describe('particle verb dataset - SVALex evidence integrity (#395 remediation item 4.1)', () => {
+  // Parses the same CSV the file header cites as the source of `svalex`
+  // cefrEvidence, and checks the dataset against it directly rather than
+  // trusting the derivation was copied over correctly by hand.
+  type SvalexCsvRow = { verb: string; particle: string; svalexFirstLevel: string };
+
+  function parseSvalexCsv(): SvalexCsvRow[] {
+    const csvPath = join(
+      here,
+      '..',
+      '..',
+      'docs',
+      'research',
+      'svalex',
+      'partikelverb_cefr_draft.csv',
+    );
+    const csv = readFileSync(csvPath, 'utf-8');
+    const lines = csv.split(/\r?\n/).filter(Boolean);
+    return lines.slice(1).map((line) => {
+      const [verb = '', particle = '', svalexFirstLevel = ''] = line.split(',');
+      return { verb, particle, svalexFirstLevel };
+    });
+  }
+
+  const csvRows = parseSvalexCsv();
+  // Rows with an empty svalex_first_level are SweLLex-only (README: 28 of
+  // 457) and carry no SVALex level to compare a dataset entry against, so
+  // they are not part of this pin's domain.
+  const csvLevelByPair = new Map<string, string>();
+  for (const row of csvRows) {
+    if (!row.svalexFirstLevel.trim()) continue;
+    csvLevelByPair.set(`${row.verb}|${row.particle}`, row.svalexFirstLevel);
+  }
+
+  it('reads a non-empty CSV with at least one leveled row, so the check below is not vacuous', () => {
+    expect(csvRows.length).toBeGreaterThan(0);
+    expect(csvLevelByPair.size).toBeGreaterThan(0);
+  });
+
+  it("gives every non-reflexive entry whose base+particle has a SVALex row cefrEvidence 'svalex' and a matching cefr band", () => {
+    // Reflexive entries (höra av sig, ge sig av, ha på sig, ta på sig, ta av
+    // sig) are out of this pin's domain: the CSV's frequency counts are for
+    // the bare verb+particle collocation ("ta av"), not the reflexive phrase
+    // ("ta av sig"), which is a distinct lexical item the CSV never measured.
+    const mismatches: string[] = [];
+    for (const entryData of PARTICLE_VERB_DATA) {
+      if (entryData.reflexive !== 'none') continue;
+      const level = csvLevelByPair.get(`${entryData.baseInfinitive}|${entryData.particle}`);
+      if (level === undefined) continue;
+      const evidenceOk = entryData.cefrEvidence === 'svalex';
+      const bandOk = entryData.cefr.toLowerCase() === level.toLowerCase();
+      if (!evidenceOk || !bandOk) {
+        mismatches.push(
+          `${entryData.id}: cefr=${entryData.cefr} cefrEvidence=${entryData.cefrEvidence}, ` +
+            `csv svalex_first_level=${level} for ${entryData.baseInfinitive}+${entryData.particle}`,
+        );
+      }
+    }
+    expect(mismatches).toEqual([]);
+  });
+});
+
+describe('particle verb dataset - no repeated example sentences (#395 remediation item 4.2)', () => {
+  it('never uses the same example sentence string twice anywhere in the dataset', () => {
+    // A repeated sentence string across two different entries (or reused
+    // within one entry's own frames) means one card's "frame rotation" is
+    // silently thinner than it looks, or two different phrases are being
+    // taught off the identical evidence sentence.
+    const seen = new Map<string, string[]>();
+    for (const entryData of PARTICLE_VERB_DATA) {
+      for (const example of entryData.examples) {
+        const ids = seen.get(example.sv) ?? [];
+        ids.push(entryData.id);
+        seen.set(example.sv, ids);
+      }
+    }
+    const repeated = [...seen.entries()]
+      .filter(([, ids]) => ids.length > 1)
+      .map(([sv, ids]) => `"${sv}" used by ${ids.join(', ')}`);
+    expect(repeated).toEqual([]);
   });
 });
