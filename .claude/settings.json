@@ -1,8 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "mcp__Linear"
-    ]
+    "allow": ["mcp__Linear", "Bash(npm run lint)", "Bash(npm run typecheck)", "Bash(npm test)"]
   },
   "hooks": {
     "SessionStart": [

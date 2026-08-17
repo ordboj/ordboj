@@ -6,6 +6,7 @@ import {
   renderLemma,
   getPhraseForms,
   isAcceptedRecall,
+  getParticleCoreSense,
 } from '@/lib/particleVerbs';
 import { PARTICLE_ID_PREFIX } from '@/lib/itemIds';
 
@@ -466,6 +467,68 @@ describe('particle verb dataset - #359 band-6 operational particle verbs', () =>
       return found!.gloss.en.toLowerCase();
     });
     expect(new Set(glosses).size).toBe(glosses.length);
+  });
+});
+
+describe('particle verb dataset - #372 remaining #359 band-6 particle verbs', () => {
+  // Pins the eight remaining #359 band-6 entries #372 authored: each entry
+  // resolves to a VERB_DATA base row, ships verified:true, and lands in
+  // A1/A2 so it counts toward the runway target above, the same shape as
+  // the #359 block pins its five entries by id.
+  const ISSUE_372_IDS = [
+    'pv:sla-pa',
+    'pv:sla-av',
+    'pv:folja-med',
+    'pv:flytta-in',
+    'pv:checka-in',
+    'pv:torka-av',
+    'pv:stada-upp',
+    'pv:fylla-i',
+  ];
+
+  it('ships every #372 entry verified, in A1/A2, with a base VERB_DATA already pinned', () => {
+    for (const id of ISSUE_372_IDS) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, `${id} missing from PARTICLE_VERB_DATA`).toBeDefined();
+      expect(found!.verified, `${id} is not verified`).toBe(true);
+      expect(['A1', 'A2'], `${id} cefr "${found!.cefr}" is not A1/A2`).toContain(found!.cefr);
+      expect(
+        BASE_INFINITIVES.has(found!.baseInfinitive),
+        `${id} base "${found!.baseInfinitive}" does not resolve in VERB_DATA`,
+      ).toBe(true);
+    }
+  });
+
+  it('gives the "i" particle a core sense for fylla i (#372)', () => {
+    // #372 added the "i" entry to PARTICLE_CORE_SENSE to unblock "fylla i";
+    // a missing or empty core sense would leave that particle's reference
+    // hint unrenderable in the UI.
+    expect(getParticleCoreSense('i')).toContain('often');
+    expect(getParticleCoreSense('i')).not.toBeNull();
+  });
+
+  it('flags slå på as unstressed to distinguish it from the "strike/hit" sense (round 2)', () => {
+    // Round 2 fix: slå på someone (stressed på, "to hit") is a different verb
+    // from slå på something (unstressed på, "to switch on"). The contrast
+    // note must say so, or a learner cannot tell the two senses apart.
+    const entry = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:sla-pa')!;
+    expect(entry.contrast).toContain('unstressed');
+  });
+
+  it('accepts the cross-synonym recall pair for the two device on/off verb pairs (round 2)', () => {
+    // sätta på/slå på are synonyms for "switch on" (same for stänga av/slå
+    // av, "switch off"). Round 2 gave all four entries acceptedRecall so a
+    // learner who types the synonym is not marked wrong for a collision the
+    // dataset itself creates.
+    const slaPa = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:sla-pa')!;
+    const sattaPa = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:satta-pa')!;
+    expect(isAcceptedRecall(slaPa, 'sätta på')).toBe(true);
+    expect(isAcceptedRecall(sattaPa, 'slå på')).toBe(true);
+
+    const slaAv = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:sla-av')!;
+    const stangaAv = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:stanga-av')!;
+    expect(isAcceptedRecall(slaAv, 'stänga av')).toBe(true);
+    expect(isAcceptedRecall(stangaAv, 'slå av')).toBe(true);
   });
 });
 

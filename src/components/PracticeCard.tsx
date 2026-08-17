@@ -20,7 +20,7 @@ import {
   type VerbPattern,
   type Grupp,
 } from '@/lib/verbs';
-import { speakSwedish } from '@/lib/speech';
+import { speakSwedish, stopSpeaking } from '@/lib/speech';
 import { Grade } from '@/lib/srs';
 
 // Fixed Swedish special-character row: always these three keys, in this
@@ -122,6 +122,26 @@ export function PracticeCard({
   // before the learner has submitted (RED LINE, see issue #228). undefined
   // renders as absent, never guessed (src/lib/verbs.ts:29-32).
   const grupp = getVerbGrupp(infinitive);
+
+  // The "Pronounce pattern" button (issue #420) speaks the whole "Complete
+  // pattern" reveal as ONE utterance: the same parts, in the same order,
+  // with the same text as their pills below (the missing pill's
+  // correctAnswer stand-in, never the '_____' placeholder and never an
+  // alternate answer or note text). A part the pattern itself renders as
+  // unavailable (isFormUnavailable — empty form, or imperativ on a verb
+  // that grammatically has none) is excluded, so e.g. an imperativ card
+  // ends up with exactly two parts (infinitive + imperativ), never a
+  // fabricated four-form chain.
+  const speakablePatternParts =
+    conjugated && pattern
+      ? pattern.patternParts.filter(
+          (part) =>
+            !isFormUnavailable(part.form, conjugated[part.form], conjugated.imperativNotApplicable),
+        )
+      : [];
+  const patternUtterance = speakablePatternParts
+    .map((part) => (part.isMissing ? correctAnswer : part.text))
+    .join(', ');
 
   // Generate multiple choice options.
   //
@@ -244,17 +264,30 @@ export function PracticeCard({
   };
 
   const handleNext = useCallback(() => {
+    // Cancel any pattern/per-form pronunciation in progress before leaving
+    // this card (issue #420) — otherwise it keeps speaking over the next
+    // card's prompt. Covers both the "Next Card" click and the
+    // Enter-to-advance listener below, which both route through here.
+    stopSpeaking();
     // Calculate grade based on correctness
     const grade: Grade = isCorrect ? 5 : 0;
     onAnswer(grade);
   }, [isCorrect, onAnswer]);
+
+  // Belt-and-braces for issue #420: if the card unmounts outright (e.g. the
+  // learner navigates away mid-utterance) rather than advancing through
+  // handleNext, cancel any in-progress speech instead of letting it run on
+  // into whatever screen replaces this one.
+  useEffect(() => {
+    return () => stopSpeaking();
+  }, []);
 
   // Once feedback is showing, the answer input is unmounted and nothing
   // holds focus, so a plain Enter press advances to the next card. Guards:
   // e.repeat ignores a held-down Enter (the same press that submitted the
   // answer fires its keydown on the Input, not here, but auto-repeat while
   // still held would land on this listener), and a focused button keeps its
-  // native Enter activation (e.g. "Pronounce answer") instead of skipping
+  // native Enter activation (e.g. "Pronounce pattern") instead of skipping
   // ahead.
   useEffect(() => {
     if (!showFeedback) return;
@@ -267,8 +300,12 @@ export function PracticeCard({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [showFeedback, handleNext]);
 
-  const handlePronounce = () => {
-    speakSwedish(correctAnswer, muteAudio);
+  const handlePronouncePattern = () => {
+    // Explicit guard (rather than relying on speakSwedish's own muted
+    // no-op) so a muted card makes no speakSwedish call at all — issue
+    // #420 AC6.
+    if (muteAudio || speakablePatternParts.length === 0) return;
+    speakSwedish(patternUtterance, muteAudio);
   };
 
   useEffect(() => {
@@ -498,14 +535,16 @@ export function PracticeCard({
                     );
                   })}
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={handlePronounce}
-                  className="w-full gap-2 min-h-11"
-                >
-                  <Volume2 className="w-4 h-4" />
-                  Pronounce answer
-                </Button>
+                {speakablePatternParts.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={handlePronouncePattern}
+                    className="w-full gap-2 min-h-11"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    Pronounce pattern
+                  </Button>
+                )}
               </div>
 
               {/* Learner's own wrong answer: muted, struck through, subordinate to the

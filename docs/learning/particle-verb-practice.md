@@ -136,7 +136,7 @@ card degrades into a reveal.
 
 **Reflexive particle verbs are safe in cloze and dangerous in recall.**
 `höra av sig` learned as a bare string teaches a form ungrammatical in first and
-second person: the learner will say *`jag hör av sig`. In the cloze the sentence
+second person: the learner will say \*`jag hör av sig`. In the cloze the sentence
 displays the correct pronoun and the learner never produces a wrong one — provided
 at least one frame per reflexive item is non-third-person
 (`Jag hör ___ mig när jag landat`), or they see `sig` three times and generalise

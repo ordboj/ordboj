@@ -35,9 +35,9 @@ one-handed. Everything is judged against that.
 - Swedish shown to the learner is correct (owned by `swedish-linguist`, not
   by this audit).
 
-1.4 The bar explicitly **does not** include: brand system, illustration style,
-motion language, dark-mode parity, animation polish, or visual differentiation
-from competitors. There is no market to differentiate in.
+  1.4 The bar explicitly **does not** include: brand system, illustration style,
+  motion language, dark-mode parity, animation polish, or visual differentiation
+  from competitors. There is no market to differentiate in.
 
 ## 2. Prioritization frame for design tickets
 

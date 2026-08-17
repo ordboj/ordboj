@@ -1,10 +1,15 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { PracticeCard } from '@/components/PracticeCard';
 import type { Grade } from '@/lib/srs';
-import { getAllConjugatedVerbs, getFormLabel, getVerbGrupp } from '@/lib/verbs';
+import { getAllConjugatedVerbs, getFormLabel, getVerbGrupp, type Form } from '@/lib/verbs';
+import {
+  installSpeechSynthesisMock,
+  SV_VOICE,
+  type SpeechSynthesisMockHandle,
+} from '@/test/speechMock';
 
 // "vara" is a stable, real fixture from VERB_DATA (owned by swedish-linguist):
 // presens "är", preteritum "var", supinum "varit", imperativ "var".
@@ -1370,14 +1375,71 @@ describe('PracticeCard - multiple-choice distractor policy (#139)', () => {
   });
 
   it('degrades to fewer options rather than leak a cross-group distractor when a grupp-3 target has too few in-group candidates', async () => {
-    // Grupp '3' has exactly three verbs total ("tro", "te sig", "ro") and no
-    // adjacent group (only 2a<->2b are adjacent), so a grupp-'3' target has
-    // at most 2 valid in-group distractors available. The hard group
-    // constraint (P14) means the option list must shrink to 3 total options
-    // (1 correct + 2 distractors), never pad to 4 with a cross-group verb.
+    // Real VERB_DATA no longer exercises this branch on its own (#415 added
+    // "nå"/"uppnå", giving grupp-3 targets 4+ valid in-group candidates), so
+    // this uses a mocked, minimal fixture (same pattern as the "P7" and
+    // "imperativNotApplicable" fixtures above) to force the scarcity the
+    // policy is meant to handle: grupp '3' has no adjacent group (only 2a<->2b
+    // are adjacent), so with only one other grupp-3 verb available, the hard
+    // group constraint (P14) must shrink the option list to 2 total options
+    // (1 correct + 1 distractor) rather than pad with the grupp-'4' and
+    // grupp-'2a' verbs also present in the fixture.
+    vi.resetModules();
+    vi.doMock('@/data/verbData', () => ({
+      VERB_DATA: [
+        {
+          cefr: 'A1',
+          infinitive: 'tro-fixture',
+          imperativ: 'tro-fixture',
+          presens: 'tror-fixture',
+          preteritum: 'trodde-fixture',
+          supinum: 'trott-fixture',
+          grupp: '3',
+        },
+        {
+          // The only other grupp-3 verb in this fixture: the sole valid
+          // in-group distractor candidate.
+          cefr: 'A1',
+          infinitive: 'ro-fixture',
+          imperativ: 'ro-fixture',
+          presens: 'ror-fixture',
+          preteritum: 'rodde-fixture',
+          supinum: 'rott-fixture',
+          grupp: '3',
+        },
+        {
+          // Cross-group (grupp '4', not adjacent to '3'): must never leak in
+          // as a distractor even though it would otherwise be a plausible
+          // pad.
+          cefr: 'A1',
+          infinitive: 'ga-fixture',
+          imperativ: 'ga-fixture',
+          presens: 'gar-fixture',
+          preteritum: 'gick-fixture',
+          supinum: 'gatt-fixture',
+          grupp: '4',
+        },
+        {
+          // Cross-group (grupp '2a', also not adjacent to '3'): same
+          // must-never-leak check from a different group.
+          cefr: 'A1',
+          infinitive: 'anvanda-fixture',
+          imperativ: 'anvand-fixture',
+          presens: 'anvander-fixture',
+          preteritum: 'anvande-fixture',
+          supinum: 'anvant-fixture',
+          grupp: '2a',
+        },
+      ],
+    }));
+
+    const { PracticeCard: MockedPracticeCard } = await import('@/components/PracticeCard');
+    const { getAllConjugatedVerbs: mockedGetAllConjugatedVerbs, getVerbGrupp: mockedGetVerbGrupp } =
+      await import('@/lib/verbs');
+
     renderWithProviders(
-      <PracticeCard
-        infinitive="tro"
+      <MockedPracticeCard
+        infinitive="tro-fixture"
         form="presens"
         mode="multiple-choice"
         showExamples={false}
@@ -1392,16 +1454,20 @@ describe('PracticeCard - multiple-choice distractor policy (#139)', () => {
     });
 
     const optionTexts = screen.getAllByRole('button').map((b) => b.textContent);
-    expect(optionTexts).toHaveLength(3);
-    expect(optionTexts).toContain('tror');
+    expect(optionTexts).toHaveLength(2);
+    expect(optionTexts).toContain('tror-fixture');
 
-    const allVerbs = await getAllConjugatedVerbs();
-    const distractorTexts = optionTexts.filter((t) => t !== 'tror');
+    const allVerbs = await mockedGetAllConjugatedVerbs();
+    const distractorTexts = optionTexts.filter((t) => t !== 'tror-fixture');
+    expect(distractorTexts).toEqual(['ror-fixture']);
     for (const text of distractorTexts) {
       const sourceVerb = allVerbs.find((v) => v.presens === text);
       expect(sourceVerb, `distractor "${text}" should map to a known verb`).toBeDefined();
-      expect(getVerbGrupp(sourceVerb!.infinitive)).toBe('3');
+      expect(mockedGetVerbGrupp(sourceVerb!.infinitive)).toBe('3');
     }
+
+    vi.resetModules();
+    vi.doUnmock('@/data/verbData');
   });
 });
 
@@ -1803,7 +1869,7 @@ describe('PracticeCard - pronounce button touch target (issue #110 AC)', () => {
 
     // "vara" pattern has multiple non-missing forms, each with its own
     // per-form pronounce button (aria-label="Pronounce <form label>"),
-    // distinct from the unrelated "Pronounce answer" button below the
+    // distinct from the unrelated "Pronounce pattern" button below the
     // pattern, which has no aria-label attribute of its own.
     const pronounceButtons = Array.from(
       container.querySelectorAll('button[aria-label^="Pronounce "]'),
@@ -1851,7 +1917,7 @@ describe('PracticeCard - pronounce button accessibility', () => {
     expect(screen.getByRole('button', { name: 'Pronounce Supinum' })).toBeInTheDocument();
   });
 
-  it('gives per-form pronounce buttons and the full pronounce-answer button a >=44px touch target', async () => {
+  it('gives per-form pronounce buttons and the pronounce-pattern button a >=44px touch target', async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <PracticeCard
@@ -1878,8 +1944,8 @@ describe('PracticeCard - pronounce button accessibility', () => {
     expect(formButton.className).toMatch(/\bh-11\b/);
     expect(formButton.className).toMatch(/\bw-11\b/);
 
-    const pronounceAnswerButton = screen.getByRole('button', { name: /pronounce answer/i });
-    expect(pronounceAnswerButton.className).toMatch(/\bh-11\b/);
+    const pronouncePatternButton = screen.getByRole('button', { name: /pronounce pattern/i });
+    expect(pronouncePatternButton.className).toMatch(/\bh-11\b/);
   });
 
   it('gives the backspace key an accessible name', async () => {
@@ -1897,5 +1963,236 @@ describe('PracticeCard - pronounce button accessibility', () => {
 
     await screen.findByPlaceholderText('Type your answer...');
     expect(screen.getByRole('button', { name: /backspace/i })).toBeInTheDocument();
+  });
+});
+
+// Issue #420: the "Pronounce pattern" button speaks the whole feedback-screen
+// pattern as one speakSwedish() call, and any pronunciation in progress is
+// cancelled on card advance / unmount. These tests exercise the real
+// src/lib/speech.ts against a faked window.speechSynthesis (src/test/speechMock.ts,
+// #418) rather than mocking speech.ts itself, per the "mock only the boundary
+// the test does not own" rule.
+describe('PracticeCard - pronounce pattern speech (issue #420)', () => {
+  let speech: SpeechSynthesisMockHandle;
+
+  beforeEach(() => {
+    speech = installSpeechSynthesisMock([SV_VOICE]);
+  });
+
+  afterEach(() => {
+    speech.uninstall();
+  });
+
+  async function renderAndReachFeedback(options: {
+    infinitive: string;
+    form: Form;
+    muteAudio: boolean;
+    autoplayAudio?: boolean;
+    typedAnswer: string;
+    onAnswer?: (grade: Grade) => void;
+  }) {
+    const user = userEvent.setup();
+    const onAnswer = options.onAnswer ?? vi.fn();
+    renderWithProviders(
+      <PracticeCard
+        infinitive={options.infinitive}
+        form={options.form}
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={options.autoplayAudio ?? false}
+        muteAudio={options.muteAudio}
+        onAnswer={onAnswer}
+      />,
+    );
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, options.typedAnswer);
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByRole('status');
+    return { user, onAnswer };
+  }
+
+  it('speaks vara/presens as one utterance: infinitive, presens, preteritum, supinum in order', async () => {
+    const { user } = await renderAndReachFeedback({
+      infinitive: 'vara',
+      form: 'presens',
+      muteAudio: false,
+      typedAnswer: VARA_PRESENS_ANSWER,
+    });
+
+    await user.click(screen.getByRole('button', { name: /pronounce pattern/i }));
+    await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(1));
+
+    // Exactly one call, the four visible parts joined in display order, with
+    // the missing (presens) part filled by correctAnswer rather than the
+    // '_____' placeholder -- never a second call, an alternates-disclosure
+    // string or note text mixed in.
+    expect(speech.speakCalls[0]).toMatchObject({ text: 'vara, är, var, varit', lang: 'sv-SE' });
+  });
+
+  it('speaks vara/imperativ as exactly two parts (infinitive, imperativ), never the four-form chain', async () => {
+    const { user } = await renderAndReachFeedback({
+      infinitive: 'vara',
+      form: 'imperativ',
+      muteAudio: false,
+      typedAnswer: 'var',
+    });
+
+    await user.click(screen.getByRole('button', { name: /pronounce pattern/i }));
+    await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(1));
+
+    expect(speech.speakCalls[0]!.text).toBe('vara, var');
+  });
+
+  it('excludes an unavailable imperativ from the spoken pattern for a modal verb, and never speaks "(not available)"', async () => {
+    // "kunna" is a modal verb (VERB_DATA noNaturalImperativ: true) with no
+    // Swedish imperativ -- ConjugatedVerb.imperativNotApplicable, not merely
+    // an unfilled field.
+    const { user } = await renderAndReachFeedback({
+      infinitive: 'kunna',
+      form: 'imperativ',
+      muteAudio: false,
+      typedAnswer: 'anything',
+    });
+
+    await user.click(screen.getByRole('button', { name: /pronounce pattern/i }));
+    await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(1));
+
+    expect(speech.speakCalls[0]!.text).toBe('kunna');
+    expect(speech.speakCalls[0]!.text).not.toContain('(not available)');
+  });
+
+  it('makes no speakSwedish call when the card is muted and "Pronounce pattern" is clicked', async () => {
+    const { user } = await renderAndReachFeedback({
+      infinitive: 'vara',
+      form: 'presens',
+      muteAudio: true,
+      typedAnswer: VARA_PRESENS_ANSWER,
+    });
+
+    await user.click(screen.getByRole('button', { name: /pronounce pattern/i }));
+    // No waitFor: handlePronouncePattern's muted guard is a synchronous
+    // early return, before any speakSwedish promise chain would start.
+    expect(speech.speakCalls).toHaveLength(0);
+  });
+
+  it('calls stopSpeaking (speechSynthesis.cancel) before onAnswer when "Next Card" is clicked', async () => {
+    let cancelCallsWhenOnAnswerFired = -1;
+    const onAnswer = vi.fn(() => {
+      cancelCallsWhenOnAnswerFired = speech.cancelCalls.length;
+    });
+    const { user } = await renderAndReachFeedback({
+      infinitive: 'vara',
+      form: 'presens',
+      muteAudio: false,
+      typedAnswer: VARA_PRESENS_ANSWER,
+      onAnswer,
+    });
+
+    expect(speech.cancelCalls).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    // cancelCalls already held at least one entry by the time onAnswer ran --
+    // proof stopSpeaking() ran before onAnswer, not just that both ran.
+    expect(cancelCallsWhenOnAnswerFired).toBeGreaterThanOrEqual(1);
+  });
+
+  it('calls stopSpeaking before onAnswer on Enter at the feedback screen', async () => {
+    let cancelCallsWhenOnAnswerFired = -1;
+    const onAnswer = vi.fn(() => {
+      cancelCallsWhenOnAnswerFired = speech.cancelCalls.length;
+    });
+    await renderAndReachFeedback({
+      infinitive: 'vara',
+      form: 'presens',
+      muteAudio: false,
+      typedAnswer: VARA_PRESENS_ANSWER,
+      onAnswer,
+    });
+
+    expect(speech.cancelCalls).toHaveLength(0);
+    fireEvent.keyDown(window, { key: 'Enter' });
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(cancelCallsWhenOnAnswerFired).toBeGreaterThanOrEqual(1);
+  });
+
+  it('calls stopSpeaking on unmount', async () => {
+    const { unmount } = renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={false}
+        onAnswer={vi.fn()}
+      />,
+    );
+    await screen.findByPlaceholderText('Type your answer...');
+
+    expect(speech.cancelCalls).toHaveLength(0);
+    unmount();
+    expect(speech.cancelCalls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('keeps per-form Volume2 buttons labeled "Pronounce <form>" and each speaks only that one form', async () => {
+    const { user } = await renderAndReachFeedback({
+      infinitive: 'vara',
+      form: 'presens',
+      muteAudio: false,
+      typedAnswer: VARA_PRESENS_ANSWER,
+    });
+
+    const infinitivButton = screen.getByRole('button', { name: 'Pronounce Infinitiv' });
+    expect(infinitivButton).toHaveAttribute('aria-label', 'Pronounce Infinitiv');
+    await user.click(infinitivButton);
+    await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(1));
+    expect(speech.speakCalls[0]!.text).toBe('vara');
+
+    const supinumButton = screen.getByRole('button', { name: 'Pronounce Supinum' });
+    expect(supinumButton).toHaveAttribute('aria-label', 'Pronounce Supinum');
+    await user.click(supinumButton);
+    await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(2));
+    // The second call is the Supinum form alone, not appended to or combined
+    // with the first -- each per-form button speaks only its own form.
+    expect(speech.speakCalls[1]!.text).toBe('varit');
+  });
+
+  it('speaks only the correct answer, once, when the submission is correct and autoplayAudio is on', async () => {
+    await renderAndReachFeedback({
+      infinitive: 'vara',
+      form: 'presens',
+      muteAudio: false,
+      autoplayAudio: true,
+      typedAnswer: VARA_PRESENS_ANSWER,
+    });
+
+    await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(1));
+    expect(speech.speakCalls[0]!.text).toBe(VARA_PRESENS_ANSWER);
+  });
+
+  it('does not speak on submit when the answer is correct but autoplayAudio is off', async () => {
+    await renderAndReachFeedback({
+      infinitive: 'vara',
+      form: 'presens',
+      muteAudio: false,
+      autoplayAudio: false,
+      typedAnswer: VARA_PRESENS_ANSWER,
+    });
+
+    expect(speech.speakCalls).toHaveLength(0);
+  });
+
+  it('does not speak on submit when autoplayAudio is on but the answer is wrong', async () => {
+    await renderAndReachFeedback({
+      infinitive: 'vara',
+      form: 'presens',
+      muteAudio: false,
+      autoplayAudio: true,
+      typedAnswer: 'definitely-not-the-answer',
+    });
+
+    expect(speech.speakCalls).toHaveLength(0);
   });
 });
