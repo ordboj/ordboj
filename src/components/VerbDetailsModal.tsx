@@ -175,7 +175,6 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
           {verbUtterance && (
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handlePronounceAll} className="flex-1 gap-2 h-11">
-
                 <Volume2 className="w-4 h-4" />
                 Pronounce all forms
               </Button>
