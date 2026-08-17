@@ -44,6 +44,26 @@ describe('particle verb dataset - ids', () => {
       expect(/^\d+-/.test(entry.id)).toBe(false);
     }
   });
+
+  it('ORD-72: gives "låsa in" the digraph id pv:laasa-in on collision, leaving pv:lasa-in ("läsa in") untouched', () => {
+    // Rule 2 at the `id` field (particleVerbData.ts header): a simple ASCII
+    // fold of "låsa in" collides with the already-shipped "läsa in"
+    // (pv:lasa-in, #336), so the later entry must fold with digraph
+    // transliteration (å→aa) instead of stealing or mutating the incumbent's
+    // id. This is the first entry to exercise that rule -- pinning it keeps
+    // the precedent from silently regressing if the dataset is ever
+    // reshuffled or re-slugged.
+    const laasaIn = PARTICLE_VERB_DATA.find((entry) => entry.id === 'pv:laasa-in');
+    expect(laasaIn).toBeDefined();
+    expect(laasaIn?.baseInfinitive).toBe('låsa');
+    expect(laasaIn?.lemma).toBe('låsa in');
+    expect(laasaIn?.id).toMatch(/^pv:[a-z0-9]+(-[a-z0-9]+)*$/);
+
+    const lasaIn = PARTICLE_VERB_DATA.find((entry) => entry.id === 'pv:lasa-in');
+    expect(lasaIn).toBeDefined();
+    expect(lasaIn?.baseInfinitive).toBe('läsa');
+    expect(lasaIn?.lemma).toBe('läsa in');
+  });
 });
 
 describe('particle verb dataset - the verified gate', () => {
