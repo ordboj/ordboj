@@ -39,8 +39,17 @@ There is no backend and no account. All progress stays in `localStorage`.
 A Claude Code lead session and ten specialist agents build this project.
 Each agent owns its own files. For example, the Swedish linguist owns the
 verb data, and the SRS engineer owns the scheduler. New ideas go through a
-review pipeline before any agent writes code. A human reviews the results
-and approves every merge.
+review pipeline before any agent writes code.
+
+The system runs on its own. The pipelines review, test, and merge most
+pull requests without human approval. The human steps in only for rare,
+risky changes: storage-schema migrations, uncertain Swedish forms, and
+contested reviews.
+
+> **A note on timestamps.** The agents work in the background, on their
+> own schedule. Commits and merges can appear at any hour of the day.
+> This includes the maintainer's normal work hours. The activity in this
+> public repository shows the agents at work, not the human.
 
 [How the AI team works](docs/AI-WORKFLOW.md) describes the team, the
 automated pipelines, and the Claude Code features behind them.

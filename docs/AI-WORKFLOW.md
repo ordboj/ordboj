@@ -1,7 +1,9 @@
 # How the AI team works
 
-Ordböj is built by a team of Claude Code agents, with one human in the
-loop. This page describes the team, the rules that keep it safe, and the
+Ordböj is built by a team of Claude Code agents. The system runs on its
+own: the pipelines review, test, and merge most changes without human
+approval. The human answers only the rare questions that the pipelines
+raise. This page describes the team, the rules that keep it safe, and the
 automated pipelines that turn an idea into merged code. It also lists the
 Claude Code features that make the setup work.
 
@@ -61,7 +63,7 @@ reviewers, and gray boxes are automatic steps. Dashed amber spokes are
 the points where an agent stops and asks the human. The green edge at
 the top closes the loop: a merged change makes room for the next idea.
 
-![Pipeline diagram: a circle of agent stages around the human, from a raw idea to a human-approved merge](diagrams/pipeline.svg)
+![Pipeline diagram: a circle of agent stages around the human, from a raw idea to a merged change](diagrams/pipeline.svg)
 
 The diagram is an SVG that the AI lead drew by hand, with no diagram
 tool. To change it, edit [`diagrams/pipeline.svg`](diagrams/pipeline.svg)
@@ -95,8 +97,9 @@ The lead passes ticket numbers to this pipeline. For each ticket, it:
 3. Routes risky classes of change (storage schema, verb data, major
    version bumps) through an extra owner gate.
 4. Watches CI on the pull request and repairs failures.
-5. Stops at "ready to merge". Only the lead session merges, and only
-   with an approval that the human gave in the chat.
+5. Stops at "ready to merge". Only the lead session merges. Most
+   merges do not wait for the human. Only the rare cases in
+   "What the human does" stop for an answer.
 
 ### 3. `deps-pilot` — keep dependencies current
 
@@ -128,7 +131,13 @@ application code goes to the human for approval first.
 
 ## What the human does
 
-The human sends ideas, answers the precise questions that the pipelines
-raise, and approves every merge. The human also holds two hard vetoes:
-changes to the `localStorage` schema and uncertain Swedish forms. Both
-stop the pipeline until a person decides.
+The human sends ideas and answers the precise questions that the
+pipelines raise. Most merges do not need human approval. The human
+decides only the rare, risky cases and holds two hard vetoes: changes
+to the `localStorage` schema and uncertain Swedish forms. Both stop the
+pipeline until a person decides.
+
+The agents work in the background, on their own schedule. Commits and
+merges can appear at any hour of the day. This includes the maintainer's
+normal work hours. The activity in this public repository shows the
+agents at work, not the human.
