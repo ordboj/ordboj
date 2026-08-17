@@ -95,7 +95,12 @@ export default function PracticeParticles() {
       // recall data yet. logAnswer is fire-and-forget by construction
       // (useAnswerLog.ts never throws and disables itself on repeated write
       // failures), so a log failure can never block this practice flow.
-      if (card.kind === 'cloze') {
+      // examples.length > 0 guards against a NaN frame index for a malformed
+      // entry. selectExample (src/lib/particleVerbs.ts) already throws first
+      // on such an entry today, so this branch cannot fire on shipped data —
+      // the guard is defence against a future entry that reaches this card
+      // some other way.
+      if (card.kind === 'cloze' && card.entry.examples.length > 0) {
         const repetitions = srsStates[card.itemId]?.repetitions ?? 0;
         logAnswer({
           i: card.itemId,
