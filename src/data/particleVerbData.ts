@@ -1078,6 +1078,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to power down a device' },
     transparency: 'literal',
     acceptedParticles: ['av'],
+    acceptedRecall: ['stänga av', 'slå av'],
     examples: [
       { sv: 'Han stänger av datorn innan han går hem.', blankIndex: 2 },
       { sv: 'Jag stänger av mobilen efter klockan tio.', blankIndex: 2 },
@@ -1096,6 +1097,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to start a device running' },
     transparency: 'literal',
     acceptedParticles: ['på'],
+    acceptedRecall: ['sätta på', 'slå på'],
     examples: [
       { sv: 'Hon sätter på radion när hon lagar mat.', blankIndex: 2 },
       { sv: 'Han sätter på kaffebryggaren varje morgon.', blankIndex: 2 },
@@ -2764,9 +2766,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     reflexive: 'none',
     lemma: 'slå på',
     gloss: { en: 'to flip a switch and activate a device' },
-    transparency: 'idiomatic',
-    contrast: 'slå på någon — a different, stressed reading: to strike or hit someone',
+    // Matches the shipped pv:satta-pa transparency so particleQueue.ts
+    // introduces these two equivalent-device verbs in the same order.
+    transparency: 'literal',
+    contrast: 'slå på någon (unstressed på) — to strike at or hit someone',
     acceptedParticles: ['på'],
+    acceptedRecall: ['slå på', 'sätta på'],
     examples: [
       { sv: 'Jag slår på tv:n för att se nyheterna.', blankIndex: 2 },
       { sv: 'Hon slår på lampan när det blir mörkt.', blankIndex: 2 },
@@ -2784,9 +2789,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     reflexive: 'none',
     lemma: 'slå av',
     gloss: { en: 'to shut a device down by flipping its switch' },
-    transparency: 'idiomatic',
+    // Matches the shipped pv:stanga-av transparency so particleQueue.ts
+    // introduces these two equivalent-device verbs in the same order.
+    transparency: 'literal',
     contrast: 'slå av på priset — a different sense: to give a discount',
     acceptedParticles: ['av'],
+    acceptedRecall: ['slå av', 'stänga av'],
     examples: [
       { sv: 'Jag slår av tv:n innan jag somnar.', blankIndex: 2 },
       { sv: 'Hon slår av lampan innan hon lämnar rummet.', blankIndex: 2 },
