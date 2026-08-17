@@ -235,7 +235,7 @@ const PARTICLE_CORE_SENSE: Record<string, string> = {
   itu: 'fossilised, meaning "in two", surviving in a few fixed phrases',
   // Added for #395, to unblock two band 3-4 entries built on these particles.
   ur: 'often emptying something out, or taking something out of a container',
-  ihjäl: 'fossilised, meaning "to death", surviving in a few fixed phrases such as "slå ihjäl"',
+  ihjäl: 'a result: the action ends in death',
 };
 
 export function getParticleCoreSense(particle: string): string | null {

@@ -2758,6 +2758,15 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   // cefrEvidence is 'svalex' throughout: bands 1-5 of the research list carry
   // the same SVALex "first level with nonzero frequency" derivation the header
   // of this file describes, not a fresh editorial call.
+  //
+  // Ordering: particleQueue.ts documents PARTICLE_VERB_DATA as frequency-ordered
+  // within a CEFR band, relying on a stable sort for entries tied on every other
+  // introduction-order key. This block is appended after the array end rather
+  // than interleaved into each band's existing run, so within-band frequency
+  // order is knowingly relaxed for entries in this wave (e.g. pv:dra-in, A2,
+  // SVALex freq 21.9, sits after A2 entries with freq 0.14). Flagged in the PR
+  // body; not resolved here to avoid reshuffling entries whose surrounding
+  // context has not been individually re-verified.
 
   {
     id: 'pv:dra-in',
@@ -2813,7 +2822,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Jag lämnar in ansökan före fredag.', blankIndex: 2 },
       { sv: 'Hon lämnar in sin uppsats i morgon.', blankIndex: 2 },
-      { sv: 'Vi lämnar in blanketterna på kontoret idag.', blankIndex: 2 },
+      { sv: 'Vi lämnar in blanketterna på kontoret i dag.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'lämnar in', preteritum: 'lämnade in', supinum: 'lämnat in' },
@@ -2851,7 +2860,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['hem'],
     examples: [
-      { sv: 'Jag kör hem dig efter festen ikväll.', blankIndex: 2 },
+      { sv: 'Jag kör hem dig efter festen i kväll.', blankIndex: 2 },
       { sv: 'Hon kör hem barnen från skolan varje dag.', blankIndex: 2 },
       { sv: 'Vi kör hem grannen när det regnar.', blankIndex: 2 },
     ],
@@ -2953,7 +2962,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Jag kör in bilen i garaget.', blankIndex: 2 },
       { sv: 'Han kör försiktigt in lastbilen på gården.', blankIndex: 3 },
-      { sv: 'Vi kör in bussen på verkstaden idag.', blankIndex: 2 },
+      { sv: 'Vi kör in bussen på verkstaden i dag.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'kör in', preteritum: 'körde in', supinum: 'kört in' },
@@ -3073,7 +3082,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Han åker fast för fortkörning igen.', blankIndex: 2 },
       { sv: 'Tjuven åker fast redan samma kväll.', blankIndex: 2 },
-      { sv: 'Vi åker aldrig fast för sånt här.', blankIndex: 3 },
+      { sv: 'Vi åker aldrig fast för sådant här.', blankIndex: 3 },
     ],
     verified: true,
     forms: { presens: 'åker fast', preteritum: 'åkte fast', supinum: 'åkt fast' },
@@ -3253,7 +3262,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Läraren ropar upp namnen på listan.', blankIndex: 2 },
       { sv: 'Sköterskan ropar upp nästa patient nu.', blankIndex: 2 },
-      { sv: 'Han ropar högt upp varje elevs namn.', blankIndex: 3 },
+      { sv: 'Han ropar tydligt upp varje elevs namn.', blankIndex: 3 },
     ],
     verified: true,
     forms: { presens: 'ropar upp', preteritum: 'ropade upp', supinum: 'ropat upp' },
@@ -3393,7 +3402,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['på'],
     examples: [
       { sv: 'Bilen kör på en cyklist vid korsningen.', blankIndex: 2 },
-      { sv: 'Han kör tyvärr på ett rådjur ikväll.', blankIndex: 3 },
+      { sv: 'Han kör tyvärr på ett rådjur i kväll.', blankIndex: 3 },
       { sv: 'Lastbilen kör på staketet vid halkan.', blankIndex: 2 },
     ],
     verified: true,
@@ -3453,7 +3462,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['ut'],
     examples: [
-      { sv: 'Vi skickar ut inbjudningarna imorgon bitti.', blankIndex: 2 },
+      { sv: 'Vi skickar ut inbjudningarna i morgon bitti.', blankIndex: 2 },
       { sv: 'Företaget skickar ut fakturan varje månad.', blankIndex: 2 },
       { sv: 'Hon skickar snabbt ut ett meddelande till alla.', blankIndex: 3 },
     ],
@@ -3513,7 +3522,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'idiomatic',
     acceptedParticles: ['in'],
     examples: [
-      { sv: 'Jag tittar in hos dig senare ikväll.', blankIndex: 2 },
+      { sv: 'Jag tittar in hos dig senare i kväll.', blankIndex: 2 },
       { sv: 'Hon tittar gärna in på kontoret.', blankIndex: 3 },
       { sv: 'Vi tittar in en stund på festen.', blankIndex: 2 },
     ],
@@ -3529,7 +3538,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'blanda in',
-    gloss: { en: 'to draw someone into a matter against their wishes' },
+    gloss: { en: 'to draw someone into a matter, often unwillingly' },
     transparency: 'idiomatic',
     acceptedParticles: ['in'],
     examples: [
@@ -3574,7 +3583,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['upp'],
     examples: [
       { sv: 'Jag kollar upp priset på nätet.', blankIndex: 2 },
-      { sv: 'Hon kollar upp faktan innan hon skriver.', blankIndex: 2 },
+      { sv: 'Hon kollar upp uppgifterna innan hon skriver.', blankIndex: 2 },
       { sv: 'Vi kollar snabbt upp adressen på kartan.', blankIndex: 3 },
     ],
     verified: true,
@@ -3611,7 +3620,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'stoppa ner',
     gloss: { en: 'to push something into a container or pocket' },
     transparency: 'literal',
-    acceptedParticles: ['ner', 'ned'],
+    acceptedParticles: ['ner', 'ned', 'in'],
     examples: [
       { sv: 'Jag stoppar ner boken i väskan.', blankIndex: 2 },
       { sv: 'Hon stoppar ner pengarna i fickan.', blankIndex: 2 },
@@ -3633,7 +3642,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'idiomatic',
     acceptedParticles: ['ut'],
     examples: [
-      { sv: 'Juryn väljer ut tre finalister ikväll.', blankIndex: 2 },
+      { sv: 'Juryn väljer ut tre finalister i kväll.', blankIndex: 2 },
       { sv: 'Hon väljer noga ut presenterna till barnen.', blankIndex: 3 },
       { sv: 'Vi väljer ut de bästa bilderna.', blankIndex: 2 },
     ],
@@ -3654,7 +3663,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['ihop'],
     examples: [
       { sv: 'Jag sparar ihop pengar till resan.', blankIndex: 2 },
-      { sv: 'Hon sparar länge ihop till en bil.', blankIndex: 3 },
+      { sv: 'Hon sparar troget ihop till en bil.', blankIndex: 3 },
       { sv: 'Vi sparar ihop till ett nytt hus.', blankIndex: 2 },
     ],
     verified: true,
@@ -3871,6 +3880,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     lemma: 'dricka ur',
     gloss: { en: 'to finish drinking until the glass or cup is empty' },
     transparency: 'literal',
+    contrast: 'dricka ur flaskan (unstressed ur) — to drink from the bottle',
     acceptedParticles: ['ur'],
     examples: [
       { sv: 'Jag dricker ur glaset innan jag går.', blankIndex: 2 },
@@ -3893,7 +3903,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'idiomatic',
     acceptedParticles: ['in'],
     examples: [
-      { sv: 'Jag rycker in som vikarie imorgon.', blankIndex: 2 },
+      { sv: 'Jag rycker in som vikarie i morgon.', blankIndex: 2 },
       { sv: 'Hon rycker in när chefen är sjuk.', blankIndex: 2 },
       { sv: 'Vi rycker snabbt in vid behov.', blankIndex: 3 },
     ],
@@ -3915,7 +3925,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Jag blåser upp ballongerna till festen.', blankIndex: 2 },
       { sv: 'Han blåser upp badringen på stranden.', blankIndex: 2 },
-      { sv: 'Vi blåser sakta upp madrassen ikväll.', blankIndex: 3 },
+      { sv: 'Vi blåser sakta upp madrassen i kväll.', blankIndex: 3 },
     ],
     verified: true,
     forms: { presens: 'blåser upp', preteritum: 'blåste upp', supinum: 'blåst upp' },
@@ -3929,13 +3939,13 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'upp',
     reflexive: 'none',
     lemma: 'jaga upp',
-    gloss: { en: 'to drive a price or demand sharply upward' },
+    gloss: { en: 'to work someone into a state of agitation, or to drive prices sharply higher' },
     transparency: 'idiomatic',
     acceptedParticles: ['upp'],
     examples: [
       { sv: 'Efterfrågan jagar upp priserna på biljetter.', blankIndex: 2 },
       { sv: 'Spekulanter jagar upp priset på huset.', blankIndex: 2 },
-      { sv: 'Bristen jagar upp priserna på virke.', blankIndex: 2 },
+      { sv: 'Nyheten jagar upp hela familjen på en gång.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'jagar upp', preteritum: 'jagade upp', supinum: 'jagat upp' },
@@ -3953,7 +3963,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['bort'],
     examples: [
-      { sv: 'Jag kastar bort gamla papper idag.', blankIndex: 2 },
+      { sv: 'Jag kastar bort gamla papper i dag.', blankIndex: 2 },
       { sv: 'Hon kastar bort maten som är dålig.', blankIndex: 2 },
       { sv: 'Vi kastar aldrig bort värdefulla saker.', blankIndex: 3 },
     ],
@@ -3975,7 +3985,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Mannen slår ihjäl ormen med spaden.', blankIndex: 2 },
       { sv: 'Han slår ihjäl flugan på bordet.', blankIndex: 2 },
-      { sv: 'De slår ihjäl tiden med kortspel.', blankIndex: 2 },
+      { sv: 'Bonden slår ihjäl råttan i ladan.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'slår ihjäl', preteritum: 'slog ihjäl', supinum: 'slagit ihjäl' },
@@ -3995,7 +4005,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Jag slår in presenten i fint papper.', blankIndex: 2 },
       { sv: 'Hon slår snyggt in paketet till julen.', blankIndex: 3 },
-      { sv: 'Vi slår in alla julklappar ikväll.', blankIndex: 2 },
+      { sv: 'Vi slår in alla julklappar i kväll.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'slår in', preteritum: 'slog in', supinum: 'slagit in' },
