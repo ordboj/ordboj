@@ -196,14 +196,14 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      # GitHub-hosted ubuntu-latest runners downgraded from 4 vCPU / 16 GB to
-      # 2 vCPU / 7 GB when this repo went private. At default parallelism
-      # vitest forked enough jsdom workers to get OOM-killed mid-run
-      # (`Worker exited unexpectedly`) on every CI attempt, even though the
-      # full suite passes locally. --maxWorkers=1 keeps a single jsdom fork
-      # alive at a time, trading wall-clock time for the memory headroom the
-      # smaller runner has.
+      # Single vitest fork's heap gets exhausted by Progress.test.tsx's
+      # ~973-row unvirtualized renders (defect #424), not by parallel forks.
+      # --maxWorkers=1 keeps one jsdom fork alive at a time; the larger
+      # old-space gives that one fork enough heap to survive, with headroom
+      # left for the parent process on the 7 GB private-repo runner.
       - name: Test
+        env:
+          NODE_OPTIONS: --max-old-space-size=5120
         run: npm test -- --maxWorkers=1
 
   build:
