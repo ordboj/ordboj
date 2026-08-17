@@ -26,6 +26,7 @@ import {
   restoreAppStores,
 } from '@/lib/backup';
 import { particleItemId } from '@/lib/itemIds';
+import { ANSWER_LOG_STORAGE_KEY } from '@/lib/answerLog';
 
 // How the learner produced the answer. The type moved to src/lib/srs.ts when
 // the scheduler started branching on it (#388); re-exported here so existing
@@ -742,6 +743,15 @@ export function useSrsProgress(cefrLevels?: string[]) {
     quarantinedItemsRef.current = {};
     setSrsStates(imported);
     persistNow(imported);
+    // The restored schedule describes answers the diagnostic log's entries
+    // do not agree with; a log that disagrees with the store is worse than
+    // an empty one (decision doc section 6). Best-effort: the log is
+    // disposable, so a failure here does not fail the import.
+    try {
+      localStorage.removeItem(ANSWER_LOG_STORAGE_KEY);
+    } catch (e) {
+      console.error('Failed to clear the answer log after import', e);
+    }
     return true;
   };
 
@@ -759,6 +769,10 @@ export function useSrsProgress(cefrLevels?: string[]) {
     setSrsStates({});
     persistNow({});
     localStorage.removeItem(LEGACY_BACKUP_KEY);
+    // "Reset all progress" means reset: the answer log is a per-answer
+    // history of exactly the practice the learner just asked to delete
+    // (decision doc section 6, PR #311's "reset means reset" principle).
+    localStorage.removeItem(ANSWER_LOG_STORAGE_KEY);
   };
 
   return {
