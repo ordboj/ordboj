@@ -175,6 +175,28 @@ export default function Settings() {
               </label>
             </div>
 
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="auto-read-all-forms">Read all forms automatically</Label>
+                {/* Same 44px label-wrapper pattern as show-examples above. */}
+                <label
+                  htmlFor="auto-read-all-forms"
+                  className="flex min-h-11 min-w-11 items-center justify-center cursor-pointer"
+                >
+                  <Switch
+                    id="auto-read-all-forms"
+                    checked={settings.autoReadAllForms}
+                    onCheckedChange={(checked) => updateSettings({ autoReadAllForms: checked })}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                When on, opening a verb's details reads every form aloud by itself. That is
+                different from tapping a form to hear just it, and from Autoplay pronunciation
+                above, which only plays audio after you answer a practice question correctly.
+              </p>
+            </div>
+
             <div className="space-y-3">
               <Label>CEFR Levels to Practice</Label>
               <div className="grid grid-cols-2 gap-3">
