@@ -3,6 +3,7 @@ import { screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import Settings from '@/pages/Settings';
+import { STORAGE_VERSION } from '@/hooks/useSrsProgress';
 
 // Unlike Settings.test.tsx, this suite does NOT mock '@/hooks/useSrsProgress'
 // (srs-engine-owned). Issue #93's guard only matters if the confirm action
@@ -83,7 +84,7 @@ describe('Settings page - issue #93: reset confirmation reaches the real reset p
     await waitFor(() => {
       const stored = localStorage.getItem(SRS_KEY);
       expect(stored).not.toBeNull();
-      expect(JSON.parse(stored as string)).toEqual({ version: 3, items: {} });
+      expect(JSON.parse(stored as string)).toEqual({ version: STORAGE_VERSION, items: {} });
     });
 
     // Reset means reset: the one-shot pre-v3 backup the load path wrote is a

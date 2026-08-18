@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useSrsProgress } from '@/hooks/useSrsProgress';
+import { useSrsProgress, STORAGE_VERSION } from '@/hooks/useSrsProgress';
 
 // Issue #253, hook-level wiring: the coalesced writer (src/lib/storage.ts)
 // is unit-tested in isolation in storage.test.ts. This file pins the
@@ -80,7 +80,7 @@ describe('#253: bounded per-answer write cost', () => {
 
     expect(setItemSpy).toHaveBeenCalledTimes(1);
     const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(persisted.version).toBe(3);
+    expect(persisted.version).toBe(STORAGE_VERSION);
     // One write, but it carries every answer recorded during the burst —
     // this is coalescing, not dropped writes.
     expect(persisted.items['tala-presens']).toBeDefined();
@@ -125,7 +125,7 @@ describe('#253: reset and import bypass the coalescing window', () => {
     // answer was pending when reset ran; going through the writer replaced
     // it, so it must not appear either now or via a later stale flush.
     const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(persisted).toEqual({ version: 3, items: {} });
+    expect(persisted).toEqual({ version: STORAGE_VERSION, items: {} });
   });
 
   it('importData puts the imported items on disk synchronously', async () => {
@@ -152,7 +152,7 @@ describe('#253: reset and import bypass the coalescing window', () => {
 
     // Read immediately: the imported schedule is already on disk.
     const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(persisted.version).toBe(3);
+    expect(persisted.version).toBe(STORAGE_VERSION);
     expect(persisted.items['tala-presens']).toMatchObject({ repetitions: 4, intervalDays: 12 });
   });
 });

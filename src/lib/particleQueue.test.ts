@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   buildFreeParticlePractice,
   buildParticleSitting,
@@ -200,8 +200,13 @@ describe('introductions', () => {
     expect(introduced).toHaveLength(1);
   });
 
-  it('holds a sibling back while the first one is still young', () => {
+  it('holds a sibling back while the first one is still young (fallback proxy: no firstSeenAt on the sibling state)', () => {
     // bygga upp / bygga ut is the interference case; here it is gå ut / gå in.
+    // `state()` below sets no firstSeenAt, so this exercises the pre-ORD-88
+    // fallback proxy (repetitions < RECALL_UNLOCK_REPETITIONS) that
+    // isBaseRecentlyUsed still uses for a sibling state written without the
+    // stamp (e2e seeds, hand edits) — see the dedicated firstSeenAt-window
+    // suite below for the exact 7-day-window behavior this proxy approximates.
     const first = entry({ id: 'pv:ga-ut' });
     const second = entry({ id: 'pv:ga-in', particle: 'in', acceptedParticles: ['in'] });
     const clozeId = particleItemId(first.id, 'cloze');
@@ -221,7 +226,7 @@ describe('introductions', () => {
     expect(sitting.cards.filter((card) => card.kind === 'introduction')).toEqual([]);
   });
 
-  it('releases the sibling once the first one is about a week old', () => {
+  it('releases the sibling once the first one is about a week old (fallback proxy: no firstSeenAt on the sibling state)', () => {
     const first = entry({ id: 'pv:ga-ut' });
     const second = entry({ id: 'pv:ga-in', particle: 'in', acceptedParticles: ['in'] });
     const clozeId = particleItemId(first.id, 'cloze');
@@ -253,6 +258,143 @@ describe('introductions', () => {
     expect(sitting.cards.filter((card) => card.kind === 'introduction')).toHaveLength(
       MAX_NEW_PER_PARTICLE_PER_SITTING,
     );
+  });
+});
+
+// ORD-88 decision 2: isBaseRecentlyUsed's primary rule is now the sibling
+// cloze's firstSeenAt, not its current mastery — exact 7 calendar days from
+// first exposure, day-boundary semantics (localCalendarDaysBetween in
+// srs.ts), never raw millisecond arithmetic. The fallback proxy tests above
+// cover the pre-stamp path; these cover the stamped path the fix is actually
+// for.
+describe('isBaseRecentlyUsed - 7-day first-exposure window (ORD-88 decision 2)', () => {
+  it('blocks the base on days D through D+6 from the sibling\'s first exposure, and frees it on day D+7', () => {
+    const first = entry({ id: 'pv:ga-ut' });
+    const second = entry({ id: 'pv:ga-in', particle: 'in', acceptedParticles: ['in'] });
+    const clozeId = particleItemId(first.id, 'cloze');
+    const firstSeenAt = NOW; // day D
+    const states = {
+      [clozeId]: state({
+        itemId: clozeId,
+        repetitions: 5,
+        dueAt: NOW + 60 * DAY,
+        firstSeenAt,
+      }),
+    };
+
+    for (let day = 0; day <= 6; day++) {
+      expect(isBaseRecentlyUsed(second, states, [first, second], NOW + day * DAY)).toBe(true);
+    }
+    expect(isBaseRecentlyUsed(second, states, [first, second], NOW + 7 * DAY)).toBe(false);
+  });
+
+  it('does not block on a mature sibling that just lapsed if it was first seen more than 7 days ago (the ~22% over-block case decision 2 fixes)', () => {
+    // Under the old repetitions-based proxy this sibling (repetitions reset
+    // to 0 by the lapse) would still block: repetitions < 2. The fix
+    // measures recency of first exposure instead of current mastery, so a
+    // sibling met 10 days ago no longer blocks just because it lapsed
+    // yesterday.
+    const first = entry({ id: 'pv:ta-fram', baseInfinitive: 'ta' });
+    const second = entry({
+      id: 'pv:ta-itu-med',
+      baseInfinitive: 'ta',
+      particle: 'itu med',
+      acceptedParticles: ['itu med'],
+    });
+    const clozeId = particleItemId(first.id, 'cloze');
+    const states = {
+      [clozeId]: state({
+        itemId: clozeId,
+        repetitions: 0,
+        intervalDays: 1,
+        lastGrade: 0,
+        dueAt: NOW + DAY,
+        firstSeenAt: NOW - 10 * DAY,
+      }),
+    };
+
+    expect(isBaseRecentlyUsed(second, states, [first, second], NOW)).toBe(false);
+  });
+
+  it('still blocks a sibling that lapsed inside the 7-day window (the fix narrows the rule, it does not disable it)', () => {
+    const first = entry({ id: 'pv:ta-fram', baseInfinitive: 'ta' });
+    const second = entry({
+      id: 'pv:ta-itu-med',
+      baseInfinitive: 'ta',
+      particle: 'itu med',
+      acceptedParticles: ['itu med'],
+    });
+    const clozeId = particleItemId(first.id, 'cloze');
+    const states = {
+      [clozeId]: state({
+        itemId: clozeId,
+        repetitions: 0,
+        intervalDays: 1,
+        lastGrade: 0,
+        dueAt: NOW + DAY,
+        firstSeenAt: NOW - 2 * DAY,
+      }),
+    };
+
+    expect(isBaseRecentlyUsed(second, states, [first, second], NOW)).toBe(true);
+  });
+});
+
+// process.env.TZ = 'Europe/Stockholm', same convention as
+// src/lib/srs.test.ts's DST suite: the window is computed through
+// localCalendarDaysBetween, so a bug there (raw ms-diff instead of local
+// calendar days) would show up as an off-by-one exactly on a DST day, not on
+// an ordinary one.
+describe('isBaseRecentlyUsed - 7-day window across a DST transition (Europe/Stockholm)', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'Europe/Stockholm';
+  });
+
+  afterEach(() => {
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
+  });
+
+  it('still frees the base at exactly day 7 when the window spans the spring-forward day (2026-03-29, 23-hour day)', () => {
+    const first = entry({ id: 'pv:ga-ut' });
+    const second = entry({ id: 'pv:ga-in', particle: 'in', acceptedParticles: ['in'] });
+    const clozeId = particleItemId(first.id, 'cloze');
+    const firstSeenAt = new Date(2026, 2, 25, 9, 0, 0, 0).getTime(); // March 25, local
+    const states = {
+      [clozeId]: state({
+        itemId: clozeId,
+        repetitions: 5,
+        dueAt: firstSeenAt + 60 * DAY,
+        firstSeenAt,
+      }),
+    };
+    const dayPlus6 = new Date(2026, 2, 31, 9, 0, 0, 0).getTime(); // March 31
+    const dayPlus7 = new Date(2026, 3, 1, 9, 0, 0, 0).getTime(); // April 1
+
+    expect(isBaseRecentlyUsed(second, states, [first, second], dayPlus6)).toBe(true);
+    expect(isBaseRecentlyUsed(second, states, [first, second], dayPlus7)).toBe(false);
+  });
+
+  it('still frees the base at exactly day 7 when the window spans the fall-back day (2026-10-25, 25-hour day)', () => {
+    const first = entry({ id: 'pv:ga-ut' });
+    const second = entry({ id: 'pv:ga-in', particle: 'in', acceptedParticles: ['in'] });
+    const clozeId = particleItemId(first.id, 'cloze');
+    const firstSeenAt = new Date(2026, 9, 21, 9, 0, 0, 0).getTime(); // Oct 21, local
+    const states = {
+      [clozeId]: state({
+        itemId: clozeId,
+        repetitions: 5,
+        dueAt: firstSeenAt + 60 * DAY,
+        firstSeenAt,
+      }),
+    };
+    const dayPlus6 = new Date(2026, 9, 27, 9, 0, 0, 0).getTime(); // Oct 27
+    const dayPlus7 = new Date(2026, 9, 28, 9, 0, 0, 0).getTime(); // Oct 28
+
+    expect(isBaseRecentlyUsed(second, states, [first, second], dayPlus6)).toBe(true);
+    expect(isBaseRecentlyUsed(second, states, [first, second], dayPlus7)).toBe(false);
   });
 });
 
@@ -852,6 +994,98 @@ describe('review ordering and caps', () => {
       entries: [target],
     });
     expect(sitting.cards).toEqual([]);
+  });
+});
+
+// Decision 2, rule 3 of docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md:
+// no two cards sharing a baseInfinitive may be adjacent within a sitting.
+// separateSameBaseNeighbors (particleQueue.ts) is not exported; pinned here
+// through buildParticleSitting's cards output, same as every other rule in
+// this file.
+describe('no-adjacent-same-base reordering within a sitting (decision 2, rule 3)', () => {
+  function dueReviewFixture(entries: ParticleVerbData[]): Record<string, SrsState> {
+    const states: Record<string, SrsState> = {};
+    for (const e of entries) {
+      const clozeId = particleItemId(e.id, 'cloze');
+      states[clozeId] = state({ itemId: clozeId, repetitions: 3, dueAt: NOW - DAY });
+    }
+    return states;
+  }
+
+  it('never drops a due review to satisfy the rule, even when every due card shares one base', () => {
+    // Five due reviews, one base, zero spacers: adjacency is unavoidable.
+    // The rule reorders; it must not drop a card to get there.
+    const entries = Array.from({ length: 5 }, (_, i) =>
+      entry({
+        id: `pv:ta-${i}`,
+        baseInfinitive: 'ta',
+        particle: `p${i}`,
+        acceptedParticles: [`p${i}`],
+      }),
+    );
+    const states = dueReviewFixture(entries);
+
+    const sitting = buildParticleSitting({
+      srsStates: states,
+      particleDailyGoal: 60,
+      now: NOW,
+      shuffle: noShuffle,
+      entries,
+    });
+
+    expect(sitting.cards).toHaveLength(5);
+    expect(sitting.reviewsDue).toBe(5);
+    expect(new Set(sitting.cards.map((card) => card.entry.id)).size).toBe(5);
+  });
+
+  it('minimizes same-base adjacency on a 6-ta + 3-other-base sitting: no more forced pairs than the 3 spacers cannot avoid', () => {
+    // 6 same-base cards need 5 internal gaps to be fully separated; only 3
+    // differently-based spacers exist, so at least 5 - 3 = 2 adjacent
+    // same-base pairs are mathematically unavoidable. The reorder must not
+    // produce more than that minimum.
+    const taEntries = Array.from({ length: 6 }, (_, i) =>
+      entry({
+        id: `pv:ta-${i}`,
+        baseInfinitive: 'ta',
+        particle: `p${i}`,
+        acceptedParticles: [`p${i}`],
+      }),
+    );
+    const otherEntries = ['gå', 'komma', 'sätta'].map((base, i) =>
+      entry({
+        id: `pv:${base}-x`,
+        baseInfinitive: base,
+        particle: `q${i}`,
+        acceptedParticles: [`q${i}`],
+      }),
+    );
+    const entries = [...taEntries, ...otherEntries];
+    const states = dueReviewFixture(entries);
+
+    const sitting = buildParticleSitting({
+      srsStates: states,
+      particleDailyGoal: 60,
+      now: NOW,
+      shuffle: noShuffle,
+      entries,
+    });
+
+    // Never drops: all 9 due reviews are present, unique.
+    expect(sitting.cards).toHaveLength(9);
+    expect(sitting.reviewsDue).toBe(9);
+    expect(new Set(sitting.cards.map((card) => card.entry.id)).size).toBe(9);
+
+    let adjacentSameBasePairs = 0;
+    for (let i = 1; i < sitting.cards.length; i++) {
+      if (sitting.cards[i]!.entry.baseInfinitive === sitting.cards[i - 1]!.entry.baseInfinitive) {
+        adjacentSameBasePairs++;
+      }
+    }
+    // Exactly the unavoidable minimum: never more (a regression in the
+    // greedy separation), never fewer (impossible with only 3 spacers for 5
+    // internal gaps, so a lower count would mean the count assertions above
+    // were wrong, not that separation improved).
+    expect(adjacentSameBasePairs).toBe(2);
   });
 });
 

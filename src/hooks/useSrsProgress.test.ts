@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useSrsProgress } from '@/hooks/useSrsProgress';
+import { useSrsProgress, STORAGE_VERSION } from '@/hooks/useSrsProgress';
 import { useAnswerLog } from '@/hooks/useAnswerLog';
 import { getVerbs, getAllConjugatedVerbs, conjugateVerb, verbs } from '@/lib/verbs';
 import type { ConjugatedVerb, Verb } from '@/lib/verbs';
@@ -158,7 +158,7 @@ describe('persistence - the irreplaceable-progress invariant', () => {
     const stored = localStorage.getItem(STORAGE_KEY);
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored as string);
-    expect(parsed.version).toBe(3);
+    expect(parsed.version).toBe(STORAGE_VERSION);
     expect(parsed.items['1-presens'].repetitions).toBe(1);
 
     // Advance the clock so a fresh initialization (a bug) would produce a
@@ -377,7 +377,7 @@ describe('legacy storage migration (v1 unversioned blob -> v2 ease rebase)', () 
     first.unmount();
 
     const storedAfterFirst = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(storedAfterFirst.version).toBe(3);
+    expect(storedAfterFirst.version).toBe(STORAGE_VERSION);
 
     // Prove the rebase does not run again on a versioned payload: knock the
     // persisted ease back under the rebase threshold from outside. If load
@@ -659,6 +659,10 @@ describe('importData shape validation (issue #135)', () => {
     });
 
     expect(importResult).toBe(true);
+    // v3 -> v4 (ORD-88): a practised item (lastGrade set, non-zero interval)
+    // imported without firstSeenAt is backfilled on import the same way it
+    // is backfilled on load — dueAt - intervalDays * 24h, per
+    // backfillFirstSeenAt in useSrsProgress.ts.
     expect(result.current.srsStates).toEqual({
       '1-presens': {
         itemId: '1-presens',
@@ -667,6 +671,7 @@ describe('importData shape validation (issue #135)', () => {
         easeFactor: 2.1,
         dueAt: FIXED_NOW,
         lastGrade: 5,
+        firstSeenAt: FIXED_NOW - 40 * 24 * 60 * 60 * 1000,
       },
     });
   });
@@ -779,6 +784,76 @@ describe('importData shape validation (issue #135)', () => {
     expect(importResult).toBe(false);
     expect(result.current.srsStates).toEqual(stateSnapshot);
     expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+  });
+
+  // ORD-88 staff-engineer review: the version-99 case above proves "some
+  // future version is refused"; it does not prove the refusal boundary
+  // itself is right. A version one past what this build understands is the
+  // sharper pin — an off-by-one (`>=` where the code means `>`) would still
+  // fail the 99 case but would wrongly refuse this one, or wrongly accept a
+  // real v5 payload.
+  it('refuses to import a version one newer than this build understands (v5 relative to v4), without mutating the store', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.recordAnswer('1-presens', 5);
+    });
+    await waitFor(() => expect(result.current.srsStates['1-presens']?.repetitions).toBe(1));
+    await settlePersistence(reflectsRecordedAnswer(1));
+    const stateSnapshot = JSON.parse(JSON.stringify(result.current.srsStates));
+    const storageSnapshot = localStorage.getItem(STORAGE_KEY);
+
+    const nextVersionExport = JSON.stringify({
+      version: STORAGE_VERSION + 1,
+      items: {
+        '1-presens': {
+          repetitions: 3,
+          intervalDays: 16,
+          easeFactor: 2.0,
+          dueAt: FIXED_NOW,
+        },
+      },
+    });
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(nextVersionExport);
+    });
+
+    expect(importResult).toBe(false);
+    expect(result.current.srsStates).toEqual(stateSnapshot);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(storageSnapshot);
+  });
+
+  it('accepts an import at exactly the current storage version — nothing about being "current" refuses it', async () => {
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const currentVersionExport = JSON.stringify({
+      version: STORAGE_VERSION,
+      items: {
+        '1-presens': {
+          repetitions: 6,
+          intervalDays: 18,
+          easeFactor: 2.4,
+          dueAt: FIXED_NOW,
+          lastGrade: 5,
+          firstSeenAt: FIXED_NOW - 18 * 24 * 60 * 60 * 1000,
+        },
+      },
+    });
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(currentVersionExport);
+    });
+
+    expect(importResult).toBe(true);
+    expect(result.current.srsStates['1-presens']).toMatchObject({
+      repetitions: 6,
+      firstSeenAt: FIXED_NOW - 18 * 24 * 60 * 60 * 1000,
+    });
   });
 
   it('rejects a top-level JSON array, without mutating the store', async () => {
@@ -894,7 +969,7 @@ describe('#241: forward-compat guard against a newer store', () => {
     // The write is coalesced (issue #253); unmounting flushes it.
     unmount();
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.version).toBe(3);
+    expect(stored.version).toBe(STORAGE_VERSION);
     expect(stored.items['1-presens'].repetitions).toBe(2);
   });
 
@@ -1129,6 +1204,9 @@ describe('importData - whole-app envelope (issue #251)', () => {
     });
 
     expect(importResult).toBe(true);
+    // v3 -> v4 (ORD-88) backfill applies to imports too: no lastGrade on
+    // this fixture, but repetitions > 0 means it is real practice history,
+    // not an untouched item, so firstSeenAt is still derived.
     expect(result.current.srsStates).toEqual({
       '1-presens': {
         itemId: '1-presens',
@@ -1136,13 +1214,14 @@ describe('importData - whole-app envelope (issue #251)', () => {
         intervalDays: 10,
         easeFactor: 2.2,
         dueAt: FIXED_NOW,
+        firstSeenAt: FIXED_NOW - 10 * 24 * 60 * 60 * 1000,
       },
     });
     expect(localStorage.getItem('swedish-verbs-settings')).toBe(JSON.stringify({ theme: 'dark' }));
     // Import persists synchronously (persistNow), so a tab killed right
     // after the success toast still holds the imported schedule.
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.version).toBe(3);
+    expect(stored.version).toBe(STORAGE_VERSION);
     expect(stored.items['1-presens']).toMatchObject({ repetitions: 5 });
   });
 
@@ -1286,8 +1365,13 @@ describe('load-path quarantine (issue #251)', () => {
     const { result } = renderHook(() => useSrsProgress());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    // The valid item loaded untouched and is schedulable.
-    expect(result.current.srsStates['1-presens']).toEqual(validItem);
+    // The valid item loaded untouched and is schedulable. v3 -> v4 (ORD-88)
+    // backfills firstSeenAt on read for a practised item (repetitions > 0):
+    // dueAt - intervalDays * 24h, per backfillFirstSeenAt.
+    expect(result.current.srsStates['1-presens']).toEqual({
+      ...validItem,
+      firstSeenAt: validItem.dueAt - validItem.intervalDays * 24 * 60 * 60 * 1000,
+    });
     const due = await result.current.getDueItems();
     expect(due.map((i) => i.itemId)).toContain('1-presens');
 
@@ -1553,7 +1637,12 @@ describe('importData - refuses while the store is read-only (issue #251, #241)',
   // pins that a read-only session refuses the whole import, sibling stores
   // included, rather than half-applying it.
   it('returns false and leaves both the settings store and the SRS store bytes untouched when the store is read-only', async () => {
-    const readOnlyStore = JSON.stringify({ version: 4, items: {} });
+    // Must stay ahead of STORAGE_VERSION, never a literal (staff-engineer
+    // blocking finding #2, ORD-88): a hardcoded 4 stopped exercising the
+    // forward-compat guard the moment v4 (this build) shipped, since a
+    // same-version store is not "newer" and isReadOnly would silently start
+    // asserting false, passing for the wrong reason.
+    const readOnlyStore = JSON.stringify({ version: STORAGE_VERSION + 1, items: {} });
     localStorage.setItem(STORAGE_KEY, readOnlyStore);
     localStorage.setItem('swedish-verbs-settings', JSON.stringify({ theme: 'light' }));
 
@@ -1630,6 +1719,11 @@ describe('exportData -> importData round-trip through the real store (issue #251
     // The schedule is back to what it was at export time, not the
     // post-export state.
     expect(result.current.srsStates['1-presens']?.repetitions).toBe(1);
+    // ORD-88: firstSeenAt is stamped by the first recordAnswer above and
+    // must survive the export -> import round trip unchanged, not be
+    // re-derived by the v3 -> v4 backfill (it was never missing in the
+    // first place) and not be dropped by exportData's toStoredItems.
+    expect(result.current.srsStates['1-presens']?.firstSeenAt).toBe(FIXED_NOW);
     // The settings store, carried in the envelope's `stores`, is restored
     // too - this is the part a bare SRS-only export/import could not do.
     expect(localStorage.getItem('swedish-verbs-settings')).toBe(JSON.stringify({ theme: 'dark' }));
@@ -1807,7 +1901,7 @@ describe('importData clears the answer log too (issue #403)', () => {
 });
 
 describe('exportData does not carry the answer log (issue #403)', () => {
-  it('the exported envelope has no answer log entry anywhere in it, and still reports version 3', async () => {
+  it('the exported envelope has no answer log entry anywhere in it, and still reports the current storage version', async () => {
     localStorage.setItem(
       ANSWER_LOG_STORAGE_KEY,
       JSON.stringify({
@@ -1822,7 +1916,7 @@ describe('exportData does not carry the answer log (issue #403)', () => {
     const exported = result.current.exportData();
     const parsed = JSON.parse(exported);
 
-    expect(parsed.version).toBe(3);
+    expect(parsed.version).toBe(STORAGE_VERSION);
     expect(parsed.stores).not.toHaveProperty(ANSWER_LOG_STORAGE_KEY);
     // Belt and braces: the log entry's own id string never appears anywhere
     // in the exported bytes.

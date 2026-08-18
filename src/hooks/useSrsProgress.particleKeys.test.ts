@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useSrsProgress } from '@/hooks/useSrsProgress';
+import { useSrsProgress, STORAGE_VERSION } from '@/hooks/useSrsProgress';
 import { particleItemId } from '@/lib/itemIds';
 import { VERB_DATA } from '@/data/verbData';
 import type { SrsState } from '@/lib/srs';
@@ -39,6 +39,17 @@ function withoutItemId(s: SrsState): Omit<SrsState, 'itemId'> {
   return rest;
 }
 
+// v3 -> v4 (ORD-88) backfills firstSeenAt on any item that already carries
+// real practice history (a lastGrade and a non-zero interval): the estimate
+// documented in useSrsProgress.ts's backfillFirstSeenAt is
+// `dueAt - intervalDays * 24h`, clamped to [0, now]. Every fixture below is
+// answered (lastGrade: 5) with a fixed, far-past dueAt, so the clamp never
+// engages here - re-deriving it inline keeps this suite pinned to the
+// documented formula rather than to today's Date.now().
+function withBackfilledFirstSeenAt(s: SrsState): SrsState {
+  return { ...s, firstSeenAt: s.dueAt - s.intervalDays * 24 * 60 * 60 * 1000 };
+}
+
 // Legacy positional keys, as a pre-#53 build would have written them, and
 // the canonical (infinitive-keyed) ids they must migrate to on load.
 const LEGACY_KEY = '1-presens';
@@ -64,11 +75,17 @@ const MIXED_ITEMS_INPUT: Record<string, SrsState> = {
 // migration: the two conjugation keys move to their canonical id, carrying
 // their itemId along; the pv: keys are unaffected.
 const MIGRATED_ITEMS_EXPECTED: Record<string, SrsState> = {
-  [CANONICAL_KEY]: state(CANONICAL_KEY, { repetitions: 9, intervalDays: 120 }),
-  [CANONICAL_KEY_2]: state(CANONICAL_KEY_2, { repetitions: 2, intervalDays: 6 }),
-  [CLOZE_KEY]: state(CLOZE_KEY, { repetitions: 3, intervalDays: 10 }),
-  [RECALL_KEY]: state(RECALL_KEY, { repetitions: 1, intervalDays: 1 }),
-  [REFLEXIVE_KEY]: state(REFLEXIVE_KEY, { repetitions: 6, intervalDays: 45 }),
+  [CANONICAL_KEY]: withBackfilledFirstSeenAt(
+    state(CANONICAL_KEY, { repetitions: 9, intervalDays: 120 }),
+  ),
+  [CANONICAL_KEY_2]: withBackfilledFirstSeenAt(
+    state(CANONICAL_KEY_2, { repetitions: 2, intervalDays: 6 }),
+  ),
+  [CLOZE_KEY]: withBackfilledFirstSeenAt(state(CLOZE_KEY, { repetitions: 3, intervalDays: 10 })),
+  [RECALL_KEY]: withBackfilledFirstSeenAt(state(RECALL_KEY, { repetitions: 1, intervalDays: 1 })),
+  [REFLEXIVE_KEY]: withBackfilledFirstSeenAt(
+    state(REFLEXIVE_KEY, { repetitions: 6, intervalDays: 45 }),
+  ),
 };
 
 beforeEach(() => {
@@ -84,7 +101,7 @@ describe('#246: mixed legacy + pv: key round trip', () => {
 
     const exported = JSON.parse(result.current.exportData());
     // Issue #53 bumped the storage version and stopped writing itemId.
-    expect(exported.version).toBe(3);
+    expect(exported.version).toBe(STORAGE_VERSION);
     for (const [key, value] of Object.entries(MIGRATED_ITEMS_EXPECTED)) {
       expect(exported.items[key]).toEqual(withoutItemId(value));
     }

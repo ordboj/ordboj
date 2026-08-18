@@ -10,6 +10,7 @@ import {
   isPristineSrsState,
   isSrsState,
   isStoredSrsState,
+  localCalendarDaysBetween,
   MASTERED_STAGE_THRESHOLD,
   MAX_INTERVAL_DAYS,
   MAX_REQUEUES_PER_DAY,
@@ -323,6 +324,103 @@ describe('calculateNextReview - MAX_INTERVAL_DAYS clamp', () => {
     const next = calculateNextReview(state, 5);
     expect(next.intervalDays).toBe(365);
     expect(next.intervalDays).toBe(MAX_INTERVAL_DAYS);
+  });
+});
+
+// ORD-88: firstSeenAt is the whole basis of the 7-day particle-introduction
+// window (isBaseRecentlyUsed in particleQueue.ts) — a bug here would make
+// that spacing rule silently wrong for every learner, not just fail loudly
+// in one place. Pinned directly against calculateNextReview rather than only
+// through the migration/queue tests that consume it.
+describe('calculateNextReview - firstSeenAt stamping (ORD-88)', () => {
+  it('stamps firstSeenAt with the current instant on the first recorded answer', () => {
+    const next = calculateNextReview(initializeSrsState('x'), 5);
+    expect(next.firstSeenAt).toBe(FIXED_NOW);
+  });
+
+  it('stamps firstSeenAt on a first answer that is wrong too — a lapse is still an exposure', () => {
+    const next = calculateNextReview(initializeSrsState('x'), 0);
+    expect(next.firstSeenAt).toBe(FIXED_NOW);
+  });
+
+  it('never rewrites firstSeenAt on a later answer, however much later, correct or wrong', () => {
+    let state = calculateNextReview(initializeSrsState('x'), 5);
+    const firstStamp = state.firstSeenAt;
+    expect(firstStamp).toBe(FIXED_NOW);
+
+    vi.setSystemTime(FIXED_NOW + 30 * DAY_MS);
+    state = calculateNextReview(state, 5);
+    expect(state.firstSeenAt).toBe(firstStamp);
+
+    // A later lapse resets repetitions/intervalDays/easeFactor, but must not
+    // touch the write-once exposure stamp.
+    vi.setSystemTime(FIXED_NOW + 90 * DAY_MS);
+    state = calculateNextReview(state, 0);
+    expect(state.firstSeenAt).toBe(firstStamp);
+    expect(state.repetitions).toBe(0);
+  });
+
+  it('does not stamp firstSeenAt on initializeSrsState — eager initialization is not exposure', () => {
+    // isPristineSrsState's whole justification (issue #53) depends on this:
+    // an untouched item must be indistinguishable from one re-created fresh
+    // at load, and a stamped firstSeenAt would make it non-pristine.
+    expect(initializeSrsState('x').firstSeenAt).toBeUndefined();
+  });
+});
+
+// The 7-day particle-introduction window (isBaseRecentlyUsed,
+// particleQueue.ts) is built entirely on localCalendarDaysBetween's
+// day-count, not on raw millisecond arithmetic. Pinned here against the same
+// DST/month-boundary cases isDue is pinned against below, since a silent
+// off-by-one here would either starve an introduction for an extra week or
+// release a same-base sibling early — and either failure teaches nothing
+// wrong, so nothing would look broken.
+describe('localCalendarDaysBetween - month and DST boundaries (Europe/Stockholm)', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'Europe/Stockholm';
+  });
+
+  afterEach(() => {
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
+  });
+
+  it('counts whole local calendar days crossed, not 24-hour blocks (20 minutes past midnight is 1 day)', () => {
+    const day1 = new Date(2026, 0, 15, 23, 50, 0, 0).getTime();
+    const day2 = new Date(2026, 0, 16, 0, 10, 0, 0).getTime();
+    expect(localCalendarDaysBetween(day1, day2)).toBe(1);
+  });
+
+  it('is 0 for two instants on the same local calendar day, however far apart', () => {
+    const morning = new Date(2026, 0, 15, 6, 0, 0, 0).getTime();
+    const night = new Date(2026, 0, 15, 23, 59, 0, 0).getTime();
+    expect(localCalendarDaysBetween(morning, night)).toBe(0);
+  });
+
+  it('treats a month boundary the same as any other day boundary (Jan 31 -> Feb 1)', () => {
+    const jan31 = new Date(2026, 0, 31, 12, 0, 0, 0).getTime();
+    const feb1 = new Date(2026, 1, 1, 12, 0, 0, 0).getTime();
+    expect(localCalendarDaysBetween(jan31, feb1)).toBe(1);
+  });
+
+  it('is negative when later precedes earlier', () => {
+    const a = new Date(2026, 0, 10, 12, 0, 0, 0).getTime();
+    const b = new Date(2026, 0, 5, 12, 0, 0, 0).getTime();
+    expect(localCalendarDaysBetween(a, b)).toBe(-5);
+  });
+
+  it('still counts a 7-day span as exactly 7 when it contains the spring-forward day (2026-03-29, 23-hour day)', () => {
+    const before = new Date(2026, 2, 25, 9, 0, 0, 0).getTime(); // March 25
+    const sevenDaysLater = new Date(2026, 3, 1, 9, 0, 0, 0).getTime(); // April 1
+    expect(localCalendarDaysBetween(before, sevenDaysLater)).toBe(7);
+  });
+
+  it('still counts a 7-day span as exactly 7 when it contains the fall-back day (2026-10-25, 25-hour day)', () => {
+    const before = new Date(2026, 9, 22, 9, 0, 0, 0).getTime(); // Oct 22
+    const sevenDaysLater = new Date(2026, 9, 29, 9, 0, 0, 0).getTime(); // Oct 29
+    expect(localCalendarDaysBetween(before, sevenDaysLater)).toBe(7);
   });
 });
 

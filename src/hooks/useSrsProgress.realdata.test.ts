@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useSrsProgress } from '@/hooks/useSrsProgress';
+import { useSrsProgress, STORAGE_VERSION } from '@/hooks/useSrsProgress';
 import { getVerbs, getAllConjugatedVerbs } from '@/lib/verbs';
 import { SCHEDULED_FORMS } from '@/lib/srsProviders';
 import { VERB_DATA } from '@/data/verbData';
@@ -49,7 +49,7 @@ describe('useSrsProgress against real VERB_DATA', () => {
     await waitFor(() => expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull());
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.version).toBe(3);
+    expect(stored.version).toBe(STORAGE_VERSION);
     expect(Object.keys(stored.items)).toHaveLength(0);
 
     // The in-memory deck is unaffected: every item is still there and still
@@ -107,7 +107,7 @@ describe('useSrsProgress against real VERB_DATA', () => {
     // writer (issue #253) flushes on unmount.
     unmount();
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string);
-    expect(stored.version).toBe(3);
+    expect(stored.version).toBe(STORAGE_VERSION);
     first3.forEach((verb, position) => {
       expect(stored.items[`${verb.id}-presens`]).toMatchObject({ repetitions: position + 2 });
       expect(stored.items[`${position + 1}-presens`]).toBeUndefined();
