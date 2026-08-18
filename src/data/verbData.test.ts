@@ -21,6 +21,11 @@ function rowsWithPrecedingComments(source: string): Array<{
   commentBlock: string;
   hasGrupp: boolean;
   imperativ: string;
+  // Parsed straight off the row's own `phraseBound: "..."` field (not off
+  // comment text): a stronger signal than the commentBlock regexes below,
+  // since it can't drift out of sync with a comment someone forgot to
+  // update. undefined when the row has no phraseBound field.
+  phraseBound: 'reflexive' | 'particle' | undefined;
 }> {
   const startMarker = 'export const VERB_DATA: VerbData[] = [';
   const start = source.indexOf(startMarker);
@@ -33,6 +38,7 @@ function rowsWithPrecedingComments(source: string): Array<{
     commentBlock: string;
     hasGrupp: boolean;
     imperativ: string;
+    phraseBound: 'reflexive' | 'particle' | undefined;
   }> = [];
   let pendingComment: string[] = [];
 
@@ -45,6 +51,7 @@ function rowsWithPrecedingComments(source: string): Array<{
     const rowMatch = trimmed.match(/infinitive:\s*"([^"]+)"/);
     if (rowMatch) {
       const imperativMatch = trimmed.match(/imperativ:\s*"([^"]*)"/);
+      const phraseBoundMatch = trimmed.match(/phraseBound:\s*"(reflexive|particle)"/);
       // A row can also carry its explanation as a trailing "// ..." comment
       // on the same line (e.g. "... }, // modal verb: ..."), not just as
       // preceding comment lines. Fold both into one commentBlock.
@@ -59,6 +66,9 @@ function rowsWithPrecedingComments(source: string): Array<{
         commentBlock: commentParts.join('\n'),
         hasGrupp: /\bgrupp:\s*"/.test(trimmed),
         imperativ: imperativMatch ? (imperativMatch[1] ?? '') : '',
+        phraseBound: phraseBoundMatch
+          ? (phraseBoundMatch[1] as 'reflexive' | 'particle')
+          : undefined,
       });
       pendingComment = [];
     }
@@ -230,7 +240,10 @@ describe('VERB_DATA - alternates field (issue #123)', () => {
 // imperativ forms. Genuine modal verbs (kunna, få, vilja) have no Swedish
 // imperativ at all and stay empty *with* an explanation; genuinely
 // uncertain rows (te sig, anse) stay empty and flagged for a human rather
-// than guessed; every other row now carries a real, non-empty imperativ.
+// than guessed; ORD-87 phraseBound rows (bry, slappna, piffa, tråka) store a
+// real imperativ stem but leave the field empty because the bare stem is
+// not a usable utterance on its own (see phraseBound docs in verbData.ts);
+// every other row now carries a real, non-empty imperativ.
 describe('VERB_DATA - imperativ audit (issue #132)', () => {
   // Regression: before the audit, every non-auxiliary A1 verb below had
   // imperativ: "" even though a correct Swedish imperativ exists. Pin the
@@ -271,13 +284,18 @@ describe('VERB_DATA - imperativ audit (issue #132)', () => {
   );
 
   // Every row whose imperativ is empty must carry an explanatory comment
-  // (either "modal verb" for a genuine grammatical absence, or "NEEDS
-  // HUMAN CHECK" for a genuinely uncertain form) — never a silent blank
-  // that could be mistaken for an unfinished audit.
+  // (either "modal verb" for a genuine grammatical absence, "NEEDS HUMAN
+  // CHECK" for a genuinely uncertain form, or the row's own phraseBound
+  // field for a phrase-bound verb whose bare stem isn't a usable
+  // utterance — ORD-87) — never a silent blank that could be mistaken for
+  // an unfinished audit. phraseBound is read off the row's own field
+  // (parsedRows.phraseBound), not comment text, since the field can't
+  // drift out of sync with a comment someone forgot to update.
   it('flags every row with an empty imperativ with an explanatory comment, rather than leaving it silently blank', () => {
     const unexplained = parsedRows.filter(
       (r) =>
         r.imperativ === '' &&
+        r.phraseBound === undefined &&
         !/modal verb/i.test(r.commentBlock) &&
         !/NEEDS HUMAN CHECK/i.test(r.commentBlock),
     );
@@ -300,13 +318,16 @@ describe('VERB_DATA - imperativ audit (issue #132)', () => {
   );
 
   // The audit is complete: every row's imperativ is either a real,
-  // non-empty Swedish form, or empty with one of the two allowed
-  // explanations pinned above.
+  // non-empty Swedish form, or empty with one of the three allowed
+  // explanations pinned above (modal verb, NEEDS HUMAN CHECK, or the row's
+  // own phraseBound field).
   it('has an imperativ audit comment (or a real value) for every row - no unexplained gaps remain', () => {
     for (const row of parsedRows) {
       if (row.imperativ === '') {
         expect(
-          /modal verb/i.test(row.commentBlock) || /NEEDS HUMAN CHECK/i.test(row.commentBlock),
+          row.phraseBound !== undefined ||
+            /modal verb/i.test(row.commentBlock) ||
+            /NEEDS HUMAN CHECK/i.test(row.commentBlock),
         ).toBe(true);
       } else {
         expect(row.imperativ.length).toBeGreaterThan(0);
@@ -1355,4 +1376,36 @@ describe('issue #369 - top-12 base verbs for particle-verb unblocking (PR #382)'
       expect(supinum).toBe(expected.supinum);
     },
   );
+});
+
+// ORD-87 (docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md):
+// phraseBound, phraseFrame and phraseExample are meant to travel together —
+// a phraseBound row is what releases its presens/preteritum/supinum items,
+// so a row flagged phraseBound without both strings is incomplete, not
+// shippable (per the field comment on VerbData.phraseBound). swedish-linguist
+// verified this invariant manually for the four current rows; pin it so a
+// future edit that adds a phraseBound row (or removes a frame/example from
+// one) fails loudly instead of shipping a half-frame.
+describe('VERB_DATA - phraseBound / phraseFrame / phraseExample travel together (ORD-87)', () => {
+  it('every phraseBound row carries both a non-empty phraseFrame and a non-empty phraseExample', () => {
+    const incomplete = VERB_DATA.filter(
+      (v) => v.phraseBound && (!v.phraseFrame?.trim() || !v.phraseExample?.trim()),
+    );
+    expect(incomplete.map((v) => v.infinitive)).toEqual([]);
+  });
+
+  it('no row carries phraseFrame or phraseExample without phraseBound', () => {
+    const orphaned = VERB_DATA.filter((v) => !v.phraseBound && (v.phraseFrame || v.phraseExample));
+    expect(orphaned.map((v) => v.infinitive)).toEqual([]);
+  });
+
+  // Regression: pins the exact four rows the doc names, so silently adding
+  // or dropping a phraseBound row is caught even though the two invariants
+  // above would stay green either way.
+  it('flags exactly bry, slappna, piffa, tråka as phraseBound, no more, no fewer', () => {
+    const flagged = VERB_DATA.filter((v) => v.phraseBound)
+      .map((v) => v.infinitive)
+      .sort();
+    expect(flagged).toEqual(['bry', 'piffa', 'slappna', 'tråka']);
+  });
 });
