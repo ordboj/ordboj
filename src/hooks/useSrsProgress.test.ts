@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
+import { useAnswerLog } from '@/hooks/useAnswerLog';
 import { getVerbs, getAllConjugatedVerbs, conjugateVerb, verbs } from '@/lib/verbs';
 import type { ConjugatedVerb, Verb } from '@/lib/verbs';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
+import { ANSWER_LOG_STORAGE_KEY, type AnswerLogEntry } from '@/lib/answerLog';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -1703,5 +1705,191 @@ describe('importData - envelope store-write failure rolls back cleanly (issue #2
     expect(localStorage.getItem('swedish-verbs-settings')).toBe(JSON.stringify({ theme: 'light' }));
     // A rejected import never even attempts to persist the schedule.
     expect(localStorage.getItem(STORAGE_KEY)).toBe(srsStorageSnapshot);
+  });
+});
+
+// Issue #403: the per-answer diagnostic log (src/lib/answerLog.ts,
+// src/hooks/useAnswerLog.ts) is disposable telemetry, not progress, but
+// resetProgress and importData both delete its stored key -- "reset all
+// progress" and "replace the schedule" both make the log's history disagree
+// with the schedule it was describing (decision doc section 6). Deleting the
+// stored key alone is not enough: the SRS hook and the answer-log hook are
+// mounted independently, so a co-mounted useAnswerLog instance would still
+// hold the pre-reset/pre-import entries in memory and write them straight
+// back on its next logAnswer, unless it hears the clear event too.
+function storedLogEntryIds(): string[] {
+  const raw = localStorage.getItem(ANSWER_LOG_STORAGE_KEY);
+  if (raw === null) throw new Error('expected the answer log key to be written');
+  return (JSON.parse(raw) as { entries: AnswerLogEntry[] }).entries.map((e) => e.i);
+}
+
+describe('resetProgress clears the answer log too (issue #403)', () => {
+  it('removes swedish-verbs-answer-log and fires the clear event so a co-mounted useAnswerLog empties its in-memory buffer', async () => {
+    localStorage.setItem(
+      ANSWER_LOG_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        entries: [{ t: 1, i: 'pv:pre-reset', m: 'typed', k: true, f: 0 }],
+      }),
+    );
+
+    // Mounted before the SRS hook, exactly like two independent components
+    // in the real app: this hook's load effect reads the seeded entry into
+    // its own in-memory buffer.
+    const logHook = renderHook(() => useAnswerLog());
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      result.current.resetProgress();
+    });
+
+    expect(localStorage.getItem(ANSWER_LOG_STORAGE_KEY)).toBeNull();
+
+    // If the co-mounted hook's buffer had NOT been cleared, this write
+    // would carry 'pv:pre-reset' along with the new entry.
+    act(() => {
+      logHook.result.current.logAnswer({ i: 'pv:post-reset', m: 'typed', k: true, f: 0 });
+    });
+    logHook.unmount(); // dispose() flushes the pending write synchronously
+
+    expect(storedLogEntryIds()).toEqual(['pv:post-reset']);
+  });
+});
+
+describe('importData clears the answer log too (issue #403)', () => {
+  it('removes swedish-verbs-answer-log and fires the clear event so a co-mounted useAnswerLog empties its in-memory buffer', async () => {
+    localStorage.setItem(
+      ANSWER_LOG_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        entries: [{ t: 1, i: 'pv:pre-import', m: 'typed', k: true, f: 0 }],
+      }),
+    );
+
+    const logHook = renderHook(() => useAnswerLog());
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const validExport = JSON.stringify({
+      version: 2,
+      items: {
+        '1-presens': {
+          itemId: '1-presens',
+          repetitions: 7,
+          intervalDays: 40,
+          easeFactor: 2.1,
+          dueAt: FIXED_NOW,
+          lastGrade: 5,
+        },
+      },
+    });
+
+    let importResult: boolean | undefined;
+    act(() => {
+      importResult = result.current.importData(validExport);
+    });
+    expect(importResult).toBe(true);
+
+    expect(localStorage.getItem(ANSWER_LOG_STORAGE_KEY)).toBeNull();
+
+    // Same proof as resetProgress above: a write from the co-mounted hook
+    // after the import carries only the post-import entry.
+    act(() => {
+      logHook.result.current.logAnswer({ i: 'pv:post-import', m: 'typed', k: true, f: 0 });
+    });
+    logHook.unmount();
+
+    expect(storedLogEntryIds()).toEqual(['pv:post-import']);
+  });
+});
+
+describe('exportData does not carry the answer log (issue #403)', () => {
+  it('the exported envelope has no answer log entry anywhere in it, and still reports version 3', async () => {
+    localStorage.setItem(
+      ANSWER_LOG_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        entries: [{ t: 1, i: 'pv:should-not-export', m: 'typed', k: true, f: 0 }],
+      }),
+    );
+
+    const { result } = renderHook(() => useSrsProgress());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const exported = result.current.exportData();
+    const parsed = JSON.parse(exported);
+
+    expect(parsed.version).toBe(3);
+    expect(parsed.stores).not.toHaveProperty(ANSWER_LOG_STORAGE_KEY);
+    // Belt and braces: the log entry's own id string never appears anywhere
+    // in the exported bytes.
+    expect(exported).not.toContain('pv:should-not-export');
+  });
+});
+
+describe('a throwing answer-log write does not stop the progress store persisting (issue #403, criterion 6)', () => {
+  it('keeps recordAnswer persisting to swedish-verbs-srs-progress when the co-mounted answer log write throws quota exceeded', async () => {
+    // Only the answer-log key is made to throw. The progress store writes
+    // through the same setItem, so a real setItem is required for every
+    // other key or this test would prove nothing about the two stores being
+    // independent.
+    const real = Storage.prototype.setItem;
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+      this: Storage,
+      key: string,
+      value: string,
+    ) {
+      if (key === ANSWER_LOG_STORAGE_KEY) {
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      }
+      real.call(this, key, value);
+    });
+
+    try {
+      // Mounted together, exactly like two independent components in the
+      // real app (same pattern as "resetProgress clears the answer log
+      // too" above).
+      const logHook = renderHook(() => useAnswerLog());
+
+      const { result } = renderHook(() => useSrsProgress());
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(() => {
+        act(() => {
+          logHook.result.current.logAnswer({
+            i: 'pv:quota-during-answer',
+            m: 'typed',
+            k: true,
+            f: 0,
+          });
+          result.current.recordAnswer('1-presens', 5);
+        });
+        // Force the log's pending write to actually hit the throwing
+        // setItem now, inside this act/expect, rather than leaving it
+        // armed on the real 500ms coalesced-writer timer (this suite only
+        // fakes Date, so vi.advanceTimersByTime would not fire it).
+        logHook.unmount();
+      }).not.toThrow();
+
+      // The progress store's own write is still on its real 500ms timer;
+      // wait for it to land rather than asserting on a stale snapshot.
+      await settlePersistence(reflectsRecordedAnswer(1));
+
+      const storedProgress = localStorage.getItem(STORAGE_KEY);
+      expect(storedProgress).not.toBeNull();
+      const parsedProgress = JSON.parse(storedProgress as string) as {
+        items?: Record<string, { repetitions?: number }>;
+      };
+      expect(parsedProgress.items?.['1-presens']?.repetitions).toBe(1);
+
+      // The log write never reached disk: real.call was never invoked for
+      // this key, so it stays exactly as unset as it started.
+      expect(localStorage.getItem(ANSWER_LOG_STORAGE_KEY)).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

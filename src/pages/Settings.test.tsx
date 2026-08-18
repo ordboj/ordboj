@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import Settings from '@/pages/Settings';
@@ -21,6 +21,7 @@ vi.mock('@/hooks/useSettings', () => ({
       showExamples: false,
       autoplayAudio: true,
       muteAudio: false,
+      autoReadAllForms: false,
       dailyGoal: 20,
       get cefrLevels() {
         return mockCefrLevels;
@@ -135,6 +136,7 @@ describe('Settings page - issue #327: 44px touch target on the Switch controls',
   it.each([
     { id: 'show-examples', name: /show example sentences/i },
     { id: 'autoplay-audio', name: /autoplay pronunciation/i },
+    { id: 'auto-read-all-forms', name: /read all forms automatically/i },
   ])('wraps the "$id" switch in a min-h-11 min-w-11 label bound via htmlFor', ({ id, name }) => {
     renderWithProviders(<Settings />, { route: '/settings' });
 
@@ -258,5 +260,66 @@ describe('Settings page - issue #93: guard Reset All Progress with a real confir
     ).not.toBeInTheDocument();
     expect(screen.getByText(/clearing site data/i)).toBeInTheDocument();
     expect(screen.getByText(/export regularly/i)).toBeInTheDocument();
+  });
+});
+
+// Issue #455: the opt-in "Read all forms automatically" switch. The first
+// test uses this file's existing useSettings mock (autoReadAllForms: false
+// in the fixture above). The second test needs a real write to localStorage,
+// which the mock never produces, so it unmocks '@/hooks/useSettings' for the
+// real hook + real store instead - same vi.resetModules/vi.doUnmock +
+// dynamic-import pattern already used for '@/data/verbData' in
+// PracticeCard.test.tsx and '@/lib/verbs' in Progress.placeholders.test.tsx.
+// Kept as the last describe block in the file: nothing after it depends on
+// the mocked '@/hooks/useSettings' being back in place.
+describe('Settings page - issue #455: autoReadAllForms setting', () => {
+  it('renders the switch unchecked when autoReadAllForms is false', () => {
+    renderWithProviders(<Settings />, { route: '/settings' });
+
+    const switchEl = screen.getByRole('switch', { name: /read all forms automatically/i });
+    expect(switchEl).toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('clicking the switch persists autoReadAllForms: true to localStorage and leaves autoplayAudio unchanged', async () => {
+    localStorage.clear();
+    vi.resetModules();
+    vi.doUnmock('@/hooks/useSettings');
+
+    const { default: RealSettings } = await import('@/pages/Settings');
+    const user = userEvent.setup();
+    renderWithProviders(<RealSettings />, { route: '/settings' });
+
+    const switchEl = screen.getByRole('switch', { name: /read all forms automatically/i });
+    expect(switchEl).toHaveAttribute('aria-checked', 'false');
+
+    await user.click(switchEl);
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem('swedish-verbs-settings') as string);
+      expect(stored.settings.autoReadAllForms).toBe(true);
+      // The unrelated autoplayAudio default (true) must survive the write
+      // untouched - this is a merge over the previous settings, not a
+      // replace.
+      expect(stored.settings.autoplayAudio).toBe(true);
+    });
+
+    localStorage.clear();
+    vi.resetModules();
+    vi.doMock('@/hooks/useSettings', () => ({
+      useSettings: () => ({
+        settings: {
+          practiceMode: 'typing',
+          showExamples: false,
+          autoplayAudio: true,
+          muteAudio: false,
+          autoReadAllForms: false,
+          dailyGoal: 20,
+          get cefrLevels() {
+            return mockCefrLevels;
+          },
+        },
+        updateSettings: updateSettingsMock,
+      }),
+    }));
   });
 });
