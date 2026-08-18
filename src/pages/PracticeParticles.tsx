@@ -1,14 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft } from 'lucide-react';
-import { ParticleVerbCard } from '@/components/ParticleVerbCard';
+import { ParticleVerbCard, type ChoiceCommit } from '@/components/ParticleVerbCard';
 import { ReadOnlyBanner } from '@/components/ReadOnlyBanner';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { useAnswerLog } from '@/hooks/useAnswerLog';
 import { buildFreeParticlePractice, type ParticleSittingCard } from '@/lib/particleQueue';
+import { particleItemId } from '@/lib/itemIds';
+import { getVerifiedParticleVerbs } from '@/lib/particleVerbs';
 import type { Grade } from '@/lib/srs';
 
 // A free round never records, so it is a separate kind rather than a flag on
@@ -38,6 +40,21 @@ export default function PracticeParticles() {
   useEffect(() => {
     getSittingRef.current = getParticleSitting;
   }, [getParticleSitting]);
+
+  // Particles the learner has already met: at least one particle-verb item
+  // whose `particle` equals theirs has SRS state in the store, i.e. its
+  // cloze card has been answered at least once
+  // (docs/learning/2026-08-08-discrimination-exercise.md, "introduced").
+  // Feeds the discrimination card's lure eligibility in ParticleVerbCard.
+  const introducedParticles = useMemo(() => {
+    const introduced = new Set<string>();
+    for (const particleEntry of getVerifiedParticleVerbs()) {
+      if (srsStates[particleItemId(particleEntry.id, 'cloze')]) {
+        introduced.add(particleEntry.particle);
+      }
+    }
+    return introduced;
+  }, [srsStates]);
 
   const loadedRef = useRef(false);
   useEffect(() => {
@@ -78,18 +95,18 @@ export default function PracticeParticles() {
     setSessionComplete(false);
   };
 
-  const handleAnswer = (grade: Grade) => {
+  const handleAnswer = (grade: Grade, choice?: ChoiceCommit) => {
     const card = cards[currentIndex];
     if (!card) return;
     // A free round is explicitly not scheduled: recording it would move real
     // intervals for items the learner chose to revisit early, which is the
     // opposite of what "keep practising" should cost them.
     if (card.itemId && sessionKind !== 'free') {
-      // 'typed' is the only modality particle items use in v1: the answer is
-      // two to four characters, so the mobile-friction argument for multiple
-      // choice does not apply, and safe distractors would each need a human
-      // to confirm the wrong particle is impossible in that exact sentence.
-      recordAnswer(card.itemId, grade, 'typed');
+      // `choice` is only ever set by ParticleVerbCard's discrimination-card
+      // Next Card handler; every typed cloze/recall answer omits it, so the
+      // credit path attaches to how the item was actually answered, never to
+      // a settings value (docs/learning/2026-08-08-discrimination-exercise.md).
+      recordAnswer(card.itemId, grade, choice ? 'choice' : 'typed');
       // Diagnostic only (docs/product/2026-08-13-per-answer-review-log-decision.md,
       // section 2): cloze answers only, not recall — no falsifier reads
       // recall data yet. The try/catch below guarantees logAnswer is
@@ -101,13 +118,20 @@ export default function PracticeParticles() {
       // that reaches this card some other way.
       if (card.kind === 'cloze' && card.entry.examples.length > 0) {
         const repetitions = srsStates[card.itemId]?.repetitions ?? 0;
+        const frame = repetitions % card.entry.examples.length;
         try {
-          logAnswer({
-            i: card.itemId,
-            m: 'typed',
-            k: grade === 5,
-            f: repetitions % card.entry.examples.length,
-          });
+          if (choice) {
+            logAnswer({
+              i: card.itemId,
+              m: 'choice',
+              k: grade === 5,
+              f: frame,
+              l: choice.lures,
+              p: choice.tapped,
+            });
+          } else {
+            logAnswer({ i: card.itemId, m: 'typed', k: grade === 5, f: frame });
+          }
         } catch {
           // Swallowed intentionally: a diagnostic sink must never block
           // practice flow.
@@ -200,6 +224,8 @@ export default function PracticeParticles() {
           key={`${currentCard.entry.id}-${currentCard.kind}-${currentIndex}`}
           card={currentCard}
           repetitions={currentCard.itemId ? (srsStates[currentCard.itemId]?.repetitions ?? 0) : 0}
+          introducedParticles={introducedParticles}
+          muteAudio={settings.muteAudio}
           onAcknowledge={advance}
           onAnswer={handleAnswer}
         />
