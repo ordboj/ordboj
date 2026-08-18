@@ -11,6 +11,17 @@ export interface SrsState {
   easeFactor: number;
   dueAt: number;
   lastGrade?: number;
+  // When the learner first *practised* this item (ms since epoch). Stamped by
+  // calculateNextReview on the first recorded answer and never rewritten
+  // after that; deliberately NOT set by initializeSrsState, because eager
+  // initialization at load is not exposure and a pristine item must stay
+  // discardable (see isPristineSrsState). Optional because every store
+  // written before version 4 predates the field; useSrsProgress backfills it
+  // on read (see backfillFirstSeenAt there). Consumed by the particle
+  // introduction spacing rule (isBaseRecentlyUsed in particleQueue.ts):
+  // decision 2 of
+  // docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md.
+  firstSeenAt?: number;
 }
 
 // The UI (PracticeCard.tsx) only ever emits a binary correct/incorrect
@@ -131,6 +142,10 @@ export function calculateNextReview(
     easeFactor,
     dueAt,
     lastGrade: grade,
+    // First recorded answer stamps the first-exposure instant; every later
+    // answer preserves the original value. Write-once by construction: the
+    // ?? only fires while the field is absent.
+    firstSeenAt: state.firstSeenAt ?? now,
   };
 }
 
@@ -140,6 +155,24 @@ function startOfNextLocalDay(timestamp: number): number {
   // day; Date handles DST, so this is correct on 23- and 25-hour days.
   d.setHours(24, 0, 0, 0);
   return d.getTime();
+}
+
+// 00:00.000 of the local calendar day containing `timestamp`. Same
+// convention as startOfNextLocalDay/endOfLocalDay: the browser's local
+// timezone via Date, which handles DST on 23- and 25-hour days.
+export function startOfLocalDay(timestamp: number): number {
+  const d = new Date(timestamp);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+// Whole local calendar days from `earlier` to `later` (negative when
+// `later` is the earlier instant). Day-boundary semantics, not 24-hour
+// arithmetic: 23:59 to 00:01 across midnight is 1 day. The Math.round
+// absorbs the ±1 h a DST transition puts between two local midnights, so a
+// 7-day span containing the fall-back day still counts as exactly 7.
+export function localCalendarDaysBetween(earlier: number, later: number): number {
+  return Math.round((startOfLocalDay(later) - startOfLocalDay(earlier)) / (24 * 60 * 60 * 1000));
 }
 
 // Initialize new SRS item
@@ -174,6 +207,7 @@ const KNOWN_SRS_FIELDS = new Set([
   'easeFactor',
   'dueAt',
   'lastGrade',
+  'firstSeenAt',
 ]);
 
 export function isPristineSrsState(state: SrsState, now: number): boolean {
@@ -181,6 +215,12 @@ export function isPristineSrsState(state: SrsState, now: number): boolean {
   if (state.intervalDays !== 0) return false;
   if (state.easeFactor !== INITIAL_EASE_FACTOR) return false;
   if (state.lastGrade !== undefined) return false;
+  // A first-exposure stamp is learning history (it drives the particle
+  // introduction window), and re-initialization cannot reproduce it, so its
+  // presence alone makes the item worth persisting. In practice it never
+  // coexists with an otherwise-pristine state — calculateNextReview writes
+  // it together with lastGrade — but if it ever does, keep it.
+  if (state.firstSeenAt !== undefined) return false;
   if (!Number.isFinite(state.dueAt) || state.dueAt > now) return false;
   return Object.keys(state).every((field) => KNOWN_SRS_FIELDS.has(field));
 }
@@ -358,7 +398,7 @@ export function isSrsState(value: unknown): value is SrsState {
 // microseconds lands here), not a schedule.
 const MAX_PLAUSIBLE_DUE_AT = Date.UTC(2200, 0, 1);
 
-// Version-3 flavour of isSrsState. Two differences, both deliberate:
+// Version-3/4 flavour of isSrsState. Differences, all deliberate:
 //
 //  - `itemId` is no longer required. v3 stores the id once, as the map key,
 //    so a v3 export legitimately has no itemId field; requiring it would
@@ -367,9 +407,13 @@ const MAX_PLAUSIBLE_DUE_AT = Date.UTC(2200, 0, 1);
 //    non-empty string.
 //  - `dueAt` is range-checked, not merely finite. This is the "dueAt
 //    plausible" clause of issue #53.
+//  - `firstSeenAt` (new in v4) is optional — a v3 item legitimately lacks
+//    it — but when present it must be a plausible past-or-present instant,
+//    range-checked the same way dueAt is.
 //
 // isSrsState above is left exactly as it was and still guards v1/v2
-// payloads, which really do always carry an itemId.
+// payloads, which really do always carry an itemId and never carried
+// firstSeenAt.
 export function isStoredSrsState(value: unknown): value is SrsState {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const state = value as Record<string, unknown>;
@@ -384,5 +428,13 @@ export function isStoredSrsState(value: unknown): value is SrsState {
     return false;
   }
   if (state.lastGrade !== undefined && !isFiniteNumber(state.lastGrade)) return false;
+  if (
+    state.firstSeenAt !== undefined &&
+    (!isFiniteNumber(state.firstSeenAt) ||
+      state.firstSeenAt < 0 ||
+      state.firstSeenAt > MAX_PLAUSIBLE_DUE_AT)
+  ) {
+    return false;
+  }
   return true;
 }

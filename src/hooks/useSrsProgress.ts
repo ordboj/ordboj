@@ -70,7 +70,27 @@ const LEGACY_BACKUP_KEY = PRE_V3_SRS_BACKUP_KEY;
 // them apart, so the field name and the monotonic counter are kept and only
 // the item shape changes. Flagged for staff-engineer / product-manager
 // sign-off in the PR rather than decided here.
-export const STORAGE_VERSION = 3;
+//
+// Version 4 (ORD-88, decision 2 of
+// docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md)
+// adds one optional field to the item shape: `firstSeenAt`, the instant of
+// the item's first recorded answer, stamped by calculateNextReview and never
+// rewritten. It drives the particle introduction-spacing rule (a base is
+// blocked for exactly 7 calendar days from a sibling's first exposure —
+// isBaseRecentlyUsed in particleQueue.ts). Purely additive: no key changes,
+// no value rewrites, no items dropped. Items written before v4 lack the
+// field and are backfilled on read — see backfillFirstSeenAt below. The
+// bump still matters: the #241 forward-compat guard makes a v3 build treat
+// a v4 store as read-only instead of persisting over data whose meaning it
+// cannot see.
+export const STORAGE_VERSION = 4;
+
+// The pre-v3 safety copy (LEGACY_BACKUP_KEY) captures the payload of the
+// *v2→v3 re-keying* migration only — the one migration that rewrote keys
+// and dropped fields. A store already at or past this version must never be
+// written there: v3→v4 is additive, and clobbering the key's meaning would
+// make the one backup that exists describe the wrong migration.
+const PRE_V3_BACKUP_BELOW_VERSION = 3;
 
 // The ease rebase belongs to the v1 -> v2 upgrade only. Anything already
 // stamped version 2 or later was written by the flat-delta scheduler and
@@ -158,7 +178,64 @@ function migrateConjugationKeys(
   return migrated;
 }
 
-// What actually goes to disk under version 3: no `itemId` (it is the key),
+// v3 → v4 forward migration: backfill `firstSeenAt` onto practised items
+// that predate the field.
+//
+// The backfill rule, chosen so it can be reasoned about offline with no
+// guessing:
+//
+//   firstSeenAt := clamp(0, now, dueAt - intervalDays * 24h)
+//
+// `dueAt` was written as answer-instant + intervalDays*24h (then clamped
+// forward to at most the next local midnight — calculateNextReview), so
+// `dueAt - intervalDays*24h` reconstructs the item's *last* answer to
+// within a day, from nothing but the two scheduling fields every stored
+// item carries. The true first exposure is at or before that instant, so
+// this estimate errs late — recent — which for the only consumer (the
+// 7-day particle introduction window in isBaseRecentlyUsed) errs towards
+// blocking a base slightly longer, never towards introducing an
+// interfering sibling early. The error is bounded: it over-blocks for at
+// most 7 days after the migration and only for bases whose sibling was
+// answered within the last 7 days; every item practised after the bump
+// carries an exact stamp. The clamp floors a negative result at 0 and
+// caps a future estimate (an item with a hand-seeded far-future dueAt) at
+// `now`, so a backfilled value is always a plausible past instant.
+//
+// Untouched-looking items (repetitions 0, intervalDays 0, no lastGrade —
+// e.g. eagerly-initialized conjugation items persisted by the v2 schema, or
+// e2e seeds with only a schedule) are skipped: they record no practice, so
+// there is no first exposure to reconstruct, and inventing one would block
+// particle bases on data that means nothing. Real practice always writes
+// lastGrade and an interval of at least 1.
+//
+// Idempotent (an existing firstSeenAt is never rewritten), and — like
+// migrateConjugationKeys above — run on every read rather than once at the
+// version bump, so a store that missed the bump (an imported v3 backup, a
+// quarantine entry recovered by a later build) repairs itself whenever it
+// is next loaded.
+function backfillFirstSeenAt(
+  items: Record<string, SrsState>,
+  now: number,
+): Record<string, SrsState> {
+  const backfilled: Record<string, SrsState> = {};
+  for (const [itemId, state] of Object.entries(items)) {
+    if (
+      state.firstSeenAt !== undefined ||
+      (state.repetitions === 0 && state.intervalDays === 0 && state.lastGrade === undefined)
+    ) {
+      backfilled[itemId] = state;
+      continue;
+    }
+    const lastAnswerEstimate = state.dueAt - state.intervalDays * 24 * 60 * 60 * 1000;
+    backfilled[itemId] = {
+      ...state,
+      firstSeenAt: Math.min(now, Math.max(0, lastAnswerEstimate)),
+    };
+  }
+  return backfilled;
+}
+
+// What actually goes to disk since version 3: no `itemId` (it is the key),
 // and no untouched item (it is derivable - see isPristineSrsState). Anything
 // this build does not recognize on an item survives the round trip via
 // spread.
@@ -292,14 +369,18 @@ function parseStoredProgress(raw: string): ParsedProgress {
 //   no version field -> legacy v1 bare map, ease rebase applied
 //   version 1         -> envelope form of v1, ease rebase applied
 //   version 2         -> flat-delta scheduler, every item carries itemId
-//   version 3         -> current shape: itemId optional, dueAt range-checked
-//   version > 3       -> written by a newer build; rejected rather than
+//   version 3         -> itemId optional, dueAt range-checked
+//   version 4         -> current shape: v3 plus the optional firstSeenAt
+//                        first-exposure stamp
+//   version > 4       -> written by a newer build; rejected rather than
 //                        guessed at, since the migration cannot be reasoned
 //                        about here. The user's current store is left alone.
 //
 // Whatever the version, the keys are then run through
-// migrateConjugationKeys: a backup taken before the id-scheme change is
-// still a valid backup and must land on today's keys.
+// migrateConjugationKeys — a backup taken before the id-scheme change is
+// still a valid backup and must land on today's keys — and then through
+// backfillFirstSeenAt, so a pre-v4 backup restores with the same derived
+// first-exposure stamps a pre-v4 store gets at load.
 //
 // Takes the already-parsed JSON value (not the raw text) because importData
 // parses once and first routes the value through readAppBackup to decide
@@ -377,7 +458,7 @@ function validateImportedProgress(
   }
 
   const rebased = needsEaseRebase ? rebaseLegacyEase(validated) : validated;
-  return migrateConjugationKeys(rebased, canonicalVerbIds);
+  return backfillFirstSeenAt(migrateConjugationKeys(rebased, canonicalVerbIds), Date.now());
 }
 
 // One conjugation item: a (verb, form) pair. Kept as the hook's public item
@@ -447,17 +528,25 @@ export function useSrsProgress(cefrLevels?: string[]) {
 
       // Re-key before anything else looks at the map, so every consumer -
       // eager init, due filtering, the save effect - sees one id scheme.
+      // Then the v4 firstSeenAt backfill, which needs the final keys.
       const canonicalVerbIds = (await getVerbs()).map((verb) => verb.id);
       canonicalVerbIdsRef.current = canonicalVerbIds;
-      const migratedItems = migrateConjugationKeys(loaded.items, canonicalVerbIds);
+      const migratedItems = backfillFirstSeenAt(
+        migrateConjugationKeys(loaded.items, canonicalVerbIds),
+        Date.now(),
+      );
 
       // Keep the pre-v3 bytes verbatim before the first v3 write replaces
       // them. Written once and never overwritten, so a second launch cannot
-      // clobber the pre-migration copy with a post-migration one.
+      // clobber the pre-migration copy with a post-migration one. Guarded
+      // on PRE_V3_BACKUP_BELOW_VERSION, not STORAGE_VERSION: a v3 store
+      // upgrading to v4 must never land here — this key means "bytes as
+      // they were before the v3 re-keying", and only that.
       if (
         stored !== null &&
         !fromNewerBuild &&
-        (loaded.storedVersion === undefined || loaded.storedVersion < STORAGE_VERSION) &&
+        (loaded.storedVersion === undefined ||
+          loaded.storedVersion < PRE_V3_BACKUP_BELOW_VERSION) &&
         localStorage.getItem(LEGACY_BACKUP_KEY) === null
       ) {
         try {

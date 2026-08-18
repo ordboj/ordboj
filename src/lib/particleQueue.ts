@@ -1,4 +1,4 @@
-import { isDue, type SrsState } from '@/lib/srs';
+import { isDue, localCalendarDaysBetween, type SrsState } from '@/lib/srs';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
 import { verbs, type Form } from '@/lib/verbs';
 import { getVerifiedParticleVerbs, hasRecallItem } from '@/lib/particleVerbs';
@@ -196,24 +196,91 @@ export function orderForIntroduction(
 // "Never introduce two particle verbs sharing a base verb within a week"
 // (semantic-set interference; bygga upp / bygga ut is the case it guards).
 //
-// Derived from the sibling's own schedule rather than from a stored
-// introduction date, so the rule costs no new storage: a cloze at
-// repetitions 0 or 1 is at most a day or so old, and reaching repetitions 2
-// takes the 1-day and then 6-day intervals — about a week. The known
-// inaccuracy is that a lapse resets repetitions and re-blocks the base; that
-// errs towards spacing things further apart, never towards introducing an
-// interfering pair, so it fails in the safe direction.
+// Decision 2 of
+// docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md,
+// with the human rulings applied: the window is exactly 7 calendar days,
+// measured from the sibling's *first exposure* (`firstSeenAt`, stamped on
+// the sibling cloze's first recorded answer), not from its current mastery.
+// The previous proxy — sibling cloze at repetitions < 2 blocks the base —
+// measured mastery where the rule means recency, so every lapse on a met
+// sibling re-blocked its base (~22% of days on an 18-entry base like `ta`)
+// while a sibling stuck at repetitions 1 blocked forever.
+//
+// Day arithmetic is calendar-local (localCalendarDaysBetween in srs.ts, the
+// same local-day convention as isDue's end-of-day boundary), so DST days
+// and the exact time of day cannot shift the window: a sibling first seen
+// on local day D blocks its base on days D..D+6 and frees it on D+7.
+//
+// The repetitions fallback survives only for a sibling state that carries
+// no firstSeenAt. Post-migration (useSrsProgress backfills the field on
+// read) that is limited to states injected without it — e2e seeds, hand
+// edits — and for those the old proxy still fails in the safe direction.
+export const BASE_INTRODUCTION_WINDOW_DAYS = 7;
+
 export function isBaseRecentlyUsed(
   entry: ParticleVerbData,
   srsStates: Record<string, SrsState>,
   entries: ParticleVerbData[],
+  now: number = Date.now(),
 ): boolean {
   return entries.some((other) => {
     if (other.id === entry.id) return false;
     if (other.baseInfinitive !== entry.baseInfinitive) return false;
     const state = srsStates[particleItemId(other.id, 'cloze')];
-    return state !== undefined && state.repetitions < RECALL_UNLOCK_REPETITIONS;
+    if (state === undefined) return false;
+    if (state.firstSeenAt === undefined) {
+      return state.repetitions < RECALL_UNLOCK_REPETITIONS;
+    }
+    return localCalendarDaysBetween(state.firstSeenAt, now) < BASE_INTRODUCTION_WINDOW_DAYS;
   });
+}
+
+// Decision 2, rule 3 ("Within a sitting"): no two cards sharing a
+// baseInfinitive may be adjacent; reorder to satisfy it, never drop a card.
+//
+// Greedy separation over one segment of the sitting. At each position it
+// takes the earliest card whose base differs from the previous card's,
+// preferring the most frequent remaining base — pulling the dense base
+// (e.g. an all-`ta` review pile) forward is what leaves enough spacers to
+// finish without a forced adjacency, and when all counts are 1 the earliest
+// card wins, so a segment with no repeated bases keeps its original order.
+// When every remaining card shares the previous base the adjacency is
+// unsatisfiable (e.g. three due `ta` reviews and one other) and the card is
+// served anyway: the rule reorders, it never drops a due review.
+function separateSameBaseNeighbors(
+  cards: ParticleSittingCard[],
+  previousBase: string | undefined,
+): ParticleSittingCard[] {
+  const remaining = [...cards];
+  const ordered: ParticleSittingCard[] = [];
+  let prev = previousBase;
+  while (remaining.length > 0) {
+    const counts = new Map<string, number>();
+    for (const card of remaining) {
+      const base = card.entry.baseInfinitive;
+      counts.set(base, (counts.get(base) ?? 0) + 1);
+    }
+    let pick = -1;
+    let pickCount = -1;
+    for (let i = 0; i < remaining.length; i++) {
+      const card = remaining[i];
+      if (card === undefined) continue;
+      const base = card.entry.baseInfinitive;
+      if (base === prev) continue;
+      const count = counts.get(base) ?? 0;
+      // Strict >: the earliest card among the most frequent bases wins.
+      if (count > pickCount) {
+        pick = i;
+        pickCount = count;
+      }
+    }
+    if (pick === -1) pick = 0;
+    const [card] = remaining.splice(pick, 1);
+    if (card === undefined) break;
+    ordered.push(card);
+    prev = card.entry.baseInfinitive;
+  }
+  return ordered;
 }
 
 // Builds one particle sitting.
@@ -309,7 +376,7 @@ export function buildParticleSitting({
   for (const entry of orderForIntroduction(introductionCandidates, srsStates)) {
     if (remaining <= 0) break;
     if (srsStates[particleItemId(entry.id, 'cloze')]) continue;
-    if (isBaseRecentlyUsed(entry, srsStates, entries)) continue;
+    if (isBaseRecentlyUsed(entry, srsStates, entries, now)) continue;
     // A base verb introduced earlier in *this* sitting blocks its siblings
     // too; the stored-state check above cannot see it yet.
     if (introductions.some((card) => card.entry.baseInfinitive === entry.baseInfinitive)) continue;
@@ -345,8 +412,51 @@ export function buildParticleSitting({
     });
   });
 
+  // --- no-adjacent-same-base ordering (decision 2, rule 3) ----------------
+  // Segments that cannot contain an internal same-base pair are left alone:
+  // introductions and first clozes each carry pairwise-distinct bases by
+  // construction (the same-sitting base block in the introductions loop
+  // above). The middle — reviews plus recall unlocks — can repeat a base, so
+  // it is reordered, seeded with the last introduction's base to cover the
+  // introductions→middle boundary. Reorder only: the same cards, so
+  // reviewsDue, the goal accounting and the intervening-item counts (which
+  // use middle *length*, not order) are all untouched.
+  const lastIntroBase = introductions[introductions.length - 1]?.entry.baseInfinitive;
+  const middle = separateSameBaseNeighbors([...reviews, ...recallUnlocks], lastIntroBase);
+
+  // The middle→first-cloze boundary. firstClozes cannot be permuted — each
+  // one's position carries the intervening-item floor checked at placement,
+  // and its own introduction's index feeds that count — so when the middle
+  // ends on the first cloze's base, swap that last middle card with an
+  // earlier one, provided the swap creates no new adjacency at either
+  // position. If no candidate fits, the adjacency stands: never drop.
+  const firstClozeBase = firstClozes[0]?.entry.baseInfinitive;
+  const last = middle.length - 1;
+  if (firstClozeBase !== undefined && middle[last]?.entry.baseInfinitive === firstClozeBase) {
+    const baseAt = (index: number): string | undefined =>
+      index === -1 ? lastIntroBase : middle[index]?.entry.baseInfinitive;
+    for (let k = last - 1; k >= 0; k--) {
+      const candidate = middle[k];
+      const lastCard = middle[last];
+      if (candidate === undefined || lastCard === undefined) break;
+      const candidateBase = candidate.entry.baseInfinitive;
+      const movedBase = lastCard.entry.baseInfinitive;
+      if (candidateBase === firstClozeBase) continue;
+      // Neighbours as they will stand after the swap; an adjacent swap
+      // (k === last - 1) makes the two swapped cards each other's neighbour.
+      const adjacentSwap = k === last - 1;
+      const leftOfLastAfter = adjacentSwap ? movedBase : baseAt(last - 1);
+      const rightOfKAfter = adjacentSwap ? candidateBase : baseAt(k + 1);
+      if (candidateBase === leftOfLastAfter) continue;
+      if (movedBase === baseAt(k - 1) || movedBase === rightOfKAfter) continue;
+      middle[k] = lastCard;
+      middle[last] = candidate;
+      break;
+    }
+  }
+
   return {
-    cards: [...introductions, ...reviews, ...recallUnlocks, ...firstClozes],
+    cards: [...introductions, ...middle, ...firstClozes],
     reviewsDue,
     newAllowedToday,
     deferredFirstClozes,
