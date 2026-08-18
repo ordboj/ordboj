@@ -190,11 +190,10 @@ export function ParticleVerbCard({
       if (showFeedback) return;
       setSelectedParticle(option.particle);
       setIsCorrect(option.correct);
-      setSubmittedAnswer(`${entry.baseInfinitive} ${option.particle}`);
       setShowFeedback(true);
       if (option.correct) setShowConfetti(true);
     },
-    [showFeedback, entry.baseInfinitive],
+    [showFeedback],
   );
 
   // Auto-submit on an exact match, suppressed while the typed value is a
@@ -472,7 +471,7 @@ export function ParticleVerbCard({
               {/* Names the whole accepted set rather than only the
                   alternates, so a learner who typed one of them is not shown
                   their own answer as though it were a correction (P6). */}
-              {kind === 'cloze' && disclosure && (
+              {kind === 'cloze' && disclosure && !discriminationVariant && (
                 <p className="text-sm text-muted-foreground text-center">{disclosure}</p>
               )}
 

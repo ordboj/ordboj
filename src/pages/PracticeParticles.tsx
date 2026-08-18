@@ -43,7 +43,7 @@ export default function PracticeParticles() {
 
   // Particles the learner has already met: at least one particle-verb item
   // whose `particle` equals theirs has SRS state in the store, i.e. its
-  // cloze card has been presented at least once
+  // cloze card has been answered at least once
   // (docs/learning/2026-08-08-discrimination-exercise.md, "introduced").
   // Feeds the discrimination card's lure eligibility in ParticleVerbCard.
   const introducedParticles = useMemo(() => {
