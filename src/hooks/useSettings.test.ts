@@ -13,6 +13,7 @@ const DEFAULTS = {
   showExamples: false,
   autoplayAudio: true,
   muteAudio: false,
+  autoReadAllForms: false,
   dailyGoal: 20,
   // Particle mode's own budget, stored independently of dailyGoal (#245).
   particleDailyGoal: 12,
@@ -153,9 +154,10 @@ describe('#240: settings store versioning', () => {
       showExamples: true,
       autoplayAudio: false,
       muteAudio: true,
-      dailyGoal: 33,
       // Not in the stored object: a key added after this store was written
       // arrives from the defaults, which is exactly what the merge is for.
+      autoReadAllForms: DEFAULTS.autoReadAllForms,
+      dailyGoal: 33,
       particleDailyGoal: DEFAULTS.particleDailyGoal,
       cefrLevels: ['A2', 'B1'],
     });
@@ -174,6 +176,7 @@ describe('#240: settings store versioning', () => {
         showExamples: true,
         autoplayAudio: false,
         muteAudio: false,
+        autoReadAllForms: DEFAULTS.autoReadAllForms,
         dailyGoal: 33,
         particleDailyGoal: DEFAULTS.particleDailyGoal,
         cefrLevels: ['A2', 'B1'],
@@ -545,5 +548,108 @@ describe('#300: zod/v4-mini schema checks', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.settings.dailyGoal).toBe(20);
+  });
+});
+
+describe('#455: autoReadAllForms forward migration', () => {
+  it('defaults a legacy bare payload with no autoReadAllForms to false and leaves the other fields untouched', async () => {
+    // A store written before #455 shipped: no version envelope, and no
+    // autoReadAllForms key at all.
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        practiceMode: 'multiple-choice',
+        showExamples: true,
+        autoplayAudio: false,
+        muteAudio: true,
+        dailyGoal: 33,
+        cefrLevels: ['A2', 'B1'],
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings).toEqual({
+      practiceMode: 'multiple-choice',
+      showExamples: true,
+      autoplayAudio: false,
+      muteAudio: true,
+      autoReadAllForms: false,
+      dailyGoal: 33,
+      particleDailyGoal: DEFAULTS.particleDailyGoal,
+      cefrLevels: ['A2', 'B1'],
+    });
+  });
+
+  it('defaults autoReadAllForms to false when a v1 envelope predates the key', async () => {
+    // A v1 envelope written after #240's versioning shipped but before #455
+    // added this field: the envelope shape is current, the key just isn't
+    // there yet.
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: SETTINGS_STORAGE_VERSION,
+        settings: {
+          practiceMode: 'multiple-choice',
+          showExamples: true,
+          autoplayAudio: false,
+          muteAudio: true,
+          dailyGoal: 33,
+          particleDailyGoal: 12,
+          cefrLevels: ['A2', 'B1'],
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.autoReadAllForms).toBe(false);
+  });
+
+  it('repairs a stored non-boolean autoReadAllForms back to false while sibling fields survive unchanged', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: SETTINGS_STORAGE_VERSION,
+        settings: {
+          ...DEFAULTS,
+          autoReadAllForms: 'yes',
+          dailyGoal: 17,
+          practiceMode: 'multiple-choice',
+          cefrLevels: ['B2'],
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // The corrupt field falls back to its default...
+    expect(result.current.settings.autoReadAllForms).toBe(false);
+    // ...while every sibling field that did validate survives untouched.
+    expect(result.current.settings.dailyGoal).toBe(17);
+    expect(result.current.settings.practiceMode).toBe('multiple-choice');
+    expect(result.current.settings.cefrLevels).toEqual(['B2']);
+  });
+
+  it('keeps an unknown future key untouched alongside a valid autoReadAllForms: true', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULTS,
+        autoReadAllForms: true,
+        someFutureField: 'from-a-newer-build',
+      }),
+    );
+
+    const { result } = renderHook(() => useSettings());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.autoReadAllForms).toBe(true);
+    expect((result.current.settings as unknown as Record<string, unknown>).someFutureField).toBe(
+      'from-a-newer-build',
+    );
   });
 });
