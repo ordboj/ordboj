@@ -71,6 +71,35 @@ export function getPhraseBound(infinitive: string): PhraseBound | undefined {
   return VERB_DATA.find((v) => v.infinitive === infinitive)?.phraseBound;
 }
 
+// Everything a card needs in order to show a phraseBound verb's phrase.
+// Both strings are authored per row in VERB_DATA and are the only Swedish
+// the renderer shows for the frame: it concatenates nothing, inflects
+// nothing and supplies no pronoun of its own.
+export interface PhraseFrame {
+  // 'reflexive' | 'particle' — what the frame's open slot or fixed word is,
+  // for callers that style the two differently. Not a rendering
+  // instruction: `frame` is already the finished string.
+  kind: PhraseBound;
+  // Retrieval-side cue, e.g. "bry ___ om" or "slappna av". Context only —
+  // it is never part of the expected answer, which stays the bare
+  // conjugated form, so it must not be rendered inside the answer blank.
+  frame: string;
+  // Post-grading first-person example, e.g. "Jag bryr mig om mina
+  // grannar." Shown after the answer is graded, never during retrieval.
+  example: string;
+}
+
+// The frame cue for a phraseBound verb, or null when the verb is ordinary,
+// unknown, or flagged phraseBound without both strings authored. Null means
+// "render no frame": a half-frame (a cue with no example, or a phraseBound
+// verb with no cue at all) is the case Decision 1 holds items back for, so
+// it is reported as absent rather than patched up here.
+export function getPhraseFrame(infinitive: string): PhraseFrame | null {
+  const verb = VERB_DATA.find((v) => v.infinitive === infinitive);
+  if (!verb?.phraseBound || !verb.phraseFrame || !verb.phraseExample) return null;
+  return { kind: verb.phraseBound, frame: verb.phraseFrame, example: verb.phraseExample };
+}
+
 // Documented alternate accepted forms for a verb + form, e.g. "lade" for
 // lägga's preteritum alongside the primary stored form "la". Returns [] for
 // verbs not found, forms with no documented alternate (the common case),

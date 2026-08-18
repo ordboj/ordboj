@@ -57,7 +57,39 @@ export interface VerbData {
   // The pronoun/particle is never stored inside a form (a stored "bryr
   // sig" would teach *jag bryr sig); the frame belongs to the presentation
   // layer. Omitted (undefined) is the correct value for every other row.
+  // A phraseBound row must also carry phraseFrame and phraseExample below;
+  // the frame is what releases its presens/preteritum/supinum items into
+  // the pool, so a row flagged without them is incomplete, not shippable.
   phraseBound?: 'reflexive' | 'particle';
+  // Retrieval-side frame cue for a phraseBound verb: the phrase the verb
+  // lives in, shown as context beside the blank the learner fills. Set only
+  // together with phraseBound.
+  //
+  // Shape, per the "frame cue, specified" section of docs/learning/
+  // 2026-08-17-reflexive-only-verbs-and-entries-per-base.md: a reflexive
+  // frame leaves the pronoun as an open slot ("bry ___ om") rather than
+  // printing "sig", because a printed "sig" is right in the third person
+  // only and this is the pronoun a learner most often gets wrong; a
+  // particle frame prints the particle, which does not inflect ("slappna
+  // av"). The verb appears in the frame in its infinitive shape on purpose:
+  // the card already shows the infinitive as the prompt, so the frame adds
+  // the phrase context without leaking the presens/preteritum/supinum form
+  // the learner has to produce.
+  //
+  // It is context, never part of the accepted answer: the answer stays the
+  // bare conjugated form. The renderer must present it as such (a labelled
+  // cue, visually distinct from the answer blank), and it composes no
+  // Swedish of its own — every Swedish string it shows comes from here.
+  phraseFrame?: string;
+  // One first-person example sentence for a phraseBound verb, shown after
+  // an answer is graded (never during retrieval, per the #43/C2 note
+  // contract). Set only together with phraseBound. First person because
+  // that is the pronoun the learner will actually use: "jag bryr mig",
+  // never the citation "sig" — see renderReflexive in
+  // src/lib/particleVerbs.ts for the same rule in the particle dataset.
+  // One sentence per row, so it is fixed prose rather than an illustration
+  // of the specific form just graded.
+  phraseExample?: string;
   // Recognition-only prose about the lemma, e.g. naming an archaic or
   // colloquial variant ("taga" for "ta"). #43/C2 (docs/learning/
   // 2026-08-08-verb-data-conventions.md): may be shown after an answer is
@@ -1120,7 +1152,10 @@ export const VERB_DATA: VerbData[] = [
   // with its particle; bare "Slappna!" is not Swedish, so no bare answer
   // string is correct. The particle is not stored in any form: it is a
   // frame for the presentation layer, not part of the verb's paradigm.
-  { cefr: "B1", infinitive: "slappna", imperativ: "", presens: "slappnar", preteritum: "slappnade", supinum: "slappnat", grupp: "1", phraseBound: "particle" }, // regular grupp 1 (SAOL slappna/slappnar/slappnade/slappnat, imperativ slappna av). B1 from SVALex slappna+av=b1; the promotion-queue CSV tags the bare lemma C1, which understates it — the forms this row teaches are the ones a learner meets in the everyday "slappna av"
+  // Frame "slappna av": the particle is invariable and always follows the
+  // verb, so printing it costs the learner nothing and names the phrase.
+  // Example is presens, the tense the phrase is overwhelmingly used in.
+  { cefr: "B1", infinitive: "slappna", imperativ: "", presens: "slappnar", preteritum: "slappnade", supinum: "slappnat", grupp: "1", phraseBound: "particle", phraseFrame: "slappna av", phraseExample: "Jag slappnar av när jag lyssnar på musik." }, // regular grupp 1 (SAOL slappna/slappnar/slappnade/slappnat, imperativ slappna av). B1 from SVALex slappna+av=b1; the promotion-queue CSV tags the bare lemma C1, which understates it — the forms this row teaches are the ones a learner meets in the everyday "slappna av"
   // "vika": strong verb, avljud i/e/i (viker/vek/vikit), same pattern as the
   // shipped riva/rev/rivit and skriva/skrev/skrivit. Supinum "vikt" is the
   // documented free variant alongside "vikit" (SAOL 14 "vikit el./äv. vikt",
@@ -1141,7 +1176,10 @@ export const VERB_DATA: VerbData[] = [
   // same decision doc as "slappna" above): the verb occurs only in "piffa
   // upp", so the usable command is "Piffa upp ...!" and bare "Piffa!" is
   // not an utterance. Forms stay bare, the particle stays out of them.
-  { cefr: "C1", infinitive: "piffa", imperativ: "", presens: "piffar", preteritum: "piffade", supinum: "piffat", grupp: "1", phraseBound: "particle" }, // regular grupp 1 (SAOL -ar/-ade/-at), colloquial. C1 from SVALex piffa+upp=c1; no promotion-queue CSV row exists for the bare lemma
+  // Frame "piffa upp". Example is preteritum: "piffa upp" is most often
+  // said of a finished job ("jag piffade upp ..."), and it shows the object
+  // the phrase normally takes, which the bare frame cannot.
+  { cefr: "C1", infinitive: "piffa", imperativ: "", presens: "piffar", preteritum: "piffade", supinum: "piffat", grupp: "1", phraseBound: "particle", phraseFrame: "piffa upp", phraseExample: "Jag piffade upp lägenheten inför festen." }, // regular grupp 1 (SAOL -ar/-ade/-at), colloquial. C1 from SVALex piffa+upp=c1; no promotion-queue CSV row exists for the bare lemma
   // "bry": grupp 3, not 2a — the stem is vowel-final, so the forms are the
   // bo/tro/nå pattern (bry+r, bry+dde, bry+tt), not an -er present. Forms
   // per SAOL: bry/bryr/brydde/brytt. The imperativ stem is "bry", but the
@@ -1166,10 +1204,21 @@ export const VERB_DATA: VerbData[] = [
   // it. That phrase is deliberately NOT a particle-verb
   // entry — see the ORD-72 note in particleVerbData.ts — but the verb still
   // conjugates and belongs here.
-  { cefr: "A2", infinitive: "bry", imperativ: "", presens: "bryr", preteritum: "brydde", supinum: "brytt", grupp: "3", phraseBound: "reflexive", note: "bry is used almost only reflexively, as bry sig (om något). Recognition only: the reflexive pronoun is not part of the stored forms." },
+  // Frame "bry ___ om": the slot is the reflexive pronoun, left open rather
+  // than filled with "sig", which would be correct only in the third person
+  // and is exactly the form a learner over-generalises to *"jag bryr sig".
+  // The preposition "om" is printed because it does not vary. Example is
+  // presens and positive: the negated "jag bryr mig inte om ..." is the
+  // commoner utterance, but a first meeting with the phrase is clearer
+  // without the negation, and it shows "mig" in the slot the frame leaves
+  // open.
+  { cefr: "A2", infinitive: "bry", imperativ: "", presens: "bryr", preteritum: "brydde", supinum: "brytt", grupp: "3", phraseBound: "reflexive", phraseFrame: "bry ___ om", phraseExample: "Jag bryr mig om mina grannar.", note: "bry is used almost only reflexively, as bry sig (om något). Recognition only: the reflexive pronoun is not part of the stored forms." },
   // "tråka" stores imperativ: "" under ORD-87 (phraseBound: 'particle',
   // same decision doc as "slappna" above): the verb occurs only in "tråka
   // ut (någon)", so any command form carries the particle and bare
   // "Tråka!" is not an utterance. Forms stay bare.
-  { cefr: "A2", infinitive: "tråka", imperativ: "", presens: "tråkar", preteritum: "tråkade", supinum: "tråkat", grupp: "1", phraseBound: "particle" }, // regular grupp 1 (SAOL -ar/-ade/-at). A2 from SVALex tråka+ut=a2; no promotion-queue CSV row for the bare lemma. Used almost only in "tråka ut"
+  // Frame "tråka ut". Example is preteritum with a human object, because
+  // "tråka ut" is transitive and always takes one ("tråka ut någon"); a
+  // subjectless frame would leave that unsaid.
+  { cefr: "A2", infinitive: "tråka", imperativ: "", presens: "tråkar", preteritum: "tråkade", supinum: "tråkat", grupp: "1", phraseBound: "particle", phraseFrame: "tråka ut", phraseExample: "Jag tråkade ut mina vänner med semesterbilderna." }, // regular grupp 1 (SAOL -ar/-ade/-at). A2 from SVALex tråka+ut=a2; no promotion-queue CSV row for the bare lemma. Used almost only in "tråka ut"
 ];
