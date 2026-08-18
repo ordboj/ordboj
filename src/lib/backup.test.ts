@@ -282,3 +282,42 @@ describe('restoreAppStores', () => {
     expect(base.getItem('swedish-verbs-b')).toBeNull();
   });
 });
+
+// Issue #455: backup.ts carries the settings store opaquely (decode/encode
+// through JSON, never reading individual fields), so autoReadAllForms needs
+// no special-case handling here - this test is the round-trip proof that
+// holds regardless, the same way the "bare JSON scalar" test above pins the
+// generic contract rather than one field.
+describe('#455: autoReadAllForms survives a whole-app backup + restore round-trip', () => {
+  it('exports swedish-verbs-settings with autoReadAllForms: true and restores it intact into a cleared store', () => {
+    const sourceStorage = new FakeStorage();
+    sourceStorage.setItem(
+      'swedish-verbs-settings',
+      JSON.stringify({
+        version: 1,
+        settings: {
+          practiceMode: 'typing',
+          showExamples: false,
+          autoplayAudio: true,
+          muteAudio: false,
+          autoReadAllForms: true,
+          dailyGoal: 20,
+          particleDailyGoal: 12,
+          cefrLevels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
+        },
+      }),
+    );
+
+    const out = JSON.parse(buildAppBackup({ version: 2, items: {} }, sourceStorage));
+    expect(out.stores['swedish-verbs-settings'].settings.autoReadAllForms).toBe(true);
+
+    // Simulates the storage being cleared (a fresh device, or a reset)
+    // before the restore runs.
+    const destStorage = new FakeStorage();
+    const ok = restoreAppStores(out.stores, destStorage);
+    expect(ok).toBe(true);
+
+    const restored = JSON.parse(destStorage.getItem('swedish-verbs-settings') as string);
+    expect(restored.settings.autoReadAllForms).toBe(true);
+  });
+});
