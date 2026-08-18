@@ -36,13 +36,17 @@ export const meta = {
     {
       title: 'Ticketize',
       detail:
-        'one board scribe per idea, serialized: epic issue + sub-issues created, linked, added to project 1 in Todo',
+        'one board scribe per idea, serialized: epic issue + sub-issues created and linked on GitHub; the lead mirrors them to Linear after the run',
     },
   ],
 };
 
 const REPO = 'ordboj/ordboj';
-const PROJECT = { number: 1, owner: 'ordboj' };
+
+// Cloud containers often lack the gh CLI; agents must not treat that as a blocker.
+const TOOLING = `
+Tooling note: this container may not have the gh CLI. Check once with 'command -v gh'. When gh is missing, perform the same GitHub operations with the session's GitHub MCP tools instead. The absence of gh is never a valid block reason.
+`;
 
 // ---------------------------------------------------------------- args
 
@@ -60,7 +64,16 @@ if (!rawNotes.length || rawNotes.some((n) => typeof n !== 'string' || !n.trim())
     'args.ideas required: array of non-empty free-form idea notes, e.g. { ideas: ["daily streak freeze?", "verb audio on the card"] }',
   );
 
-// Board writes are serialized so two ideas never race gh project item-add.
+// agent() resolves to null when the subagent dies on a terminal error; one
+// re-run converts most of those into results instead of failed/lost ideas.
+async function once(mk) {
+  const first = await mk();
+  if (first !== null && first !== undefined) return first;
+  log('agent returned nothing; retrying once');
+  return mk();
+}
+
+// Board writes are serialized so two ideas never race issue creation.
 const locks = {};
 function withLock(key, fn) {
   const prev = locks[key] || Promise.resolve();
@@ -303,8 +316,9 @@ const TICKETIZE_SCHEMA = {
 // One agent splits the raw notes into distinct idea candidates and dedupes
 // against the live board, so the pipeline never re-litigates a tracked idea.
 
-const intake = await agent(
-  `You receive raw product idea notes for Ordböj (Swedish verb conjugation trainer). The notes can be in any language and one note can contain several distinct ideas.
+const intake = await once(() =>
+  agent(
+    `You receive raw product idea notes for Ordböj (Swedish verb conjugation trainer). The notes can be in any language and one note can contain several distinct ideas.
 
 Notes:
 ${rawNotes.map((n, i) => `--- note ${i + 1} ---\n${n}`).join('\n')}
@@ -315,8 +329,10 @@ Steps:
 3. For each idea write an imperative working title and a 2-4 sentence plain-English summary. Keep the human's exact original wording in 'original' (verbatim, original language).
 4. Dedupe against the board. Run: gh issue list --repo ${REPO} --state open --limit 100 --json number,title,labels
    When an open issue already covers the idea, set existingIssue to its number. Otherwise 0.
+${TOOLING}
 Return only the structured result.`,
-  { label: 'intake', phase: 'Intake', schema: INTAKE_SCHEMA, effort: 'low', model: 'sonnet' },
+    { label: 'intake', phase: 'Intake', schema: INTAKE_SCHEMA, effort: 'low', model: 'sonnet' },
+  ),
 );
 if (!intake || !intake.ideas || !intake.ideas.length)
   throw new Error('intake produced no idea candidates');
@@ -437,8 +453,9 @@ Return only the structured result.`,
 // pursue with a settled scope, reject with a reason, or needs-human with one
 // precise question. Never a vague "maybe".
 function runVerdict(idea, debate) {
-  return agent(
-    `You are the product owner's delegate for Ordböj. Rule on this feature idea. The whole debate is below; you speak last.
+  return once(() =>
+    agent(
+      `You are the product owner's delegate for Ordböj. Rule on this feature idea. The whole debate is below; you speak last.
 
 ${ideaBlock(idea)}
 
@@ -462,7 +479,8 @@ Rules for your ruling:
 - needs-human ONLY when the ruling truly hinges on a fact or preference only the human has — then ask exactly one precise question. Unresolved taste disagreements between agents are yours to settle, not the human's.
 - On pursue: write 'scope' as the settled statement — what ships, what is explicitly cut (including cuts the critic won) — and requirements the owners set that survived the debate. An engineer must know what "done" means from it. Write 'valueStatement' as the one sentence that justifies building it.
 Return only the structured result.`,
-    { label: 'verdict', phase: 'Verdict', schema: VERDICT_SCHEMA, model: 'fable' },
+      { label: 'verdict', phase: 'Verdict', schema: VERDICT_SCHEMA, model: 'fable' },
+    ),
   );
 }
 
@@ -470,8 +488,9 @@ Return only the structured result.`,
 // ticket-pilot can parallelize: disjoint owners AND files inside a batch,
 // dependsOn edges across batches.
 function runFeasibility(idea, verdict) {
-  return agent(
-    `You are the staff engineer for Ordböj. The product verdict approved a feature. Check feasibility and split the work into tickets.
+  return once(() =>
+    agent(
+      `You are the staff engineer for Ordböj. The product verdict approved a feature. Check feasibility and split the work into tickets.
 
 ${ideaBlock(idea)}
 
@@ -486,19 +505,21 @@ Steps:
 3. Split the scope into tickets. Rules:
    - One ticket = one owner. Every file in a ticket belongs to that owner per the CLAUDE.md table. A change that genuinely spans owners becomes multiple tickets with dependsOn edges, not one cross-owner ticket.
    - Slice for parallelism first: prefer vertical slices with disjoint files. Use dependsOn only for real build-order constraints (schema before UI that reads it), never for convenience.
+   - Shared-store rule: two tickets that each add, rename, or remove a field in the same shared store (settings in src/hooks/useSettings.ts; SRS state in src/lib/srs.ts / src/hooks/useSrsProgress.ts) are NEVER in the same batch — give them a dependsOn edge. Parallel additive changes to one store break each other's test fixtures at merge time.
    - parallelGroup: batch 1 = every ticket with no dependencies; batch N+1 = tickets whose dependencies all sit in batches ≤ N. Tickets inside one batch must have disjoint owners AND disjoint files.
    - Any ticket that changes a localStorage shape needs the version bump + forward migration stated IN its acceptance criteria, and risky=true. Same for verb-data content changes.
    - Acceptance criteria are testable statements. A qa engineer must be able to write a failing test from them.
    - When the scope needs a pedagogy or product ruling that the verdict did not settle, make that a 'decision' ticket (owner learning-designer or product-manager) in batch 1 and let implementation tickets depend on it.
 4. storageMigration=true when any ticket touches a localStorage shape.
 Return only the structured result. Do not edit any file; this stage is read-only.`,
-    {
-      label: 'feasibility',
-      phase: 'Feasibility',
-      schema: FEASIBILITY_SCHEMA,
-      agentType: 'staff-engineer',
-      model: 'opus',
-    },
+      {
+        label: 'feasibility',
+        phase: 'Feasibility',
+        schema: FEASIBILITY_SCHEMA,
+        agentType: 'staff-engineer',
+        model: 'opus',
+      },
+    ),
   );
 }
 
@@ -515,9 +536,10 @@ function runTicketize(idea, verdict, feas) {
    dependsOn: ${t.dependsOn.length ? t.dependsOn.map((d) => 'ticket ' + d).join(', ') : 'none'}`,
     )
     .join('\n');
-  return withLock('board', () =>
-    agent(
-      `You are the board scribe for Ordböj, acting on the lead's dispatch. Create an epic and its sub-tickets on GitHub for an approved feature. Use the Bash tool with gh.
+  return once(() =>
+    withLock('board', () =>
+      agent(
+        `You are the board scribe for Ordböj, acting on the lead's dispatch. Create an epic and its sub-tickets on GitHub for an approved feature. Use the Bash tool with gh.
 
 Epic: "${idea.title}"
 Value statement: ${verdict.valueStatement || verdict.rationale}
@@ -538,16 +560,16 @@ Steps:
 3. Create each sub-ticket in the listed order: gh issue create --repo ${REPO} --title "..." --body "..."
    Sub-ticket body, exactly these sections: "Part of #<epic>", Owner: <role>, Acceptance criteria (verbatim from the list), Files: <list>, Depends on: #<numbers of the created dependency tickets, resolved from the dependsOn indices> or "none", Batch: <parallelGroup>. Add "RISKY" plus the reason line when the ticket is marked RISKY.
 4. Edit the epic body so the task list references the real numbers: "- [ ] #<n> <title>" per sub-ticket. Use gh issue edit <epic-number> --repo ${REPO} --body "...".
-5. Add the epic and every sub-ticket to the project: gh project item-add ${PROJECT.number} --owner ${PROJECT.owner} --url <issue-url>
-   New project items land in Todo by default; do not move statuses.
-6. Return epicNumber, epicUrl and the created tickets with number, url, title, owner, parallelGroup.
-${STYLE}`,
-      {
-        label: `ticketize:${idea.title.slice(0, 30)}`,
-        phase: 'Ticketize',
-        schema: TICKETIZE_SCHEMA,
-        model: 'sonnet',
-      },
+5. Return epicNumber, epicUrl and the created tickets with number, url, title, owner, parallelGroup.
+Do not touch the old GitHub Projects board: it is retired, and the Projects v2 API is blocked in this environment. Task status lives in Linear; the LEAD mirrors these issues to Linear after the run.
+${TOOLING}${STYLE}`,
+        {
+          label: `ticketize:${idea.title.slice(0, 30)}`,
+          phase: 'Ticketize',
+          schema: TICKETIZE_SCHEMA,
+          model: 'sonnet',
+        },
+      ),
     ),
   );
 }
@@ -662,4 +684,7 @@ log(
 //    ticket-pilot without the human's explicit yes.
 // 3. Storage-migration epics: remind the human that those merges also need
 //    their explicit schema approval (CLAUDE.md rule).
+// 4. Mirror every created epic and sub-ticket to Linear (CLAUDE.md rule: the
+//    lead creates the Linear issue, status Todo, with the GitHub link in the
+//    description). The GitHub issue is the inbound record; Linear tracks it.
 return summary;

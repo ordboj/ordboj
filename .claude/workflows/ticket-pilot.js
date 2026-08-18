@@ -47,8 +47,19 @@ export const meta = {
 };
 
 const REPO = 'ordboj/ordboj';
-// Per-ticket cap on fix-and-re-review rounds (shared with the one CI-red retry).
+// Per-ticket cap on fix-and-re-review rounds.
 const MAX_REMEDIATIONS = 2;
+
+// agent() resolves to null when the user skips it or the subagent dies on a
+// terminal error. A dead agent used to read as "returned nothing" and park
+// the ticket (PR #467 parked exactly this way). One re-run converts most of
+// those into results.
+async function once(mk) {
+  const first = await mk();
+  if (first !== null && first !== undefined) return first;
+  log('agent returned nothing; retrying once');
+  return mk();
+}
 
 let parsedArgs = args;
 if (typeof parsedArgs === 'string') {
@@ -85,6 +96,11 @@ function withLock(key, fn) {
 
 // ---------------------------------------------------------------- rules
 
+// Cloud containers often lack the gh CLI; agents must not treat that as a blocker.
+const TOOLING = `
+Tooling note: this container may not have the gh CLI. Check once with 'command -v gh'. When gh is missing, perform the same GitHub operations with the session's GitHub MCP tools instead. Git itself (fetch, checkout, commit, push) always works. The absence of gh is never a valid block reason.
+`;
+
 // ASD-STE100 style for every human-visible GitHub text (PR bodies, comments).
 const STYLE = `
 PR-body and comment style (mandatory):
@@ -107,7 +123,7 @@ Hard rules (non-negotiable):
   npm run lint && npm run typecheck && npm test && npm run build
   If a command fails, fix the cause or return blocked. Do not claim completion without evidence.
 - Evidence must state the commit SHA of the branch head (git rev-parse HEAD). Evidence from an older commit is stale and not valid.
-${STYLE}`;
+${TOOLING}${STYLE}`;
 
 // A worktree may not be able to `git checkout <branch>` directly because
 // another active worktree already holds that branch. The standard procedure
@@ -296,8 +312,9 @@ const triaged = (
   await parallel(
     tickets.map(
       (n) => () =>
-        agent(
-          `Read GitHub issue #${n} in ${REPO}: gh issue view ${n} --repo ${REPO} --json title,body,labels
+        once(() =>
+          agent(
+            `Read GitHub issue #${n} in ${REPO}: gh issue view ${n} --repo ${REPO} --json title,body,labels
 Then read the file-ownership table in CLAUDE.md in the repo root.
 Classify the ticket. Fill each field as follows:
 - kind: set 'decision' if the deliverable is a written product or pedagogy decision, spec, or research verdict, not code. Titles of such tickets often start with Decide, Spec, Define, or Research. Otherwise set 'code'.
@@ -309,17 +326,19 @@ Classify the ticket. Fill each field as follows:
 - model: 'sonnet' by default. Set 'opus' only if the ticket changes localStorage schema or migration code, or is an architectural change.
 - risky: set true if the ticket changes any of these: localStorage schema or shape, Swedish verb data (content of verbData.ts or swedish_verbs.csv), a dependency major version, or files of more than one owner. Decision tickets are never risky. Otherwise set false.
 - needsTests: set true if the ticket changes testable behavior (logic, data handling, component behavior). Set false for pure config, formatting, or docs work.
-- files: list the repo-relative production file paths that the fix will likely touch. Grep the repo if you are not sure. The pipeline uses this list to serialize tickets that touch the same file, so include a file when in doubt. For decision tickets, list the predicted doc path under docs/product/ or docs/learning/.
+- files: list the repo-relative production file paths that the fix will likely touch. Grep the repo if you are not sure. The pipeline uses this list to serialize tickets that touch the same file, so include a file when in doubt. When the ticket adds, renames, or removes a field in a shared store (settings in src/hooks/useSettings.ts; SRS state in src/lib/srs.ts or src/hooks/useSrsProgress.ts), include that store file AND its test file (for example src/hooks/useSettings.test.ts), even when another role owns them: two tickets that grow the same store must serialize, or the second ticket's fixtures break. For decision tickets, list the predicted doc path under docs/product/ or docs/learning/.
 - fixtureBreakExpected: set true if the change removes or renames something that existing test fixtures likely hardcode, for example a settings field, an export, or a prop.
 - acceptance: write the concrete acceptance criteria from the issue body.
+${TOOLING}
 Return only the structured result.`,
-          {
-            label: `triage:#${n}`,
-            phase: 'Triage',
-            schema: TRIAGE_SCHEMA,
-            effort: 'low',
-            model: 'sonnet',
-          },
+            {
+              label: `triage:#${n}`,
+              phase: 'Triage',
+              schema: TRIAGE_SCHEMA,
+              effort: 'low',
+              model: 'sonnet',
+            },
+          ),
         ).then((t) => ({ n, t })),
     ),
   )
@@ -387,6 +406,7 @@ Record the parked state on GitHub. Use the Bash tool:
 2. Comment the reason on the issue: gh issue comment ${n} --repo ${REPO} --body "..."
    Keep the comment at most 3 sentences. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.
 3. Add the label to the issue: gh issue edit ${n} --repo ${REPO} --add-label needs-human
+${TOOLING}
 Return status 'parked' with a one-line detail.`,
     {
       label: `park:#${n}`,
@@ -413,6 +433,7 @@ Record the parked state on GitHub. Use the Bash tool:
 2. Comment the reason on the PR. Include any question for the human verbatim: gh pr comment ${r.prNumber} --repo ${REPO} --body "..."
    Keep the comment at most 3 sentences plus the question. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.
 3. Add the label to both the PR and the issue: gh pr edit ${r.prNumber} --repo ${REPO} --add-label needs-human ; gh issue edit ${n} --repo ${REPO} --add-label needs-human
+${TOOLING}
 Return status 'parked' with a one-line detail.`,
     {
       label: `park:#${n}`,
@@ -427,9 +448,10 @@ Return status 'parked' with a one-line detail.`,
 // On needs-help (from implement OR remediation), a helper-role agent
 // contributes its own files to the same branch.
 function runAssist(n, r) {
-  return withLock('owner:' + r.helpRole, () =>
-    agent(
-      `You are the ${r.helpRole} on the Ordböj team. The ${r.triage.owner} who implements issue #${n} ("${r.triage.title}") on branch ${r.branch} asks for your help:
+  return once(() =>
+    withLock('owner:' + r.helpRole, () =>
+      agent(
+        `You are the ${r.helpRole} on the Ordböj team. The ${r.triage.owner} who implements issue #${n} ("${r.triage.title}") on branch ${r.branch} asks for your help:
 ${r.helpRequest}
 
 You are in an isolated git worktree.
@@ -443,14 +465,15 @@ Steps:
 6. Return status 'pr-opened' with branch, prNumber, prUrl, and evidence.
 If you cannot make the change safely, return status 'blocked' with a precise blockReason. Do not return needs-help yourself.
 ${RULES}`,
-      {
-        label: `assist:#${n}:${r.helpRole}`,
-        phase: 'Assist',
-        schema: IMPL_SCHEMA,
-        agentType: r.helpRole,
-        model: 'sonnet',
-        isolation: 'worktree',
-      },
+        {
+          label: `assist:#${n}:${r.helpRole}`,
+          phase: 'Assist',
+          schema: IMPL_SCHEMA,
+          agentType: r.helpRole,
+          model: 'sonnet',
+          isolation: 'worktree',
+        },
+      ),
     ),
   ).then((h) =>
     h
@@ -494,7 +517,7 @@ You are in an isolated git worktree. Steps:
 8. Return status 'pr-opened' with branch, prNumber, prUrl, and evidence.
 Push every commit before you return. A commit that stays only in the worktree is lost.
 Do not guess Swedish. If the ruling depends on a Swedish form that you cannot check, return blocked with the precise question.
-${STYLE}`,
+${TOOLING}${STYLE}`,
     {
       label: `decide:#${n}`,
       phase: 'Implement',
@@ -531,7 +554,8 @@ Report every finding. Write each finding as one short sentence in ASD-STE100 sty
 - approved=true: nothing material is wrong with the code. List description-only imperfections as findings.
 - approved=false and remediable=true: one follow-up commit on this branch can fix all findings. Examples: stale or incorrect PR body, unrelated formatting churn, missing tests, CI red on head, CONFLICTING or BEHIND branch, stale evidence. A remediation stage runs next, and a re-review follows it.
 - approved=false and remediable=false: at least one finding invalidates the approach itself. Examples: acceptance criteria not met, wrong behavior, data loss, weakened tests, wrong Swedish, ownership violations.
-When approved=false, fill 'remediation' with concrete instructions: the exact files, the exact edits, and the exact PR-body corrections.`,
+When approved=false, fill 'remediation' with concrete instructions: the exact files, the exact edits, and the exact PR-body corrections.
+${TOOLING}`,
     // review pinned to opus: strongest affordable tier (session model too expensive)
     {
       label: `review:#${n}${round ? ':r' + round : ''}`,
@@ -553,9 +577,10 @@ function runRemediate(n, r, rev, round) {
     isolation: 'worktree',
   };
   if (r.triage.kind !== 'decision') opts.agentType = r.triage.owner;
-  return withLock(lockKey, () =>
-    agent(
-      `Fix the review findings on PR #${r.prNumber} in ${REPO} (branch ${r.branch}, issue #${n}: "${r.triage.title}"). This is remediation round ${round} of ${MAX_REMEDIATIONS}.
+  return once(() =>
+    withLock(lockKey, () =>
+      agent(
+        `Fix the review findings on PR #${r.prNumber} in ${REPO} (branch ${r.branch}, issue #${n}: "${r.triage.title}"). This is remediation round ${round} of ${MAX_REMEDIATIONS}.
 
 Findings:
 ${(rev.findings || []).map((f) => '- ' + f).join('\n')}
@@ -574,7 +599,8 @@ Fix only what the findings require. Do not add scope. Standard remedies:
 After code fixes: run all four check commands, commit, push (git push origin HEAD:${r.branch}), and update the evidence block in the PR body with the new SHA.
 Return 'pr-opened' when the branch is fixed and pushed. Return 'needs-help' with helpRole and helpRequest when a fix lies in files of a different role. Return 'blocked' when a fix is not possible.
 ${RULES}`,
-      opts,
+        opts,
+      ),
     ),
   );
 }
@@ -601,7 +627,8 @@ Always park, and state the exact question, when one of these is true:
 
 In all other cases, weigh the real trade-off. A parked PR goes stale: main moves on, the branch conflicts, and the work dies. That was the dominant failure mode of this project. Park only when a merge would risk user data, teach wrong Swedish, or ship broken behavior. These points alone do not justify a park: a cosmetic finding, an imperfect PR description, a risk-class label on a change that you checked and found sound. A dependency major bump with green CI and no behavioral findings is mergeable. A cross-owner diff with two coherent halves is mergeable.
 
-Return decision merge|park and a rationale of 1-3 sentences. On park, also return 'question': the single precise question that the human must answer to unblock. You are read-only. Do not run gh mutations. Do not edit files. The pipeline acts on your decision.`,
+Return decision merge|park and a rationale of 1-3 sentences. On park, also return 'question': the single precise question that the human must answer to unblock. You are read-only. Do not run gh mutations. Do not edit files. The pipeline acts on your decision.
+${TOOLING}`,
     { label: `gate:#${n}`, phase: 'Gate', schema: GATE_SCHEMA, model: 'fable' },
   );
 }
@@ -625,14 +652,12 @@ gh label create needs-human --repo ${REPO} --color D93F0B --description "agent p
    - If it fails: capture the failing spec names and the decisive error lines. Do not edit code. Do not park. Return status 'ci-red' with those lines in detail — the pipeline routes it to remediation exactly like a red CI check.
    - If the suite cannot run at all in this environment (browser missing, install blocked): do NOT fail the ticket for that. Note "smoke gate skipped: <reason>" in detail and continue to step 7 — CI remains the authoritative gate.
 7. When the current head is green:
+   - If the PR is still a draft, mark it ready for review.
    - Remove stale park labels. Ignore errors: gh pr edit ${r.prNumber} --repo ${REPO} --remove-label needs-human ; gh issue edit ${n} --repo ${REPO} --remove-label needs-human
-<<<<<<< HEAD
-7. Return 'ready' with a one-line detail that names the green head SHA. The lead merges, closes issue #${n}, and sets the matching Linear issue to Done.
-=======
 8. Return 'ready' with a one-line detail that names the green head SHA and states the smoke-gate outcome (passed / skipped: <reason>). The lead merges, closes issue #${n}, and sets the matching Linear issue to Done.
->>>>>>> origin/main
 Do not edit application source. Do not weaken tests.
-When you comment on a PR or issue: keep the comment at most 3 sentences. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.`,
+When you comment on a PR or issue: keep the comment at most 3 sentences. Use ASD-STE100 style: active voice, simple tenses, one fact per sentence.
+${TOOLING}`,
     {
       label: `ship:#${n}${attempt > 1 ? ':retry' : ''}`,
       phase: 'Ship',
@@ -660,7 +685,9 @@ async function runTicket(n, t, serializedAfter) {
     };
   } else if (t.kind === 'decision') {
     await syncMainBeforeWorktree(n);
-    const d = await withLock('owner:decision-' + t.owner, () => implementDecision(n, t));
+    const d = await once(() =>
+      withLock('owner:decision-' + t.owner, () => implementDecision(n, t)),
+    );
     r = d
       ? { ...d, triage: t }
       : { status: 'blocked', blockReason: 'decision agent returned nothing', triage: t };
@@ -673,9 +700,10 @@ async function runTicket(n, t, serializedAfter) {
       ? `\nExpected fixture breakage: triage predicts that your change breaks existing test fixtures that hardcode what you remove or rename. This is acceptable and does not mean needs-help. Condition: npm test fails only in qa-owned test files whose fixtures reference the thing that you intentionally changed, and every other suite is green. When this condition holds: open the PR as a draft (gh pr create --draft), set fixtureFailures=true, list the failing tests in the evidence, and return 'pr-opened'. The QA stage runs next on your branch and repairs the fixtures. Do not edit test files yourself. Do not wait for help.`
       : '';
     await syncMainBeforeWorktree(n);
-    const impl = await withLock('owner:' + t.owner, () =>
-      agent(
-        `Implement GitHub issue #${n} in ${REPO}: "${t.title}".
+    const impl = await once(() =>
+      withLock('owner:' + t.owner, () =>
+        agent(
+          `Implement GitHub issue #${n} in ${REPO}: "${t.title}".
 Acceptance criteria:
 ${t.acceptance}
 ${serialNote}${fixtureNote}
@@ -693,14 +721,15 @@ You are in an isolated git worktree that was created from a freshly pulled main.
 If the fix needs a change in files that a different role owns: do not edit those files. Complete and commit your part. Push the branch. Open the PR as a draft (gh pr create --draft ...). Return status 'needs-help' with helpRole and a precise helpRequest. The pipeline sends an agent of that role to the same branch.
 If you cannot proceed safely at all (Swedish not certain, acceptance criteria ambiguous, tests cannot pass without weakening): do not push anything. Return status 'blocked' with a precise blockReason.
 ${RULES}`,
-        {
-          label: `impl:#${n}`,
-          phase: 'Implement',
-          schema: IMPL_SCHEMA,
-          agentType: t.owner,
-          model: t.model,
-          isolation: 'worktree',
-        },
+          {
+            label: `impl:#${n}`,
+            phase: 'Implement',
+            schema: IMPL_SCHEMA,
+            agentType: t.owner,
+            model: t.model,
+            isolation: 'worktree',
+          },
+        ),
       ),
     );
     r = impl
@@ -721,8 +750,9 @@ ${RULES}`,
       const fixtureRepairNote = r.fixtureFailures
         ? `\nFixture repair first: the branch has failing tests now. Existing qa-owned fixtures reference something that the change intentionally removed or renamed. Update those fixtures to the new intended shape. Do not weaken a real behavioral assertion; adjust only fixture data and shape. Make the suite green. If the PR is a draft, run gh pr ready ${r.prNumber}.`
         : '';
-      const qa = await agent(
-        `You are the qa engineer. PR #${r.prNumber} in ${REPO} (branch ${r.branch}) implements issue #${n}: "${r.triage.title}".
+      const qa = await once(() =>
+        agent(
+          `You are the qa engineer. PR #${r.prNumber} in ${REPO} (branch ${r.branch}) implements issue #${n}: "${r.triage.title}".
 Acceptance criteria:
 ${r.triage.acceptance}
 ${fixtureRepairNote}
@@ -736,15 +766,17 @@ Steps:
 4. Fail-first proof. This step is mandatory for every new test. First, revert the production files that the PR changed to their merge-base versions: git checkout $(git merge-base HEAD origin/main) -- <files>. Run your new tests. Check that they fail for the predicted reason. Then restore the branch versions byte for byte: git checkout HEAD -- <files>. Check that git diff shows no production changes. Run the tests again and check that they pass. A new test that passes against the pre-fix code is vacuous: rewrite it or drop it. Include both outputs (fail and pass) in the evidence.
 5. Run npm test and npm run typecheck. Both must pass. Capture the real output and the commit SHA as evidence.
 6. Commit with a "test: ..." message. Push to the same branch: git push origin HEAD:${r.branch}
-Return status 'tests-added' with evidence, or 'blocked' with blockReason. If the PR already has adequate tests, return 'not-needed'.`,
-        {
-          label: `qa:#${n}`,
-          phase: 'QA',
-          schema: QA_SCHEMA,
-          agentType: 'qa',
-          model: 'sonnet',
-          isolation: 'worktree',
-        },
+Return status 'tests-added' with evidence, or 'blocked' with blockReason. If the PR already has adequate tests, return 'not-needed'.
+${TOOLING}`,
+          {
+            label: `qa:#${n}`,
+            phase: 'QA',
+            schema: QA_SCHEMA,
+            agentType: 'qa',
+            model: 'sonnet',
+            isolation: 'worktree',
+          },
+        ),
       );
       r =
         qa && qa.status === 'blocked'
@@ -763,7 +795,7 @@ Return status 'tests-added' with evidence, or 'blocked' with blockReason. If the
 
   // ---- Review + bounded remediation loop
   let rounds = 0;
-  let rev = await runReview(n, r);
+  let rev = await once(() => runReview(n, r));
   while (rev && !rev.approved && rev.remediable !== false && rounds < MAX_REMEDIATIONS) {
     rounds++;
     let fix = await runRemediate(n, r, rev, rounds);
@@ -793,7 +825,7 @@ Return status 'tests-added' with evidence, or 'blocked' with blockReason. If the
       };
       break;
     }
-    rev = await runReview(n, r, rounds);
+    rev = await once(() => runReview(n, r, rounds));
   }
   r = { ...r, review: rev };
 
@@ -805,7 +837,7 @@ Return status 'tests-added' with evidence, or 'blocked' with blockReason. If the
   if (approved && !risky) {
     authorizedBy = 'clean review, non-risky class';
   } else {
-    const gate = await runGate(n, r, rev);
+    const gate = await once(() => runGate(n, r, rev));
     r = { ...r, gate };
     if (gate && gate.decision === 'merge') {
       authorizedBy = 'owner-gate: ' + gate.rationale;
@@ -828,10 +860,11 @@ Return status 'tests-added' with evidence, or 'blocked' with blockReason. If the
     }
   }
 
-  // ---- Ship: merges are serialized. One ci-red result gets one remediation
-  // retry if the budget allows; a second ci-red parks.
-  let s = await withLock('merge', () => runShip(n, r, authorizedBy, 1));
-  if (s && s.status === 'ci-red' && rounds < MAX_REMEDIATIONS) {
+  // ---- Ship: merges are serialized. CI repair has its own budget (one
+  // round), independent of the review-remediation rounds — a ticket that
+  // spent both review rounds still gets its CI retry; a second ci-red parks.
+  let s = await once(() => withLock('merge', () => runShip(n, r, authorizedBy, 1)));
+  if (s && s.status === 'ci-red') {
     rounds++;
     const fix = await runRemediate(
       n,
@@ -844,7 +877,7 @@ Return status 'tests-added' with evidence, or 'blocked' with blockReason. If the
       rounds,
     );
     if (fix && fix.status === 'pr-opened') {
-      s = await withLock('merge', () => runShip(n, r, authorizedBy, 2));
+      s = await once(() => withLock('merge', () => runShip(n, r, authorizedBy, 2)));
     }
   }
   if (s && s.status === 'ci-red') {
@@ -887,9 +920,17 @@ log(
   `ticket-pilot done: ${summary.filter((s) => s.status === 'ready').length} ready-to-merge, ${summary.filter((s) => s.status === 'merged').length} merged, ${summary.filter((s) => s.status === 'parked').length} parked, ${summary.filter((s) => s.status === 'failed').length} failed`,
 );
 // LEAD: for every 'ready' result, in list order: confirm the human's merge
-// approval from the conversation, then gh pr update-branch, wait for green CI
-// on the new head, gh pr merge --squash --delete-branch, close the issue, and
-// set the matching Linear issue (search by title or "Migrated from" link) to
-// Done. Re-update later ready branches after each merge, since main moves
-// under them.
+// approval from the conversation, then update the branch, wait for green CI
+// on the new head, squash-merge (delete branch), close the issue, and set the
+// matching Linear issue (search by title or "Migrated from" link) to Done.
+// Re-update later ready branches after each merge, since main moves under
+// them. Do not let 'ready' results wait on nothing: when the human already
+// approved the batch in chat, merge immediately; when you must wait, call
+// subscribe_pr_activity on each ready PR and arm a send_later check-in
+// (~1 hour) so the merge still happens after this turn ends.
+// LEAD, parked results: a park is a question, not an end state. Surface every
+// parked question to the human with AskUserQuestion in the same turn this
+// summary arrives. When the human answers, re-run ticket-pilot with that
+// ticket number: the new run adopts the open PR and continues from review.
+// A needs-human PR left unanswered goes stale and the work dies.
 return summary;
