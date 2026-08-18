@@ -2,22 +2,48 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Volume2 } from 'lucide-react';
 import { ConfettiEffect } from './ConfettiEffect';
 import type { Grade } from '@/lib/srs';
 import type { ParticleSittingCard } from '@/lib/particleQueue';
+import {
+  selectDiscriminationVariant,
+  type DiscriminationOption,
+} from '@/lib/discriminationVariant';
+import { speakSwedish, stopSpeaking } from '@/lib/speech';
 import {
   getAcceptedParticles,
   getAcceptedParticlesDisclosure,
   getAcceptedRecallAnswers,
   getParticleCoreSense,
   getPhraseForms,
+  getVerifiedParticleVerbs,
   isAcceptedParticle,
   isAcceptedRecall,
   renderCloze,
   renderLemma,
   selectExample,
 } from '@/lib/particleVerbs';
+
+// What onAnswer carries for a discrimination (choice) commit, so the caller
+// (PracticeParticles.tsx) can log the presented lures and the tapped one
+// without recomputing the option set itself
+// (docs/learning/2026-08-12-sentence-completion-distractors.md). Absent
+// entirely on a typed cloze/recall answer.
+export interface ChoiceCommit {
+  // The lure particles presented alongside the target, in no particular
+  // order — the answer log's `l` field.
+  lures: string[];
+  // The lure the learner tapped, or null when they tapped the correct
+  // option — the answer log's `p` field.
+  tapped: string | null;
+}
+
+// Stable empty-set default so a caller that omits `introducedParticles`
+// (e.g. an existing test that constructs this card directly) never renders a
+// discrimination card by accident — the ineligible fallback is always typed
+// cloze.
+const EMPTY_INTRODUCED_PARTICLES: ReadonlySet<string> = new Set();
 
 // Same fixed three keys as the conjugation card, in the same order, never
 // derived from the answer (red lines P4, P11).
@@ -28,9 +54,15 @@ interface ParticleVerbCardProps {
   // Drives deterministic frame rotation, so a learner meets an entry's
   // sentences in a stable order rather than a random one.
   repetitions?: number;
+  // Particles the learner has already met (docs/learning/2026-08-08-discrimination-exercise.md's
+  // "introduced" definition), read from srsStates by the caller. Feeds
+  // selectDiscriminationVariant's lure eligibility; omitted entirely means
+  // no discrimination card ever renders.
+  introducedParticles?: ReadonlySet<string>;
+  muteAudio?: boolean;
   // Introduction cards are shown, not tested, so they report no grade.
   onAcknowledge?: () => void;
-  onAnswer?: (grade: Grade) => void;
+  onAnswer?: (grade: Grade, choice?: ChoiceCommit) => void;
 }
 
 // Renders a phrase with its particle in bold. The particle carries the
@@ -53,6 +85,8 @@ function PhraseWithParticle({ phrase, particle }: { phrase: string; particle: st
 export function ParticleVerbCard({
   card,
   repetitions = 0,
+  introducedParticles = EMPTY_INTRODUCED_PARTICLES,
+  muteAudio = false,
   onAcknowledge,
   onAnswer,
 }: ParticleVerbCardProps) {
@@ -62,6 +96,9 @@ export function ParticleVerbCard({
   const [isCorrect, setIsCorrect] = useState(false);
   const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
+  // The lure particle tapped on a discrimination card, or null while nothing
+  // has been tapped yet / the target was tapped.
+  const [selectedParticle, setSelectedParticle] = useState<string | null>(null);
 
   const example = useMemo(() => selectExample(entry, repetitions), [entry, repetitions]);
   const cloze = useMemo(() => renderCloze(example), [example]);
@@ -69,6 +106,23 @@ export function ParticleVerbCard({
   const coreSense = getParticleCoreSense(entry.particle);
   const phraseForms = getPhraseForms(entry);
   const disclosure = getAcceptedParticlesDisclosure(entry);
+
+  // The discrimination render mode of this cloze (docs/learning/2026-08-12-sentence-completion-distractors.md).
+  // null on every recall/introduction card and on any cloze this exact
+  // repetitions count does not select for the variant — the caller always
+  // falls back to typed cloze in that case, never a reduced-option card.
+  const discriminationVariant = useMemo(() => {
+    if (kind !== 'cloze') return null;
+    return selectDiscriminationVariant(
+      {
+        reflexive: entry.reflexive,
+        acceptedParticles: entry.acceptedParticles,
+        excludedParticles: example.excludedParticles,
+      },
+      repetitions,
+      introducedParticles,
+    );
+  }, [kind, entry.reflexive, entry.acceptedParticles, example, repetitions, introducedParticles]);
 
   // Every card of a given item starts clean, including when the same
   // component instance is reused for the next card in the sitting.
@@ -78,12 +132,36 @@ export function ParticleVerbCard({
     setIsCorrect(false);
     setSubmittedAnswer('');
     setShowConfetti(false);
+    setSelectedParticle(null);
+    stopSpeaking();
   }, [card.itemId, kind, entry.id]);
+
+  // Belt-and-braces: cancel any in-progress "pronounce corrected sentence"
+  // speech if the card unmounts outright rather than advancing through the
+  // Next Card button.
+  useEffect(() => {
+    return () => stopSpeaking();
+  }, []);
 
   const accepted = useMemo(
     () => (kind === 'recall' ? getAcceptedRecallAnswers(entry) : getAcceptedParticles(entry)),
     [entry, kind],
   );
+
+  // Gloss of the wrong phrase the learner tapped, shown only when a verified
+  // entry in the corpus actually carries that base+particle lemma (feedback
+  // point 3 of the ruling). No new authoring, no new field: a lookup, and
+  // nothing when no such entry exists.
+  const chosenLureEntry = useMemo(() => {
+    if (!discriminationVariant || isCorrect || selectedParticle === null) return null;
+    return (
+      getVerifiedParticleVerbs().find(
+        (candidate) =>
+          candidate.baseInfinitive === entry.baseInfinitive &&
+          candidate.particle === selectedParticle,
+      ) ?? null
+    );
+  }, [discriminationVariant, isCorrect, selectedParticle, entry.baseInfinitive]);
 
   const handleSubmit = useCallback(
     (answer: string) => {
@@ -100,6 +178,23 @@ export function ParticleVerbCard({
       // here at all until a linguist has signed off on real TTS output.
     },
     [entry, kind],
+  );
+
+  // Discrimination card: the first tap commits, full stop — no re-tap, no
+  // retry (P1, P3, P5 of docs/learning/2026-08-08-ux-pedagogy-red-lines.md).
+  // Once showFeedback is true the option buttons are unmounted (replaced by
+  // the static result list below), so this guard only matters against a
+  // double-fire of the same tap.
+  const handleChoice = useCallback(
+    (option: DiscriminationOption) => {
+      if (showFeedback) return;
+      setSelectedParticle(option.particle);
+      setIsCorrect(option.correct);
+      setSubmittedAnswer(`${entry.baseInfinitive} ${option.particle}`);
+      setShowFeedback(true);
+      if (option.correct) setShowConfetti(true);
+    },
+    [showFeedback, entry.baseInfinitive],
   );
 
   // Auto-submit on an exact match, suppressed while the typed value is a
@@ -220,12 +315,35 @@ export function ParticleVerbCard({
         <CardContent className="p-8 space-y-6">
           <div className="text-center space-y-3">
             <p className="text-muted-foreground text-sm font-medium">
-              {kind === 'cloze' ? 'Fill in the missing particle' : 'Produce the whole phrase'}
+              {kind !== 'cloze'
+                ? 'Produce the whole phrase'
+                : discriminationVariant
+                  ? 'Choose the correct particle verb'
+                  : 'Fill in the missing particle'}
             </p>
             {prompt}
           </div>
 
-          {!showFeedback && (
+          {!showFeedback && discriminationVariant && (
+            // First tap commits — no re-tap, no retry
+            // (docs/learning/2026-08-12-sentence-completion-distractors.md,
+            // "Feedback", point 1).
+            <div className="space-y-3" role="group" aria-label="Choose the particle verb">
+              {discriminationVariant.options.map((option) => (
+                <Button
+                  key={option.particle}
+                  onClick={() => handleChoice(option)}
+                  variant="outline"
+                  className="w-full py-6 text-lg justify-center"
+                  lang="sv"
+                >
+                  {entry.baseInfinitive} {option.particle}
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {!showFeedback && !discriminationVariant && (
             <div className="space-y-4">
               <Input
                 value={userAnswer}
@@ -294,7 +412,32 @@ export function ParticleVerbCard({
                 )}
               </div>
 
-              {!isCorrect && (
+              {discriminationVariant && (
+                // The tapped option marked wrong and muted, the target
+                // marked correct — never at equal weight (P21 of
+                // docs/learning/2026-08-08-ux-pedagogy-red-lines.md).
+                <div className="space-y-2">
+                  {discriminationVariant.options.map((option) => {
+                    const wasTapped = option.particle === selectedParticle;
+                    const stateClasses = option.correct
+                      ? 'border-success text-success bg-success/10'
+                      : wasTapped
+                        ? 'border-destructive text-destructive bg-destructive/10'
+                        : 'border-muted text-muted-foreground opacity-60';
+                    return (
+                      <div
+                        key={option.particle}
+                        className={`rounded-lg border px-4 py-3 text-center text-lg font-semibold ${stateClasses}`}
+                        lang="sv"
+                      >
+                        {entry.baseInfinitive} {option.particle}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!isCorrect && !discriminationVariant && (
                 <div className="flex flex-wrap items-center justify-center gap-4 text-center">
                   <div className="space-y-1 min-w-0 max-w-full">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">
@@ -314,6 +457,18 @@ export function ParticleVerbCard({
                 </div>
               )}
 
+              {/* The chosen-lure gloss, feedback point 3 of
+                  docs/learning/2026-08-12-sentence-completion-distractors.md:
+                  only when a verified entry actually carries that lemma. */}
+              {chosenLureEntry && (
+                <p className="text-sm text-muted-foreground text-center">
+                  <span lang="sv" className="font-semibold">
+                    {renderLemma(chosenLureEntry)}
+                  </span>{' '}
+                  — {chosenLureEntry.gloss.en}
+                </p>
+              )}
+
               {/* Names the whole accepted set rather than only the
                   alternates, so a learner who typed one of them is not shown
                   their own answer as though it were a correction (P6). */}
@@ -329,13 +484,44 @@ export function ParticleVerbCard({
                 <p className="text-base" lang="sv">
                   <PhraseWithParticle phrase={example.sv} particle={entry.particle} />
                 </p>
+                {discriminationVariant && (
+                  // Audio speaks the corrected sentence only — no pronounce
+                  // control on any wrong option (feedback point 5). The
+                  // isolated-particle stress risk the typed cloze's comment
+                  // above describes does not apply to a full sentence, which
+                  // is why this control exists here and nowhere else on this
+                  // card.
+                  <Button
+                    onClick={() => speakSwedish(example.sv, muteAudio)}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 min-h-11"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    Pronounce sentence
+                  </Button>
+                )}
               </div>
 
               {senseLine}
               {contrastLine}
               {referenceLine}
 
-              <Button onClick={() => onAnswer?.(isCorrect ? 5 : 0)} className="w-full py-6 text-lg">
+              <Button
+                onClick={() => {
+                  stopSpeaking();
+                  const choice: ChoiceCommit | undefined = discriminationVariant
+                    ? {
+                        lures: discriminationVariant.options
+                          .filter((option) => !option.correct)
+                          .map((option) => option.particle),
+                        tapped: isCorrect ? null : selectedParticle,
+                      }
+                    : undefined;
+                  onAnswer?.(isCorrect ? 5 : 0, choice);
+                }}
+                className="w-full py-6 text-lg"
+              >
                 Next Card
               </Button>
             </div>
