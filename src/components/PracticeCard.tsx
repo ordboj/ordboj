@@ -15,6 +15,7 @@ import {
   getVerbGrupp,
   getAcceptedAnswers,
   getAlternatesDisclosure,
+  getPhraseFrame,
   isAcceptedAnswer,
   type ConjugatedVerb,
   type VerbPattern,
@@ -117,6 +118,15 @@ export function PracticeCard({
   const effectiveMode = mode === 'multiple-choice' && !isAnswerAvailable ? 'typing' : mode;
   const exampleSentence = showExamples ? getExampleSentence(infinitive, form) : '';
   const alternatesDisclosure = getAlternatesDisclosure(infinitive, form);
+  // Phrase-context cue for a phraseBound verb (Decision 1, docs/learning/
+  // 2026-08-17-reflexive-only-verbs-and-entries-per-base.md): `frame` renders
+  // beside the prompt during retrieval, `example` after grading. Neither is
+  // composed or inflected here -- both strings come straight from
+  // getPhraseFrame, which is null for every ordinary verb, so this is a
+  // no-op everywhere else. The imperativ item is suppressed at the data
+  // layer for these verbs (verbs.ts), so form === 'imperativ' should never
+  // reach here for a phraseBound infinitive; the guard is defensive only.
+  const phraseFrame = form === 'imperativ' ? null : getPhraseFrame(infinitive);
   // Only ever read here for the post-answer feedback chip below — grupp
   // predicts the answer's ending pattern, so it must never be rendered
   // before the learner has submitted (RED LINE, see issue #228). undefined
@@ -355,6 +365,21 @@ export function PracticeCard({
               Missing: <span className="font-semibold">{getFormLabel(form)}</span>
             </p>
             <p className="text-xs text-muted-foreground italic">{getFormHint(form)}</p>
+            {/* Supplementary, not the question: a phraseBound verb's bare
+                stem isn't a usable phrase on its own, so this names the
+                phrase it lives in without supplying any part of the answer
+                (that stays the bare conjugated form). role="note" marks it
+                as ancillary for assistive tech rather than part of the
+                prompt itself, and it renders in the same static block as
+                the prompt above so it never shifts the input that follows. */}
+            {phraseFrame && (
+              <p role="note" className="text-xs text-muted-foreground">
+                Used in the phrase:{' '}
+                <span lang="sv" className="font-medium text-foreground/80">
+                  {phraseFrame.frame}
+                </span>
+              </p>
+            )}
           </div>
         </div>
 
@@ -546,6 +571,21 @@ export function PracticeCard({
                   </Button>
                 )}
               </div>
+
+              {/* Phrase-context example, shown only after grading (never during
+                  retrieval, per the contract on getPhraseFrame) and placed right
+                  after the complete-pattern pills so it reads as elaboration on
+                  the correct answer above, not a competing prompt. First person,
+                  per Decision 1, so the pronoun the learner will actually use is
+                  the one they see. */}
+              {phraseFrame && (
+                <div className="bg-accent/10 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground mb-1">In the phrase:</p>
+                  <p className="text-base italic" lang="sv">
+                    {phraseFrame.example}
+                  </p>
+                </div>
+              )}
 
               {/* Learner's own wrong answer: muted, struck through, subordinate to the
                   correct form above (P21) -- never rendered at equal weight beside it,
