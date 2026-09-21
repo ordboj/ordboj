@@ -403,8 +403,9 @@ function classifyAndValidate(infinitive, imperativ, presens, preteritum, supinum
   // mistake) would silently pass the shipped-table gate in step 2, because
   // step 2 only escalates `status === 'fail'` to a build failure.
   // The shipped table requires an explicit marker for every empty
-  // imperativ: noNaturalImperativ, MODAL_VERBS, a 'modal verb' comment, or
-  // a 'NEEDS HUMAN CHECK' comment (see `explainedEmpty` in step 2 below).
+  // imperativ: noNaturalImperativ, phraseBound, MODAL_VERBS, a 'modal verb'
+  // comment, or a 'NEEDS HUMAN CHECK' comment (see `explainedEmpty` in
+  // step 2 below).
   // Only a modal verb is exempt here without one of those markers; a
   // deponens or reflexive row still needs one on the shipped table. The
   // deponens/reflexive carve-out in the `emptyImperativ && (grupp ===
@@ -553,8 +554,13 @@ function parseVerbDataTs(text) {
       const fields = {};
       for (const m of line.matchAll(FIELD_RE)) fields[m[1]] = m[2];
       const noNaturalImperativ = /noNaturalImperativ\s*:\s*true/.test(line);
+      // ORD-87: a phraseBound row ('reflexive' | 'particle') stores an empty
+      // imperativ on purpose — the bare stem is not a usable command without
+      // its pronoun or particle. Read as first-class evidence alongside
+      // noNaturalImperativ, not as prose, so the explanation cannot rot.
+      const phraseBound = /\bphraseBound\s*:\s*["'](reflexive|particle)["']/.test(line);
       const hasGrupp = /\bgrupp\s*:\s*"/.test(line);
-      blocks.push({ lines: pending, fields, noNaturalImperativ, hasGrupp });
+      blocks.push({ lines: pending, fields, noNaturalImperativ, phraseBound, hasGrupp });
       pending = [];
     }
   }
@@ -672,6 +678,7 @@ function main() {
     const commentBlock = block.lines.join('\n');
     const explainedEmpty =
       block.noNaturalImperativ ||
+      block.phraseBound ||
       MODAL_VERBS.has(f.infinitive) ||
       /modal verb/i.test(commentBlock) ||
       /NEEDS HUMAN CHECK/i.test(commentBlock);
@@ -700,9 +707,9 @@ function main() {
     }
     // classifyAndValidate already fails empty-imperativ-on-non-modal using
     // the CSV-only MODAL_VERBS heuristic; the shipped table additionally
-    // carries noNaturalImperativ / review comments as first-class evidence,
-    // so an empty imperativ backed by either is accepted here even though
-    // classifyAndValidate alone flagged it.
+    // carries noNaturalImperativ / phraseBound / review comments as
+    // first-class evidence, so an empty imperativ backed by any of those is
+    // accepted here even though classifyAndValidate alone flagged it.
     if (
       result.status === 'fail' &&
       result.reasons.length === 1 &&
@@ -724,8 +731,8 @@ function main() {
     // (no noNaturalImperativ, no modal/comment marker) through the gate
     // silently. `unexplainedEmptyImperativ` is the fact, computed
     // independently of `status`; `explainedEmpty` is still the only carve-out
-    // (noNaturalImperativ / MODAL_VERBS / 'modal verb' or 'NEEDS HUMAN CHECK'
-    // comment).
+    // (noNaturalImperativ / phraseBound / MODAL_VERBS / 'modal verb' or
+    // 'NEEDS HUMAN CHECK' comment).
     if (result.unexplainedEmptyImperativ && !explainedEmpty) {
       shippedFailures.push({
         infinitive: f.infinitive,

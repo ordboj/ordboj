@@ -13,6 +13,7 @@ import {
   isAcceptedAnswer,
   isImperativNotApplicable,
   getAllConjugatedVerbs,
+  getPhraseFrame,
   type Form,
 } from '@/lib/verbs';
 import { VERB_DATA } from '@/data/verbData';
@@ -56,6 +57,62 @@ describe('conjugateVerb - "(not available)" fallback for a known verb missing on
     const result = await conjugateVerb('kunna');
     expect(result.imperativ).toBe('(not available)');
   });
+});
+
+// ORD-87 (docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md):
+// the four phraseBound verbs report "(not available)" for imperativ no
+// matter what VERB_DATA stores for the field, because toConjugatedVerb
+// (src/lib/verbs.ts) branches on verb.phraseBound rather than trusting the
+// stored value. Their other three forms stay real and non-empty.
+describe('conjugateVerb - phraseBound verbs report no imperativ (ORD-87)', () => {
+  it.each(['bry', 'slappna', 'piffa', 'tråka'] as const)(
+    'reports "(not available)" imperativ for phraseBound verb "%s", with real presens/preteritum/supinum',
+    async (infinitive) => {
+      const result = await conjugateVerb(infinitive);
+      expect(result.imperativ).toBe('(not available)');
+      expect(result.presens).not.toBe('(not available)');
+      expect(result.preteritum).not.toBe('(not available)');
+      expect(result.supinum).not.toBe('(not available)');
+      expect(result.presens.length).toBeGreaterThan(0);
+      expect(result.preteritum.length).toBeGreaterThan(0);
+      expect(result.supinum.length).toBeGreaterThan(0);
+    },
+  );
+});
+
+// ORD-87: getPhraseFrame is the only path a card has into a phraseBound
+// verb's frame/example strings. It must be null for every ordinary verb
+// (no frame renders for verbs that don't need one) and must return the
+// authored frame for the four current phraseBound rows.
+describe('getPhraseFrame (ORD-87)', () => {
+  it('returns null for an ordinary verb', () => {
+    expect(getPhraseFrame('vara')).toBeNull();
+  });
+
+  it('returns null for a verb not found in VERB_DATA (lookup miss)', () => {
+    expect(getPhraseFrame('this-infinitive-does-not-exist')).toBeNull();
+  });
+
+  it.each([
+    ['bry', 'reflexive'],
+    ['slappna', 'particle'],
+    ['piffa', 'particle'],
+    ['tråka', 'particle'],
+  ] as const)(
+    'returns a frame object with kind "%s" -> "%s" for phraseBound verb',
+    (infinitive, kind) => {
+      const source = VERB_DATA.find((v) => v.infinitive === infinitive);
+      expect(source).toBeDefined();
+
+      const result = getPhraseFrame(infinitive);
+      expect(result).not.toBeNull();
+      expect(result?.kind).toBe(kind);
+      expect(result?.frame).toBe(source?.phraseFrame);
+      expect(result?.example).toBe(source?.phraseExample);
+      expect(result?.frame.length).toBeGreaterThan(0);
+      expect(result?.example.length).toBeGreaterThan(0);
+    },
+  );
 });
 
 // Issue #124: modal verbs (kunna, få, vilja) grammatically have no

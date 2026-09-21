@@ -1,6 +1,11 @@
-import { VERB_DATA, type Grupp } from '@/data/verbData';
+import { VERB_DATA, type Grupp, type VerbData } from '@/data/verbData';
 
 export type { Grupp };
+
+// The phrase a verb is bound to, when its bare stem is not usable on its
+// own: 'reflexive' (bry sig om) or 'particle' (slappna av, piffa upp,
+// tråka ut). See VerbData.phraseBound in src/data/verbData.ts.
+export type PhraseBound = NonNullable<VerbData['phraseBound']>;
 
 export type Form = 'infinitive' | 'presens' | 'preteritum' | 'supinum' | 'imperativ';
 
@@ -23,6 +28,12 @@ export interface ConjugatedVerb extends Verb {
   // for the unknown-verb fallback, where the app has no basis to claim the
   // form doesn't exist.
   imperativNotApplicable?: boolean;
+  // Set only for a verb whose bare stem is not a usable utterance without
+  // its reflexive pronoun or particle (VerbData.phraseBound). The card that
+  // presents any form of such a verb needs a frame cue around the blank —
+  // "bry ___ om", "slappna av" — while the answer string itself stays bare.
+  // Undefined for every ordinary verb and for the unknown-verb fallback.
+  phraseBound?: PhraseBound;
 }
 
 // Get all basic verbs
@@ -50,6 +61,43 @@ export function getVerbGrupp(infinitive: string): Grupp | undefined {
 // form.
 export function isImperativNotApplicable(infinitive: string): boolean {
   return VERB_DATA.find((v) => v.infinitive === infinitive)?.noNaturalImperativ ?? false;
+}
+
+// The phrase a verb is bound to ('reflexive' | 'particle'), or undefined
+// for the ordinary case and for verbs not found in VERB_DATA. A caller that
+// renders a card for one of these verbs must show the frame (the pronoun
+// slot, the particle) around the blank; the expected answer stays bare.
+export function getPhraseBound(infinitive: string): PhraseBound | undefined {
+  return VERB_DATA.find((v) => v.infinitive === infinitive)?.phraseBound;
+}
+
+// Everything a card needs in order to show a phraseBound verb's phrase.
+// Both strings are authored per row in VERB_DATA and are the only Swedish
+// the renderer shows for the frame: it concatenates nothing, inflects
+// nothing and supplies no pronoun of its own.
+export interface PhraseFrame {
+  // 'reflexive' | 'particle' — what the frame's open slot or fixed word is,
+  // for callers that style the two differently. Not a rendering
+  // instruction: `frame` is already the finished string.
+  kind: PhraseBound;
+  // Retrieval-side cue, e.g. "bry ___ om" or "slappna av". Context only —
+  // it is never part of the expected answer, which stays the bare
+  // conjugated form, so it must not be rendered inside the answer blank.
+  frame: string;
+  // Post-grading first-person example, e.g. "Jag bryr mig om mina
+  // grannar." Shown after the answer is graded, never during retrieval.
+  example: string;
+}
+
+// The frame cue for a phraseBound verb, or null when the verb is ordinary,
+// unknown, or flagged phraseBound without both strings authored. Null means
+// "render no frame": a half-frame (a cue with no example, or a phraseBound
+// verb with no cue at all) is the case Decision 1 holds items back for, so
+// it is reported as absent rather than patched up here.
+export function getPhraseFrame(infinitive: string): PhraseFrame | null {
+  const verb = VERB_DATA.find((v) => v.infinitive === infinitive);
+  if (!verb?.phraseBound || !verb.phraseFrame || !verb.phraseExample) return null;
+  return { kind: verb.phraseBound, frame: verb.phraseFrame, example: verb.phraseExample };
 }
 
 // Documented alternate accepted forms for a verb + form, e.g. "lade" for
@@ -134,18 +182,37 @@ export function getAlternatesDisclosure(infinitive: string, form: Form): string 
   return `${allButLast} and ${accepted[accepted.length - 1]} are all correct.`;
 }
 
-// Get all conjugated verbs efficiently (no file reads needed!)
-export async function getAllConjugatedVerbs(): Promise<ConjugatedVerb[]> {
-  return VERB_DATA.map((verb) => ({
+// Shape one VERB_DATA row as a ConjugatedVerb. Single source of truth for
+// the "" -> '(not available)' sentinel mapping and the phraseBound imperativ
+// rule below, so conjugateVerb and getAllConjugatedVerbs cannot drift.
+function toConjugatedVerb(verb: VerbData): ConjugatedVerb {
+  return {
     id: verb.infinitive,
     infinitive: verb.infinitive,
     presens: verb.presens || '(not available)',
     preteritum: verb.preteritum || '(not available)',
     supinum: verb.supinum || '(not available)',
-    imperativ: verb.imperativ || '(not available)',
+    // A phraseBound verb never reports an imperativ, no matter what the row
+    // stores. Decision 1 of docs/learning/
+    // 2026-08-17-reflexive-only-verbs-and-entries-per-base.md: the bare stem
+    // is not a usable command ("Bry!", "Slappna!"), so a card asking for it
+    // would train Swedish the learner cannot say. Those rows already store
+    // imperativ: "", which reaches the same sentinel; this branch makes the
+    // rule a property of the field rather than of one row's current value,
+    // so refilling the stored imperativ can never resurrect the item.
+    // '(not available)' is what makes the item disappear: the conjugation
+    // provider skips any form that resolves to it
+    // (createConjugationProvider.listAvailableItems, src/lib/srsProviders.ts).
+    imperativ: verb.phraseBound ? '(not available)' : verb.imperativ || '(not available)',
     imperativNotApplicable: verb.noNaturalImperativ,
+    phraseBound: verb.phraseBound,
     cefr: verb.cefr,
-  }));
+  };
+}
+
+// Get all conjugated verbs efficiently (no file reads needed!)
+export async function getAllConjugatedVerbs(): Promise<ConjugatedVerb[]> {
+  return VERB_DATA.map(toConjugatedVerb);
 }
 
 // Conjugate verb from hardcoded data
@@ -153,16 +220,7 @@ export async function conjugateVerb(infinitive: string): Promise<ConjugatedVerb>
   const verb = VERB_DATA.find((v) => v.infinitive === infinitive);
 
   if (verb) {
-    return {
-      id: verb.infinitive,
-      infinitive: verb.infinitive,
-      presens: verb.presens || '(not available)',
-      preteritum: verb.preteritum || '(not available)',
-      supinum: verb.supinum || '(not available)',
-      imperativ: verb.imperativ || '(not available)',
-      imperativNotApplicable: verb.noNaturalImperativ,
-      cefr: verb.cefr,
-    };
+    return toConjugatedVerb(verb);
   }
 
   // Fallback for unknown verbs

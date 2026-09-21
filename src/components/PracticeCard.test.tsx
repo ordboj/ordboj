@@ -1227,6 +1227,107 @@ describe('PracticeCard - empty imperativ', () => {
   });
 });
 
+// ORD-87 (docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md):
+// a phraseBound verb's card shows a retrieval-side frame cue ("Used in the
+// phrase: ...") beside the prompt, and a post-grading example ("In the
+// phrase: ..."), sourced from getPhraseFrame. Neither renders for an
+// ordinary verb, and the example must never leak into the retrieval screen.
+describe('PracticeCard - phraseBound frame cue and example (ORD-87)', () => {
+  it('shows the retrieval-side frame cue, as a role="note", for a phraseBound verb\'s non-imperativ card', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="bry"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await screen.findByPlaceholderText('Type your answer...');
+
+    const note = screen.getByRole('note');
+    expect(note).toHaveTextContent('Used in the phrase:');
+    expect(note).toHaveTextContent('bry ___ om');
+
+    // The post-grading example must not have leaked into the retrieval
+    // screen alongside the frame cue.
+    expect(screen.queryByText('In the phrase:')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Jag bryr mig om mina grannar/)).not.toBeInTheDocument();
+  });
+
+  it('does not show a frame cue for an ordinary (non-phraseBound) verb', async () => {
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    await screen.findByPlaceholderText('Type your answer...');
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Used in the phrase:/)).not.toBeInTheDocument();
+  });
+
+  it('shows the phrase example only in the post-grading feedback pane, not during retrieval', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="bry"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    // Before grading: no example anywhere on the card.
+    expect(screen.queryByText('In the phrase:')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Jag bryr mig om mina grannar/)).not.toBeInTheDocument();
+
+    await user.type(input, 'bryr');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    // After grading: the example appears in the feedback pane, labelled
+    // distinctly from the frame cue shown before grading.
+    expect(screen.getByText('In the phrase:')).toBeInTheDocument();
+    expect(screen.getByText('Jag bryr mig om mina grannar.')).toBeInTheDocument();
+  });
+
+  it('does not show a phrase example for an ordinary verb after grading', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, VARA_PRESENS_ANSWER);
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByText('Correct!');
+
+    expect(screen.queryByText('In the phrase:')).not.toBeInTheDocument();
+  });
+});
+
 // Issue #139: multiple-choice distractors were drawn from a fixed 8-verb
 // pool and could surface "(not available)" as a selectable option.
 describe('PracticeCard - multiple-choice distractor policy (#139)', () => {

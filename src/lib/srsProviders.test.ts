@@ -73,3 +73,41 @@ describe('conjugation provider - available items', () => {
     );
   });
 });
+
+// ORD-87 (docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md):
+// a phraseBound verb's bare stem is not a usable imperativ, so the provider
+// must never surface an imperativ item for one, even though presens/
+// preteritum/supinum stay in the deck. This is the end-to-end proof that the
+// data-layer suppression (verb.phraseBound -> imperativ: "(not available)"
+// in toConjugatedVerb, src/lib/verbs.ts) actually removes the item from what
+// a learner can be scheduled, not just from the stored string.
+describe('conjugation provider - phraseBound suppresses the imperativ item (ORD-87)', () => {
+  it.each(['bry', 'slappna', 'piffa', 'tråka'] as const)(
+    'yields exactly presens/preteritum/supinum, no imperativ item, for phraseBound verb "%s"',
+    async (infinitive) => {
+      const verbs = await getVerbs();
+      const verb = verbs.find((v) => v.infinitive === infinitive);
+      expect(verb).toBeDefined();
+
+      const items = await createConjugationProvider().listAvailableItems();
+      const forms = items
+        .filter((item) => item.verbId === verb!.id)
+        .map((item) => item.form)
+        .sort();
+      expect(forms).toEqual(['presens', 'preteritum', 'supinum']);
+    },
+  );
+
+  it('yields all 4 scheduled forms, including imperativ, for an ordinary control verb', async () => {
+    const verbs = await getVerbs();
+    const vara = verbs.find((v) => v.infinitive === 'vara');
+    expect(vara).toBeDefined();
+
+    const items = await createConjugationProvider().listAvailableItems();
+    const forms = items
+      .filter((item) => item.verbId === vara!.id)
+      .map((item) => item.form)
+      .sort();
+    expect(forms).toEqual(['imperativ', 'presens', 'preteritum', 'supinum']);
+  });
+});
