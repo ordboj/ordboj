@@ -286,6 +286,7 @@ describe('VERB_DATA - imperativ audit (issue #132)', () => {
 
   // Regression: rows flagged as genuinely uncertain must actually be
   // empty (not a guessed form hiding behind a stale review comment).
+  // Pending human ruling; no open tracking issue currently linked.
   it.each(['te sig', 'anse'] as const)(
     'leaves the genuinely uncertain imperativ for "%s" empty and flagged for human review, not guessed',
     (infinitive) => {
@@ -318,8 +319,8 @@ describe('VERB_DATA - imperativ audit (issue #132)', () => {
 // Issue #124: modal verbs (kunna, få, vilja) are now explicitly flagged
 // noNaturalImperativ: true, distinguishing "grammatically has none" from
 // "not filled in yet" -- "te sig" and "anse" (below) stay unflagged because
-// their empty imperativ is still pending human review (issue #132), not a
-// confirmed grammatical absence.
+// their empty imperativ is still pending human ruling, not a confirmed
+// grammatical absence. No open tracking issue is currently linked.
 describe('VERB_DATA - noNaturalImperativ flag (issue #124)', () => {
   it.each(['kunna', 'få', 'vilja'] as const)(
     'flags modal verb "%s" noNaturalImperativ: true',
@@ -336,7 +337,7 @@ describe('VERB_DATA - noNaturalImperativ flag (issue #124)', () => {
   });
 
   it.each(['te sig', 'anse'] as const)(
-    'does not flag "%s" (empty pending human review, not a confirmed grammatical absence)',
+    'does not flag "%s" (empty pending human ruling, not a confirmed grammatical absence)',
     (infinitive) => {
       const row = VERB_DATA.find((v) => v.infinitive === infinitive);
       expect(row?.noNaturalImperativ).toBeFalsy();
@@ -356,6 +357,22 @@ describe('VERB_DATA - noNaturalImperativ flag (issue #124)', () => {
       .map((v) => v.infinitive)
       .sort();
     expect(flagged).toEqual(['få', 'kunna', 'vilja']);
+  });
+
+  it('lists exactly te sig and anse as rows with an empty imperativ and no noNaturalImperativ flag (#124 full-table audit)', () => {
+    const unflaggedEmpty = VERB_DATA.filter((v) => !v.imperativ && !v.noNaturalImperativ)
+      .map((v) => v.infinitive)
+      .sort();
+    expect(unflaggedEmpty).toEqual(['anse', 'te sig']);
+  });
+
+  it('gives every VERB_DATA row either a non-empty imperativ or the noNaturalImperativ flag or a known pending-review exception', () => {
+    const PENDING_HUMAN_REVIEW = ['anse', 'te sig'];
+    for (const verb of VERB_DATA) {
+      if (verb.imperativ) continue;
+      if (verb.noNaturalImperativ) continue;
+      expect(PENDING_HUMAN_REVIEW).toContain(verb.infinitive);
+    }
   });
 });
 
