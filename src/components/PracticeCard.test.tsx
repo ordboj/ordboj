@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { act, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { PracticeCard } from '@/components/PracticeCard';
@@ -2398,6 +2398,8 @@ describe('PracticeCard - Enter advances on the feedback screen (ORD-55)', () => 
     // {Enter>3} is one hold: keydown (repeat false), then two auto-repeats
     // (repeat true). Only the first may advance.
     await user.keyboard('{Enter>3}');
+    // Let a deferred handleNext (timeout or frame) land before the check.
+    await act(async () => {});
 
     expect(onAnswer).toHaveBeenCalledTimes(1);
     expect(onAnswer).toHaveBeenCalledWith(5);
@@ -2413,6 +2415,8 @@ describe('PracticeCard - Enter advances on the feedback screen (ORD-55)', () => 
     // The first keydown submits from the input (the listener is not mounted
     // yet). The repeats land after feedback is showing.
     await user.keyboard('{Enter>3}');
+    // Let a deferred handleNext (timeout or frame) land before the check.
+    await act(async () => {});
 
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /next card/i })).toBeInTheDocument();
@@ -2495,6 +2499,8 @@ describe('PracticeCard - Enter advances on the feedback screen (ORD-55)', () => 
     const input = await screen.findByPlaceholderText('Type your answer...');
     await user.click(input);
     await user.keyboard('{Enter}');
+    // Let a deferred handleNext (timeout or frame) land before the check.
+    await act(async () => {});
 
     expect(screen.queryByText('Correct!')).not.toBeInTheDocument();
     expect(screen.queryByText('Not quite')).not.toBeInTheDocument();
@@ -2509,12 +2515,16 @@ describe('PracticeCard - Enter advances on the feedback screen (ORD-55)', () => 
     renderTypingCard(onAnswer);
 
     const input = await screen.findByPlaceholderText('Type your answer...');
-    await user.type(input, '   {Enter}');
+    await user.type(input, '   ');
+    await user.keyboard('{Enter}');
+    // Let a deferred handleNext (timeout or frame) land before the check.
+    await act(async () => {});
 
     expect(input).toHaveValue('   ');
     expect(screen.queryByText('Correct!')).not.toBeInTheDocument();
     expect(screen.queryByText('Not quite')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /next card/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /check answer/i })).toBeDisabled();
     expect(onAnswer).not.toHaveBeenCalled();
   });
 });
