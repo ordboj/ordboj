@@ -536,6 +536,7 @@ describe('getDueItems scaling (regression guard for #56: O(V^2) per-verb lookup)
   // and any other super-linear scan grow by about that factor squared and
   // miss the ceiling. Additive per-call overhead only shrinks the ratio, so
   // the ceiling needs no timer slack.
+  // This guard covers an empty store only: localStorage is cleared and srsStates and quarantine are {}. A future per-item scan over stored states could be O(V^2) and this test would not catch it.
   it('keeps getDueItems verb-table work linear as verb count grows 10x', async () => {
     const SMALL_N = 100;
     const LARGE_N = SMALL_N * 10;
