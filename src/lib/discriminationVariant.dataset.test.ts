@@ -81,8 +81,10 @@ describe('selectDiscriminationVariant over every certified frame (#474)', () => 
 
   it('returns the same variant, with k = floor(repetitions / 3), for the same inputs', () => {
     const offenders: string[] = [];
+    let checked = 0;
     for (const frame of frames) {
       if (frame.reflexive !== 'none') continue;
+      checked += 1;
       const introduced = introducedFor(frame);
       for (const repetitions of TRIGGER_REPETITIONS) {
         const first = selectDiscriminationVariant(asFrame(frame), repetitions, introduced);
@@ -100,12 +102,15 @@ describe('selectDiscriminationVariant over every certified frame (#474)', () => 
         }
       }
     }
+    expect(checked).toBeGreaterThan(0);
     expect(offenders).toEqual([]);
   });
 
   it('returns null off the one-in-three trigger', () => {
     const offenders: string[] = [];
+    let checked = 0;
     for (const frame of frames) {
+      checked += 1;
       const introduced = introducedFor(frame);
       for (const repetitions of OFF_TRIGGER_REPETITIONS) {
         const variant = selectDiscriminationVariant(asFrame(frame), repetitions, introduced);
@@ -114,13 +119,16 @@ describe('selectDiscriminationVariant over every certified frame (#474)', () => 
         }
       }
     }
+    expect(checked).toBeGreaterThan(0);
     expect(offenders).toEqual([]);
   });
 
   it('marks exactly one of three options correct', () => {
     const offenders: string[] = [];
+    let checked = 0;
     for (const frame of frames) {
       if (frame.reflexive !== 'none') continue;
+      checked += 1;
       const introduced = introducedFor(frame);
       for (const repetitions of TRIGGER_REPETITIONS) {
         const variant = selectDiscriminationVariant(asFrame(frame), repetitions, introduced);
@@ -139,13 +147,16 @@ describe('selectDiscriminationVariant over every certified frame (#474)', () => 
         }
       }
     }
+    expect(checked).toBeGreaterThan(0);
     expect(offenders).toEqual([]);
   });
 
   it('keeps the answer key out of excludedParticles and intersects acceptedParticles once', () => {
     const offenders: string[] = [];
+    let checked = 0;
     for (const frame of frames) {
       if (frame.reflexive !== 'none') continue;
+      checked += 1;
       const introduced = introducedFor(frame);
       for (const repetitions of TRIGGER_REPETITIONS) {
         const variant = selectDiscriminationVariant(asFrame(frame), repetitions, introduced);
@@ -188,6 +199,7 @@ describe('selectDiscriminationVariant over every certified frame (#474)', () => 
         }
       }
     }
+    expect(checked).toBeGreaterThan(0);
     expect(offenders).toEqual([]);
   });
 

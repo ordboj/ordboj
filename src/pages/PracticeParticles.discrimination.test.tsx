@@ -224,6 +224,21 @@ describe('particle practice discrimination card', () => {
     await user.click(screen.getByRole('button', { name: 'komma ihåg' }));
 
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    // chosenLureEntry stays null on a correct tap (ParticleVerbCard.tsx
+    // returns early when isCorrect), so neither lure gloss is shown.
+    expect(screen.queryByText(/to enter; to gain admission/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/to arrive at a destination/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText((_, element) => {
+        if (element?.tagName !== 'P') return false;
+        const text = element.textContent ?? '';
+        return (
+          text.includes('komma in —') ||
+          text.includes('komma fram —') ||
+          text.includes('komma ihåg —')
+        );
+      }),
+    ).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next Card' }));
 
     flushPersistence();
@@ -355,12 +370,12 @@ describe('particle practice discrimination card', () => {
     });
   });
 
-  // Every certified lure in the shipped dataset has a verified same-base
-  // lemma, so the page cannot reach the "no gloss" branch on real data.
-  // This card is pv:sta-till with its excluded particles replaced by "fram"
-  // and "ner": both are real particles with verified lemmas on other bases,
-  // and neither is a verified lemma of "stå". A lookup by particle alone
-  // would show one of those glosses; the card must show none.
+  // stå + fram/ner is a fixture chosen because the data has no verified entry
+  // for it, read at runtime, and it is not a claim about Swedish. Every
+  // certified lure in the shipped dataset has a verified same-base lemma, so
+  // the page cannot reach the "no gloss" branch on real data. "fram" and
+  // "ner" are verified lemmas of other bases; a lookup by particle alone
+  // would show one of those glosses, and this card must show none.
   it('(k) shows no gloss when the tapped lure has no verified lemma for that base', async () => {
     const user = userEvent.setup();
     const source = findParticleVerb('pv:sta-till');

@@ -233,6 +233,39 @@ describe('selectDiscriminationVariant — determinism', () => {
   });
 });
 
+describe('selectDiscriminationVariant — sv collation', () => {
+  // Synthetic tokens, not Swedish words and not a claim about Swedish.
+  // repetitions 9 → k = 3 → k % 3 === 0, so the card order is the sorted
+  // order with the rotation at identity. Swedish collation is
+  // a < z < å < ä < ö. Code-point order swaps å (U+00E5) and ä (U+00E4),
+  // so a default .sort() fails the triples that contain both.
+  const swedishOrder = ['a-synth', 'z-synth', 'å-synth', 'ä-synth', 'ö-synth'] as const;
+
+  it('orders option strings a < z < å < ä < ö', () => {
+    for (let start = 0; start <= swedishOrder.length - 3; start++) {
+      const triple = swedishOrder.slice(start, start + 3);
+      const target = triple[0];
+      const firstLure = triple[1];
+      const secondLure = triple[2];
+      if (target === undefined || firstLure === undefined || secondLure === undefined) {
+        throw new Error(`expected a 3-token window, got ${triple.join(', ')}`);
+      }
+      const frame: DiscriminationFrame = {
+        reflexive: 'none',
+        acceptedParticles: [target],
+        excludedParticles: [firstLure, secondLure],
+      };
+      const variant = selectDiscriminationVariant(frame, 9, new Set([firstLure, secondLure]));
+      expect(variant, triple.join(' < ')).not.toBeNull();
+      expect(variant!.options.map((option) => option.particle)).toEqual([
+        target,
+        firstLure,
+        secondLure,
+      ]);
+    }
+  });
+});
+
 describe('selectDiscriminationVariant — purity', () => {
   it('never calls Math.random or Date, so its output cannot depend on wall-clock time or chance', () => {
     // Matches actual call sites (`Math.random(`, `new Date(`, `Date.now(`),
