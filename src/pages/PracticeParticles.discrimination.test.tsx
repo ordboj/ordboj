@@ -1,13 +1,44 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { act, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import PracticeParticles from '@/pages/PracticeParticles';
+import { ParticleVerbCard } from '@/components/ParticleVerbCard';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
-import { getVerifiedParticleVerbs } from '@/lib/particleVerbs';
+import { findParticleVerb, getVerifiedParticleVerbs, selectExample } from '@/lib/particleVerbs';
 import { verbs } from '@/lib/verbs';
 import { ANSWER_LOG_STORAGE_KEY, type AnswerLogEntry } from '@/lib/answerLog';
 import type { SrsState } from '@/lib/srs';
+import type { ParticleSittingCard } from '@/lib/particleQueue';
+import type { ParticleVerbData } from '@/data/particleVerbData';
+import {
+  installSpeechSynthesisMock,
+  SV_VOICE,
+  type SpeechSynthesisMockHandle,
+} from '@/test/speechMock';
+
+// Wraps the real useSrsProgress so a choice-path test can see the modality
+// argument recordAnswer was called with. The wrapper forwards every call,
+// so the schedule and the answer log still come from the real hook. The
+// stored interval is only an indirect trace of that argument (a correct
+// choice and a correct typed answer write different numbers); this spy is
+// the call itself. vi.mock is hoisted, so the spy is created with vi.hoisted.
+const recordAnswerSpy = vi.hoisted(() => vi.fn());
+
+vi.mock('@/hooks/useSrsProgress', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSrsProgress')>();
+  return {
+    ...actual,
+    useSrsProgress: (...args: Parameters<typeof actual.useSrsProgress>) => {
+      const value = actual.useSrsProgress(...args);
+      const recordAnswer: typeof value.recordAnswer = (itemId, grade, modality) => {
+        recordAnswerSpy(itemId, grade, modality);
+        value.recordAnswer(itemId, grade, modality);
+      };
+      return { ...value, recordAnswer };
+    },
+  };
+});
 
 // Issue #473: the 3-option discrimination card render mode on the particle
 // practice page. Fixtures duplicated verbatim from
@@ -91,6 +122,7 @@ function readAnswerLogEntries(): AnswerLogEntry[] {
 
 beforeEach(() => {
   localStorage.clear();
+  recordAnswerSpy.mockClear();
   // Fake only Date -- see PracticeParticles.test.tsx's beforeEach comment
   // (issue #271 / PR #292) for why setTimeout stays real.
   vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
@@ -278,5 +310,185 @@ describe('particle practice discrimination card', () => {
     await screen.findByText('Correct!');
 
     expect(screen.getByRole('button', { name: /pronounce sentence/i })).toBeInTheDocument();
+  });
+
+  it("(j) calls recordAnswer with modality 'choice' and logs the lures", async () => {
+    const user = userEvent.setup();
+
+    seedKommaIhag({ repetitions: 3 });
+    const wrong = renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+    await screen.findByText('Choose the correct particle verb');
+    await user.click(screen.getByRole('button', { name: 'komma in' }));
+    await screen.findByText('Not quite');
+    await user.click(screen.getByRole('button', { name: 'Next Card' }));
+
+    expect(recordAnswerSpy).toHaveBeenCalledTimes(1);
+    expect(recordAnswerSpy).toHaveBeenCalledWith(kommaIhagClozeId, 0, 'choice');
+    flushPersistence();
+    expect(readAnswerLogEntries()[0]).toMatchObject({
+      i: 'pv:komma-ihag:cloze',
+      m: 'choice',
+      k: false,
+      l: ['in', 'fram'],
+      p: 'in',
+    });
+
+    wrong.unmount();
+    localStorage.clear();
+    recordAnswerSpy.mockClear();
+
+    seedKommaIhag({ repetitions: 3 });
+    renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+    await screen.findByText('Choose the correct particle verb');
+    await user.click(screen.getByRole('button', { name: 'komma ihåg' }));
+    await screen.findByText('Correct!');
+    await user.click(screen.getByRole('button', { name: 'Next Card' }));
+
+    expect(recordAnswerSpy).toHaveBeenCalledTimes(1);
+    expect(recordAnswerSpy).toHaveBeenCalledWith(kommaIhagClozeId, 5, 'choice');
+    flushPersistence();
+    expect(readAnswerLogEntries()[0]).toMatchObject({
+      m: 'choice',
+      k: true,
+      l: ['in', 'fram'],
+      p: null,
+    });
+  });
+
+  // Every certified lure in the shipped dataset has a verified same-base
+  // lemma, so the page cannot reach the "no gloss" branch on real data.
+  // This card is pv:sta-till with its excluded particles replaced by "fram"
+  // and "ner": both are real particles with verified lemmas on other bases,
+  // and neither is a verified lemma of "stå". A lookup by particle alone
+  // would show one of those glosses; the card must show none.
+  it('(k) shows no gloss when the tapped lure has no verified lemma for that base', async () => {
+    const user = userEvent.setup();
+    const source = findParticleVerb('pv:sta-till');
+    expect(source).toBeDefined();
+    const entry: ParticleVerbData = {
+      ...source!,
+      examples: source!.examples.map((example) => ({
+        ...example,
+        excludedParticles: ['fram', 'ner'],
+      })),
+    };
+    const verified = getVerifiedParticleVerbs();
+    expect(
+      verified.some(
+        (candidate) => candidate.baseInfinitive === 'stå' && candidate.particle === 'fram',
+      ),
+    ).toBe(false);
+    expect(
+      verified.some(
+        (candidate) => candidate.baseInfinitive === 'stå' && candidate.particle === 'ner',
+      ),
+    ).toBe(false);
+    const foreignGlosses = verified
+      .filter(
+        (candidate) =>
+          (candidate.particle === 'fram' || candidate.particle === 'ner') &&
+          candidate.baseInfinitive !== 'stå',
+      )
+      .map((candidate) => candidate.gloss.en);
+    expect(foreignGlosses.length).toBeGreaterThan(0);
+
+    const card: ParticleSittingCard = {
+      kind: 'cloze',
+      entry,
+      itemId: particleItemId(entry.id, 'cloze'),
+      countsTowardGoal: true,
+    };
+    renderWithProviders(
+      <ParticleVerbCard
+        card={card}
+        repetitions={3}
+        introducedParticles={new Set(['fram', 'ner'])}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('Choose the correct particle verb')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^stå / })).toHaveLength(3);
+    await user.click(screen.getByRole('button', { name: 'stå fram' }));
+    expect(await screen.findByText('Not quite')).toBeInTheDocument();
+
+    // exact: false — the gloss is one text node inside "<lemma> — <gloss>",
+    // so an exact match on the English alone would pass even when the line
+    // is on screen.
+    for (const gloss of foreignGlosses) {
+      expect(screen.queryByText(gloss, { exact: false })).not.toBeInTheDocument();
+    }
+    // A lure gloss is a paragraph of the form "<lemma> — <english>". The
+    // target's own gloss and the "For reference" line stay on screen; neither
+    // is that paragraph. Nothing may gloss the tapped phrase.
+    expect(
+      screen.queryByText((_, element) => {
+        if (element?.tagName !== 'P') return false;
+        return (element.textContent ?? '').includes('stå fram —');
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('(l) gives a wrong option no pronounce control', async () => {
+    const user = userEvent.setup();
+    seedKommaIhag({ repetitions: 3 });
+
+    renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+    await screen.findByText('Choose the correct particle verb');
+    await user.click(screen.getByRole('button', { name: 'komma in' }));
+    await screen.findByText('Not quite');
+
+    // The tapped lure and the other lure are static rows, not buttons, and
+    // neither row carries a pronounce control. The only speech control on
+    // the feedback screen is the corrected-sentence button.
+    for (const lure of ['komma in', 'komma fram']) {
+      // The tapped lure's gloss repeats its lemma in a <span>, so the option
+      // row is the DIV, not every node whose text contains the label.
+      const rows = screen.getAllByText(lure).filter((element) => element.tagName === 'DIV');
+      expect(rows).toHaveLength(1);
+      const row = rows[0]!;
+      expect(row.closest('button')).toBeNull();
+      expect(within(row).queryByRole('button', { name: /pronounce/i })).not.toBeInTheDocument();
+    }
+    const pronounceButtons = screen.getAllByRole('button', { name: /pronounce/i });
+    expect(pronounceButtons).toHaveLength(1);
+    expect(pronounceButtons[0]).toHaveAccessibleName(/pronounce sentence/i);
+  });
+});
+
+describe('particle practice discrimination card — corrected sentence audio (#473)', () => {
+  let speech: SpeechSynthesisMockHandle;
+
+  beforeEach(() => {
+    speech = installSpeechSynthesisMock([SV_VOICE]);
+  });
+
+  afterEach(() => {
+    speech.uninstall();
+  });
+
+  it('(m) speaks the corrected sentence only, and a wrong tap speaks nothing', async () => {
+    const user = userEvent.setup();
+    const entry = findParticleVerb('pv:komma-ihag');
+    expect(entry).toBeDefined();
+    const corrected = selectExample(entry!, 3).sv;
+
+    seedKommaIhag({ repetitions: 3 });
+    renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+    await screen.findByText('Choose the correct particle verb');
+    await user.click(screen.getByRole('button', { name: 'komma in' }));
+    await screen.findByText('Not quite');
+
+    expect(speech.speakCalls).toHaveLength(0);
+
+    await user.click(screen.getByRole('button', { name: /pronounce sentence/i }));
+    await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(1));
+
+    expect(speech.speakCalls[0]).toMatchObject({ text: corrected, lang: 'sv-SE' });
+    expect(corrected).toContain('ihåg');
+    expect(speech.speakCalls[0]?.text).not.toBe('komma in');
+    expect(speech.speakCalls[0]?.text).not.toBe('komma fram');
+    expect(speech.speakCalls[0]?.text).not.toBe('in');
+    expect(speech.speakCalls[0]?.text).not.toBe('fram');
   });
 });
