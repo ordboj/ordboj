@@ -5,6 +5,7 @@ import { useAnswerLog } from '@/hooks/useAnswerLog';
 import { getVerbs, getAllConjugatedVerbs, conjugateVerb, verbs } from '@/lib/verbs';
 import type { ConjugatedVerb, Verb } from '@/lib/verbs';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
+import { SCHEDULED_FORMS } from '@/lib/srsProviders';
 import { ANSWER_LOG_STORAGE_KEY, type AnswerLogEntry } from '@/lib/answerLog';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
@@ -516,117 +517,163 @@ describe('importData legacy rebase', () => {
 });
 
 describe('getDueItems scaling (regression guard for #56: O(V^2) per-verb lookup)', () => {
-  // Before #56, getDueItems called conjugateVerb(infinitive) once per verb,
-  // and conjugateVerb's real implementation does an O(V) VERB_DATA.find()
-  // internally -> O(V) calls x O(V) search = O(V^2) total. The fix replaced
-  // that with a single getAllConjugatedVerbs() call (O(V)) indexed into a
-  // Map for O(1) per-verb lookups in the loop.
+  // Before #56, getDueItems (now createConjugationProvider.listAvailableItems)
+  // called conjugateVerb(infinitive) once per verb. The real conjugateVerb
+  // does an O(V) VERB_DATA.find(), so V calls cost O(V^2). The fix calls
+  // getAllConjugatedVerbs once (one O(V) VERB_DATA.map) and indexes that
+  // array in a Map, so each verb is an O(1) lookup.
   //
-  // To make that complexity difference observable without depending on
-  // real wall-clock noise at small V, both conjugateVerb and
-  // getAllConjugatedVerbs are given an artificial per-call cost
-  // proportional to the verb count N, mirroring the real functions' O(N)
-  // shape. getDueItems's current (fixed) implementation only ever calls
-  // getAllConjugatedVerbs once, so total cost stays O(N) regardless of how
-  // many verbs there are. If a future change reintroduces a per-verb
-  // conjugateVerb call in that loop, this test's large-N run pays for N
-  // calls at O(N) each and the assertion below fails loudly (or the test
-  // times out) instead of drifting unnoticed.
-  it(
-    'keeps getDueItems wall time close to linear as verb count grows 10x',
-    { timeout: 15000 },
-    async () => {
-      function busyWork(n: number) {
-        let acc = 0;
-        for (let i = 0; i < n * 2000; i++) acc += i % 7;
-        return acc;
-      }
+  // Wall-clock budgets flake when the runner gets slower (ORD-73: a 2-vCPU
+  // runner crossed `small * 15`). This guard counts verb-table work instead.
+  // Counting calls alone is not enough: V conjugateVerb calls are still
+  // linear in V, so a 10x table would look like a 10x cost and the bug would
+  // pass. Each boundary call is charged the scan its real implementation
+  // performs (getVerbs and getAllConjugatedVerbs: one pass of length V;
+  // conjugateVerb: one find of length V). The arrays handed back are proxies
+  // that charge one step per element read, so a later per-verb .find() or
+  // nested walk of those arrays is charged too, even when it never calls
+  // conjugateVerb. Linear work grows by the same factor as V. The #56 pattern
+  // and any other super-linear scan grow by about that factor squared and
+  // miss the ceiling. Additive per-call overhead only shrinks the ratio, so
+  // the ceiling needs no timer slack.
+  it('keeps getDueItems verb-table work linear as verb count grows 10x', async () => {
+    const SMALL_N = 100;
+    const LARGE_N = SMALL_N * 10;
 
-      function makeVerbs(n: number): Verb[] {
-        return Array.from({ length: n }, (_, i) => ({
-          id: String(i + 1),
-          infinitive: `verb${i}`,
-          cefr: 'A1',
-        }));
-      }
+    // Steps charged while getDueItems runs. Reset after mount so eager init's
+    // own getVerbs pass is not part of the measurement.
+    let verbTableSteps = 0;
+    const charge = (amount: number) => {
+      verbTableSteps += amount;
+    };
 
-      function makeConjugated(n: number): ConjugatedVerb[] {
-        return Array.from({ length: n }, (_, i) => ({
-          id: String(i + 1),
-          infinitive: `verb${i}`,
-          cefr: 'A1',
-          presens: 'x',
-          preteritum: 'x',
-          supinum: 'x',
-          imperativ: 'x',
-        }));
-      }
+    // Array indexes only. `length` and method names are not element reads.
+    function isArrayIndexProp(prop: string): boolean {
+      if (prop === '' || !/^\d+$/.test(prop)) return false;
+      const index = Number(prop);
+      return index >= 0 && index < 2 ** 32 - 1 && String(index) === prop;
+    }
 
-      async function timeGetDueItems(n: number): Promise<number> {
-        const verbs = makeVerbs(n);
-        const conjugated = makeConjugated(n);
+    // One step per element the provider actually reads. Array methods keep
+    // working because they are invoked with the proxy as `this`, so their
+    // index reads go through this trap (spec Get on the receiver).
+    function instrumentArray<T>(items: T[]): T[] {
+      return new Proxy(items, {
+        get(target, prop, receiver) {
+          if (typeof prop === 'string' && isArrayIndexProp(prop)) charge(1);
+          const value: unknown = Reflect.get(target, prop, receiver);
+          if (typeof value !== 'function') return value;
+          const method = value as (this: unknown, ...args: unknown[]) => unknown;
+          return function (this: unknown, ...args: unknown[]) {
+            const thisArg = this == null || this === receiver ? receiver : this;
+            return method.apply(thisArg, args);
+          };
+        },
+      });
+    }
 
-        vi.mocked(getVerbs).mockImplementation(async () => verbs);
-        vi.mocked(getAllConjugatedVerbs).mockImplementation(async () => {
-          busyWork(n); // one O(n) pass, mirroring a real VERB_DATA.map()
-          return conjugated;
-        });
-        vi.mocked(conjugateVerb).mockImplementation(async (infinitive: string) => {
-          busyWork(n); // one O(n) scan, mirroring a real VERB_DATA.find()
-          return (
-            conjugated.find((c) => c.infinitive === infinitive) ?? {
-              id: 'unknown',
-              infinitive,
-              presens: '(not available)',
-              preteritum: '(not available)',
-              supinum: '(not available)',
-              imperativ: '(not available)',
-            }
-          );
-        });
+    function makeVerbs(n: number): Verb[] {
+      return Array.from({ length: n }, (_, i) => ({
+        id: String(i + 1),
+        infinitive: `verb${i}`,
+        cefr: 'A1',
+      }));
+    }
 
-        const { result } = renderHook(() => useSrsProgress());
-        await waitFor(() => expect(result.current.isLoading).toBe(false));
+    function makeConjugated(n: number): ConjugatedVerb[] {
+      return Array.from({ length: n }, (_, i) => ({
+        id: String(i + 1),
+        infinitive: `verb${i}`,
+        cefr: 'A1',
+        presens: 'x',
+        preteritum: 'x',
+        supinum: 'x',
+        imperativ: 'x',
+      }));
+    }
 
-        const start = performance.now();
-        await result.current.getDueItems();
-        return performance.now() - start;
-      }
+    async function measureVerbTableSteps(n: number): Promise<{ steps: number; dueCount: number }> {
+      localStorage.clear();
+      const verbs = makeVerbs(n);
+      const conjugated = makeConjugated(n);
+      // O(1) lookup for the mock itself. The charge below is the real
+      // VERB_DATA.find(); a .find() on `conjugated` would bill the test
+      // double and would not be production work.
+      const byInfinitive = new Map(conjugated.map((verb) => [verb.infinitive, verb]));
 
-      try {
-        const small = await timeGetDueItems(100);
-        const large = await timeGetDueItems(1000); // 10x verb count
-
-        // O(V) work should land near ~10x; the pre-#56 O(V^2) bug would be
-        // ~100x. Generous slack (15x, plus a flat floor) keeps this stable
-        // under CI timer noise while still catching a real quadratic
-        // regression.
-        expect(large).toBeLessThan(Math.max(small * 15, small + 50));
-      } finally {
-        // These three are module-scoped vi.fn()s shared by every test in
-        // this file via the top-level vi.mock('@/lib/verbs', ...) factory;
-        // restore their fixture-backed behavior so later test runs (or a
-        // different execution order) don't inherit this test's synthetic
-        // large-N implementations.
-        vi.mocked(getVerbs).mockImplementation(async () => FIXTURE_VERBS);
-        vi.mocked(getAllConjugatedVerbs).mockImplementation(async () =>
-          Object.values(FIXTURE_CONJUGATIONS),
+      vi.mocked(getVerbs).mockImplementation(async () => {
+        charge(n); // VERB_DATA.map, one pass
+        return instrumentArray(verbs);
+      });
+      vi.mocked(getAllConjugatedVerbs).mockImplementation(async () => {
+        charge(n); // VERB_DATA.map, one pass
+        return instrumentArray(conjugated);
+      });
+      vi.mocked(conjugateVerb).mockImplementation(async (infinitive: string) => {
+        charge(n); // VERB_DATA.find, one scan of the whole table
+        return (
+          byInfinitive.get(infinitive) ?? {
+            id: 'unknown',
+            infinitive,
+            presens: '(not available)',
+            preteritum: '(not available)',
+            supinum: '(not available)',
+            imperativ: '(not available)',
+          }
         );
-        vi.mocked(conjugateVerb).mockImplementation(async (infinitive: string) => {
-          return (
-            FIXTURE_CONJUGATIONS[infinitive] ?? {
-              id: 'unknown',
-              infinitive,
-              presens: '(not available)',
-              preteritum: '(not available)',
-              supinum: '(not available)',
-              imperativ: '(not available)',
-            }
-          );
-        });
+      });
+
+      const hook = renderHook(() => useSrsProgress());
+      try {
+        await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+        verbTableSteps = 0;
+        const due = await hook.result.current.getDueItems();
+        return { steps: verbTableSteps, dueCount: due.length };
+      } finally {
+        hook.unmount();
       }
-    },
-  );
+    }
+
+    try {
+      const small = await measureVerbTableSteps(SMALL_N);
+      const large = await measureVerbTableSteps(LARGE_N);
+
+      // Both runs walked every verb x scheduled form. A short-circuit that
+      // skipped the lookup loop must not be able to satisfy the ceiling below
+      // by doing less work.
+      expect(small.dueCount).toBe(SMALL_N * SCHEDULED_FORMS.length);
+      expect(large.dueCount).toBe(LARGE_N * SCHEDULED_FORMS.length);
+
+      expect(small.steps).toBeGreaterThan(0);
+      expect(large.steps).toBeGreaterThan(small.steps);
+      // growth === 10. Linear steps scale by `growth`; quadratic steps scale
+      // by about `growth` squared (~100x) and fail this ceiling.
+      const growth = LARGE_N / SMALL_N;
+      expect(large.steps).toBeLessThanOrEqual(small.steps * growth);
+    } finally {
+      // These three are module-scoped vi.fn()s shared by every test in
+      // this file via the top-level vi.mock('@/lib/verbs', ...) factory;
+      // restore their fixture-backed behavior so later test runs (or a
+      // different execution order) don't inherit this test's synthetic
+      // large-N implementations.
+      vi.mocked(getVerbs).mockImplementation(async () => FIXTURE_VERBS);
+      vi.mocked(getAllConjugatedVerbs).mockImplementation(async () =>
+        Object.values(FIXTURE_CONJUGATIONS),
+      );
+      vi.mocked(conjugateVerb).mockImplementation(async (infinitive: string) => {
+        return (
+          FIXTURE_CONJUGATIONS[infinitive] ?? {
+            id: 'unknown',
+            infinitive,
+            presens: '(not available)',
+            preteritum: '(not available)',
+            supinum: '(not available)',
+            imperativ: '(not available)',
+          }
+        );
+      });
+    }
+  });
 });
 
 // Issue #135: "Import Progress accepts any JSON and overwrites the store
