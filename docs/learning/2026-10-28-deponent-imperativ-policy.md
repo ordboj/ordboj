@@ -80,7 +80,7 @@ No earlier note in `docs/learning/` or `docs/product/` picks the drill rule for 
 
 `swedish-linguist` applies this pass to every deponent row. One row gets one lookup. Do not build a stem. Do not add `-s` to a stem.
 
-1. Open the SO verb article whose headword equals the row infinitive.
+1. Open `https://svenska.se/api/search/so?q=` plus the row infinitive. Use the article whose `ordklass` is `verb`. Do not use an article whose `ordklass` is `substantiv`. `låtsas` has a verb article and a substantiv article. The substantiv id is 234577. The verb id is 234579.
 2. Read the table row whose label is "imperativ deponens".
 3. If that row exists, copy its printed form into `imperativ`.
 4. If that row exists, leave `noNaturalImperativ` unset.
@@ -89,21 +89,21 @@ No earlier note in `docs/learning/` or `docs/product/` picks the drill rule for 
 7. Do not invent a form.
 8. Promote `lyckas` under step 3. The SO form is `lyckas`. This note does not set `grupp` or `cefr` for `lyckas`.
 
-The seven lookups for this ticket are already done. Each public page is the SO tab on svenska.se. The table text comes from the article body at `https://svenska.se/api/search/so?q=` plus the headword. The article id is the SO field `l_nr`.
+The seven lookups for this ticket are already done. The checkable source is the API URL in the table. The article id is the SO field `l_nr`. The public SO page renders the article only with JavaScript. That page is not the check.
 
-| Headword   | SO label           | Printed form | Article | Public page                                   |
+| Headword   | SO label           | Printed form | Article | Source                                        |
 | ---------- | ------------------ | ------------ | ------- | --------------------------------------------- |
-| lyckas     | imperativ deponens | lyckas       | 233184  | https://svenska.se/?activeTab=so&q=lyckas     |
-| misslyckas | imperativ deponens | misslyckas   | 245761  | https://svenska.se/?activeTab=so&q=misslyckas |
-| andas      | imperativ deponens | andas        | 103794  | https://svenska.se/?activeTab=so&q=andas      |
-| umgås      | imperativ deponens | umgås        | 374998  | https://svenska.se/?activeTab=so&q=umgås      |
-| vistas     | imperativ deponens | vistas       | 392697  | https://svenska.se/?activeTab=so&q=vistas     |
-| låtsas     | imperativ deponens | låtsas       | 234579  | https://svenska.se/?activeTab=so&q=låtsas     |
-| färdas     | imperativ deponens | färdas       | 159640  | https://svenska.se/?activeTab=so&q=färdas     |
+| lyckas     | imperativ deponens | lyckas       | 233184  | https://svenska.se/api/search/so?q=lyckas     |
+| misslyckas | imperativ deponens | misslyckas   | 245761  | https://svenska.se/api/search/so?q=misslyckas |
+| andas      | imperativ deponens | andas        | 103794  | https://svenska.se/api/search/so?q=andas      |
+| umgås      | imperativ deponens | umgås        | 374998  | https://svenska.se/api/search/so?q=umgås      |
+| vistas     | imperativ deponens | vistas       | 392697  | https://svenska.se/api/search/so?q=vistas     |
+| låtsas     | imperativ deponens | låtsas       | 234579  | https://svenska.se/api/search/so?q=låtsas     |
+| färdas     | imperativ deponens | färdas       | 159640  | https://svenska.se/api/search/so?q=färdas     |
 
 The six shipped rows already store that printed form. The pass leaves a matching row unchanged. When the stored string differs from the printed form, the pass replaces the stored string. `lyckas` is the row the pass adds.
 
-SO does not print an imperativ for `kunna`. Article 220674 has presens, preteritum, infinitiv, and supinum. It has no imperativ row. Public page: https://svenska.se/?activeTab=so&q=kunna. That is why `kunna` stays empty and flagged.
+SO does not print an imperativ for `kunna`. The verb article id is 220674. The source is `https://svenska.se/api/search/so?q=kunna`. That article has presens, preteritum, infinitiv, and supinum. It has no imperativ row. That is why `kunna` stays empty and flagged.
 
 The short SO line `lyckades lyckats` also omits the imperativ. SAOL 15 does the same for a regular verb. It prints preteritum and supinum, not the imperativ (`https://svenska.se/Inledning_SAOL_15_2026.pdf`, section 2.2). Silence on that short line is not evidence of a missing form. The table row is the source.
 
@@ -122,7 +122,9 @@ The due queue already does step 1. `PracticeCard` does not do steps 2 and 3. A d
 
 ## Runner-up
 
-The empty flag lost for these deponents. SO prints an imperativ for every lemma in the table. An empty field hides a printed form. The flag stays the mark for a verb whose SO table has no imperativ row. Today that set is the modal verbs, including `kunna`.
+The empty flag lost for these deponents. SO prints an imperativ for every lemma in the table. An empty field hides a printed form.
+
+The flag stays the mark for a verb whose SO table has no imperativ row. This note opened the SO verb article for `kunna` only. That article has no imperativ row. This note did not open `få`, `vilja`, `måste`, or `skola`. `swedish-linguist` checks those four verbs in the data pass.
 
 The "no imperativ" practice card lost. It spends a retrieval slot on a sentence the Progress page already shows.
 
