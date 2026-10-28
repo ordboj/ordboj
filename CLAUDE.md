@@ -105,6 +105,20 @@ task tracking.
   webhooks can miss CI success and merge-conflict transitions — not as
   the primary polling loop. Unsubscribe (or let the session end) when the
   PR is merged or closed.
+- **Parked PRs are a queue, not a graveyard.** A `needs-human` label means
+  one open question, not an end state. When a pilot run returns parked
+  results, the lead puts each parked question to the human with
+  `AskUserQuestion` in the same turn. When the human answers, the lead
+  re-runs `ticket-pilot` with that ticket number — the run adopts the open
+  PR and continues from review. At the start of any backlog session, list
+  open `needs-human` PRs; any of them older than a few days gets re-driven
+  (answer + re-run) or closed with a reason, never left open silently.
+- **`ready` results merge now, not later.** When ticket-pilot returns
+  `ready` and the human's approval is already in the chat, the lead merges
+  in the same turn. If the merge must wait, the lead subscribes to the PR
+  (`subscribe_pr_activity`) and arms a `send_later` check-in, so the merge
+  still happens after the turn ends. A green PR left waiting goes stale
+  and dies as a conflict.
 - **Raw feature ideas go through `idea-pilot`.** When the human sends idea or
   intention notes ("should we add X?", "what if Y worked like Z?"), the lead
   launches the `idea-pilot` workflow (`.claude/workflows/idea-pilot.js`) with

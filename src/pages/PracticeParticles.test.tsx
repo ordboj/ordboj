@@ -281,9 +281,13 @@ describe('particle practice flow', () => {
     expect(screen.getByText('For reference — not tested')).toBeInTheDocument();
   });
 
-  it('offers no pronunciation control anywhere on a particle card', async () => {
+  it('offers no pronunciation control on a typed particle cloze card', async () => {
     // Web Speech cannot be trusted to place particle stress, and wrong
-    // prosody teaches wrong Swedish. There is no toggle to get this wrong.
+    // prosody teaches wrong Swedish. This fixture (pv:tycka-om) carries no
+    // excludedParticles, so it never renders a discrimination card, and the
+    // discrimination feedback screen does speak the corrected sentence —
+    // docs/learning/2026-08-12-sentence-completion-distractors.md,
+    // "Feedback" point 5.
     const user = userEvent.setup();
     const clozeId = particleItemId('pv:tycka-om', 'cloze');
     // Pin every other verified entry as already-met (issue #315: no more

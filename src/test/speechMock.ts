@@ -36,6 +36,16 @@ export interface SpeakCall {
   voice: string | null;
   /** Shared sequence number with cancelCalls; lower seq happened first. */
   seq: number;
+  /**
+   * Invokes this call's utterance.onend, exactly as a real browser would on
+   * natural playback completion (as opposed to stopSpeaking()/cancel(),
+   * which src/lib/speech.ts settles itself without waiting for an onend/
+   * onerror event — see its stopSpeaking() comment). A no-op if the caller
+   * never assigned onend. Distinguishing "finished on its own" from "was
+   * cancelled" matters for consumers like VerbDetailsModal that key UI
+   * state off speakSwedish's onEnd settle callback either way.
+   */
+  fireEnd(): void;
 }
 
 /** One recorded speechSynthesis.cancel() call, in call order. */
@@ -155,6 +165,9 @@ export function installSpeechSynthesisMock(
         lang: utterance.lang,
         voice: utterance.voice ? utterance.voice.name : null,
         seq: seq++,
+        fireEnd: () => {
+          utterance.onend?.();
+        },
       });
     },
     cancel: () => {

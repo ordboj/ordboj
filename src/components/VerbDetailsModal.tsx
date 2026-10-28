@@ -1,11 +1,12 @@
+import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Volume2 } from 'lucide-react';
+import { CircleStop, Volume2 } from 'lucide-react';
 import { ConjugatedVerb, Form, getExampleSentence, getFormLabel, getVerbGrupp } from '@/lib/verbs';
 import { conjugationItemId } from '@/lib/itemIds';
 import { getMasteryStageBadge, isDue, SrsState } from '@/lib/srs';
-import { speakSwedish } from '@/lib/speech';
+import { buildConjugationUtterance, speakSwedish, stopSpeaking } from '@/lib/speech';
 import { useSettings } from '@/hooks/useSettings';
 
 interface VerbDetailsModalProps {
@@ -17,6 +18,84 @@ interface VerbDetailsModalProps {
 
 export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDetailsModalProps) {
   const { settings } = useSettings();
+
+  // True while a "pronounce all forms" sequence (manual or auto-play) is in
+  // flight, i.e. between speakSwedish() being called and its onEnd settling.
+  // Drives the visible stop control below.
+  const [isSpeakingAll, setIsSpeakingAll] = useState(false);
+
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // settings is read inside the verb-keyed auto-play effect below without
+  // being one of its dependencies (see that effect's comment) — kept in a
+  // ref so the effect always reads the latest mute/auto-read choice without
+  // re-running, and therefore never re-speaking, on a settings change.
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  // Exactly the forms this modal renders: infinitive, then the paradigm
+  // below with unavailable forms (empty, the sentinel, or a grammatically
+  // absent imperativ) already excluded — buildConjugationUtterance applies
+  // the identical isFormUnavailable check this component uses further down.
+  const verbUtterance = buildConjugationUtterance(verb);
+
+  // Auto-play (#455's autoReadAllForms), keyed on verb.id alone so a
+  // settings change, an SRS state update, or any other re-render of this
+  // modal never re-triggers it — only opening a *different* verb does.
+  // verb itself (not just verb.id) is used inside; that's fine because the
+  // effect body always runs with the verb from the same render that
+  // produced the id it's keyed on, and switching to a different verb without
+  // closing runs this cleanup before the new one plays (never two sequences
+  // at once).
+  useEffect(() => {
+    const { autoReadAllForms, muteAudio } = settingsRef.current;
+    if (autoReadAllForms && !muteAudio && verbUtterance) {
+      setIsSpeakingAll(true);
+      speakSwedish(verbUtterance, muteAudio, {
+        onEnd: () => {
+          if (isMountedRef.current) setIsSpeakingAll(false);
+        },
+      });
+    }
+    // Cancels the sequence above on verb switch and on unmount. Also covers
+    // a sequence started by the "Pronounce all forms" button below, since
+    // stopSpeaking() is global rather than scoped to one call.
+    return () => {
+      stopSpeaking();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verb.id]);
+
+  const handlePronounceAll = () => {
+    // Explicit guard (rather than relying on speakSwedish's own muted
+    // no-op), as in PracticeCard.tsx:307, so a muted click makes no
+    // speakSwedish call at all and never shows the stop control.
+    if (settings.muteAudio || !verbUtterance) return;
+    // stopSpeaking() first: a second click on this button while a paradigm
+    // is already playing replaces it, it never queues alongside it.
+    stopSpeaking();
+    setIsSpeakingAll(true);
+    speakSwedish(verbUtterance, settings.muteAudio, {
+      onEnd: () => {
+        if (isMountedRef.current) setIsSpeakingAll(false);
+      },
+    });
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      stopSpeaking();
+    }
+    onClose();
+  };
 
   const forms: Form[] = ['presens', 'preteritum', 'supinum', 'imperativ'];
 
@@ -49,7 +128,7 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
   };
 
   return (
-    <Dialog open onOpenChange={onClose}>
+    <Dialog open onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
@@ -87,6 +166,31 @@ export function VerbDetailsModal({ verb, srsStage, srsStates, onClose }: VerbDet
               {verb.infinitive}
             </p>
           </div>
+
+          {/* Issue #457: one utterance covering every form rendered below,
+              built by buildConjugationUtterance so it can never drift from
+              what's actually on screen. Stays visible (and clickable) even
+              when muted, matching the infinitive/per-form buttons above and
+              below — only the click handler's guard silences it. */}
+          {verbUtterance && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handlePronounceAll} className="flex-1 gap-2 h-11">
+                <Volume2 className="w-4 h-4" />
+                Pronounce all forms
+              </Button>
+              {isSpeakingAll && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 shrink-0"
+                  aria-label="Stop pronunciation"
+                  onClick={() => stopSpeaking()}
+                >
+                  <CircleStop className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* CEFR Level */}
           <div>
