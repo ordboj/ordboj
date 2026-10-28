@@ -7,6 +7,7 @@ import type { ConjugatedVerb, Verb } from '@/lib/verbs';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
 import { SCHEDULED_FORMS } from '@/lib/srsProviders';
 import { ANSWER_LOG_STORAGE_KEY, type AnswerLogEntry } from '@/lib/answerLog';
+import { DEFAULT_WRITE_DELAY_MS } from '@/lib/storage';
 
 const STORAGE_KEY = 'swedish-verbs-srs-progress';
 
@@ -1880,6 +1881,18 @@ describe('exportData does not carry the answer log (issue #403)', () => {
 
 describe('a throwing answer-log write does not stop the progress store persisting (issue #403, criterion 6)', () => {
   it('keeps recordAnswer persisting to swedish-verbs-srs-progress when the co-mounted answer log write throws quota exceeded', async () => {
+    // The file beforeEach fakes only Date, so the other cases can poll with
+    // waitFor. This case has to own the coalesced writer's setTimeout: a
+    // real 500ms wait (settlePersistence) is the ~500ms cost and the CI
+    // flake, because waitFor's default 1000ms budget expires when the
+    // runner stalls. Install a full fake clock before either writer arms a
+    // timer. setImmediate stays real so React can flush the async load;
+    // faking it deadlocks that flush against the clock this test advances.
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    });
+    vi.setSystemTime(FIXED_NOW);
+
     // Only the answer-log key is made to throw. The progress store writes
     // through the same setItem, so a real setItem is required for every
     // other key or this test would prove nothing about the two stores being
@@ -1903,7 +1916,13 @@ describe('a throwing answer-log write does not stop the progress store persistin
       const logHook = renderHook(() => useAnswerLog());
 
       const { result } = renderHook(() => useSrsProgress());
-      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      // The load effect awaits getVerbs, then listEagerInitIds. Flush those
+      // microtasks here. Advance 0ms so the 500ms write window stays armed
+      // and has not fired yet.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.isLoading).toBe(false);
 
       expect(() => {
         act(() => {
@@ -1915,16 +1934,18 @@ describe('a throwing answer-log write does not stop the progress store persistin
           });
           result.current.recordAnswer('1-presens', 5);
         });
-        // Force the log's pending write to actually hit the throwing
-        // setItem now, inside this act/expect, rather than leaving it
-        // armed on the real 500ms coalesced-writer timer (this suite only
-        // fakes Date, so vi.advanceTimersByTime would not fire it).
+        // Force the log's pending write to hit the throwing setItem now,
+        // inside this act/expect. dispose() flushes synchronously, so the
+        // quota error has to be swallowed on this stack.
         logHook.unmount();
       }).not.toThrow();
 
-      // The progress store's own write is still on its real 500ms timer;
-      // wait for it to land rather than asserting on a stale snapshot.
-      await settlePersistence(reflectsRecordedAnswer(1));
+      // The progress store's write is the fake timer armed at load.
+      // schedule() keeps that timer when the recorded answer replaces the
+      // producer, so one window lands the answer.
+      act(() => {
+        vi.advanceTimersByTime(DEFAULT_WRITE_DELAY_MS);
+      });
 
       const storedProgress = localStorage.getItem(STORAGE_KEY);
       expect(storedProgress).not.toBeNull();
