@@ -215,6 +215,16 @@ export function isDue(state: SrsState, now: number = Date.now()): boolean {
   return state.dueAt <= endOfLocalDay(now);
 }
 
+// True when `state` is the result of a lapse already applied on the local
+// day of `now`. calculateNextReview writes that signature on a wrong grade:
+// lastGrade 0, repetitions 0, and a dueAt strictly after the end of the
+// local day. A later answer the same day must not grade the item again.
+// A lapse whose dueAt has reached the current local day, and any state
+// with no lastGrade, is not lapsed today and is graded normally.
+export function isLapsedToday(state: SrsState, now: number): boolean {
+  return state.lastGrade === 0 && state.repetitions === 0 && state.dueAt > endOfLocalDay(now);
+}
+
 // In-session relearning queue policy (decision: docs/learning/lapse-handling.md,
 // "Decision" and "Interaction with the sitting cap"). A lapsed item re-enters
 // the current sitting rather than waiting until its normal `dueAt` (tomorrow

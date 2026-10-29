@@ -4,6 +4,7 @@ import {
   initializeSrsState,
   calculateNextReview,
   isDue,
+  isLapsedToday,
   isPristineSrsState,
   isSrsState,
   isStoredSrsState,
@@ -585,6 +586,11 @@ export function useSrsProgress(cefrLevels?: string[]) {
   // retroactively reinterpret history.
   const recordAnswer = (itemId: string, grade: Grade, modality: AnswerModality = 'typed') => {
     const currentState = srsStates[itemId] || initializeSrsState(itemId);
+    // The lapse itself is the grade for this local day. A later answer —
+    // re-queue, extra review, particle mode, either modality — must not
+    // reach the scheduler or the store. Return before setSrsStates so the
+    // persisted state stays byte-for-byte what the lapse wrote.
+    if (isLapsedToday(currentState, Date.now())) return;
     const newState = calculateNextReview(currentState, grade, modality);
     setSrsStates((prev) => ({
       ...prev,
