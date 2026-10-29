@@ -7,6 +7,10 @@ import jsxA11y from 'eslint-plugin-jsx-a11y';
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
 
+// This constant is the lint message for a blocked verb-data import.
+const VERB_DATA_IMPORT_MESSAGE =
+  'Import verb data through @/lib/verbs (getVerbs). Only src/lib/verbs.ts may import @/data/verbData.';
+
 export default tseslint.config(
   {
     name: 'ordboj/ignores',
@@ -118,4 +122,74 @@ export default tseslint.config(
     },
   },
   prettierConfig,
+  {
+    // Verb data has one import path.
+    // Other files get verb data from @/lib/verbs (getVerbs).
+    // Only src/lib/verbs.ts can import the verb data module.
+    //
+    // The paths entry blocks the alias @/data/verbData.
+    // The pattern **/data/verbData blocks a relative path such as ../data/verbData.
+    // The pattern **/data/verbData does not match a same-folder import ./verbData.
+    // The pattern **/verbData matches that same-folder import.
+    // A pattern with a file extension matches an import that includes the extension.
+    name: 'ordboj/verb-data-import',
+    files: ['**/*.{ts,tsx,js,mjs,cjs}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@/data/verbData',
+              message: VERB_DATA_IMPORT_MESSAGE,
+            },
+          ],
+          patterns: [
+            {
+              group: [
+                '**/data/verbData',
+                '**/verbData',
+                '**/verbData.ts',
+                '**/verbData.js',
+                '**/verbData.tsx',
+                '**/verbData.jsx',
+                '**/verbData.mjs',
+                '**/verbData.cjs',
+              ],
+              message: VERB_DATA_IMPORT_MESSAGE,
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // src/lib/verbs.ts is the access module for verb data.
+    // This block turns the rule off for that file only.
+    name: 'ordboj/verb-data-import-allow',
+    files: ['src/lib/verbs.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
+  {
+    // These test files import @/data/verbData today.
+    // QA owns these files.
+    // Staff-engineer does not edit a file that QA owns.
+    // This block turns the rule off for these files only.
+    // When a listed file no longer imports @/data/verbData, that file leaves this list.
+    name: 'ordboj/verb-data-import-tests',
+    files: [
+      'src/data/particleVerbData.test.ts',
+      'src/data/verbData.orderPin.test.ts',
+      'src/data/verbData.test.ts',
+      'src/hooks/useSrsProgress.particleKeys.test.ts',
+      'src/hooks/useSrsProgress.realdata.test.ts',
+      'src/lib/srsProviders.test.ts',
+      'src/lib/verbs.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
 );
