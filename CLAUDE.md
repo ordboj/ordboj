@@ -1,17 +1,19 @@
 # Ordböj — project instructions
 
-Swedish verb conjugation trainer. Vite + React 18 + TypeScript, Tailwind +
-shadcn/ui. No backend, no accounts: all progress and settings live in
-`localStorage`. Dev server runs on port 8080.
+Ordböj is a Swedish verb conjugation trainer. The stack is Vite, React 19,
+TypeScript, Tailwind, and shadcn/ui. The app has no backend and no accounts.
+Progress and settings live in `localStorage`. The dev server runs on port 8080.
 
 Commands: `npm run dev`, `npm run build`, `npm run lint`,
 `npm run typecheck`, `npm test` (Vitest, harness owned by `qa`).
 
 ## Two facts that shape every decision
 
-1. **User progress is irreplaceable.** One browser, one `localStorage`, no
-   backup. Any change to stored data needs a version field and a forward
-   migration.
+1. **User progress is irreplaceable.** Progress lives in one browser, in
+   `localStorage`, with no server copy. The learner can export and import a
+   JSON file. `buildAppBackup`, `readAppBackup`, and `restoreAppStores` are in
+   `src/lib/backup.ts`. That JSON file does not contain the answer log. A
+   change to stored data needs a version field and a forward migration.
 2. **Wrong Swedish is worse than missing Swedish.** A confidently incorrect
    conjugation teaches the learner something false. Uncertainty gets flagged
    for a human, never guessed.
@@ -22,22 +24,23 @@ The main session is the team lead. Teammates cannot spawn teammates.
 Roles: `product-manager` (scope/specs), three business owners
 (`srs-engine`, `swedish-linguist`, `learning-designer`), `staff-engineer`
 (architecture), `frontend-expert`, `devops`, `qa`.
+`ui-ux-expert` and `design-critic` are also roles in `.claude/agents/`.
 
 ## File ownership
 
 Agents must not edit files another agent owns. Report the defect to the lead
 instead; the lead routes it.
 
-| Owner               | Files                                                                                                                                                            |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `swedish-linguist`  | `src/data/verbData.ts`, `public/data/swedish_verbs.csv`, `src/lib/verbs.ts`, Swedish strings                                                                     |
-| `srs-engine`        | `src/lib/srs.ts`, `src/hooks/useSrsProgress.ts`                                                                                                                  |
-| `staff-engineer`    | `index.html`, `src/main.tsx`, `src/App.tsx`, `tsconfig*.json`, `eslint.config.js`, `src/lib/utils.ts`                                                            |
-| `devops`            | `vite.config.ts`, `postcss.config.js`, `package.json`, `.github/**`, PWA/manifest/service worker, deploy config                                                  |
-| `frontend-expert`   | `src/pages/**`, `src/components/*.tsx`, `src/hooks/useSettings.ts`, `use-mobile.tsx`, `use-toast.ts`, `src/lib/speech.ts`, `tailwind.config.ts`, `src/index.css` |
-| `qa`                | `*.test.ts(x)`, `*.spec.ts`, `src/test/**`, `e2e/**`, `vitest.config.ts`, `playwright.config.ts`                                                                 |
-| `learning-designer` | `docs/learning/**` — decision notes only, no production code                                                                                                     |
-| `product-manager`   | `docs/product/**` — specs and decisions only, no production code                                                                                                 |
+| Owner               | Files                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `swedish-linguist`  | `src/data/verbData.ts`, `docs/verb-data/candidates.csv`, `src/lib/verbs.ts`, Swedish strings                                   |
+| `srs-engine`        | `src/lib/srs.ts`, `src/hooks/useSrsProgress.ts`                                                                                |
+| `staff-engineer`    | `index.html`, `src/main.tsx`, `src/App.tsx`, `tsconfig*.json`, `eslint.config.js`, `src/lib/utils.ts`                          |
+| `devops`            | `vite.config.ts`, `postcss.config.js`, `package.json`, `.github/**`, PWA/manifest/service worker, deploy config                |
+| `frontend-expert`   | `src/pages/**`, `src/components/*.tsx`, `src/hooks/useSettings.ts`, `src/lib/speech.ts`, `tailwind.config.ts`, `src/index.css` |
+| `qa`                | `*.test.ts(x)`, `*.spec.ts`, `src/test/**`, `e2e/**`, `vitest.config.ts`, `playwright.config.ts`                               |
+| `learning-designer` | `docs/learning/**` — decision notes only, no production code                                                                   |
+| `product-manager`   | `docs/product/**` — specs and decisions only, no production code                                                               |
 
 `src/components/ui/**` is generated shadcn/ui. Nobody edits it in place;
 compose around it. Exception: `devops` may delete unused primitives during
@@ -130,22 +133,29 @@ task tracking.
 
 ## Known issues to keep in mind
 
-- `swedish_verbs.csv` has ~1537 rows; `VERB_DATA` in `verbData.ts` has ~50.
-  They have drifted and only the TS table ships.
-- The manifest carries many Radix and utility packages the Lovable scaffold
-  installed; several are likely unused.
-- The settings store (`swedish-verbs-settings`) is still unversioned. The SRS
-  progress store is versioned (`STORAGE_VERSION = 3`, `{version, items}`
-  envelope with legacy migration in `useSrsProgress.ts`); new fields there
-  mean a v3→v4 bump, not greenfield versioning. `dueAt` is clamped to the
-  next local day and `isDue` uses an end-of-local-day boundary (`srs.ts`) —
-  the old "due today is ambiguous" issue is resolved. Issue #53 (v2→v3)
-  re-keyed items onto the verb's infinitive instead of `String(index + 1)`
-  over `VERB_DATA` (`src/lib/verbs.ts`), so stored ids survive the verb table
-  being reordered or extended; `itemId` is no longer duplicated inside the
-  stored value (it is the map key); and an item that was never practised is
-  no longer persisted at all, since it is derivable on load. A one-shot,
-  never-overwritten copy of the pre-v3 payload is kept at
-  `swedish-verbs-srs-progress-backup-pre-v3` as a migration safety net; it
-  has no read/restore path, so "Reset all progress" deletes it too — reset
-  means reset (see PR #311).
+- `docs/verb-data/candidates.csv` has 1538 data rows. `VERB_DATA` in
+  `src/data/verbData.ts` has 979 rows. The CSV file is a promotion queue.
+  The app does not ship the CSV file. The app reads only `VERB_DATA`.
+- Each `@radix-ui` package in `package.json` has an import under
+  `src/components/ui`. Issue #115 removed the unused packages from the
+  Lovable scaffold.
+- The settings store (`swedish-verbs-settings`) is versioned.
+  `SETTINGS_STORAGE_VERSION` in `src/hooks/useSettings.ts` is 1. The stored
+  shape is `{ version, settings }`. A legacy install can still hold the old
+  bare object. A missing `version` field means that old shape.
+- The SRS progress store is versioned. `STORAGE_VERSION` in
+  `src/hooks/useSrsProgress.ts` is 3. The stored shape is `{ version, items }`.
+  The hook migrates an older shape on load. A new field in that store moves
+  the version from 3 to 4.
+- `calculateNextReview` clamps `dueAt` to the next local day. `isDue` in
+  `src/lib/srs.ts` uses the end of the local day as the boundary. This build
+  resolves the old ambiguous "due today" case.
+- Issue #53 changed item keys from `String(index + 1)` to the verb infinitive.
+  When `VERB_DATA` changes order or grows, the ids stay valid.
+  `src/lib/verbs.ts` sets the id to the infinitive. `itemId` is the map key.
+  The stored value does not repeat `itemId`.
+- When `isPristineSrsState` accepts an item and load can build it, the store
+  omits that item. The store keeps every particle item.
+- The key `swedish-verbs-srs-progress-backup-pre-v3` keeps one copy of the
+  pre-v3 payload. The app does not overwrite that copy. The schedule does not
+  load that copy. "Reset all progress" deletes that copy too (PR #311).
