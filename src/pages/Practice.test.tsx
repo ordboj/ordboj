@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import confetti from 'canvas-confetti';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import Practice from '@/pages/Practice';
@@ -47,7 +47,7 @@ const mocks = vi.hoisted(() => {
 // handed back a brand-new array every render would give it a new identity
 // every render too, re-firing the effect that keys on it in a loop.
 const STABLE_SETTINGS = {
-  practiceMode: 'typing' as const,
+  practiceMode: 'typing' as 'typing' | 'multiple-choice',
   showExamples: false,
   autoplayAudio: false,
   muteAudio: true,
@@ -84,6 +84,7 @@ vi.mock('@/hooks/useSettings', () => ({
 }));
 
 beforeEach(() => {
+  STABLE_SETTINGS.practiceMode = 'typing';
   mocks.recordAnswer.mockClear();
   // `restoreMocks: true` (vitest.config.ts) is a documented no-op on a
   // plain vi.fn() (as opposed to a vi.spyOn spy), so canvas-confetti's
@@ -143,8 +144,8 @@ describe('Practice page - one full session', () => {
     expect(screen.getByText(/completed all due cards/i)).toBeInTheDocument();
 
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(2);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, '1-presens', 5);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '1-preteritum', 5);
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, '1-presens', 5, 'typed');
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '1-preteritum', 5, 'typed');
 
     // Issue #100: two correct answers land on the completion screen, which
     // fires the single goal-completion confetti (not a per-card one).
@@ -315,13 +316,13 @@ describe('Practice page - same-sitting relearning queue (lapse policy #13)', () 
     // v1 was graded twice: the lapse (0) and the successful retry (5). Every
     // other item was graded once, correct (5).
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(7);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, 'v1-presens', 0);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, 'v2-presens', 5);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(3, 'v3-presens', 5);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(4, 'v4-presens', 5);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(5, 'v5-presens', 5);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(6, 'v6-presens', 5);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(7, 'v1-presens', 5);
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(1, 'v1-presens', 0, 'typed');
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, 'v2-presens', 5, 'typed');
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(3, 'v3-presens', 5, 'typed');
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(4, 'v4-presens', 5, 'typed');
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(5, 'v5-presens', 5, 'typed');
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(6, 'v6-presens', 5, 'typed');
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(7, 'v1-presens', 5, 'typed');
   }, 20000);
 
   // History: this test originally caught a real stuck-session bug, fixed by
@@ -891,7 +892,7 @@ describe('Practice page - free practice vs extra reviews (issue #27)', () => {
     await user.click(await screen.findByRole('button', { name: /next card/i }));
 
     expect(mocks.recordAnswer).toHaveBeenCalledTimes(2);
-    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '2-presens', 5);
+    expect(mocks.recordAnswer).toHaveBeenNthCalledWith(2, '2-presens', 5, 'typed');
   });
 });
 
@@ -982,5 +983,125 @@ describe('Practice page - read-only progress banner (issue #263)', () => {
 
     expect(await screen.findByText('1 / 2')).toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+
+// ORD-95: PracticeCard reports modality from the card the learner actually
+// answered (effectiveMode), and handleAnswer forwards that value to
+// recordAnswer. The choice credit formula (no ease gain; interval
+// max(1, round(interval * min(ease, 1.6)))) is already pinned in
+// src/lib/srs.test.ts from merged #401. These tests pin the call site.
+// Free practice still records nothing.
+describe('Practice page - answer modality (ORD-95)', () => {
+  async function advanceChoice(user: UserEvent, which: 'correct' | 'wrong') {
+    const correct = await screen.findByRole('button', { name: 'är' });
+    if (which === 'correct') {
+      await user.click(correct);
+      expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    } else {
+      const optionGrid = correct.closest('.grid-cols-1');
+      expect(optionGrid).not.toBeNull();
+      const wrong = within(optionGrid as HTMLElement)
+        .getAllByRole('button')
+        .find((button) => button.textContent !== 'är');
+      expect(wrong).toBeDefined();
+      await user.click(wrong as HTMLElement);
+      expect(await screen.findByText('Not quite')).toBeInTheDocument();
+    }
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+  }
+
+  it("records a correct multiple-choice answer with modality 'choice'", async () => {
+    STABLE_SETTINGS.practiceMode = 'multiple-choice';
+    mocks.dueItems = [
+      { verbId: 'vara', infinitive: 'vara', form: 'presens', itemId: 'vara-presens' },
+    ];
+    const user = userEvent.setup();
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    await advanceChoice(user, 'correct');
+
+    expect(mocks.recordAnswer).toHaveBeenCalledTimes(1);
+    expect(mocks.recordAnswer).toHaveBeenCalledWith('vara-presens', 5, 'choice');
+  });
+
+  it("records a wrong multiple-choice answer as grade 0 with modality 'choice'", async () => {
+    STABLE_SETTINGS.practiceMode = 'multiple-choice';
+    mocks.dueItems = [
+      { verbId: 'vara', infinitive: 'vara', form: 'presens', itemId: 'vara-presens' },
+    ];
+    const user = userEvent.setup();
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    await advanceChoice(user, 'wrong');
+
+    expect(mocks.recordAnswer).toHaveBeenCalledTimes(1);
+    expect(mocks.recordAnswer).toHaveBeenCalledWith('vara-presens', 0, 'choice');
+  });
+
+  it("records a correct typed answer with modality 'typed'", async () => {
+    mocks.dueItems = [
+      { verbId: 'vara', infinitive: 'vara', form: 'presens', itemId: 'vara-presens' },
+    ];
+    const user = userEvent.setup();
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, 'är');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    expect(mocks.recordAnswer).toHaveBeenCalledTimes(1);
+    expect(mocks.recordAnswer).toHaveBeenCalledWith('vara-presens', 5, 'typed');
+  });
+
+  it("records the typing fallback as 'typed' when multiple-choice has no imperativ to offer", async () => {
+    // "kunna" imperativ is unavailable, so PracticeCard falls back to
+    // typing. The page must forward that 'typed' signal. It must not
+    // substitute settings.practiceMode. The submitted string is wrong on
+    // purpose, so this does not grade the "(not available)" placeholder
+    // (ORD-92).
+    STABLE_SETTINGS.practiceMode = 'multiple-choice';
+    mocks.dueItems = [
+      {
+        verbId: 'kunna',
+        infinitive: 'kunna',
+        form: 'imperativ',
+        itemId: 'kunna-imperativ',
+      },
+    ];
+    const user = userEvent.setup();
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    expect(screen.queryByRole('button', { name: '(not available)' })).not.toBeInTheDocument();
+    await user.type(input, 'xyz');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    expect(await screen.findByText('Not quite')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    expect(mocks.recordAnswer).toHaveBeenCalledTimes(1);
+    expect(mocks.recordAnswer).toHaveBeenCalledWith('kunna-imperativ', 0, 'typed');
+  });
+
+  it('does not record a correct choice answer during free practice', async () => {
+    STABLE_SETTINGS.practiceMode = 'multiple-choice';
+    mocks.dueItems = [];
+    mocks.srsStates = {
+      'vara-presens': futureState('vara-presens', Date.now() + DAY_MS),
+    };
+    const user = userEvent.setup();
+    renderWithProviders(<Practice />, { route: '/practice' });
+
+    const keepPractising = await screen.findByRole('button', { name: /keep practising/i });
+    await waitFor(() => expect(keepPractising).toBeEnabled());
+    await user.click(keepPractising);
+
+    expect(await screen.findByText(/isn't saved to your progress/i)).toBeInTheDocument();
+    await advanceChoice(user, 'correct');
+
+    expect(await screen.findByText(/Great Work/i)).toBeInTheDocument();
+    expect(mocks.recordAnswer).not.toHaveBeenCalled();
   });
 });

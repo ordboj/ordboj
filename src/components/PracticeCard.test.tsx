@@ -3,7 +3,7 @@ import { act, screen, waitFor, fireEvent, within } from '@testing-library/react'
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { PracticeCard } from '@/components/PracticeCard';
-import type { Grade } from '@/lib/srs';
+import type { AnswerModality, Grade } from '@/lib/srs';
 import { getAllConjugatedVerbs, getFormLabel, getVerbGrupp, type Form } from '@/lib/verbs';
 import {
   installSpeechSynthesisMock,
@@ -187,7 +187,7 @@ describe('PracticeCard - typing mode', () => {
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
     expect(onAnswer).toHaveBeenCalledTimes(1);
-    expect(onAnswer).toHaveBeenCalledWith(5);
+    expect(onAnswer).toHaveBeenCalledWith(5, 'typed');
   });
 });
 
@@ -444,6 +444,97 @@ describe('PracticeCard - multiple-choice mode', () => {
     await userEvent.setup().click(wrongButton as HTMLElement);
 
     expect(await screen.findByText('Not quite')).toBeInTheDocument();
+  });
+});
+
+// ORD-95: onAnswer reports how the learner produced the answer. The
+// scheduler's choice branch (no ease reward; interval grows at
+// min(ease, 1.6)) runs only when this second argument is 'choice'.
+// A multiple-choice card that fell back to typing reports 'typed'.
+// The interval formula is already pinned in src/lib/srs.test.ts (#401).
+describe('PracticeCard - answer modality (ORD-95)', () => {
+  it("calls onAnswer(5, 'choice') after a correct multiple-choice answer", async () => {
+    const user = userEvent.setup();
+    const onAnswer = vi.fn<(grade: Grade, modality: AnswerModality) => void>();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={onAnswer}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: VARA_PRESENS_ANSWER }));
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(5, 'choice');
+  });
+
+  it("calls onAnswer(0, 'choice') after a wrong multiple-choice answer", async () => {
+    const user = userEvent.setup();
+    const onAnswer = vi.fn<(grade: Grade, modality: AnswerModality) => void>();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={onAnswer}
+      />,
+    );
+
+    const correctButton = await screen.findByRole('button', { name: VARA_PRESENS_ANSWER });
+    const optionGrid = correctButton.closest('.grid-cols-1');
+    expect(optionGrid).not.toBeNull();
+    const wrongButton = within(optionGrid as HTMLElement)
+      .getAllByRole('button')
+      .find((button) => button.textContent !== VARA_PRESENS_ANSWER);
+    expect(wrongButton).toBeDefined();
+    await user.click(wrongButton as HTMLElement);
+    expect(await screen.findByText('Not quite')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(0, 'choice');
+  });
+
+  it("calls onAnswer(0, 'typed') when multiple-choice falls back to typing for kunna imperativ", async () => {
+    // "kunna" has no imperativ (imperativNotApplicable). The card falls
+    // back to the typing input, and that answer is production, so the
+    // modality is 'typed' even though the requested mode is
+    // multiple-choice. The string is wrong on purpose: this test does
+    // not grade the "(not available)" placeholder (ORD-92).
+    const user = userEvent.setup();
+    const onAnswer = vi.fn<(grade: Grade, modality: AnswerModality) => void>();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="kunna"
+        form="imperativ"
+        mode="multiple-choice"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={onAnswer}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    expect(screen.queryByRole('button', { name: '(not available)' })).not.toBeInTheDocument();
+    await user.type(input, 'xyz');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    expect(await screen.findByText('Not quite')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /next card/i }));
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(0, 'typed');
   });
 });
 
@@ -808,7 +899,7 @@ describe('PracticeCard - #43 alternate grading and alternatesNote disclosure', (
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
     expect(onAnswer).toHaveBeenCalledTimes(1);
-    expect(onAnswer).toHaveBeenCalledWith(5);
+    expect(onAnswer).toHaveBeenCalledWith(5, 'typed');
   });
 
   it('grades onAnswer(5) after typing the alternate "sade" for säga preteritum (AC5)', async () => {
@@ -833,7 +924,7 @@ describe('PracticeCard - #43 alternate grading and alternatesNote disclosure', (
     await user.click(screen.getByRole('button', { name: /next card/i }));
 
     expect(onAnswer).toHaveBeenCalledTimes(1);
-    expect(onAnswer).toHaveBeenCalledWith(5);
+    expect(onAnswer).toHaveBeenCalledWith(5, 'typed');
   });
 
   describe('sense-conditioned alternatesNote (fixture verb, AC6)', () => {
@@ -931,7 +1022,7 @@ describe('PracticeCard - #43 alternate grading and alternatesNote disclosure', (
       await user.click(screen.getByRole('button', { name: /next card/i }));
 
       expect(onAnswer).toHaveBeenCalledTimes(1);
-      expect(onAnswer).toHaveBeenCalledWith(5);
+      expect(onAnswer).toHaveBeenCalledWith(5, 'typed');
     });
   });
 });
@@ -2402,7 +2493,7 @@ describe('PracticeCard - Enter advances on the feedback screen (ORD-55)', () => 
     await act(async () => {});
 
     expect(onAnswer).toHaveBeenCalledTimes(1);
-    expect(onAnswer).toHaveBeenCalledWith(5);
+    expect(onAnswer).toHaveBeenCalledWith(5, 'typed');
   });
 
   it('does not advance when the Enter that submitted the answer is still held', async () => {
@@ -2433,7 +2524,7 @@ describe('PracticeCard - Enter advances on the feedback screen (ORD-55)', () => 
     await user.keyboard('{Enter}');
 
     expect(onAnswer).toHaveBeenCalledTimes(1);
-    expect(onAnswer).toHaveBeenCalledWith(5);
+    expect(onAnswer).toHaveBeenCalledWith(5, 'typed');
   });
 
   describe('focused Pronounce pattern button', () => {

@@ -22,7 +22,7 @@ import {
   type Grupp,
 } from '@/lib/verbs';
 import { speakSwedish, stopSpeaking } from '@/lib/speech';
-import { Grade } from '@/lib/srs';
+import { Grade, type AnswerModality } from '@/lib/srs';
 
 // Fixed Swedish special-character row: always these three keys, in this
 // order, on every card regardless of the answer. Never derived from the
@@ -72,7 +72,7 @@ interface PracticeCardProps {
   // forms. Left in the prop contract rather than removed from Practice.tsx
   // pending a decision on whether #32 gets a non-recall-screen home.
   repetitions?: number;
-  onAnswer: (grade: Grade) => void;
+  onAnswer: (grade: Grade, modality: AnswerModality) => void;
 }
 
 export function PracticeCard({
@@ -279,10 +279,12 @@ export function PracticeCard({
     // card's prompt. Covers both the "Next Card" click and the
     // Enter-to-advance listener below, which both route through here.
     stopSpeaking();
-    // Calculate grade based on correctness
+    // Grade stays binary. The modality is 'choice' when effectiveMode is
+    // 'multiple-choice'. The typing fallback (unavailable form) sends 'typed'.
     const grade: Grade = isCorrect ? 5 : 0;
-    onAnswer(grade);
-  }, [isCorrect, onAnswer]);
+    const modality: AnswerModality = effectiveMode === 'multiple-choice' ? 'choice' : 'typed';
+    onAnswer(grade, modality);
+  }, [isCorrect, onAnswer, effectiveMode]);
 
   // Belt-and-braces for issue #420: if the card unmounts outright (e.g. the
   // learner navigates away mid-utterance) rather than advancing through
