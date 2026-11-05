@@ -9,7 +9,7 @@ import { ReadOnlyBanner } from '@/components/ReadOnlyBanner';
 import { useSrsProgress, type PracticeItem } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
 import { conjugationItemId } from '@/lib/itemIds';
-import { Grade, MAX_REQUEUES_PER_DAY, isEligibleForRequeue } from '@/lib/srs';
+import { Grade, MAX_REQUEUES_PER_DAY, isEligibleForRequeue, type AnswerModality } from '@/lib/srs';
 import { getVerbs, conjugateVerb, type Form } from '@/lib/verbs';
 
 // How many items "Keep practising" draws per batch.
@@ -206,13 +206,15 @@ export default function Practice() {
     startRound(pendingExtraReview, 'extra');
   };
 
-  const handleAnswer = (grade: Grade) => {
+  const handleAnswer = (grade: Grade, modality: AnswerModality) => {
     const answeredItem = items[currentIndex];
     if (!answeredItem) return;
 
     const isFree = sessionKind === 'free';
     if (!isFree) {
-      recordAnswer(answeredItem.itemId, grade);
+      // modality is the value PracticeCard sends from effectiveMode.
+      // A multiple-choice card on the typing fallback sends 'typed'.
+      recordAnswer(answeredItem.itemId, grade, modality);
     }
 
     let nextQueue = items;
