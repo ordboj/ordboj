@@ -51,18 +51,25 @@ vi.mock('canvas-confetti', () => ({
 // "URL.createObjectURL is not a function" for reasons unrelated to the
 // behavior under test.
 //
+// Vitest's jsdom environment does install a createObjectURL, so a
+// "only if missing" guard is not enough. That wrapper reads the Blob impl
+// off the first own symbol (`blob[implSymbol]._buffer`). jsdom 30.1 moved
+// the impl into a private field, the symbol is undefined, and the call
+// throws "Cannot read properties of undefined (reading '_buffer')". React
+// reports that click-dispatch exception as an unhandled error, which fails
+// the run after the test assertions have already passed. Always replace the
+// method. Tests only need a URL string here.
+//
 // configurable: true matches the deliberately-configurable local stub
 // pattern in AppErrorBoundary.test.tsx (which vi.spyOn()s these same
 // properties per-test): a non-configurable global stub here would silently
 // pre-empt that file's own `if (!('createObjectURL' in URL))` guard and
 // leave the property unable to be cleanly reconfigured/restored.
-if (!window.URL.createObjectURL) {
-  Object.defineProperty(window.URL, 'createObjectURL', {
-    writable: true,
-    configurable: true,
-    value: vi.fn(() => 'blob:mock-url'),
-  });
-}
+Object.defineProperty(window.URL, 'createObjectURL', {
+  writable: true,
+  configurable: true,
+  value: vi.fn(() => 'blob:mock-url'),
+});
 if (!window.URL.revokeObjectURL) {
   Object.defineProperty(window.URL, 'revokeObjectURL', {
     writable: true,
