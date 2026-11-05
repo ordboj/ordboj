@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor, fireEvent, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { act, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { PracticeCard } from '@/components/PracticeCard';
 import type { Grade } from '@/lib/srs';
@@ -2295,5 +2295,236 @@ describe('PracticeCard - pronounce pattern speech (issue #420)', () => {
     });
 
     expect(speech.speakCalls).toHaveLength(0);
+  });
+});
+
+// ORD-55 (GitHub #407, shipped in #406): once feedback is showing, Enter
+// calls the same handleNext as the "Next Card" button. The window listener
+// ignores key-repeat and a focused <button> (that button keeps its own
+// Enter activation). Before feedback, Enter in the input still submits, and
+// an empty answer still does not.
+describe('PracticeCard - Enter advances on the feedback screen (ORD-55)', () => {
+  const WRONG_ANSWER = 'totallywrong';
+
+  function renderTypingCard(onAnswer: (grade: Grade) => void, muteAudio = true) {
+    return renderWithProviders(
+      <PracticeCard
+        infinitive="vara"
+        form="presens"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={muteAudio}
+        onAnswer={onAnswer}
+      />,
+    );
+  }
+
+  async function submitTypedAnswer(user: UserEvent, answer: string) {
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, answer);
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    await screen.findByRole('status');
+  }
+
+  // Check Answer unmounts with the input. A real browser then leaves focus
+  // on the document, which is the state the window listener is written for.
+  // Blur a leftover button so Enter is not swallowed by native button
+  // activation — that path has its own tests below.
+  function blurIfButtonFocused() {
+    const active = document.activeElement;
+    if (active instanceof HTMLButtonElement) {
+      active.blur();
+    }
+    expect(document.activeElement).not.toBeInstanceOf(HTMLButtonElement);
+  }
+
+  async function gradeFromAdvance(answer: string, advance: 'click' | 'enter'): Promise<Grade> {
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    const user = userEvent.setup();
+    const view = renderTypingCard(onAnswer);
+
+    await submitTypedAnswer(user, answer);
+    expect(onAnswer).not.toHaveBeenCalled();
+    blurIfButtonFocused();
+
+    if (advance === 'click') {
+      await user.click(screen.getByRole('button', { name: /next card/i }));
+    } else {
+      await user.keyboard('{Enter}');
+    }
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    const grade = onAnswer.mock.calls[0]?.[0];
+    if (grade === undefined) {
+      throw new Error('onAnswer was called without a grade');
+    }
+    view.unmount();
+    return grade;
+  }
+
+  async function focusButton(user: UserEvent, name: RegExp) {
+    const button = screen.getByRole('button', { name });
+    for (let i = 0; i < 15 && document.activeElement !== button; i += 1) {
+      await user.tab();
+    }
+    expect(button).toHaveFocus();
+    return button;
+  }
+
+  it('advances on Enter after a correct answer with the same grade as Next Card', async () => {
+    const byClick = await gradeFromAdvance(VARA_PRESENS_ANSWER, 'click');
+    const byEnter = await gradeFromAdvance(VARA_PRESENS_ANSWER, 'enter');
+
+    expect(byEnter).toBe(byClick);
+    expect(byEnter).toBe(5);
+  });
+
+  it('advances on Enter after a wrong answer with the same grade as Next Card', async () => {
+    const byClick = await gradeFromAdvance(WRONG_ANSWER, 'click');
+    const byEnter = await gradeFromAdvance(WRONG_ANSWER, 'enter');
+
+    expect(byEnter).toBe(byClick);
+    expect(byEnter).toBe(0);
+  });
+
+  it('does not advance again when a held Enter auto-repeats on the feedback screen', async () => {
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    const user = userEvent.setup();
+    renderTypingCard(onAnswer);
+    await submitTypedAnswer(user, VARA_PRESENS_ANSWER);
+    blurIfButtonFocused();
+
+    // {Enter>3} is one hold: keydown (repeat false), then two auto-repeats
+    // (repeat true). Only the first may advance.
+    await user.keyboard('{Enter>3}');
+    // Let a deferred handleNext (timeout or frame) land before the check.
+    await act(async () => {});
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(5);
+  });
+
+  it('does not advance when the Enter that submitted the answer is still held', async () => {
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    const user = userEvent.setup();
+    renderTypingCard(onAnswer);
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, VARA_PRESENS_ANSWER);
+    // The first keydown submits from the input (the listener is not mounted
+    // yet). The repeats land after feedback is showing.
+    await user.keyboard('{Enter>3}');
+    // Let a deferred handleNext (timeout or frame) land before the check.
+    await act(async () => {});
+
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next card/i })).toBeInTheDocument();
+    expect(onAnswer).not.toHaveBeenCalled();
+  });
+
+  it('advances only once when Enter is pressed while Next Card has focus', async () => {
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    const user = userEvent.setup();
+    renderTypingCard(onAnswer);
+    await submitTypedAnswer(user, VARA_PRESENS_ANSWER);
+
+    await focusButton(user, /next card/i);
+    await user.keyboard('{Enter}');
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer).toHaveBeenCalledWith(5);
+  });
+
+  describe('focused Pronounce pattern button', () => {
+    let speech: SpeechSynthesisMockHandle;
+
+    beforeEach(() => {
+      speech = installSpeechSynthesisMock([SV_VOICE]);
+    });
+
+    afterEach(() => {
+      speech.uninstall();
+    });
+
+    it('activates Pronounce pattern and does not advance when that button has focus', async () => {
+      const onAnswer = vi.fn<(grade: Grade) => void>();
+      const user = userEvent.setup();
+      renderTypingCard(onAnswer, false);
+      await submitTypedAnswer(user, VARA_PRESENS_ANSWER);
+      expect(speech.speakCalls).toHaveLength(0);
+
+      await focusButton(user, /pronounce pattern/i);
+      await user.keyboard('{Enter}');
+
+      expect(onAnswer).not.toHaveBeenCalled();
+      await vi.waitFor(() => expect(speech.speakCalls).toHaveLength(1));
+      expect(speech.speakCalls[0]).toMatchObject({ text: 'vara, är, var, varit', lang: 'sv-SE' });
+    });
+  });
+
+  it('submits a correct typed answer on Enter before feedback and does not advance', async () => {
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    const user = userEvent.setup();
+    renderTypingCard(onAnswer);
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, `${VARA_PRESENS_ANSWER}{Enter}`);
+
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next card/i })).toBeInTheDocument();
+    expect(onAnswer).not.toHaveBeenCalled();
+  });
+
+  it('submits a wrong typed answer on Enter before feedback and does not advance', async () => {
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    const user = userEvent.setup();
+    renderTypingCard(onAnswer);
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, `${WRONG_ANSWER}{Enter}`);
+
+    expect(await screen.findByText('Not quite')).toBeInTheDocument();
+    expect(screen.getByText('Complete pattern:').closest('div')).toHaveTextContent(
+      VARA_PRESENS_ANSWER,
+    );
+    expect(onAnswer).not.toHaveBeenCalled();
+  });
+
+  it('does not submit an empty answer on Enter', async () => {
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    const user = userEvent.setup();
+    renderTypingCard(onAnswer);
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.click(input);
+    await user.keyboard('{Enter}');
+    // Let a deferred handleNext (timeout or frame) land before the check.
+    await act(async () => {});
+
+    expect(screen.queryByText('Correct!')).not.toBeInTheDocument();
+    expect(screen.queryByText('Not quite')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /next card/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /check answer/i })).toBeDisabled();
+    expect(onAnswer).not.toHaveBeenCalled();
+  });
+
+  it('does not submit a whitespace-only answer on Enter', async () => {
+    const onAnswer = vi.fn<(grade: Grade) => void>();
+    const user = userEvent.setup();
+    renderTypingCard(onAnswer);
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    await user.type(input, '   ');
+    await user.keyboard('{Enter}');
+    // Let a deferred handleNext (timeout or frame) land before the check.
+    await act(async () => {});
+
+    expect(input).toHaveValue('   ');
+    expect(screen.queryByText('Correct!')).not.toBeInTheDocument();
+    expect(screen.queryByText('Not quite')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /next card/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /check answer/i })).toBeDisabled();
+    expect(onAnswer).not.toHaveBeenCalled();
   });
 });
