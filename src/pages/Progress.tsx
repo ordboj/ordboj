@@ -33,6 +33,10 @@ import { VerbDetailsModal } from '@/components/VerbDetailsModal';
 type SortField = 'infinitive' | 'difficulty';
 type SortDirection = 'asc' | 'desc';
 
+// Rows mounted at once. The filtered corpus can be the full verb table;
+// further rows load only when the learner asks for them.
+const VERB_ROW_PAGE_SIZE = 50;
+
 export default function Progress() {
   const navigate = useNavigate();
   const { settings } = useSettings();
@@ -46,6 +50,7 @@ export default function Progress() {
   const [sortField, setSortField] = useState<SortField>('infinitive');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [selectedVerb, setSelectedVerb] = useState<ConjugatedVerb | null>(null);
+  const [visibleCount, setVisibleCount] = useState(VERB_ROW_PAGE_SIZE);
 
   useEffect(() => {
     const loadVerbs = async () => {
@@ -89,8 +94,11 @@ export default function Progress() {
       });
     }
 
-    // Sort
-    filtered.sort((a, b) => {
+    // Copy before sorting. The old in-place sort mutated `verbs` when no
+    // filter had copied the array, so a later slice of that same reference
+    // kept the previous page after the direction changed.
+    const sorted = [...filtered];
+    sorted.sort((a, b) => {
       let comparison = 0;
       if (sortField === 'infinitive') {
         comparison = a.infinitive.localeCompare(b.infinitive);
@@ -101,8 +109,19 @@ export default function Progress() {
       return sortDirection === 'asc' ? comparison : -comparison;
     });
 
-    return filtered;
+    return sorted;
   }, [verbs, searchQuery, difficultyFilter, srsFilter, sortField, sortDirection, getSrsStage]);
+
+  // Search, filters, and sort already ran on the full list. Slice only what
+  // paints, so the row count stays capped as VERB_DATA grows.
+  const visibleVerbs = useMemo(
+    () => filteredAndSortedVerbs.slice(0, visibleCount),
+    [filteredAndSortedVerbs, visibleCount],
+  );
+
+  const showFirstPage = () => {
+    setVisibleCount(VERB_ROW_PAGE_SIZE);
+  };
 
   const progressStats = useMemo(() => {
     const total = verbs.length;
@@ -175,6 +194,7 @@ export default function Progress() {
       setSortField(field);
       setSortDirection('asc');
     }
+    showFirstPage();
   };
 
   if (isLoading) {
@@ -293,13 +313,24 @@ export default function Progress() {
                   <Input
                     placeholder="Search by verb..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      showFirstPage();
+                    }}
                     className="pl-10"
                   />
                 </div>
               </div>
-              <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                <SelectTrigger>
+              <Select
+                value={difficultyFilter}
+                onValueChange={(value) => {
+                  setDifficultyFilter(value);
+                  showFirstPage();
+                }}
+              >
+                <SelectTrigger
+                  aria-label={`Difficulty, ${difficultyFilter === 'all' ? 'All Levels' : difficultyFilter}`}
+                >
                   <SelectValue placeholder="Difficulty" />
                 </SelectTrigger>
                 <SelectContent>
@@ -312,8 +343,16 @@ export default function Progress() {
                   <SelectItem value="C2">C2</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={srsFilter} onValueChange={setSrsFilter}>
-                <SelectTrigger>
+              <Select
+                value={srsFilter}
+                onValueChange={(value) => {
+                  setSrsFilter(value);
+                  showFirstPage();
+                }}
+              >
+                <SelectTrigger
+                  aria-label={`SRS stage, ${srsFilter === 'all' ? 'All Stages' : srsFilter}`}
+                >
                   <SelectValue placeholder="SRS Stage" />
                 </SelectTrigger>
                 <SelectContent>
@@ -327,6 +366,25 @@ export default function Progress() {
             </div>
           </CardContent>
         </Card>
+
+        {filteredAndSortedVerbs.length > 0 && (
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p id="verb-list-count" role="status" className="text-sm text-muted-foreground">
+              Showing {visibleVerbs.length} of {filteredAndSortedVerbs.length} verbs
+            </p>
+            {visibleVerbs.length < filteredAndSortedVerbs.length && (
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                aria-describedby="verb-list-count"
+                onClick={() => setVisibleCount((count) => count + VERB_ROW_PAGE_SIZE)}
+              >
+                Show more verbs
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Table - readable at sm and up; 7 columns need horizontal room */}
         <Card className="hidden sm:block">
@@ -381,7 +439,7 @@ export default function Progress() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAndSortedVerbs.map((verb, index) => {
+                {visibleVerbs.map((verb, index) => {
                   const stage = getSrsStage(verb.id);
                   const badge = getMasteryStageBadge(stage);
                   // Reference-only surface (never rendered pre-answer on
@@ -487,6 +545,7 @@ export default function Progress() {
                   const [field, direction] = value.split('-') as [SortField, SortDirection];
                   setSortField(field);
                   setSortDirection(direction);
+                  showFirstPage();
                 }}
               >
                 <SelectTrigger aria-label="Sort verbs" className="w-48">
@@ -501,7 +560,7 @@ export default function Progress() {
               </Select>
             </div>
           )}
-          {filteredAndSortedVerbs.map((verb) => {
+          {visibleVerbs.map((verb) => {
             const stage = getSrsStage(verb.id);
             const badge = getMasteryStageBadge(stage);
             const grupp = getVerbGrupp(verb.infinitive);
