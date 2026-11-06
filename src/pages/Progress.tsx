@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,12 @@ export default function Progress() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [selectedVerb, setSelectedVerb] = useState<ConjugatedVerb | null>(null);
   const [visibleCount, setVisibleCount] = useState(VERB_ROW_PAGE_SIZE);
+  const showMoreButtonRef = useRef<HTMLButtonElement>(null);
+  const tableCardRef = useRef<HTMLDivElement>(null);
+  const mobileListRef = useRef<HTMLDivElement>(null);
+  // Set in the show-more click, read once after that commit, so focus stays
+  // on the button (or moves to the last row when the button unmounts).
+  const showMoreFocus = useRef<'button' | 'end' | null>(null);
 
   useEffect(() => {
     const loadVerbs = async () => {
@@ -122,6 +128,33 @@ export default function Progress() {
   const showFirstPage = () => {
     setVisibleCount(VERB_ROW_PAGE_SIZE);
   };
+
+  const showMoreVerbs = () => {
+    const nextCount = visibleCount + VERB_ROW_PAGE_SIZE;
+    showMoreFocus.current = nextCount < filteredAndSortedVerbs.length ? 'button' : 'end';
+    setVisibleCount(nextCount);
+  };
+
+  useLayoutEffect(() => {
+    const intent = showMoreFocus.current;
+    if (!intent) return;
+    showMoreFocus.current = null;
+    if (intent === 'button') {
+      showMoreButtonRef.current?.focus();
+      return;
+    }
+    const tableButton = tableCardRef.current?.querySelector<HTMLButtonElement>(
+      'tbody tr:last-child button',
+    );
+    const card = mobileListRef.current?.querySelector<HTMLElement>(
+      ':scope > [role="button"]:last-child',
+    );
+    const candidates = [tableButton, card].filter((el): el is HTMLElement => el != null);
+    // display:none layouts (the hidden breakpoint) have no client rects, so
+    // focus lands on the list the learner can actually see.
+    const shown = candidates.find((el) => el.getClientRects().length > 0);
+    (shown ?? candidates[0])?.focus();
+  }, [visibleCount]);
 
   const progressStats = useMemo(() => {
     const total = verbs.length;
@@ -368,26 +401,13 @@ export default function Progress() {
         </Card>
 
         {filteredAndSortedVerbs.length > 0 && (
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p id="verb-list-count" role="status" className="text-sm text-muted-foreground">
-              Showing {visibleVerbs.length} of {filteredAndSortedVerbs.length} verbs
-            </p>
-            {visibleVerbs.length < filteredAndSortedVerbs.length && (
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                aria-describedby="verb-list-count"
-                onClick={() => setVisibleCount((count) => count + VERB_ROW_PAGE_SIZE)}
-              >
-                Show more verbs
-              </Button>
-            )}
-          </div>
+          <p id="verb-list-count" role="status" className="text-sm text-muted-foreground">
+            Showing {visibleVerbs.length} of {filteredAndSortedVerbs.length} verbs
+          </p>
         )}
 
         {/* Table - readable at sm and up; 7 columns need horizontal room */}
-        <Card className="hidden sm:block">
+        <Card ref={tableCardRef} className="hidden sm:block">
           <ScrollArea className="h-[min(600px,70dvh)]">
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
@@ -536,7 +556,7 @@ export default function Progress() {
         {/* Card list - below sm, a 7-column table can't stay readable at 360px width.
             The sort headers live in the (hidden-below-sm) table, so this is the
             only sort affordance phone users have. */}
-        <div className="sm:hidden space-y-3">
+        <div ref={mobileListRef} className="sm:hidden space-y-3">
           {filteredAndSortedVerbs.length > 0 && (
             <div className="flex justify-end">
               <Select
@@ -633,6 +653,19 @@ export default function Progress() {
             );
           })}
         </div>
+
+        {visibleVerbs.length < filteredAndSortedVerbs.length && (
+          <Button
+            ref={showMoreButtonRef}
+            type="button"
+            variant="outline"
+            size="lg"
+            aria-describedby="verb-list-count"
+            onClick={showMoreVerbs}
+          >
+            Show more verbs
+          </Button>
+        )}
 
         {filteredAndSortedVerbs.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">

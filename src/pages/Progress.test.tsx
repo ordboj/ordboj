@@ -137,6 +137,32 @@ describe('Progress page - bounded verb row rendering (ORD-68)', () => {
     expect(screen.getByText(`Showing ${afterRows} of ${all.length} verbs`)).toBeInTheDocument();
   });
 
+  it('puts Show more verbs after both lists and keeps focus on it', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProviders(<Progress />, { route: '/progress' });
+    await screen.findByRole('columnheader', { name: /verb/i });
+
+    const more = screen.getByRole('button', { name: /show more verbs/i });
+    const table = verbTable(container);
+    const mobileList = container.querySelector('.sm\\:hidden');
+    expect(mobileList).not.toBeNull();
+    if (!mobileList) return;
+
+    const follows = (earlier: Node, later: Node) =>
+      (earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+    expect(follows(screen.getByRole('status'), table)).toBe(true);
+    expect(follows(table, more)).toBe(true);
+    expect(follows(mobileList, more)).toBe(true);
+
+    const before = verbTableRows(container).length;
+    await user.click(more);
+
+    const again = screen.getByRole('button', { name: /show more verbs/i });
+    expect(verbTableRows(container).length).toBeGreaterThan(before);
+    expect(again).toHaveFocus();
+  });
+
   it('search and level filter still reach verbs that were not in the first batch', async () => {
     const user = userEvent.setup();
     const { container } = renderWithProviders(<Progress />, { route: '/progress' });
