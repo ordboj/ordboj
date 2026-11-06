@@ -10,14 +10,6 @@ import Progress from '@/pages/Progress';
 // heap that survives unmount + cleanup() + forced GC, bounded here by
 // keeping each file's render count low so vitest's per-file process
 // isolation resets it between files).
-//
-// Temporary until #424 lands: issue #415 grew VERB_DATA from 68 to 971 rows,
-// and Progress.tsx renders every row unvirtualized (~13s per render in
-// jsdom), blowing past vitest's default 5s testTimeout on every test in this
-// file. This is a real perf finding tracked as #424, owned by frontend-expert
-// -- qa does not fix the page. frontend-expert removes this raise in the
-// #424 PR.
-vi.setConfig({ testTimeout: 60000 });
 
 // Progress.tsx composes useSrsProgress (srs-engine) and useSettings
 // (frontend-expert) with the real getAllConjugatedVerbs() lookup
@@ -51,10 +43,7 @@ vi.mock('@/hooks/useSettings', () => ({
 describe('Progress page - sortable column headers: aria-sort + keyboard (issue #110 AC)', () => {
   it('marks the default-sorted "Verb" column ascending via aria-sort; other headers stay unsorted', async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
-    // #113: scoped to the desktop table's span, since the mobile card list
-    // renders the same infinitive concurrently in the DOM (see the AC #3
-    // test above for why plain findByText('kunna') is ambiguous now).
-    await screen.findByText('kunna', { selector: 'span:not(.font-semibold)' });
+    await screen.findByRole('columnheader', { name: /verb/i });
 
     const verbHeader = screen.getByRole('columnheader', { name: /verb/i });
     const difficultyHeader = screen.getByRole('columnheader', { name: /difficulty/i });
@@ -69,10 +58,7 @@ describe('Progress page - sortable column headers: aria-sort + keyboard (issue #
   it('reverses the verb row order and flips aria-sort when the "Verb" header is activated by keyboard Enter', async () => {
     const user = userEvent.setup();
     const { container } = renderWithProviders(<Progress />, { route: '/progress' });
-    // #113: scoped to the desktop table's span, since the mobile card list
-    // renders the same infinitive concurrently in the DOM (see the AC #3
-    // test above for why plain findByText('kunna') is ambiguous now).
-    await screen.findByText('kunna', { selector: 'span:not(.font-semibold)' });
+    await screen.findByRole('columnheader', { name: /verb/i });
 
     const infinitivesOf = () =>
       Array.from(container.querySelectorAll('tbody tr td:first-child span[lang="sv"]')).map(
@@ -92,16 +78,20 @@ describe('Progress page - sortable column headers: aria-sort + keyboard (issue #
     await user.keyboard('{Enter}');
 
     expect(verbHeader).toHaveAttribute('aria-sort', 'descending');
-    expect(infinitivesOf()).toEqual([...before].reverse());
+    const after = infinitivesOf();
+    expect(after.length).toBe(before.length);
+    // The mounted window is the first page of the newly sorted full list.
+    // Reversing only those rows would put `before`'s last infinitive first
+    // (localeCompare === 0). A later first row means the sort walked verbs
+    // that were not mounted.
+    expect((after[0] ?? '').localeCompare(before[before.length - 1] ?? '')).toBeGreaterThan(0);
+    expect(after).toEqual([...after].sort((a, b) => (b ?? '').localeCompare(a ?? '')));
   });
 
   it('switches sorting to the "Difficulty" column when it is activated by keyboard Space, and the "Verb" header goes back to unsorted', async () => {
     const user = userEvent.setup();
     renderWithProviders(<Progress />, { route: '/progress' });
-    // #113: scoped to the desktop table's span, since the mobile card list
-    // renders the same infinitive concurrently in the DOM (see the AC #3
-    // test above for why plain findByText('kunna') is ambiguous now).
-    await screen.findByText('kunna', { selector: 'span:not(.font-semibold)' });
+    await screen.findByRole('columnheader', { name: /verb/i });
 
     const verbHeader = screen.getByRole('columnheader', { name: /verb/i });
     const difficultyHeader = screen.getByRole('columnheader', { name: /difficulty/i });

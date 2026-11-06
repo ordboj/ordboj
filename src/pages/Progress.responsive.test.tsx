@@ -6,8 +6,8 @@ import Progress from '@/pages/Progress';
 
 // Split from the original monolithic Progress.test.tsx (one describe block
 // per file) as a qa-side fix for a deterministic CI killer: Progress.tsx
-// renders every VERB_DATA row unvirtualized, twice (desktop table + mobile
-// card list), and each such render was measured to retain ~150-220MB of JS
+// used to render every VERB_DATA row, twice (desktop table + mobile card
+// list), and each such render was measured to retain ~150-220MB of JS
 // heap that survives unmount() + testing-library's cleanup() + two forced
 // GC passes -- i.e. a real per-render leak, not just a big-but-freed working
 // set (reported to frontend-expert, since the leak's source is in
@@ -22,13 +22,8 @@ import Progress from '@/pages/Progress';
 // single test, or changing what data (real, full VERB_DATA via the
 // unmocked getAllConjugatedVerbs()) each test exercises.
 //
-// Temporary until #424 lands: issue #415 grew VERB_DATA from 68 to 971 rows,
-// and Progress.tsx renders every row unvirtualized (~13s per render in
-// jsdom), blowing past vitest's default 5s testTimeout on every test in this
-// file. This is a real perf finding tracked as #424, owned by frontend-expert
-// -- qa does not fix the page. frontend-expert removes this raise in the
-// #424 PR.
-vi.setConfig({ testTimeout: 60000 });
+// ORD-68 mounts a bounded window of those rows and dropped the temporary
+// 60s testTimeout. These tests still run on the real verb table.
 
 // Progress.tsx composes useSrsProgress (srs-engine) and useSettings
 // (frontend-expert) with the real getAllConjugatedVerbs() lookup

@@ -10,14 +10,6 @@ import Progress from '@/pages/Progress';
 // heap that survives unmount + cleanup() + forced GC, bounded here by
 // keeping each file's render count low so vitest's per-file process
 // isolation resets it between files).
-//
-// Temporary until #424 lands: issue #415 grew VERB_DATA from 68 to 971 rows,
-// and Progress.tsx renders every row unvirtualized (~13s per render in
-// jsdom), blowing past vitest's default 5s testTimeout on every test in this
-// file. This is a real perf finding tracked as #424, owned by frontend-expert
-// -- qa does not fix the page. frontend-expert removes this raise in the
-// #424 PR.
-vi.setConfig({ testTimeout: 60000 });
 
 // Progress.tsx composes useSrsProgress (srs-engine) and useSettings
 // (frontend-expert) with the real getAllConjugatedVerbs() lookup
@@ -46,13 +38,22 @@ vi.mock('@/hooks/useSettings', () => ({
   }),
 }));
 
+// "kunna" sits past the first mounted page (ORD-68). Search still runs over
+// the full corpus, so the row button is there after a query.
+async function renderProgressAndSearch(query: string) {
+  const user = userEvent.setup();
+  renderWithProviders(<Progress />, { route: '/progress' });
+  const search = await screen.findByPlaceholderText('Search by verb...');
+  await user.type(search, query);
+  return user;
+}
+
 // Issue #110 AC: the verb row opens the details modal via a real, focusable
 // <button> in its first cell (native keyboard semantics), not a custom
 // role="button" TableRow with a hand-rolled onKeyDown.
 describe('Progress page - verb row opens the details modal by keyboard (issue #110 AC)', () => {
   it('opens the VerbDetailsModal for "kunna" when its row button is activated by keyboard Enter', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<Progress />, { route: '/progress' });
+    const user = await renderProgressAndSearch('kunna');
 
     const button = await screen.findByRole('button', { name: 'kunna' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -68,8 +69,7 @@ describe('Progress page - verb row opens the details modal by keyboard (issue #1
   });
 
   it('opens the VerbDetailsModal when its row button is activated by keyboard Space', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<Progress />, { route: '/progress' });
+    const user = await renderProgressAndSearch('kunna');
 
     const button = await screen.findByRole('button', { name: 'kunna' });
     button.focus();
@@ -79,8 +79,7 @@ describe('Progress page - verb row opens the details modal by keyboard (issue #1
   });
 
   it('does not open the modal on an unrelated key (e.g. Tab) and leaves the row button focusable', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<Progress />, { route: '/progress' });
+    const user = await renderProgressAndSearch('kunna');
 
     const button = await screen.findByRole('button', { name: 'kunna' });
     button.focus();
@@ -95,7 +94,7 @@ describe('Progress page - verb row opens the details modal by keyboard (issue #1
   });
 
   it('renders the row button at a 44x44 minimum touch target, not height-only', async () => {
-    renderWithProviders(<Progress />, { route: '/progress' });
+    await renderProgressAndSearch('kunna');
     const button = await screen.findByRole('button', { name: 'kunna' });
     expect(button).toHaveClass('min-h-11');
     expect(button).toHaveClass('min-w-11');

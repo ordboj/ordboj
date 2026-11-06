@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import Progress from '@/pages/Progress';
 
@@ -9,14 +10,6 @@ import Progress from '@/pages/Progress';
 // heap that survives unmount + cleanup() + forced GC, bounded here by
 // keeping each file's render count low so vitest's per-file process
 // isolation resets it between files).
-//
-// Temporary until #424 lands: issue #415 grew VERB_DATA from 68 to 971 rows,
-// and Progress.tsx renders every row unvirtualized (~13s per render in
-// jsdom), blowing past vitest's default 5s testTimeout on every test in this
-// file. This is a real perf finding tracked as #424, owned by frontend-expert
-// -- qa does not fix the page. frontend-expert removes this raise in the
-// #424 PR.
-vi.setConfig({ testTimeout: 60000 });
 
 // Progress.tsx composes useSrsProgress (srs-engine) and useSettings
 // (frontend-expert) with the real getAllConjugatedVerbs() lookup
@@ -54,10 +47,7 @@ vi.mock('@/hooks/useSettings', () => ({
 describe('Progress page - table semantics survive the row-button a11y fix (regression, PR #308)', () => {
   it('still exposes real table row/cell semantics, not a row hijacked into role="button"', async () => {
     renderWithProviders(<Progress />, { route: '/progress' });
-    // #113: scoped to the desktop table's span, since the mobile card list
-    // renders the same infinitive concurrently in the DOM (see the AC #3
-    // test above for why plain findByText('kunna') is ambiguous now).
-    await screen.findByText('kunna', { selector: 'span:not(.font-semibold)' });
+    await screen.findByRole('columnheader', { name: /verb/i });
 
     const rows = screen.getAllByRole('row');
     // Header row + at least one data row.
@@ -77,11 +67,15 @@ describe('Progress page - table semantics survive the row-button a11y fix (regre
 
 describe("Progress page - lang='sv' on inline Swedish word display (AC #5, issue #112)", () => {
   it("wraps the verb infinitive cell in a lang='sv' span", async () => {
+    const user = userEvent.setup();
     renderWithProviders(<Progress />, { route: '/progress' });
 
     // #113: scoped to the desktop table's span, since the mobile card list
     // also wraps its infinitive in its own lang="sv" span (fact pinned
     // separately by the "responsive table at 360px" suite above).
+    // "kunna" is past the first mounted page (ORD-68).
+    const search = await screen.findByPlaceholderText('Search by verb...');
+    await user.type(search, 'kunna');
     const infinitiveCell = await screen.findByText('kunna', {
       selector: 'span:not(.font-semibold)',
     });

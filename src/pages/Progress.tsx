@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,10 @@ import { VerbDetailsModal } from '@/components/VerbDetailsModal';
 type SortField = 'infinitive' | 'difficulty';
 type SortDirection = 'asc' | 'desc';
 
+// Rows mounted at once. The filtered corpus can be the full verb table;
+// further rows load only when the learner asks for them.
+const VERB_ROW_PAGE_SIZE = 50;
+
 export default function Progress() {
   const navigate = useNavigate();
   const { settings } = useSettings();
@@ -46,6 +50,13 @@ export default function Progress() {
   const [sortField, setSortField] = useState<SortField>('infinitive');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [selectedVerb, setSelectedVerb] = useState<ConjugatedVerb | null>(null);
+  const [visibleCount, setVisibleCount] = useState(VERB_ROW_PAGE_SIZE);
+  const showMoreButtonRef = useRef<HTMLButtonElement>(null);
+  const tableCardRef = useRef<HTMLDivElement>(null);
+  const mobileListRef = useRef<HTMLDivElement>(null);
+  // Set in the show-more click, read once after that commit, so focus stays
+  // on the button (or moves to the last row when the button unmounts).
+  const showMoreFocus = useRef<'button' | 'end' | null>(null);
 
   useEffect(() => {
     const loadVerbs = async () => {
@@ -89,8 +100,11 @@ export default function Progress() {
       });
     }
 
-    // Sort
-    filtered.sort((a, b) => {
+    // Copy before sorting. The old in-place sort mutated `verbs` when no
+    // filter had copied the array, so a later slice of that same reference
+    // kept the previous page after the direction changed.
+    const sorted = [...filtered];
+    sorted.sort((a, b) => {
       let comparison = 0;
       if (sortField === 'infinitive') {
         comparison = a.infinitive.localeCompare(b.infinitive);
@@ -101,8 +115,46 @@ export default function Progress() {
       return sortDirection === 'asc' ? comparison : -comparison;
     });
 
-    return filtered;
+    return sorted;
   }, [verbs, searchQuery, difficultyFilter, srsFilter, sortField, sortDirection, getSrsStage]);
+
+  // Search, filters, and sort already ran on the full list. Slice only what
+  // paints, so the row count stays capped as VERB_DATA grows.
+  const visibleVerbs = useMemo(
+    () => filteredAndSortedVerbs.slice(0, visibleCount),
+    [filteredAndSortedVerbs, visibleCount],
+  );
+
+  const showFirstPage = () => {
+    setVisibleCount(VERB_ROW_PAGE_SIZE);
+  };
+
+  const showMoreVerbs = () => {
+    const nextCount = visibleCount + VERB_ROW_PAGE_SIZE;
+    showMoreFocus.current = nextCount < filteredAndSortedVerbs.length ? 'button' : 'end';
+    setVisibleCount(nextCount);
+  };
+
+  useLayoutEffect(() => {
+    const intent = showMoreFocus.current;
+    if (!intent) return;
+    showMoreFocus.current = null;
+    if (intent === 'button') {
+      showMoreButtonRef.current?.focus();
+      return;
+    }
+    const tableButton = tableCardRef.current?.querySelector<HTMLButtonElement>(
+      'tbody tr:last-child button',
+    );
+    const card = mobileListRef.current?.querySelector<HTMLElement>(
+      ':scope > [role="button"]:last-child',
+    );
+    const candidates = [tableButton, card].filter((el): el is HTMLElement => el != null);
+    // display:none layouts (the hidden breakpoint) have no client rects, so
+    // focus lands on the list the learner can actually see.
+    const shown = candidates.find((el) => el.getClientRects().length > 0);
+    (shown ?? candidates[0])?.focus();
+  }, [visibleCount]);
 
   const progressStats = useMemo(() => {
     const total = verbs.length;
@@ -175,6 +227,7 @@ export default function Progress() {
       setSortField(field);
       setSortDirection('asc');
     }
+    showFirstPage();
   };
 
   if (isLoading) {
@@ -293,13 +346,24 @@ export default function Progress() {
                   <Input
                     placeholder="Search by verb..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      showFirstPage();
+                    }}
                     className="pl-10"
                   />
                 </div>
               </div>
-              <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                <SelectTrigger>
+              <Select
+                value={difficultyFilter}
+                onValueChange={(value) => {
+                  setDifficultyFilter(value);
+                  showFirstPage();
+                }}
+              >
+                <SelectTrigger
+                  aria-label={`Difficulty, ${difficultyFilter === 'all' ? 'All Levels' : difficultyFilter}`}
+                >
                   <SelectValue placeholder="Difficulty" />
                 </SelectTrigger>
                 <SelectContent>
@@ -312,8 +376,16 @@ export default function Progress() {
                   <SelectItem value="C2">C2</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={srsFilter} onValueChange={setSrsFilter}>
-                <SelectTrigger>
+              <Select
+                value={srsFilter}
+                onValueChange={(value) => {
+                  setSrsFilter(value);
+                  showFirstPage();
+                }}
+              >
+                <SelectTrigger
+                  aria-label={`SRS stage, ${srsFilter === 'all' ? 'All Stages' : srsFilter}`}
+                >
                   <SelectValue placeholder="SRS Stage" />
                 </SelectTrigger>
                 <SelectContent>
@@ -328,8 +400,14 @@ export default function Progress() {
           </CardContent>
         </Card>
 
+        {filteredAndSortedVerbs.length > 0 && (
+          <p id="verb-list-count" role="status" className="text-sm text-muted-foreground">
+            Showing {visibleVerbs.length} of {filteredAndSortedVerbs.length} verbs
+          </p>
+        )}
+
         {/* Table - readable at sm and up; 7 columns need horizontal room */}
-        <Card className="hidden sm:block">
+        <Card ref={tableCardRef} className="hidden sm:block">
           <ScrollArea className="h-[min(600px,70dvh)]">
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
@@ -381,7 +459,7 @@ export default function Progress() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAndSortedVerbs.map((verb, index) => {
+                {visibleVerbs.map((verb, index) => {
                   const stage = getSrsStage(verb.id);
                   const badge = getMasteryStageBadge(stage);
                   // Reference-only surface (never rendered pre-answer on
@@ -478,7 +556,7 @@ export default function Progress() {
         {/* Card list - below sm, a 7-column table can't stay readable at 360px width.
             The sort headers live in the (hidden-below-sm) table, so this is the
             only sort affordance phone users have. */}
-        <div className="sm:hidden space-y-3">
+        <div ref={mobileListRef} className="sm:hidden space-y-3">
           {filteredAndSortedVerbs.length > 0 && (
             <div className="flex justify-end">
               <Select
@@ -487,6 +565,7 @@ export default function Progress() {
                   const [field, direction] = value.split('-') as [SortField, SortDirection];
                   setSortField(field);
                   setSortDirection(direction);
+                  showFirstPage();
                 }}
               >
                 <SelectTrigger aria-label="Sort verbs" className="w-48">
@@ -501,7 +580,7 @@ export default function Progress() {
               </Select>
             </div>
           )}
-          {filteredAndSortedVerbs.map((verb) => {
+          {visibleVerbs.map((verb) => {
             const stage = getSrsStage(verb.id);
             const badge = getMasteryStageBadge(stage);
             const grupp = getVerbGrupp(verb.infinitive);
@@ -574,6 +653,19 @@ export default function Progress() {
             );
           })}
         </div>
+
+        {visibleVerbs.length < filteredAndSortedVerbs.length && (
+          <Button
+            ref={showMoreButtonRef}
+            type="button"
+            variant="outline"
+            size="lg"
+            aria-describedby="verb-list-count"
+            onClick={showMoreVerbs}
+          >
+            Show more verbs
+          </Button>
+        )}
 
         {filteredAndSortedVerbs.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">

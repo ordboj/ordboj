@@ -10,14 +10,6 @@ import Progress from '@/pages/Progress';
 // heap that survives unmount + cleanup() + forced GC, bounded here by
 // keeping each file's render count low so vitest's per-file process
 // isolation resets it between files).
-//
-// Temporary until #424 lands: issue #415 grew VERB_DATA from 68 to 971 rows,
-// and Progress.tsx renders every row unvirtualized (~13s per render in
-// jsdom), blowing past vitest's default 5s testTimeout on every test in this
-// file. This is a real perf finding tracked as #424, owned by frontend-expert
-// -- qa does not fix the page. frontend-expert removes this raise in the
-// #424 PR.
-vi.setConfig({ testTimeout: 60000 });
 
 // Progress.tsx composes useSrsProgress (srs-engine) and useSettings
 // (frontend-expert) with the real getAllConjugatedVerbs() lookup
@@ -49,6 +41,7 @@ vi.mock('@/hooks/useSettings', () => ({
 
 describe('Progress page - Imperativ placeholder (AC #3, issue #112)', () => {
   it("renders an em-dash instead of raw '(not available)' text for a verb with no imperativ", async () => {
+    const user = userEvent.setup();
     renderWithProviders(<Progress />, { route: '/progress' });
 
     // "kunna" is a modal verb: VERB_DATA pins its imperativ as "" on
@@ -58,7 +51,10 @@ describe('Progress page - Imperativ placeholder (AC #3, issue #112)', () => {
     // the <td> around it; scoped to the desktop table's plain span
     // (:not(.font-semibold)), not the mobile card list's identically-texted
     // span (which (#113) renders the same infinitive concurrently in the
-    // DOM, styled with font-semibold).
+    // DOM, styled with font-semibold). "kunna" is past the first mounted
+    // page (ORD-68); search still covers the full table.
+    const search = await screen.findByPlaceholderText('Search by verb...');
+    await user.type(search, 'kunna');
     const infinitiveCell = await screen.findByText('kunna', {
       selector: 'span:not(.font-semibold)',
     });
@@ -75,16 +71,20 @@ describe("Progress page - issue #132: no raw '(not available)' placeholder", () 
 
     // Wait for the async verb list to finish loading before asserting a
     // global negative, otherwise the assertion would trivially pass while
-    // the table is still empty. Scoped to the desktop table's span (see the
-    // AC #3 test above for why plain findByText('kunna') is ambiguous now).
-    await screen.findByText('kunna', { selector: 'span:not(.font-semibold)' });
+    // the table is still empty.
+    await screen.findByRole('columnheader', { name: /verb/i });
     expect(screen.queryByText('(not available)')).not.toBeInTheDocument();
     expect(screen.queryByText(/not available/i)).not.toBeInTheDocument();
   });
 
   it('still renders a real imperativ form as plain text for a verb that has one', async () => {
+    const user = userEvent.setup();
     renderWithProviders(<Progress />, { route: '/progress' });
 
+    // Search so the assertion does not depend on "använda" falling inside
+    // the first mounted page.
+    const search = await screen.findByPlaceholderText('Search by verb...');
+    await user.type(search, 'använda');
     const infinitiveCell = await screen.findByText('använda', {
       selector: 'span:not(.font-semibold)',
     });
