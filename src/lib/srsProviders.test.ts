@@ -74,29 +74,48 @@ describe('conjugation provider - available items', () => {
   });
 });
 
-// ORD-87 (docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md):
-// a phraseBound verb's bare stem is not a usable imperativ, so the provider
-// must never surface an imperativ item for one, even though presens/
-// preteritum/supinum stay in the deck. This is the end-to-end proof that the
-// data-layer suppression (verb.phraseBound -> imperativ: "(not available)"
-// in toConjugatedVerb, src/lib/verbs.ts) actually removes the item from what
-// a learner can be scheduled, not just from the stored string.
-describe('conjugation provider - phraseBound suppresses the imperativ item (ORD-87)', () => {
-  it.each(['bry', 'slappna', 'piffa', 'tråka'] as const)(
-    'yields exactly presens/preteritum/supinum, no imperativ item, for phraseBound verb "%s"',
-    async (infinitive) => {
-      const verbs = await getVerbs();
-      const verb = verbs.find((v) => v.infinitive === infinitive);
-      expect(verb).toBeDefined();
+// ORD-87 default: an empty phraseBound imperativ stays out of the deck
+// (piffa, bry). ORD-102: a non-empty stored imperativ is an explicit human
+// override, so slappna and tråka yield all four scheduled forms. This is the
+// end-to-end proof that toConjugatedVerb (src/lib/verbs.ts) no longer
+// hard-suppresses every phraseBound imperativ.
+describe('conjugation provider - phraseBound imperativ (ORD-87, ORD-102)', () => {
+  async function scheduledForms(infinitive: string): Promise<string[]> {
+    const verbs = await getVerbs();
+    const verb = verbs.find((v) => v.infinitive === infinitive);
+    expect(verb).toBeDefined();
+    const items = await createConjugationProvider().listAvailableItems();
+    return items
+      .filter((item) => item.verbId === verb!.id)
+      .map((item) => item.form)
+      .sort();
+  }
 
-      const items = await createConjugationProvider().listAvailableItems();
-      const forms = items
-        .filter((item) => item.verbId === verb!.id)
-        .map((item) => item.form)
-        .sort();
-      expect(forms).toEqual(['presens', 'preteritum', 'supinum']);
+  it.each(['bry', 'piffa'] as const)(
+    'yields exactly presens/preteritum/supinum, no imperativ item, for empty phraseBound verb "%s"',
+    async (infinitive) => {
+      expect(await scheduledForms(infinitive)).toEqual(['presens', 'preteritum', 'supinum']);
     },
   );
+
+  it.each(['slappna', 'tråka'] as const)(
+    'yields all four scheduled forms, including imperativ, for phraseBound verb "%s"',
+    async (infinitive) => {
+      expect(await scheduledForms(infinitive)).toEqual([
+        'imperativ',
+        'presens',
+        'preteritum',
+        'supinum',
+      ]);
+    },
+  );
+
+  it('schedules a non-empty phraseBound imperativ and skips an empty one (ORD-102)', async () => {
+    expect(await scheduledForms('slappna')).toContain('imperativ');
+    expect(await scheduledForms('tråka')).toContain('imperativ');
+    expect(await scheduledForms('piffa')).not.toContain('imperativ');
+    expect(await scheduledForms('bry')).not.toContain('imperativ');
+  });
 
   it('yields all 4 scheduled forms, including imperativ, for an ordinary control verb', async () => {
     const verbs = await getVerbs();

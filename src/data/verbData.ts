@@ -47,16 +47,16 @@ export interface VerbData {
   // because the verb lives inside a fixed phrase: 'reflexive' for a verb
   // bound to a reflexive pronoun (bry sig om), 'particle' for one bound to
   // a particle (slappna av, piffa upp, tråka ut). Per Decision 1 of
-  // docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md:
-  // a phraseBound row stores imperativ: "" so that no imperativ item is
-  // ever generated (getAllConjugatedVerbs maps "" to '(not available)',
-  // which the item provider skips), while presens/preteritum/supinum stay
-  // in the deck. This is NOT noNaturalImperativ: a modal has no imperativ
-  // at all, whereas these verbs do have one — it is simply never usable
-  // without its pronoun or particle, so no bare answer string is correct.
-  // The pronoun/particle is never stored inside a form (a stored "bryr
-  // sig" would teach *jag bryr sig); the frame belongs to the presentation
-  // layer. Omitted (undefined) is the correct value for every other row.
+  // docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md
+  // the default is imperativ: "" so no imperativ item is generated
+  // (toConjugatedVerb maps "" to '(not available)', which the item provider
+  // skips), while presens/preteritum/supinum stay in the deck. ORD-102
+  // overrides that default for slappna and tråka only: those rows store the
+  // SO-printed bare imperativ, and a non-empty value is scheduled. The
+  // pronoun or particle is never stored inside a form (a stored "bryr sig"
+  // would teach *jag bryr sig); the frame belongs to the presentation
+  // layer. This is NOT noNaturalImperativ: a modal has no imperativ at all.
+  // Omitted (undefined) is the correct value for every other row.
   // A phraseBound row must also carry phraseFrame and phraseExample below;
   // the frame is what releases its presens/preteritum/supinum items into
   // the pool, so a row flagged without them is incomplete, not shippable.
@@ -1145,17 +1145,25 @@ export const VERB_DATA: VerbData[] = [
   // exists. Where the promotion-queue CSV carries a different band for the
   // bare lemma, the divergence is named on the row rather than left
   // implicit.
-  // "slappna" stores imperativ: "" under ORD-87 (phraseBound: 'particle',
-  // Decision 1 of docs/learning/
-  // 2026-08-17-reflexive-only-verbs-and-entries-per-base.md). The form
-  // exists — the command is "Slappna av!" — but it is only ever uttered
-  // with its particle; bare "Slappna!" is not Swedish, so no bare answer
-  // string is correct. The particle is not stored in any form: it is a
-  // frame for the presentation layer, not part of the verb's paradigm.
+  // "slappna" stores imperativ: "slappna" (ORD-102). Tuğrul overruled
+  // ORD-83 Decision 1 (docs/learning/
+  // 2026-08-17-reflexive-only-verbs-and-entries-per-base.md) for this row
+  // and for "tråka" only: drill the SO-printed bare imperativ while keeping
+  // phraseBound: 'particle' and the frame. SO prints imperativ "slappna"
+  // for the bare lemma (sense "bli slappare", SO 325692,
+  // https://svenska.se/api/search/so?q=slappna ; SAOL 85502,
+  // https://svenska.se/api/search/saol?q=slappna) and imperativ "slappna av"
+  // for the particle verb (SO 857612,
+  // https://svenska.se/api/search/so?q=slappna%20av ; SAOL 478683,
+  // https://svenska.se/api/search/saol?q=slappna%20av). "" is not the design
+  // choice for this row, and the bare form is not unattested. The
+  // particle is not stored inside the imperativ string (ORD-83: forms stay
+  // bare; the frame is presentation). The answer is bare "slappna"; the
+  // frame cue shows "slappna av".
   // Frame "slappna av": the particle is invariable and always follows the
   // verb, so printing it costs the learner nothing and names the phrase.
   // Example is presens, the tense the phrase is overwhelmingly used in.
-  { cefr: "B1", infinitive: "slappna", imperativ: "", presens: "slappnar", preteritum: "slappnade", supinum: "slappnat", grupp: "1", phraseBound: "particle", phraseFrame: "slappna av", phraseExample: "Jag slappnar av när jag lyssnar på musik." }, // regular grupp 1 (SAOL slappna/slappnar/slappnade/slappnat, imperativ slappna av). B1 from SVALex slappna+av=b1; the promotion-queue CSV tags the bare lemma C1, which understates it — the forms this row teaches are the ones a learner meets in the everyday "slappna av"
+  { cefr: "B1", infinitive: "slappna", imperativ: "slappna", presens: "slappnar", preteritum: "slappnade", supinum: "slappnat", grupp: "1", phraseBound: "particle", phraseFrame: "slappna av", phraseExample: "Jag slappnar av när jag lyssnar på musik." }, // regular grupp 1 (SO/SAOL slappnar/slappnade/slappnat; bare imperativ "slappna" SO 325692 / SAOL 85502; particle "slappna av" SO 857612 / SAOL 478683 is the frame, not the stored answer). B1 from SVALex slappna+av=b1; the promotion-queue CSV tags the bare lemma C1, which understates it — the forms this row teaches are the ones a learner meets in the everyday "slappna av"
   // "vika": strong verb, avljud i/e/i (viker/vek/vikit), same pattern as the
   // shipped riva/rev/rivit and skriva/skrev/skrivit. Supinum "vikt" is the
   // documented free variant alongside "vikit" (SAOL 14 "vikit el./äv. vikt",
@@ -1173,28 +1181,46 @@ export const VERB_DATA: VerbData[] = [
   { cefr: "B1", infinitive: "vika", imperativ: "vik", presens: "viker", preteritum: "vek", supinum: "vikit", grupp: "4", alternates: { supinum: ["vikt"] } },
   { cefr: "B1", infinitive: "bädda", imperativ: "bädda", presens: "bäddar", preteritum: "bäddade", supinum: "bäddat", grupp: "1" }, // regular grupp 1, forms exactly as the promotion-queue CSV row. B1 from SVALex bädda+in=b1; the CSV tags the bare lemma C1, which is too high for a verb used daily of making a bed
   // "piffa" stores imperativ: "" under ORD-87 (phraseBound: 'particle',
-  // same decision doc as "slappna" above): the verb occurs only in "piffa
-  // upp", so the usable command is "Piffa upp ...!" and bare "Piffa!" is
-  // not an utterance. Forms stay bare, the particle stays out of them.
+  // Decision 1 of docs/learning/
+  // 2026-08-17-reflexive-only-verbs-and-entries-per-base.md). ORD-102 does
+  // not fill this row: SO has no bare "piffa" headword, only the particle
+  // verb "piffa upp" (SO 279209,
+  // https://svenska.se/api/search/so?q=piffa%20upp ; SAOL 461134,
+  // https://svenska.se/api/search/saol?q=piffa%20upp , imperativ "piffa
+  // upp"; SAOL also lists the synonym "piffa till", 461131,
+  // https://svenska.se/api/search/saol?q=piffa%20till), so the usable
+  // command is "Piffa upp ...!" and bare "Piffa!" is not printed by either
+  // dictionary. Forms stay bare, the particle stays out of them.
   // Frame "piffa upp". Example is preteritum: "piffa upp" is most often
   // said of a finished job ("jag piffade upp ..."), and it shows the object
   // the phrase normally takes, which the bare frame cannot.
-  { cefr: "C1", infinitive: "piffa", imperativ: "", presens: "piffar", preteritum: "piffade", supinum: "piffat", grupp: "1", phraseBound: "particle", phraseFrame: "piffa upp", phraseExample: "Jag piffade upp lägenheten inför festen." }, // regular grupp 1 (SAOL -ar/-ade/-at), colloquial. C1 from SVALex piffa+upp=c1; no promotion-queue CSV row exists for the bare lemma
+  { cefr: "C1", infinitive: "piffa", imperativ: "", presens: "piffar", preteritum: "piffade", supinum: "piffat", grupp: "1", phraseBound: "particle", phraseFrame: "piffa upp", phraseExample: "Jag piffade upp lägenheten inför festen." }, // regular grupp 1 (SO/SAOL piffa upp: piffar/piffade/piffat upp; neither dictionary labels it colloquial). C1 from SVALex piffa+upp=c1; no promotion-queue CSV row exists for the bare lemma
   // "bry": grupp 3, not 2a — the stem is vowel-final, so the forms are the
   // bo/tro/nå pattern (bry+r, bry+dde, bry+tt), not an -er present. Forms
   // per SAOL: bry/bryr/brydde/brytt. The imperativ stem is "bry", but the
   // row stores imperativ: "" under ORD-87 (phraseBound: 'reflexive',
   // Decision 1 of docs/learning/
-  // 2026-08-17-reflexive-only-verbs-and-entries-per-base.md). The reason is
-  // phrase-boundness, not an absent form: per the ORD-83 research ruling
-  // the positive imperative IS attested — "Bry dig (om ...)!" occurs in
-  // campaign copy and headlines — alongside the commoner negated "bry dig
-  // inte om det". What no attested imperative does is drop the reflexive
-  // pronoun, so bare "bry" is never a usable answer; and the pronoun is not
-  // stored in any form here, because "bry dig" is a second-person string
-  // that would be wrong in every other person. This is the opposite case
-  // from "anse"/"te sig", whose imperativs are empty because the form
-  // itself is unattested.
+  // 2026-08-17-reflexive-only-verbs-and-entries-per-base.md). ORD-102 does
+  // not fill this row. The reason is phrase-boundness. SO (bry sig 834073,
+  // https://svenska.se/api/search/so?q=bry%20sig ; bry sig om 126372,
+  // https://svenska.se/api/search/so?q=bry%20sig%20om) and SAOL (bry sig
+  // 452842, https://svenska.se/api/search/saol?q=bry%20sig ; bry sig om
+  // 452845, https://svenska.se/api/search/saol?q=bry%20sig%20om) print NO
+  // imperativ row for the reflexive verb; the imperativ "bry" is printed
+  // only under the separate transitive sense "bry sin hjärna" (SO 126370,
+  // https://svenska.se/api/search/so?q=bry ; SAOL 10315,
+  // https://svenska.se/api/search/saol?q=bry). The ORD-83 research ruling
+  // (not a dictionary source) says "Bry dig (om ...)!" occurs in campaign
+  // copy alongside the commoner negated "bry dig inte om det". What no
+  // attested imperative does is drop the reflexive pronoun, so bare "bry"
+  // is never a usable answer; and the pronoun is not stored in any form
+  // here, because "bry dig" is a second-person string that would be wrong
+  // in every other person. The earlier comparison with "anse" was wrong:
+  // SO 105123 (https://svenska.se/api/search/so?q=anse) and SAOL 443626
+  // (https://svenska.se/api/search/saol?q=anse) print imperativ "anse".
+  // "te sig" is empty because SO 357642
+  // (https://svenska.se/api/search/so?q=te%20sig) and SAOL 466846
+  // (https://svenska.se/api/search/saol?q=te%20sig) print no imperativ for it.
   // A2, diverging from the promotion-queue CSV, which carries no bare "bry"
   // row but does carry the reflexive lemma "bry sig" at A1 (same forms plus
   // the pronoun). Re-tagged down to A2 for the same reason as the rest of
@@ -1213,12 +1239,23 @@ export const VERB_DATA: VerbData[] = [
   // without the negation, and it shows "mig" in the slot the frame leaves
   // open.
   { cefr: "A2", infinitive: "bry", imperativ: "", presens: "bryr", preteritum: "brydde", supinum: "brytt", grupp: "3", phraseBound: "reflexive", phraseFrame: "bry ___ om", phraseExample: "Jag bryr mig om mina grannar.", note: "bry is used almost only reflexively, as bry sig (om något). Recognition only: the reflexive pronoun is not part of the stored forms." },
-  // "tråka" stores imperativ: "" under ORD-87 (phraseBound: 'particle',
-  // same decision doc as "slappna" above): the verb occurs only in "tråka
-  // ut (någon)", so any command form carries the particle and bare
-  // "Tråka!" is not an utterance. Forms stay bare.
+  // "tråka" stores imperativ: "tråka" (ORD-102). Tuğrul overruled ORD-83
+  // Decision 1 for this row and for "slappna" only: drill the SO-printed
+  // bare imperativ while keeping phraseBound: 'particle' and the frame.
+  // SO 369458 (https://svenska.se/api/search/so?q=tr%C3%A5ka) has two
+  // senses. The sense this row teaches is "vanligen med partikel, särsk.
+  // ihjäl, ut" (valens "någon/något tråkar ut någon"); SAOL particle verb
+  // "tråka ut" 467169
+  // (https://svenska.se/api/search/saol?q=tr%C3%A5ka%20ut) prints imperativ
+  // "tråka ut". The bare lemma also has a colloquial sense "retas med
+  // (någon)", and SO and SAOL 100847
+  // (https://svenska.se/api/search/saol?q=tr%C3%A5ka) print imperativ
+  // "tråka". Bare "Tråka!" is attested; "" is not the design choice here.
+  // The particle is not stored inside the imperativ string (ORD-83: forms
+  // stay bare; the frame is presentation). The answer is bare "tråka"; the
+  // frame cue shows "tråka ut".
   // Frame "tråka ut". Example is preteritum with a human object, because
   // "tråka ut" is transitive and always takes one ("tråka ut någon"); a
   // subjectless frame would leave that unsaid.
-  { cefr: "A2", infinitive: "tråka", imperativ: "", presens: "tråkar", preteritum: "tråkade", supinum: "tråkat", grupp: "1", phraseBound: "particle", phraseFrame: "tråka ut", phraseExample: "Jag tråkade ut mina vänner med semesterbilderna." }, // regular grupp 1 (SAOL -ar/-ade/-at). A2 from SVALex tråka+ut=a2; no promotion-queue CSV row for the bare lemma. Used almost only in "tråka ut"
+  { cefr: "A2", infinitive: "tråka", imperativ: "tråka", presens: "tråkar", preteritum: "tråkade", supinum: "tråkat", grupp: "1", phraseBound: "particle", phraseFrame: "tråka ut", phraseExample: "Jag tråkade ut mina vänner med semesterbilderna." }, // regular grupp 1 (SAOL -ar/-ade/-at; bare imperativ "tråka" SO 369458 / SAOL 100847). A2 from SVALex tråka+ut=a2; no promotion-queue CSV row for the bare lemma. SO: "vanligen med partikel, särsk. ihjäl, ut"
 ];

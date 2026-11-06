@@ -192,18 +192,17 @@ function toConjugatedVerb(verb: VerbData): ConjugatedVerb {
     presens: verb.presens || '(not available)',
     preteritum: verb.preteritum || '(not available)',
     supinum: verb.supinum || '(not available)',
-    // A phraseBound verb never reports an imperativ, no matter what the row
-    // stores. Decision 1 of docs/learning/
-    // 2026-08-17-reflexive-only-verbs-and-entries-per-base.md: the bare stem
-    // is not a usable command ("Bry!", "Slappna!"), so a card asking for it
-    // would train Swedish the learner cannot say. Those rows already store
-    // imperativ: "", which reaches the same sentinel; this branch makes the
-    // rule a property of the field rather than of one row's current value,
-    // so refilling the stored imperativ can never resurrect the item.
-    // '(not available)' is what makes the item disappear: the conjugation
-    // provider skips any form that resolves to it
+    // ORD-87 default still suppresses an empty phraseBound imperativ
+    // (piffa, bry): "" becomes '(not available)', and the conjugation
+    // provider skips that sentinel
     // (createConjugationProvider.listAvailableItems, src/lib/srsProviders.ts).
-    imperativ: verb.phraseBound ? '(not available)' : verb.imperativ || '(not available)',
+    // A non-empty stored imperativ is an explicit human override (ORD-102 /
+    // Tuğrul, slappna and tråka only), so the provider can schedule the
+    // card. The answer stays the bare stored string; PracticeCard still
+    // shows the phrase frame. A row that is not phraseBound is unchanged:
+    // empty becomes '(not available)', otherwise the stored string.
+    imperativ:
+      verb.phraseBound && !verb.imperativ ? '(not available)' : verb.imperativ || '(not available)',
     imperativNotApplicable: verb.noNaturalImperativ,
     phraseBound: verb.phraseBound,
     cefr: verb.cefr,

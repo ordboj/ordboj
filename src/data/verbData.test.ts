@@ -240,10 +240,11 @@ describe('VERB_DATA - alternates field (issue #123)', () => {
 // imperativ forms. Genuine modal verbs (kunna, få, vilja) have no Swedish
 // imperativ at all and stay empty *with* an explanation; genuinely
 // uncertain rows (te sig, anse) stay empty and flagged for a human rather
-// than guessed; ORD-87 phraseBound rows (bry, slappna, piffa, tråka) store a
-// real imperativ stem but leave the field empty because the bare stem is
-// not a usable utterance on its own (see phraseBound docs in verbData.ts);
-// every other row now carries a real, non-empty imperativ.
+// than guessed; ORD-87 phraseBound rows whose stored imperativ is empty
+// (bry, piffa) leave the field empty because SO/SAOL print no bare imperativ
+// for the phrase the row teaches. ORD-102 stores the SO-printed bare
+// imperativ on slappna and tråka (phraseBound stays set; the frame is
+// presentation). Every other row carries a real, non-empty imperativ.
 describe('VERB_DATA - imperativ audit (issue #132)', () => {
   // Regression: before the audit, every non-auxiliary A1 verb below had
   // imperativ: "" even though a correct Swedish imperativ exists. Pin the

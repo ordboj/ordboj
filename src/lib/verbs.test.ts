@@ -59,23 +59,49 @@ describe('conjugateVerb - "(not available)" fallback for a known verb missing on
   });
 });
 
-// ORD-87 (docs/learning/2026-08-17-reflexive-only-verbs-and-entries-per-base.md):
-// the four phraseBound verbs report "(not available)" for imperativ no
-// matter what VERB_DATA stores for the field, because toConjugatedVerb
-// (src/lib/verbs.ts) branches on verb.phraseBound rather than trusting the
-// stored value. Their other three forms stay real and non-empty.
-describe('conjugateVerb - phraseBound verbs report no imperativ (ORD-87)', () => {
-  it.each(['bry', 'slappna', 'piffa', 'tråka'] as const)(
-    'reports "(not available)" imperativ for phraseBound verb "%s", with real presens/preteritum/supinum',
+// ORD-87 default: an empty phraseBound imperativ is '(not available)', so
+// piffa and bry stay suppressed. ORD-102: slappna and tråka store a non-empty
+// bare imperativ. conjugateVerb returns that string and keeps phraseBound.
+// The particle is not part of the accepted answer.
+describe('conjugateVerb - phraseBound imperativ (ORD-87, ORD-102)', () => {
+  it.each(['bry', 'piffa'] as const)(
+    'reports "(not available)" imperativ for phraseBound verb "%s" with an empty stored imperativ',
     async (infinitive) => {
+      const source = VERB_DATA.find((v) => v.infinitive === infinitive);
+      expect(source?.imperativ).toBe('');
+      expect(source?.phraseBound).toBeDefined();
+
       const result = await conjugateVerb(infinitive);
       expect(result.imperativ).toBe('(not available)');
+      expect(result.phraseBound).toBe(source?.phraseBound);
       expect(result.presens).not.toBe('(not available)');
       expect(result.preteritum).not.toBe('(not available)');
       expect(result.supinum).not.toBe('(not available)');
       expect(result.presens.length).toBeGreaterThan(0);
       expect(result.preteritum.length).toBeGreaterThan(0);
       expect(result.supinum.length).toBeGreaterThan(0);
+    },
+  );
+
+  it.each([
+    ['slappna', 'slappna', 'particle', 'slappna av'],
+    ['tråka', 'tråka', 'particle', 'tråka ut'],
+  ] as const)(
+    'returns bare imperativ "%s" for phraseBound verb and keeps phraseBound',
+    async (infinitive, imperativ, kind, phraseForm) => {
+      const source = VERB_DATA.find((v) => v.infinitive === infinitive);
+      expect(source?.imperativ).toBe(imperativ);
+      expect(source?.phraseBound).toBe(kind);
+      expect(source?.phraseFrame).toBeDefined();
+
+      const result = await conjugateVerb(infinitive);
+      expect(result.imperativ).toBe(imperativ);
+      expect(result.phraseBound).toBe(kind);
+      expect(result.presens).not.toBe('(not available)');
+      expect(result.preteritum).not.toBe('(not available)');
+      expect(result.supinum).not.toBe('(not available)');
+      expect(getAcceptedAnswers(infinitive, 'imperativ')).toEqual([imperativ]);
+      expect(isAcceptedAnswer(infinitive, 'imperativ', phraseForm)).toBe(false);
     },
   );
 });

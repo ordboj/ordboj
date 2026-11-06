@@ -123,10 +123,11 @@ export function PracticeCard({
   // beside the prompt during retrieval, `example` after grading. Neither is
   // composed or inflected here -- both strings come straight from
   // getPhraseFrame, which is null for every ordinary verb, so this is a
-  // no-op everywhere else. The imperativ item is suppressed at the data
-  // layer for these verbs (verbs.ts), so form === 'imperativ' should never
-  // reach here for a phraseBound infinitive; the guard is defensive only.
-  const phraseFrame = form === 'imperativ' ? null : getPhraseFrame(infinitive);
+  // no-op everywhere else. ORD-102 schedules a bare imperativ card when the
+  // row stores one (slappna, tråka). The answer stays that bare string, and
+  // this cue still names the phrase ("slappna av", "tråka ut"). An empty
+  // phraseBound imperativ (piffa, bry) is not scheduled.
+  const phraseFrame = getPhraseFrame(infinitive);
   // Only ever read here for the post-answer feedback chip below — grupp
   // predicts the answer's ending pattern, so it must never be rendered
   // before the learner has submitted (RED LINE, see issue #228). undefined
