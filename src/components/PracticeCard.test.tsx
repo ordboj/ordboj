@@ -1417,6 +1417,57 @@ describe('PracticeCard - phraseBound frame cue and example (ORD-87)', () => {
 
     expect(screen.queryByText('In the phrase:')).not.toBeInTheDocument();
   });
+
+  // ORD-102: slappna and tråka store a bare imperativ, so the card is
+  // scheduled. The answer stays that bare string. The phrase frame still
+  // shows, including on the imperativ card. The particle is not the answer.
+  it('shows the phrase frame on a phraseBound imperativ card and grades the bare stored form (ORD-102)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="slappna"
+        form="imperativ"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    const note = screen.getByRole('note');
+    expect(note).toHaveTextContent('Used in the phrase:');
+    expect(note).toHaveTextContent('slappna av');
+
+    await user.type(input, 'slappna');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    expect(await screen.findByText('Correct!')).toBeInTheDocument();
+    expect(screen.getByText('Jag slappnar av när jag lyssnar på musik.')).toBeInTheDocument();
+  });
+
+  it('does not accept the particle phrase as the imperativ answer (ORD-102)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <PracticeCard
+        infinitive="tråka"
+        form="imperativ"
+        mode="typing"
+        showExamples={false}
+        autoplayAudio={false}
+        muteAudio={true}
+        onAnswer={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByPlaceholderText('Type your answer...');
+    expect(screen.getByRole('note')).toHaveTextContent('tråka ut');
+
+    await user.type(input, 'tråka ut');
+    await user.click(screen.getByRole('button', { name: /check answer/i }));
+    expect(await screen.findByText('Not quite')).toBeInTheDocument();
+    expect(screen.queryByText('Correct!')).not.toBeInTheDocument();
+  });
 });
 
 // Issue #139: multiple-choice distractors were drawn from a fixed 8-verb
