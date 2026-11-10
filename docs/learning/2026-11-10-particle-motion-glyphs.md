@@ -11,18 +11,18 @@ the glyph of the correct particle, never the glyph of the learner's answer. It
 starts in the same frame as the feedback. It plays once for 700 ms, with no
 delay. The learner taps it to play it again. It never loops and never disables
 a control. Under reduced motion it shows the rest frame only, and it is not a
-button. Confetti does not fire on a feedback screen that shows a glyph. An
-entry gets a glyph only when it passes all six gates in "Eligibility" below.
-The last gate is a human flag, `motionGlyphVerified: true`. The default is no
-glyph. An entry whose accepted particles map to more than one glyph, or to no
-glyph, gets no glyph. The glyph on the introduction card is deferred, not
-rejected.
+button. Per-correct-answer confetti is removed from the particle card before
+the glyph ships (P8). An entry gets a glyph only when it passes all six gates
+in "Eligibility" below. The last gate is a human flag,
+`motionGlyphVerified: true`. The default is no glyph. An entry whose accepted
+particles map to more than one glyph, or to no glyph, gets no glyph. The glyph
+on the introduction card is deferred, not rejected.
 
 ## Question
 
 How does a six-glyph motion aid for particle meaning appear on the particle
-card, and which entries get one, so that it helps meaning recall and does not
-inflate grades or delay feedback?
+card, and which entries get one? The aid must help meaning recall. It must not
+inflate grades or delay feedback.
 
 ## Settled before this note
 
@@ -37,6 +37,30 @@ The human approved these points. This note works inside them.
 5. Out of scope: idiomatic entries, other particles, per-verb assets, raster or
    video, animation libraries, A/B telemetry, text in a glyph, a settings
    toggle.
+
+## Human decisions, 2026-11-10
+
+The human answered four review questions on 2026-11-10. These answers are
+authoritative.
+
+- **A. Pool.** The human does not accept a small pool as it is. The
+  `swedish-linguist` rewrites the example sentences of literal spatial
+  candidates. After the rewrite, every shipped example uses the physical,
+  drawable sense. Examples: replace the social "Vi går ut och äter middag" in
+  `gå ut`, and the scale metaphors "Priserna går upp/ner". The strict "every
+  example" test of gate 5 stays. The rewrite happens before the allowlist pass.
+  Conditions are in rule 9.
+- **B. `upp` sense line.** The human approves a new wording of
+  `PARTICLE_CORE_SENSE.upp` that names upward movement. This is a separate
+  `swedish-linguist` ticket. It blocks only the `upp` glyph. If the linguist
+  finds a problem with the wording, the linguist reports it to the lead and the
+  human. The linguist does not silently drop `upp`.
+- **C. Gate 6.** The human gives one batch approval of the linguist's pass
+  list. The list is in the PR, with a one-line reason for each entry.
+- **D. Confetti.** Per-correct-answer confetti is removed from the particle
+  card (`ParticleVerbCard.tsx:173` and `:194`). This applies P8. It is a
+  separate small `frontend-expert` ticket. It lands before the glyph
+  placement. Rule 6 records this.
 
 ## What the app does today
 
@@ -79,9 +103,9 @@ recovery and end of goal.
 
 The global reduced-motion rule sets every CSS animation to 0.01 ms and one
 iteration (`src/index.css`, lines 104–113). A glyph whose base style is the rest
-frame therefore shows the rest frame at once. No glyph-specific code is needed
-for the picture. The replay control is a different matter: under this rule a
-tap does nothing visible.
+frame therefore shows the rest frame at once. The picture needs no
+glyph-specific code. The replay control does need code: under this rule a tap
+does nothing visible.
 
 The sense strings are in `PARTICLE_CORE_SENSE` (`src/lib/particleVerbs.ts`,
 lines 193–247). Five of the six glyph particles have a spatial line. `upp` does
@@ -96,6 +120,10 @@ The entry type has the fields the gate needs: `transparency`, `contrast?`,
 113–127). There is no `motionGlyphVerified` field yet. It is a static data
 field, not a `localStorage` field. It needs no storage migration.
 
+**Ownership.** The CLAUDE.md ownership table lists
+`src/data/particleVerbData.ts` and `src/lib/particleVerbs.ts` under
+`swedish-linguist` (the human confirmed this on 2026-11-10).
+
 ## Evidence
 
 **Dual coding.** A meaning held as both a word and a picture is easier to
@@ -105,10 +133,11 @@ imageable meanings. A literal spatial particle is concrete. An aspectual `upp`
 (`äta upp`) is not.
 
 **Pictures help meaning, not form.** Boers, Piquer Píriz, Stengers & Eyckmans
-(2009) found that pictures helped learners recall the meaning of idioms, and did
-not help them recall the form. For some learners the pictures took attention
-from the form. That is the reason for the goal "meaning recall", and the reason
-the glyph never shows before the learner produces the form.
+(2009) found that pictures helped learners recall the meaning of idioms. The
+pictures did not help learners recall the form. For some learners the pictures
+took attention from the form. That is the reason for the goal "meaning
+recall". It is also the reason the glyph never shows before the learner
+produces the form.
 
 **Animation is not better than a good still.** Tversky, Morrison & Bétrancourt
 (2002) reviewed the studies. When an animation and a still carry the same
@@ -135,14 +164,15 @@ so the grade stays honest. Cost: the glyph appears only after the learner has
 already answered, so it helps the next retrieval, not this one.
 
 **Glyph on the prompt.** Rejected. The glyph tells the learner the particle. On
-a binary 0|5 grade, that is a free correct answer. This breaks red lines P2 and
-P7.
+a binary 0|5 grade, that is a free correct answer. This breaks collected red
+line 1 of [[2026-08-08-ux-pedagogy-red-lines]] (no part of the answer during
+recall). It also breaks P7 (at most four elements during recall).
 
 **Glyph instead of the sense line.** Rejected. The sense line names the
 non-spatial senses of the particle. The glyph shows only one spatial sense. A
 learner who sees only the glyph learns that `upp` means "up" and nothing else.
 
-**Glyph on the introduction card too.** Deferred. See decision 8.
+**Glyph on the introduction card too.** Deferred. See rule 8.
 
 ## Rules
 
@@ -155,7 +185,9 @@ learner who sees only the glyph learns that `upp` means "up" and nothing else.
 - It sits in the sense-line row, to the left of the sense text. The row is a
   flex row, centred.
 - The glyph box is 44 × 44 CSS px. This is the minimum touch target.
-- The sense line stays. Its text does not change because of the glyph.
+- The sense line stays. The glyph does not change the sense line at render
+  time. (Rule 10 changes one data string. That is a data change, not a render
+  change.)
 - The glyph uses the neutral foreground colour. It never uses the success
   colour or the destructive colour. It must look the same after a correct
   answer and after a wrong answer.
@@ -167,9 +199,10 @@ The glyph shows after both. It always shows the correct particle
 (`entry.particle`, through the alias map).
 
 Reason: after a wrong answer, the meaning of the correct particle is what the
-learner needs most. Errors followed by feedback are learned well (Metcalfe
-2017, cited in P21). A glyph only after correct answers would turn a meaning
-aid into a reward, and it would remove the aid from the screen that needs it.
+learner needs most. Learners learn well from errors when feedback follows
+(Metcalfe 2017, cited in P21). If the glyph showed only after correct answers,
+it would become a reward. It would also be absent from the screen that needs it
+most.
 
 Conditions:
 
@@ -211,8 +244,20 @@ picture from the one screen where the learner did not have the meaning.
 | Iterations                             | **1**                     |
 
 The hard cap applies to `animation-delay + animation-duration` of every
-animated element in the glyph. A test can check that sum against 1500 ms. A
-glyph that needs more than 900 ms is a design defect, even below the cap.
+animated element in the glyph. A glyph that needs more than 900 ms is a design
+defect, even below the cap.
+
+**Make the timing testable.** jsdom does not compute keyframes or read
+durations from a stylesheet. So `frontend-expert` must expose every duration
+and every delay in one of two ways:
+
+- as exported TypeScript constants (for example `GLYPH_DURATION_MS`,
+  `GLYPH_STAGGER_MS`) that the component uses, or
+- as inline CSS custom properties on the glyph elements (for example
+  `--glyph-duration: 700ms`) that the stylesheet reads.
+
+Vitest then asserts that delay plus duration is 1500 ms or less for each
+animated element.
 
 Reason for 700 ms: it is long enough to read a direction. It ends before a
 typical learner reads the correct form and moves to the sense line. The glyph
@@ -235,22 +280,25 @@ starts with the feedback, so it never delays the feedback. P1 holds.
 A focusable control that does nothing visible is a dead control. It is not
 allowed.
 
-### 6. Glyph and confetti
+### 6. Confetti on the particle card
 
-**On a feedback screen that shows a glyph, confetti does not fire.** The
-condition is the glyph gate of rule 9, not the answer. Confetti on the other
-particle cards is unchanged by this note.
+**The particle card fires no confetti on a correct answer.** Remove the
+`setShowConfetti(true)` calls at `ParticleVerbCard.tsx:173` (`handleSubmit`)
+and `:194` (`handleChoice`). This applies P8 of
+[[2026-08-08-ux-pedagogy-red-lines]]: confetti is for lapse recovery and end
+of goal only. This is a separate `frontend-expert` ticket. It lands before the
+glyph placement (human decision D).
 
 Reason: two motions at the same moment compete for the same attention, and
-the confetti covers the glyph. Delaying the glyph until confetti ends is a
-second interruption, and the glyph then plays when the learner already reads
-the next line. Delaying confetti is also a second interruption.
+the confetti covers the glyph. If the glyph waited until the confetti ended,
+the wait would be a second interruption, and the glyph would play while the
+learner already reads the next line. If the confetti waited, that would also
+be a second interruption. With no per-answer confetti, the conflict does not
+occur. All particle cards also behave the same, so no learner reads a missing
+confetti as "this answer counted less".
 
-Known cost: on glyph cards, a correct answer has no confetti, and on other
-cards it has confetti. The learner can read that difference as "this answer
-counted less". The clean fix is P8 for the whole particle card: confetti only
-on lapse recovery and end of goal. That is a separate ticket for
-`frontend-expert`. When P8 ships, this rule has no visible effect.
+Fallback, only if the P8 ticket has not landed first: suppress confetti on any
+feedback screen that shows a glyph.
 
 ### 7. Entries with accepted particles that map to different glyphs
 
@@ -267,8 +315,9 @@ glyph. A particle with no glyph (for example `iväg`) counts as "not one glyph".
 
 Runner-up: show the glyph of the primary particle. It lost because a learner
 who typed the accepted alternative would see a picture of a different
-direction. That reads as a correction of a correct answer, which the
-alternate-answers decision (P6) forbids for text.
+direction. That reads as a correction of a correct answer. P6 of
+`docs/product/2026-08-08-alternate-answers-decision.md` forbids that for text:
+the feedback panel discloses alternates as also accepted, never as errors.
 
 ### 8. Introduction card
 
@@ -289,8 +338,8 @@ Revisit when all of these are true:
 4. A 360 × 640 screenshot shows that the introduction card with the glyph
    needs no extra scroll to reach "Got it".
 
-The introduction card is not graded, so P2 and P7 do not block it. Only the
-risk at first encoding and the screen budget block it.
+The introduction card is not graded, so red line 1 and P7 do not block it.
+Only the risk at first encoding and the screen budget block it.
 
 ### 9. Eligibility, per entry
 
@@ -298,14 +347,39 @@ An entry gets a glyph only when all six gates pass. The default is no glyph.
 
 1. `verified === true`.
 2. `transparency === 'literal'`.
-3. `contrast` is not set.
+3. `contrast` is not set. Reason: on these entries the feedback panel already
+   shows a contrast line that names a stressed prepositional twin with a
+   different meaning. A glyph in the same panel could attach to either
+   reading, and the panel has the least height to spare (P10).
 4. Rule 7 gives exactly one glyph.
 5. **Spatial test** passes on **every** sentence in `examples` (see below).
 6. A human has set `motionGlyphVerified: true` on the entry. Absent means
    false.
 
 Gates 1–4 are code. Gate 5 is the linguist's work. Gate 6 is the human's
-sign-off on gate 5.
+sign-off on gate 5. The human gives it as one batch approval of the linguist's
+pass list in the PR. The list has a one-line reason for each entry (human
+decision C).
+
+**Order of work.**
+
+1. The linguist rewrites example sentences of literal spatial candidates
+   (human decision A).
+2. The linguist applies the spatial test to all entries and writes the pass
+   list.
+3. The human approves the pass list in one batch.
+4. The linguist sets `motionGlyphVerified: true` on the approved entries.
+
+**Rewrite conditions.**
+
+- Each rewritten sentence must be correct, natural Swedish.
+- The rewrite keeps the entry's gloss.
+- The rewrite uses the physical, drawable sense of the entry.
+- Do not force an entry whose physical sense is not its main sense. Example:
+  if the main sense in the gloss is social or figurative, leave the examples
+  as they are. The entry gets no glyph.
+- Doubt = fail. If the linguist is not sure that a rewrite is natural or keeps
+  the gloss, the linguist does not rewrite, and the entry gets no glyph.
 
 **The spatial test.** The card rotates the shown sentence by `repetitions`, so
 the glyph appears beside every example in turn. Each example must pass all
@@ -323,72 +397,96 @@ three questions:
 - (c) **Drawing.** Can you draw this sentence as a figure moving along the
   glyph path, and is the drawing true?
 
-One "no" on one example fails the entry. Metaphors of scale (prices,
-temperature) fail (a). Social meanings fail (b) or (c). Completion, transfer
-of ownership, replacement and subtraction fail (a). This removes the known
-traps: `äta upp`, `städa upp`, `värma upp`, `dela upp`, `ringa upp`, `föda upp`,
-`hyra ut`, `låna ut`, `byta ut`, `räkna bort`.
+In a caused-motion sentence, the figure is the object, not the subject. In
+"Hon bär in lådan", the figure is `lådan`.
 
-Worked checks against the current data (`src/data/particleVerbData.ts`, lines
-156–233):
+One "no" on one example fails the entry. **Doubt = fail.** If the linguist is
+not sure of an answer, the answer is "no".
+
+Metaphors of scale (prices, temperature) fail (a). Social meanings fail (b) or
+(c). Completion, transfer of ownership, replacement and subtraction fail (a).
+This removes the known traps: `äta upp`, `städa upp`, `värma upp`, `dela upp`,
+`ringa upp`, `föda upp`, `hyra ut`, `låna ut`, `byta ut`, `räkna bort`.
+
+**Rulings on hard classes.** This table reduces disagreement between two
+reviewers. It does not remove it. For a case outside the table, doubt = fail,
+and the linguist adds the case to the PR for the human.
+
+| Class                           | Example                                   | Ruling                                                                                                                                         |
+| ------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Posture change                  | `stå upp` (rise), `sitta ner` (sit down)  | Pass only when the sentence describes the act of rising or sitting down. The body is the figure. A posture held over time fails (a).           |
+| Static configuration            | `sticka upp` (a nail sticks up)           | Fail (a). Nothing moves.                                                                                                                       |
+| Non-solid figure                | `strömma in`, `andas in/ut`               | Pass when the sentence names the fluid and it moves along the path ("Vattnet strömmar in i källaren"). Fail when the fluid is not named (`andas in`): (c) is in doubt. |
+| State change with a direction   | `fälla upp`, `hugga ner`, `låsa in`       | Fail (a). The main event is a change of state (open, felled, locked), even if a part moves along the path.                                     |
+| Return of possession            | `ge tillbaka pengarna`, `få tillbaka`     | Fail (a). This is transfer of ownership.                                                                                                       |
+| Digital object                  | `ta bort filen`                           | Fail (a). A file is not a physical thing.                                                                                                      |
+| Discard                         | `kasta bort` (throw out, get rid of)      | Fail (a) when the sense is "get rid of". Pass only when the sentence describes a throw that moves the object away in space, with no "get rid of" sense. |
+
+**Worked checks against the current data** (`src/data/particleVerbData.ts`,
+lines 156–233), before the rewrite:
 
 - `pv:ga-in`: all three examples move a figure into a building or a room.
   Passes gate 5.
 - `pv:ga-ut`: "Hon går ut genom dörren" passes. "Vi går ut och äter middag"
-  is social. It fails. The entry fails.
+  is social. It fails. The entry fails today. It is a rewrite candidate.
 - `pv:ga-upp`: "Solen går upp" passes. "Priserna går upp" is a scale
-  metaphor. It fails. The entry fails.
-- `pv:ga-ner`: same as `gå upp`. The entry fails.
-
-The linguist may rewrite examples so that an entry passes. A rewrite must keep
-the gloss correct. If the gloss covers a non-spatial sense ("to increase"), the
-examples must keep that sense, and the entry stays without a glyph.
+  metaphor. It fails. The entry fails today. It is a rewrite candidate.
+- `pv:ga-ner`: same as `gå upp`. It is a rewrite candidate.
 
 Runner-up for gate 5: allow orientational metaphors (`priserna går upp`) for
-`upp` and `ner`. Boers (2000) argues that the spatial image helps with these
-extensions. It lost because one picture beside two senses tells the learner
-the senses are the same. Also "every example is physical" is a test two
-people apply the same way. "The metaphor is close enough" is not.
+`upp` and `ner`. Boers (2000) argues that awareness of the spatial source helps
+learners retain these extensions. It lost because one picture beside two senses
+tells the learner the senses are the same. Also, the test "every example is
+physical" gives more consistent results between reviewers than the test "the
+metaphor is close enough".
 
 **Check against P1.** The glyph starts with the feedback, at 0 ms delay. It
 disables nothing. The correct form and the marker are on screen in the same
 frame. Pass.
 
-**Check against P10.** The glyph adds no row. It is 44 px tall in the
-sense-line row. The sense line is about 20 px tall. The glyph adds 24 px of
-height or less. Test: on a 360 × 640 viewport, the feedback panel with the
-glyph is 24 px or less taller than without it. If "Next Card" is already below
-the fold without the glyph, that is a P10 defect that exists today. Report it.
-Do not fix it by removing the sense line.
+**Check against P10.** P10 is about the recall screen: no scroll to answer.
+This note extends P10 to the feedback panel on purpose: "Next Card" must stay
+above the fold. The glyph adds no row. It is 44 px tall in the sense-line row.
+The sense line is about 20 px tall. The glyph adds 24 px of height or less.
+Test: on a 360 × 640 viewport, the feedback panel with the glyph is 24 px or
+less taller than without it. If "Next Card" is already below the fold without
+the glyph, that is a defect that exists today. Report it. Do not fix it by
+removing the sense line.
 
 ### 10. `upp` sense line
 
 The glyph for `upp` shows upward motion. The sense line for `upp` says
 "completion, or making something visible". On a spatial entry the two would
 contradict each other. **The `upp` glyph ships only after the `upp` line in
-`PARTICLE_CORE_SENSE` names upward movement as a sense.** The other five glyphs
-do not wait for this. The wording is the linguist's call.
+`PARTICLE_CORE_SENSE` names upward movement as a sense.** The human approved
+this new wording on 2026-11-10 (human decision B). It is a separate
+`swedish-linguist` ticket. It blocks only the `upp` glyph. The other five
+glyphs do not wait for it. The wording is the linguist's call. If the linguist
+finds a problem with the wording, the linguist reports it to the lead and the
+human. The linguist does not silently drop `upp`.
 
 ## Parameters, collected
 
-| Parameter                      | Value                                         |
-| ------------------------------ | --------------------------------------------- |
-| Screens                        | graded feedback panel only                    |
-| Answers                        | correct and wrong                             |
-| Glyph shown                    | correct particle only, alias `ned` → `ner`    |
-| Size                           | 44 × 44 CSS px                                |
-| Position                       | sense-line row, left of the text              |
-| Colour                         | neutral foreground; never success/destructive |
-| Duration                       | 700 ms, `ease-out`, 0 ms delay                |
-| Secondary stagger              | 100 ms or less                                |
-| Design end                     | 900 ms or less                                |
-| Hard cap (delay + duration)    | 1500 ms                                       |
-| Iterations                     | 1; tap replays; no limit                      |
-| Reduced motion                 | rest frame, not a button, `aria-hidden`       |
-| Confetti on a glyph screen     | off                                           |
-| Multi-glyph or no-glyph accept | no glyph                                      |
-| Data flag                      | `motionGlyphVerified?: boolean`, default off  |
-| Introduction card              | deferred; revisit conditions in rule 8        |
+| Parameter                      | Value                                                   |
+| ------------------------------ | ------------------------------------------------------- |
+| Screens                        | graded feedback panel only                              |
+| Answers                        | correct and wrong                                       |
+| Glyph shown                    | correct particle only, alias `ned` → `ner`              |
+| Size                           | 44 × 44 CSS px                                          |
+| Position                       | sense-line row, left of the text                        |
+| Colour                         | neutral foreground; never success/destructive           |
+| Duration                       | 700 ms, `ease-out`, 0 ms delay                          |
+| Secondary stagger              | 100 ms or less                                          |
+| Design end                     | 900 ms or less                                          |
+| Hard cap (delay + duration)    | 1500 ms, exposed as constants or CSS custom properties  |
+| Iterations                     | 1; tap replays; no limit                                |
+| Reduced motion                 | rest frame, not a button, `aria-hidden`                 |
+| Confetti on the particle card  | none on a correct answer (P8); fallback: off with glyph |
+| Multi-glyph or no-glyph accept | no glyph                                                |
+| Spatial test                   | every example; doubt = fail; hard-class table in rule 9 |
+| Data flag                      | `motionGlyphVerified?: boolean`, default off            |
+| Gate 6 approval                | one human batch approval of the pass list, in the PR    |
+| Introduction card              | deferred; revisit conditions in rule 8                  |
 
 ## What we will not claim
 
@@ -404,31 +502,52 @@ The maintainer checks these points by hand.
 - A gated glyph misleads on one of its examples. Remove the flag from that
   entry. If this happens on 3 or more entries, gate 5 is too loose. Make the
   linguist re-check every flagged entry.
+- A rewritten example sounds unnatural to a native speaker. Revert that
+  sentence and remove the flag from the entry.
 - The maintainer waits for the glyph before tapping "Next Card". 700 ms is too
   long. Drop it to 600 ms.
 - The glyph after a wrong answer feels like a reward. Make it smaller or
   dimmer on wrong answers. Do not remove it.
-- The missing confetti on glyph cards reads as a weaker "Correct". Ship P8 for
-  the particle card.
 - "Next Card" moves below the fold on a 360 × 640 phone because of the glyph.
   The 44 px box is too large for this panel. Reduce the glyph to the
   sense-line height and keep a 44 px tap area with padding.
 
 ## Hand-off
 
-`swedish-linguist`: apply gate 5 to the 81 entries. Add
-`motionGlyphVerified?: boolean` to the entry type in
-`src/data/particleVerbData.ts`, and set it to `true` only on entries that pass
-gate 5 and that the human approves. Rewrite the `upp` line in
-`PARTICLE_CORE_SENSE` (rule 10), or say why not.
+Follow-up tickets, in order:
 
-`frontend-expert`: the six glyphs and the feedback-panel placement (rules 1–6),
+1. **`swedish-linguist`: rewrite example sentences** (human decision A). Rewrite
+   the examples of literal spatial candidates so that every example uses the
+   physical, drawable sense. Each sentence must be correct, natural Swedish and
+   keep the entry's gloss. Do not force an entry whose physical sense is not
+   its main sense. Doubt = fail. This happens before the allowlist pass.
+2. **`swedish-linguist`: reword the `upp` sense line** (human decision B, rule
+   10). Name upward movement in `PARTICLE_CORE_SENSE.upp`. This blocks only the
+   `upp` glyph. A wording problem goes to the lead and the human.
+3. **`frontend-expert`: remove per-correct-answer confetti from the particle
+   card** (human decision D, rule 6). Remove the calls at
+   `ParticleVerbCard.tsx:173` and `:194`. This lands before the glyph
+   placement.
+
+Then the main work:
+
+`swedish-linguist`: add `motionGlyphVerified?: boolean` to the entry type in
+`src/data/particleVerbData.ts`. Apply gate 5 to the 81 entries with the
+hard-class table. Put the pass list in the PR, with a one-line reason for each
+entry. After the human's batch approval, set the flag to `true` on the approved
+entries only. (Ownership of this file and of `src/lib/particleVerbs.ts` is
+assumed; see "What the app does today".)
+
+`frontend-expert`: the six glyphs and the feedback-panel placement (rules 1–5),
 inside `src/components/ParticleVerbCard.tsx` and `src/index.css`. Gates 1–4 in
-code; gate 6 read from data. A separate ticket: P8 for the particle card.
+code; gate 6 read from data. Expose every glyph duration and delay as exported
+constants or inline CSS custom properties (rule 4).
 
 `qa`: tests for the gate (each row of the rule-7 table), for "no glyph before
 the grade", for "no glyph on the introduction card", for "no button under
-reduced motion", for "no confetti on a glyph screen", and for the 1500 ms cap.
+reduced motion", for "no confetti on a correct particle answer", and for the
+1500 ms cap. The cap test reads the exported constants or the CSS custom
+properties, because jsdom does not compute keyframes.
 
 `srs-engine`: nothing. The glyph does not change a grade or an interval.
 
@@ -436,10 +555,11 @@ reduced motion", for "no confetti on a glyph screen", and for the 1500 ms cap.
 
 Paivio 1986, _Mental Representations: A Dual Coding Approach_. Clark & Paivio
 1991, _Dual coding theory and education_, Educational Psychology Review 3(3).
-Boers, Piquer Píriz, Stengers & Eyckmans 2009, _Does pictorial elucidation
-foster recollection of idioms?_, Language Teaching Research 13(4). Tversky,
-Morrison & Bétrancourt 2002, _Animation: can it facilitate?_, International
-Journal of Human-Computer Studies 57. Ayres & Paas 2007, _Making instructional
-animations more effective: a cognitive load approach_, Applied Cognitive
-Psychology 21. Boers 2000 on orientational metaphor and multi-word verbs.
-Metcalfe 2017, _Learning from errors_, Annual Review of Psychology.
+Boers, F. 2000, _Metaphor awareness and vocabulary retention_, Applied
+Linguistics 21(4): 553–571. Boers, Piquer Píriz, Stengers & Eyckmans 2009,
+_Does pictorial elucidation foster recollection of idioms?_, Language Teaching
+Research 13(4). Tversky, Morrison & Bétrancourt 2002, _Animation: can it
+facilitate?_, International Journal of Human-Computer Studies 57. Ayres & Paas
+2007, _Making instructional animations more effective: a cognitive load
+approach_, Applied Cognitive Psychology 21. Metcalfe 2017, _Learning from
+errors_, Annual Review of Psychology.
