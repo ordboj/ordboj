@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { SupportLosevNotice } from '@/components/SupportLosevNotice';
 import { BookOpen, Puzzle, Settings, Trophy, Volume2, VolumeX } from 'lucide-react';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
 import { useSettings } from '@/hooks/useSettings';
@@ -244,10 +245,12 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-sm text-muted-foreground">
-          Practicing Swedish verbs with confidence ✨
-        </p>
+        <footer className="space-y-3">
+          <p className="text-center text-sm text-muted-foreground">
+            Practicing Swedish verbs with confidence ✨
+          </p>
+          <SupportLosevNotice className="text-center" />
+        </footer>
       </div>
     </div>
   );
