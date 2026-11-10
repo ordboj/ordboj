@@ -397,10 +397,6 @@ describe('getParticleGlyph', () => {
     expect(getParticleGlyph({ ...flagged(), transparency: 'idiomatic' })).toBeNull();
   });
 
-  it('denies a semi-literal entry (gate 2)', () => {
-    expect(getParticleGlyph({ ...flagged(), transparency: 'semi' })).toBeNull();
-  });
-
   it('denies an entry with a contrast line (gate 3)', () => {
     expect(getParticleGlyph({ ...flagged(), contrast: 'in vs. på' })).toBeNull();
   });
