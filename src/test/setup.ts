@@ -3,8 +3,9 @@ import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 // Unmount any component tree rendered by the previous test.
+// Node-environment suites (the auth Functions) have no document.
 afterEach(() => {
-  cleanup();
+  if (typeof document !== 'undefined') cleanup();
 });
 
 // jsdom does not implement matchMedia. src/hooks/use-mobile.tsx and some
@@ -21,7 +22,7 @@ afterEach(() => {
 // window.matchMedia() itself when its `theme={theme}` prop is `"system"`,
 // and the mock was preventing that branch (and this matchMedia stub) from
 // ever being exercised in the first place.
-if (!window.matchMedia) {
+if (typeof window !== 'undefined' && !window.matchMedia) {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: (query: string) => ({
@@ -63,17 +64,19 @@ vi.mock('canvas-confetti', () => ({
 // AppErrorBoundary.test.tsx can vi.spyOn() it. A non-configurable global
 // stub would silently pre-empt that file's `if (!('createObjectURL' in URL))`
 // guard and leave the property unable to be cleanly reconfigured/restored.
-Object.defineProperty(window.URL, 'createObjectURL', {
-  writable: true,
-  configurable: true,
-  value: vi.fn(() => 'blob:mock-url'),
-});
-if (!window.URL.revokeObjectURL) {
-  Object.defineProperty(window.URL, 'revokeObjectURL', {
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window.URL, 'createObjectURL', {
     writable: true,
     configurable: true,
-    value: vi.fn(),
+    value: vi.fn(() => 'blob:mock-url'),
   });
+  if (!window.URL.revokeObjectURL) {
+    Object.defineProperty(window.URL, 'revokeObjectURL', {
+      writable: true,
+      configurable: true,
+      value: vi.fn(),
+    });
+  }
 }
 
 // jsdom does not implement the Web Speech API either (no

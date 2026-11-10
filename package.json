@@ -11,7 +11,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint . --max-warnings 20",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.functions.json",
     "validate:verbs": "node scripts/validate-verb-forms.mjs",
     "build:verb-data": "node scripts/build-verb-data.mjs",
     "build:verb-data:check": "node scripts/build-verb-data.mjs --check",
@@ -25,6 +25,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@better-auth/passkey": "^1.7.20",
     "@radix-ui/react-alert-dialog": "^1.2.1",
     "@radix-ui/react-checkbox": "^1.4.1",
     "@radix-ui/react-dialog": "^1.1.14",
@@ -35,6 +36,7 @@
     "@radix-ui/react-slot": "^1.5.0",
     "@radix-ui/react-switch": "^1.4.1",
     "@radix-ui/react-tooltip": "^1.4.1",
+    "better-auth": "^1.7.20",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -49,6 +51,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261110.1",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.0",
     "@eslint/js": "^10.0.1",
@@ -81,7 +84,8 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.72.1",
     "vite": "^8.3.6",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "^4.160.0"
   },
   "overrides": {
     "eslint-plugin-react": {

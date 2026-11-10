@@ -1,0 +1,13 @@
+{
+  // Pages project for the Ordböj SPA and the auth Functions.
+  // The D1 binding is not in this file. A placeholder database_id makes the
+  // Pages deploy look up a database that does not exist, and the deploy fails.
+  // Add the binding after both EU databases exist. The steps are in
+  // docs/auth/cloudflare-setup.md.
+  // pages_build_output_dir stays ./dist so the SPA deploy is unchanged.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ordboj",
+  "compatibility_date": "2026-11-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "pages_build_output_dir": "./dist",
+}
