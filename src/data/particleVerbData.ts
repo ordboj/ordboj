@@ -161,12 +161,17 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'ut',
     reflexive: 'none',
     lemma: 'gå ut',
-    gloss: { en: 'to leave the house; to spend an evening socialising' },
-    transparency: 'literal',
+    // ORD-123 split (decision E): two of three frames were social, so this
+    // id keeps the social sense. The physical sense ("leave a room or
+    // building") is pv:ga-ut-lamna, appended at the end of the array.
+    // Idiomatic: the leisure/outing meaning comes from neither "gå" nor
+    // "ut"; same call as the dinner-invitation sense of pv:ga-bort.
+    gloss: { en: 'to spend an evening socialising' },
+    transparency: 'idiomatic',
     acceptedParticles: ['ut'],
     examples: [
       { sv: 'Vi går ut och äter middag varje fredag.', blankIndex: 2 },
-      { sv: 'Hon går ut genom dörren utan ett ord.', blankIndex: 2 },
+      { sv: 'Vi går ut och dansar i kväll.', blankIndex: 2 },
       { sv: 'På lördagar går de ut med sina vänner.', blankIndex: 4 },
     ],
     verified: true,
@@ -199,11 +204,15 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'upp',
     reflexive: 'none',
     lemma: 'gå upp',
-    gloss: { en: 'to rise; to increase' },
+    // ORD-123 split (decision E): two of three frames were "increase", so
+    // this id keeps that sense. The physical sense is pv:ga-upp-stiga,
+    // appended at the end of the array. Stays literal: "more is up" is the
+    // same transparent scale metaphor in English and Swedish.
+    gloss: { en: 'to increase' },
     transparency: 'literal',
     acceptedParticles: ['upp'],
     examples: [
-      { sv: 'Solen går upp klockan fyra på morgonen i juni.', blankIndex: 2 },
+      { sv: 'Hyran går upp igen eftersom allt blir dyrare.', blankIndex: 2 },
       { sv: 'Priserna går upp när efterfrågan blir större.', blankIndex: 2 },
       { sv: 'Temperaturen går upp några grader varje eftermiddag.', blankIndex: 2 },
     ],
@@ -218,15 +227,20 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'ner',
     reflexive: 'none',
     lemma: 'gå ner',
-    gloss: { en: 'to descend; to decrease' },
+    // ORD-123 split (decision E): two of three frames were physical, so this
+    // id keeps "descend". The "decrease" sense is pv:ga-ner-minska, appended
+    // at the end of the array. The stairs frame is replaced too: the
+    // preposition is written "nerför trappan" in standard Swedish, and that
+    // spelling leaves no separate particle to blank.
+    gloss: { en: 'to descend' },
     transparency: 'literal',
     // "ned" is the same verb in a more formal spelling, standard in SAOL and
     // listed separately in SVALex. Marking it wrong would teach a fiction.
     acceptedParticles: ['ner', 'ned'],
     examples: [
       { sv: 'Solen går ner bakom bergen på kvällen.', blankIndex: 2 },
-      { sv: 'Priserna går ner efter jul varje år.', blankIndex: 2 },
-      { sv: 'Hon går ner för trappan med sin väska.', blankIndex: 2 },
+      { sv: 'Han går ner i källaren för att hämta saft.', blankIndex: 2 },
+      { sv: 'Hon går ner till bottenvåningen med sin väska.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'går ner', preteritum: 'gick ner', supinum: 'gått ner' },
@@ -260,13 +274,16 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'komma in',
-    gloss: { en: 'to enter; to gain admission' },
+    // ORD-123 split (decision E): two of three frames were physical, so this
+    // id keeps "enter". The admission sense is pv:komma-in-antagning,
+    // appended at the end of the array.
+    gloss: { en: 'to enter' },
     transparency: 'literal',
     acceptedParticles: ['in'],
     examples: [
       { sv: 'Han kommer in i rummet med en stor låda.', blankIndex: 2 },
       { sv: 'Ljuset kommer in genom det stora fönstret.', blankIndex: 2 },
-      { sv: 'Hon kommer in på universitetet nästa höst.', blankIndex: 2 },
+      { sv: 'Grannen kommer in i köket utan att knacka.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'kommer in', preteritum: 'kom in', supinum: 'kommit in' },
@@ -339,7 +356,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Hon kommer tillbaka till Sverige nästa sommar.', blankIndex: 2 },
       { sv: 'Vi kommer tillbaka hem sent på söndagen.', blankIndex: 2 },
-      { sv: 'Han kommer tillbaka till jobbet efter sin semester.', blankIndex: 2 },
+      { sv: 'Han kommer tillbaka till kontoret efter lunchen.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'kommer tillbaka', preteritum: 'kom tillbaka', supinum: 'kommit tillbaka' },
@@ -371,11 +388,14 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'ut',
     reflexive: 'none',
     lemma: 'ta ut',
-    gloss: { en: 'to withdraw; to remove from inside something' },
+    // ORD-123 split (decision E): two of three frames were physical, so this
+    // id keeps "remove from inside". The money sense is pv:ta-ut-uttag,
+    // appended at the end of the array.
+    gloss: { en: 'to remove from inside something' },
     transparency: 'literal',
     acceptedParticles: ['ut'],
     examples: [
-      { sv: 'Han tar ut pengar från banken varje månad.', blankIndex: 2 },
+      { sv: 'Han tar ut leksakerna ur lådan på golvet.', blankIndex: 2 },
       { sv: 'Jag tar ut soporna innan jag går hemifrån.', blankIndex: 2 },
       { sv: 'Hon tar ut tallrikarna ur skåpet före middagen.', blankIndex: 2 },
     ],
