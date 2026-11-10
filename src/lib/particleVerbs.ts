@@ -191,7 +191,7 @@ export function getPhraseForms(entry: ParticleVerbData): PhraseForms | null {
 // verb's meaning is not reliably compositional. Particles with no confident
 // line return null rather than an invented one.
 const PARTICLE_CORE_SENSE: Record<string, string> = {
-  upp: 'often completion, or making something visible or available',
+  upp: 'often upward movement, completion, or making something visible or available',
   ut: 'often outward movement, or making something public',
   in: 'often movement inwards, or entry',
   ner: 'often downward movement, or reduction',
