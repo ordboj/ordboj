@@ -288,6 +288,23 @@ const MAIN_SNAPSHOT: readonly Row[] = [
 ];
 
 const MAIN_COUNT = 274;
+
+// The 11 entries ORD-123 appended after the frozen 274 (9 from the first
+// batch, then satta-in-montera and plocka-bort-lista), in data order. Pinned
+// literally so an accidental removal, rename or reorder is loud.
+const APPENDED_IDS: readonly string[] = [
+  'pv:ga-ut-lamna',
+  'pv:ga-upp-stiga',
+  'pv:ga-ner-minska',
+  'pv:komma-in-antagning',
+  'pv:ta-ut-uttag',
+  'pv:ta-bort-radera',
+  'pv:satta-upp-pjas',
+  'pv:satta-ut-medicin',
+  'pv:komma-upp-amne',
+  'pv:satta-in-montera',
+  'pv:plocka-bort-lista',
+];
 const MAIN_IDS = MAIN_SNAPSHOT.map(([id]) => id);
 
 describe('particle verb id stability (ORD-123 pin)', () => {
@@ -309,6 +326,23 @@ describe('particle verb id stability (ORD-123 pin)', () => {
     const appended = PARTICLE_VERB_DATA.slice(MAIN_COUNT).map((entry) => entry.id);
     expect(appended.filter((id) => MAIN_IDS.includes(id))).toEqual([]);
     expect(PARTICLE_VERB_DATA.length).toBeGreaterThan(MAIN_COUNT);
+  });
+
+  it('exactly the 11 pinned ORD-123 entries are appended, in order', () => {
+    expect(APPENDED_IDS).toHaveLength(11);
+    expect(new Set(APPENDED_IDS).size).toBe(11);
+    expect(PARTICLE_VERB_DATA).toHaveLength(MAIN_COUNT + APPENDED_IDS.length);
+    expect(PARTICLE_VERB_DATA.slice(MAIN_COUNT).map((entry) => entry.id)).toEqual(APPENDED_IDS);
+  });
+
+  it('every pinned appended entry is verified and served by getVerifiedParticleVerbs', () => {
+    const shipped = new Set(getVerifiedParticleVerbs().map((entry) => entry.id));
+    for (const id of APPENDED_IDS) {
+      const entry = PARTICLE_VERB_DATA.find((candidate) => candidate.id === id);
+      expect(entry, id).toBeDefined();
+      expect(entry?.verified, id).toBe(true);
+      expect(shipped.has(id), id).toBe(true);
+    }
   });
 
   it('all ids are unique and carry the pv: prefix', () => {
@@ -341,5 +375,21 @@ describe('particle verb id stability (ORD-123 pin)', () => {
         accepted,
       });
     }
+  });
+});
+
+describe('primary sense of split particle verbs (ORD-123)', () => {
+  it('for every base+particle shared by verified entries, the first one is a pre-existing entry', () => {
+    const mainIds = new Set(MAIN_IDS);
+    const groups = new Map<string, string[]>();
+    for (const entry of getVerifiedParticleVerbs()) {
+      const key = `${entry.baseInfinitive}|${entry.particle}`;
+      groups.set(key, [...(groups.get(key) ?? []), entry.id]);
+    }
+    const shared = [...groups.entries()].filter(([, ids]) => ids.length > 1);
+    // Guard against a vacuous pass: the split really produced shared pairs.
+    expect(shared.length).toBeGreaterThan(0);
+    const appendedPrimaries = shared.filter(([, ids]) => !mainIds.has(ids[0]!)).map(([key]) => key);
+    expect(appendedPrimaries).toEqual([]);
   });
 });

@@ -316,6 +316,27 @@ describe('particle practice discrimination card', () => {
     expect(screen.queryByText(/gain admission/)).not.toBeInTheDocument();
   });
 
+  it('shows the primary sense gloss, not an appended split sense, for a lure shared by split entries', async () => {
+    // pv:komma-in (primary, pre-existing) and pv:komma-in-antagning (appended
+    // ORD-123 sense) share base+particle; the lure gloss must be the first.
+    const user = userEvent.setup();
+    seedKommaIhag({ repetitions: 3 });
+
+    renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+    await screen.findByText('Choose the correct particle verb');
+
+    await user.click(screen.getByRole('button', { name: 'komma in' }));
+    await screen.findByText('Not quite');
+
+    const gloss = screen.getByText(
+      (_, element) =>
+        element?.tagName === 'P' && (element.textContent ?? '').includes('komma in —'),
+    );
+    expect(gloss).toHaveTextContent('to enter');
+    expect(gloss).not.toHaveTextContent('admission');
+    expect(screen.queryByText(/to gain admission to a school or course/)).not.toBeInTheDocument();
+  });
+
   it('(i) offers a pronounce-sentence control on the discrimination feedback screen', async () => {
     const user = userEvent.setup();
     seedKommaIhag({ repetitions: 3 });
