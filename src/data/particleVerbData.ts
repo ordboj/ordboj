@@ -90,7 +90,13 @@ export interface ParticleVerbData {
   //      and its majority sense; the new sense appends as
   //      `<incumbent slug>-<tag>`, where <tag> is one ASCII-folded Swedish
   //      word naming the new sense (pv:ga-ner-minska, pv:satta-upp-pjas).
-  //      Proposed by swedish-linguist, pending staff-engineer review.
+  //      Approved by staff-engineer in the ORD-123 review (2026-11-10):
+  //      additive, no storage migration. <tag> is a noun or verb, never a
+  //      particle, a preposition or "sig", so it cannot be read as, or
+  //      collide with, a three-token lemma slug (pv:se-fram-emot,
+  //      pv:ta-av-sig). Ids are opaque: no code may parse the tag. If the
+  //      suffixed slug is already taken, rule 2 applies and the new entry
+  //      yields.
   // Rule 2 is deliberately not applied retroactively: no existing id
   // changes, so no stored progress key changes.
   id: string;
@@ -361,6 +367,8 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Hon kommer tillbaka till Sverige nästa sommar.', blankIndex: 2 },
       { sv: 'Vi kommer tillbaka hem sent på söndagen.', blankIndex: 2 },
+      // ORD-123: replaces "kommer tillbaka till jobbet efter sin semester",
+      // which means resuming work, not a physical return to a place.
       { sv: 'Han kommer tillbaka till kontoret efter lunchen.', blankIndex: 2 },
     ],
     verified: true,
