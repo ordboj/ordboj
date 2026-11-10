@@ -158,12 +158,12 @@ Every new glyph follows the grammar of the six existing glyphs:
 New landmark types (the six use a room bracket, a ground line and a ring
 point):
 
-| Landmark | Shape in the 24 × 24 viewBox                                                                                       | Used by         |
-| -------- | ------------------------------------------------------------------------------------------------------------------ | --------------- |
-| Block    | outline rectangle, x 6–18, y 15–20, corner radius 1                                                                | `på`, `av`      |
-| Partner  | outline circle, centre (15, 12), r 2.5, landmark token                                                             | `ihop`          |
-| Cover    | filled rectangle, x 3–10, y 6–18, corner radius 1, landmark token, drawn **above** the mover                       | `fram`, `undan` |
-| House    | roof lines (11, 12)–(16.5, 5)–(22, 12); right wall x 21, y 12–20; floor y 20, x 12–21; no left wall below the eave | `hem`           |
+| Landmark | Shape in the 24 × 24 viewBox                                                                                                                               | Used by         |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| Block    | outline rectangle, x 6–18, y 15–20, corner radius 1                                                                                                        | `på`, `av`      |
+| Partner  | outline circle, centre (15, 12), r 2.5, stroke 2 (outer radius 3.5, hole radius 1.5), landmark token. The same ring as the ring point in bort and tillbaka | `ihop`          |
+| Cover    | filled rectangle, x 2–8, y 6–18, corner radius 1, landmark token, drawn **above** the mover                                                                | `fram`, `undan` |
+| House    | roof lines (11, 12)–(16.5, 5)–(22, 12); right wall x 21, y 12–20; floor y 20, x 12–21; no left wall below the eave                                         | `hem`           |
 
 Each pair of opposites shares one landmark, as `in`/`ut`, `upp`/`ner` and
 `bort`/`tillbaka` do.
@@ -194,8 +194,12 @@ learner sees. It must carry the meaning without the motion.
 
 **`ihop` — together, into one.**
 
-- Landmark: partner (an outline circle, the same size as the mover).
-- Mover start (4, 12). Rest (11, 12): it overlaps the partner by 1 unit.
+- Landmark: partner (an outline ring, the same ring as the bort/tillbaka ring point: r 2.5, stroke 2, outer radius 3.5).
+- Mover start (4, 12). Rest (11, 12): it overlaps the partner by 2 units.
+  The stroke is 2 units wide, so the ring's outer edge is at x 11.5 and the
+  mover's right edge is at x 13.5.
+- A true twin (an outline circle the same size as the mover) was tried and
+  rejected: at 40 px its hole disappears, so it reads as a second filled disc.
 - Travel: horizontal, to the right. Chevron points right, at the partner.
 - Rest frame alone: two discs, one filled and one outline, that overlap, with
   a trail from the left. "Joined."
@@ -203,8 +207,14 @@ learner sees. It must carry the meaning without the motion.
 **`fram` — out of a hidden or stored place, into view or reach.**
 
 - Landmark: cover.
-- Mover start (6.5, 12): fully behind the cover, not visible. Rest (16, 12):
-  fully visible, in the open, right of the cover.
+- Mover start (5, 12): the centre of the cover, fully behind it, not
+  visible. Rest (20, 12): fully visible, in the open, right of the cover.
+  Animation offset from rest: (-15, 0).
+- Redrawn once after `ui-ux-expert` review (2026-11-10). In the first
+  drawing the trail dots were hidden under the cover, and the chevron
+  fused with the slab. The fix was a narrower cover (x 2–8) and a rest
+  further right. This uses the one redraw that rule E4 allows. A second
+  failure means `fram` gets no glyph.
 - Travel: horizontal, to the right. Chevron points right.
 - Rest frame alone: a solid cover, a full disc in the open beside it, and a
   trail from the edge of the cover to the disc. "Came out where you can see
@@ -248,11 +258,21 @@ differ:
 | Pair                | Rest of X vs start of Y                                                                                                                      | Rest of Y vs start of X                                   |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | `på` / `av`         | `på` rest (9, 12.5) vs `av` start (15, 12.5): 6 units                                                                                        | `av` rest (20, 5) vs `på` start (4, 4): 16 units          |
-| `fram` / `undan`    | `fram` rest (16, 12), full disc, vs `undan` start (21, 12): 5 units                                                                          | `undan` rest: sliver at the cover vs `fram` start: hidden |
+| `fram` / `undan`    | `fram` rest (20, 12), full disc, vs `undan` start (21, 12): 1 unit. **Fails measure 1.** See the note below the table.                       | `undan` rest: sliver at the cover vs `fram` start: hidden |
 | `fram` / `tillbaka` | different landmarks (cover vs ring point)                                                                                                    | different landmarks                                       |
 | `hem` / `bort`      | different landmarks (house vs ring point)                                                                                                    | different landmarks                                       |
 | `ihop` / `isär`     | no `isär` glyph and no `isär` entry. If one is added, it starts at (11, 12) only with no chevron, or it starts 4 units or more from (11, 12) | —                                                         |
 | `ihop` / `sönder`   | `sönder` gets no glyph (rule E6)                                                                                                             | —                                                         |
+
+**`fram` / `undan` after the `fram` redraw.** Moving the `fram` rest to
+(20, 12) brings it 1 unit from the `undan` start (21, 12), so this row
+fails the pair rule as written. Nothing breaks today, because `undan` is
+out and is not drawn. If `undan` is ever drawn:
+
+- its rest moves to (7, 12), so a sliver of about 1.5 units still shows
+  past the new cover edge at x 8, and
+- the `fram` rest against the `undan` start needs a new check before
+  `undan` ships. The old numbers do not carry over.
 
 The rest frames of the two members of a pair also differ: the mover is in a
 different place and the trail runs the other way.
@@ -276,6 +296,12 @@ A glyph that fails one check does not ship. The `frontend-expert` may change
 the drawing once to fix it, inside the grammar of rule E2. A second failure
 means the particle gets no glyph. The reviewer records the verdict for each
 row in the PR.
+
+**Dark theme check is blocked.** The repo has no dark palette. The
+`.dark` palette was removed and no theme toggle ships
+(`docs/product/2026-08-08-dark-mode-decision.md`). So the review covered
+the light theme only. The dark half of this check is open, not passed.
+Run it if a dark palette is ever added.
 
 ### E5. Sense line agrees with the picture
 
@@ -497,20 +523,20 @@ picture of a disc landing on an object would teach a false meaning for them.
 
 ## Parameters, collected
 
-| Parameter                         | Value                                                                      |
-| --------------------------------- | -------------------------------------------------------------------------- |
-| Candidate particles               | `på`, `av`, `ihop`, `fram`, `hem`, `undan`                                 |
-| Inclusion threshold               | 3 or more entries that pass gates 1–5, per particle, after splits/rewrites |
-| New aliases                       | none                                                                       |
-| viewBox                           | `0 0 24 24`                                                                |
-| Mover                             | filled circle, r 2.5                                                       |
-| Landmarks                         | block, partner, cover, house (rule E2 table)                               |
-| Pair rule                         | rest of X vs start of Y: mover 4 units or more apart, or hidden in one     |
-| Distinctness review               | 44 × 44 CSS px, light and dark theme, rule E4 table                        |
-| Redraw attempts after a failure   | 1; a second failure means no glyph                                         |
-| Sense line                        | must name the drawn sense (rule E5); `på` needs a new line                 |
-| Placement, timing, reduced motion | unchanged (base rules 1–5)                                                 |
-| Implementation                    | CSS keyframes only; no new dependency                                      |
+| Parameter                         | Value                                                                                         |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| Candidate particles               | `på`, `av`, `ihop`, `fram`, `hem`, `undan`                                                    |
+| Inclusion threshold               | 3 or more entries that pass gates 1–5, per particle, after splits/rewrites                    |
+| New aliases                       | none                                                                                          |
+| viewBox                           | `0 0 24 24`                                                                                   |
+| Mover                             | filled circle, r 2.5                                                                          |
+| Landmarks                         | block, partner, cover, house (rule E2 table)                                                  |
+| Pair rule                         | rest of X vs start of Y: mover 4 units or more apart, or hidden in one                        |
+| Distinctness review               | 44 × 44 CSS px, light theme; dark theme blocked (no dark palette, see rule E4), rule E4 table |
+| Redraw attempts after a failure   | 1; a second failure means no glyph                                                            |
+| Sense line                        | must name the drawn sense (rule E5); `på` needs a new line                                    |
+| Placement, timing, reduced motion | unchanged (base rules 1–5)                                                                    |
+| Implementation                    | CSS keyframes only; no new dependency                                                         |
 
 ## How we would know this was wrong
 
@@ -561,6 +587,20 @@ Order of work:
    new glyph is not a button.
 
 `srs-engine`: nothing. A glyph does not change a grade or an interval.
+
+## UI/UX review, 2026-11-10
+
+`ui-ux-expert` reviewed the drawn glyphs for `fram`, `hem` and `ihop`.
+
+- `fram`: failed once (trail dots under the cover, chevron fused with the
+  slab). Redrawn, see rule E3. The one redraw is used.
+- `ihop`: the drawing is fine. The note's wording was wrong and is fixed in
+  rules E2 and E3: the partner is the bort/tillbaka ring, and the overlap is
+  2 units.
+- `hem`: two nits, both accepted and not blocking. The mover touches the
+  floor line. The eave end of the roof line shows a small knob, because
+  there is no left wall below it.
+- Dark theme: not checked. There is no dark palette (rule E4).
 
 ## Sources
 
