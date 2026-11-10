@@ -49,8 +49,7 @@ authoritative.
   `swedish-linguist` rewrites the example sentences of literal spatial
   candidates. After the rewrite, every shipped example of a glyph candidate
   uses the physical, drawable sense. The strict "every example" test of gate 5
-  stays. The rewrite happens before the allowlist pass. Conditions are in rule
-  9. Entries with more than one sense split first (decision E).
+  stays. The rewrite happens before the allowlist pass. Conditions are in rule 9. Entries with more than one sense split first (decision E).
 - **B. `upp` sense line.** The human approves a new wording of
   `PARTICLE_CORE_SENSE.upp` that names upward movement. This is a separate
   `swedish-linguist` ticket. It blocks only the `upp` glyph. If the linguist
@@ -242,15 +241,15 @@ picture from the one screen where the learner did not have the meaning.
 
 ### 4. Duration
 
-| Parameter                              | Value                     |
-| -------------------------------------- | ------------------------- |
-| Main animation duration                | **700 ms**                |
-| Start delay after the feedback renders | **0 ms**                  |
-| Easing                                 | `ease-out`                |
-| Stagger of one secondary element       | delay **100 ms** or less  |
-| Latest end of any keyframe, design     | **900 ms** after render   |
-| Hard cap, including every delay        | **1500 ms** after render  |
-| Iterations                             | **1**                     |
+| Parameter                              | Value                    |
+| -------------------------------------- | ------------------------ |
+| Main animation duration                | **700 ms**               |
+| Start delay after the feedback renders | **0 ms**                 |
+| Easing                                 | `ease-out`               |
+| Stagger of one secondary element       | delay **100 ms** or less |
+| Latest end of any keyframe, design     | **900 ms** after render  |
+| Hard cap, including every delay        | **1500 ms** after render |
+| Iterations                             | **1**                    |
 
 The hard cap applies to `animation-delay + animation-duration` of every
 animated element in the glyph. A glyph that needs more than 900 ms is a design
@@ -312,12 +311,12 @@ Rule: map every particle in `acceptedParticles` through the glyph map (`ned`
 maps to `ner`). If the result is not exactly one glyph, the entry gets no
 glyph. A particle with no glyph (for example `iväg`) counts as "not one glyph".
 
-| Entry             | Accepted          | Result                              |
-| ----------------- | ----------------- | ----------------------------------- |
-| `pv:ga-ner`       | ner, ned          | one glyph (`ner`): passes this gate |
-| `pv:skriva-ner`   | ner, ned, upp     | two glyphs: no glyph                |
-| `pv:stoppa-ner`   | ner, ned, in      | two glyphs: no glyph                |
-| `pv:skramma-bort` | bort, iväg        | `iväg` has no glyph: no glyph       |
+| Entry             | Accepted      | Result                              |
+| ----------------- | ------------- | ----------------------------------- |
+| `pv:ga-ner`       | ner, ned      | one glyph (`ner`): passes this gate |
+| `pv:skriva-ner`   | ner, ned, upp | two glyphs: no glyph                |
+| `pv:stoppa-ner`   | ner, ned, in  | two glyphs: no glyph                |
+| `pv:skramma-bort` | bort, iväg    | `iväg` has no glyph: no glyph       |
 
 Runner-up: show the glyph of the primary particle. It lost because a learner
 who typed the accepted alternative would see a picture of a different
@@ -437,15 +436,15 @@ This removes the known traps: `äta upp`, `städa upp`, `värma upp`, `dela upp`
 reviewers. It does not remove it. For a case outside the table, doubt = fail,
 and the linguist adds the case to the PR for the human.
 
-| Class                           | Example                                                    | Ruling                                                                                                                                                                                                                       |
-| ------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Posture change                  | rising (the linguist picks the exemplar, for example `ställa sig upp` or `resa sig upp`); `sitta ner` (sit down) | Pass only when the sentence describes the act of rising or sitting down. The body is the figure. A posture held over time fails (a).                                                                     |
-| Static configuration            | `sticka upp` (a nail sticks up)                            | Fail (a). Nothing moves.                                                                                                                                                                                                     |
-| Non-solid figure                | `strömma in`, `andas in/ut`                                | Pass when the sentence names the fluid and it moves along the path ("Vattnet strömmar in i källaren"). Fail when the fluid is not named. Air into the body (`andas in`) is not drawable: fail.                             |
-| State change with a direction   | `fälla upp`, `hugga ner`, `låsa in`                        | Fail (a). The main event is a change of state (open, felled, locked), even if a part moves along the path.                                                                                                                  |
-| Return of possession            | `ge tillbaka pengarna`, `få tillbaka`                      | Fail (a). This is transfer of ownership. When this class and the `tillbaka` direction test disagree, the physical reading wins only when a moving object returns to a place: that passes. A pure transfer of ownership fails. |
-| Digital object                  | `ta bort filen`                                            | Fail (a). A file is not a physical thing.                                                                                                                                                                                    |
-| Discard                         | `kasta bort` (throw out, get rid of)                       | Fail (a) when the sense is "get rid of". Pass only when the sentence describes a throw that moves the object away in space, with no "get rid of" sense.                                                                    |
+| Class                         | Example                                                                                                          | Ruling                                                                                                                                                                                                                        |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Posture change                | rising (the linguist picks the exemplar, for example `ställa sig upp` or `resa sig upp`); `sitta ner` (sit down) | Pass only when the sentence describes the act of rising or sitting down. The body is the figure. A posture held over time fails (a).                                                                                          |
+| Static configuration          | `sticka upp` (a nail sticks up)                                                                                  | Fail (a). Nothing moves.                                                                                                                                                                                                      |
+| Non-solid figure              | `strömma in`, `andas in/ut`                                                                                      | Pass when the sentence names the fluid and it moves along the path ("Vattnet strömmar in i källaren"). Fail when the fluid is not named. Air into the body (`andas in`) is not drawable: fail.                                |
+| State change with a direction | `fälla upp`, `hugga ner`, `låsa in`                                                                              | Fail (a). The main event is a change of state (open, felled, locked), even if a part moves along the path.                                                                                                                    |
+| Return of possession          | `ge tillbaka pengarna`, `få tillbaka`                                                                            | Fail (a). This is transfer of ownership. When this class and the `tillbaka` direction test disagree, the physical reading wins only when a moving object returns to a place: that passes. A pure transfer of ownership fails. |
+| Digital object                | `ta bort filen`                                                                                                  | Fail (a). A file is not a physical thing.                                                                                                                                                                                     |
+| Discard                       | `kasta bort` (throw out, get rid of)                                                                             | Fail (a) when the sense is "get rid of". Pass only when the sentence describes a throw that moves the object away in space, with no "get rid of" sense.                                                                       |
 
 **Worked checks against the current data** (`src/data/particleVerbData.ts`,
 lines 156–233).
