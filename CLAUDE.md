@@ -30,8 +30,8 @@ instead; the lead routes it.
 
 | Owner               | Files                                                                                                                                                            |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `swedish-linguist`  | `src/data/verbData.ts`, `public/data/swedish_verbs.csv`, `src/lib/verbs.ts`, Swedish strings                                                                     |
-| `srs-engine`        | `src/lib/srs.ts`, `src/hooks/useSrsProgress.ts`                                                                                                                  |
+| `swedish-linguist`  | `src/data/verbData.ts`, `public/data/swedish_verbs.csv`, `src/lib/verbs.ts`, `src/data/particleVerbData.ts`, `src/lib/particleVerbs.ts`, Swedish strings         |
+| `srs-engine`        | `src/lib/srs.ts`, `src/hooks/useSrsProgress.ts`, `src/lib/particleQueue.ts`                                                                                      |
 | `staff-engineer`    | `index.html`, `src/main.tsx`, `src/App.tsx`, `tsconfig*.json`, `eslint.config.js`, `src/lib/utils.ts`                                                            |
 | `devops`            | `vite.config.ts`, `postcss.config.js`, `package.json`, `.github/**`, PWA/manifest/service worker, deploy config                                                  |
 | `frontend-expert`   | `src/pages/**`, `src/components/*.tsx`, `src/hooks/useSettings.ts`, `use-mobile.tsx`, `use-toast.ts`, `src/lib/speech.ts`, `tailwind.config.ts`, `src/index.css` |
