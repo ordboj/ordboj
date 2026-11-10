@@ -1,26 +1,32 @@
-# Particle motion glyphs on the particle feedback screen
+# Particle motion glyphs on the particle feedback screen and introduction card
 
 Linear ORD-116 (GitHub #531).
 
 ## Decision
 
-A motion glyph shows only on the particle feedback screen. It sits at the top
-of the lemma card in the feedback panel. It is centred, directly above the
-lemma heading (for example `gå in`), and below the "Correct!" or "Not quite"
+A motion glyph shows in two places: on the particle feedback screen and on the
+particle introduction card (human decision G). On both, it sits at the top of
+the lemma area. It is centred, directly above the lemma heading (for example
+`gå in`). On the feedback screen it is below the "Correct!" or "Not quite"
 block. It never replaces a text line. The sense line stays plain text and does
-not change. It shows after a correct answer and after a wrong answer. It always shows
-the glyph of the correct particle, never the glyph of the learner's answer. It
-starts in the same frame as the feedback. It plays once for 700 ms, with no
-delay. The learner taps it to play it again. It never loops and never disables
-a control. Under reduced motion it shows the rest frame only, and it is not a
-button. Per-correct-answer confetti is removed from the particle card before
-the glyph ships (P8). An entry gets a glyph only when it passes all six gates
-in "Eligibility" below. The last gate is a human flag,
-`motionGlyphVerified: true`. The default is no glyph. An entry whose accepted
-particles map to more than one glyph, or to no glyph, gets no glyph. An entry
-with a spatial sense and a non-spatial sense splits into two entries, and only
-the physical entry can get a glyph. The glyph on the introduction card is
-deferred, not rejected.
+not change. On the feedback screen it shows after a correct answer and after a
+wrong answer. It always shows the glyph of the correct particle, never the
+glyph of the learner's answer. It starts in the same frame as the feedback or
+the introduction card. It moves for 700 ms with no start delay. Then it holds
+the rest frame for 2000 ms. Then it repeats, without end (cycle 2700 ms, human
+decision H). A tap restarts the cycle from the start state. It never disables a
+control. Under reduced motion it shows the rest frame only, it does not loop,
+and it is not a button. On the introduction card it is the same component at
+the same size. It never delays or replaces "Got it". A tap on it never grades
+or schedules anything. The glyph never shows on a cloze, recall or
+discrimination prompt before the grade. Per-correct-answer confetti is removed
+from the particle card before the glyph ships (P8). An entry gets a glyph only
+when it passes all six gates in "Eligibility" below. The last gate is a human
+flag, `motionGlyphVerified: true`. The default is no glyph. An entry whose
+accepted particles map to more than one glyph, or to no glyph, gets no glyph.
+An entry with a spatial sense and a non-spatial sense splits into two entries,
+and only the physical entry can get a glyph. The loop has known costs: it
+distracts, and it does not meet WCAG 2.2.2 (rule 3). The human accepts them.
 
 ## Question
 
@@ -37,7 +43,9 @@ The human approved these points. This note works inside them.
 3. Six glyphs: `upp`, `ut`, `in`, `ner` (`ned` is an alias), `bort`,
    `tillbaka`.
 4. CSS keyframes only. The base style is the complete rest frame with a faint
-   path trace. The keyframes define only the start state.
+   path trace. The keyframes define the start state and hold the rest values
+   for the rest of the cycle. (Amended by human decision H. Before H, the
+   keyframes defined only the start state.)
 5. Out of scope: idiomatic entries, other particles, per-verb assets, raster or
    video, animation libraries, A/B telemetry, text in a glyph, a settings
    toggle.
@@ -45,8 +53,10 @@ The human approved these points. This note works inside them.
 ## Human decisions, 2026-11-10
 
 The human answered five review questions on 2026-11-10, then decided the
-glyph placement after seeing the real screen (decision F). These answers are
-authoritative.
+glyph placement after seeing the real screen (decision F), then added the
+introduction card (decision G) and the loop (decision H). These answers are
+authoritative. A later decision applies where it disagrees with an earlier
+one.
 
 - **A. Pool.** The human does not accept a small pool as it is. The
   `swedish-linguist` rewrites the example sentences of literal spatial
@@ -79,7 +89,26 @@ authoritative.
   other rules stay: feedback only, after the grade, after wrong answers too
   (always the correct entry's glyph), play once, tap to replay, rest frame
   with no button under reduced motion, never on a prompt or the introduction
-  card.
+  card. (Decision G replaces "feedback only" and "never on the introduction
+  card". Decision H replaces "play once". "Never on a prompt" stays.)
+- **G. Introduction card, 2026-11-10.** The glyph also shows on the particle
+  introduction card, the card that teaches a new particle verb. It is the same
+  component at the same size (44 × 44 CSS px). It is centred at the top of the
+  card's lemma area, directly above the lemma heading. It shows only for
+  entries that pass all six gates in rule 9. It starts when the introduction
+  card appears, and a tap restarts it. Under reduced motion it shows the rest
+  frame, with no button. It never delays or replaces "Got it". A tap on it
+  never grades or schedules anything. It still never shows on a cloze, recall
+  or discrimination prompt before the grade. The human accepts the risk that
+  rule 8 names.
+- **H. Loop, 2026-11-10.** The glyph loops everywhere it shows: on the
+  feedback lemma card and on the introduction card. Each cycle is 700 ms of
+  movement, then 2000 ms at the rest frame, and the cycle repeats without end
+  (2700 ms). A tap restarts the cycle. Under reduced motion there is no loop:
+  the glyph shows the rest frame, with no button. This replaces "play once,
+  never loops". The human's loop request needs one change to settled point 4:
+  the keyframes now also hold the rest values for the rest of the cycle
+  (rule 4, "How to loop"). The human accepts the costs in rule 3.
 
 ## What the app does today
 
@@ -98,9 +127,10 @@ uses it in two places: the introduction card and the graded feedback panel.
 ```
 
 The introduction card renders it at line 273. The feedback panel renders it at
-line 505. The glyph goes in the feedback panel only. The engineer must not add
-the glyph to the shared `senseLine` constant, because then it also appears on
-the introduction card.
+line 505. The glyph goes in the feedback panel and on the introduction card
+(human decision G). In both places it sits above the lemma heading, not in the
+sense-line row. The engineer must not add the glyph to the shared `senseLine`
+constant. Render the glyph as its own element at the top of each lemma area.
 
 Confetti fires on every correct answer, in the same handler that opens the
 feedback.
@@ -121,10 +151,13 @@ feedback.
 recovery and end of goal.
 
 The global reduced-motion rule sets every CSS animation to 0.01 ms and one
-iteration (`src/index.css`, lines 104–113). A glyph whose base style is the rest
-frame therefore shows the rest frame at once. The picture needs no
-glyph-specific code. The replay control does need code: under this rule a tap
-does nothing visible.
+iteration (`src/index.css`, lines 104–113:
+`animation-duration: 0.01ms !important` and
+`animation-iteration-count: 1 !important`). A glyph whose base style is the
+rest frame therefore shows the rest frame at once. The same rule also stops
+the infinite loop of decision H: it runs once, at once, and ends at the rest
+frame. The picture needs no glyph-specific code. The replay control does need
+code: under this rule a tap does nothing visible.
 
 The sense strings are in `PARTICLE_CORE_SENSE` (`src/lib/particleVerbs.ts`,
 lines 193–247). Five of the six glyph particles have a spatial line. `upp` does
@@ -168,7 +201,9 @@ reduced motion then loses nothing that teaches.
 **Transience costs memory.** Ayres & Paas (2007) describe the transient
 information effect. Information that disappears must be held in working
 memory, and that adds load. A one-time animation is transient. The complete
-rest frame and the replay tap are the two remedies, so this note requires both.
+rest frame and the replay tap are two remedies, so this note requires both.
+The loop (decision H) is a third remedy: the movement comes back every 2.7 s,
+so it does not disappear. On this point the loop helps.
 
 The evidence for the glyph's size of benefit is thin. The dual-coding studies
 mostly use word lists. Boers et al. used idioms and university learners. No
@@ -177,7 +212,7 @@ direction is defensible. The size is unknown.
 
 ## Options and their cost to the learner
 
-**Glyph on the feedback screen only (chosen).** The learner retrieves the form
+**Glyph on the feedback screen (chosen).** The learner retrieves the form
 first, then sees the meaning picture. The glyph cannot help the learner answer,
 so the grade stays honest. Cost: the glyph appears only after the learner has
 already answered, so it helps the next retrieval, not this one.
@@ -191,19 +226,27 @@ recall). It also breaks P7 (at most four elements during recall).
 non-spatial senses of the particle. The glyph shows only one spatial sense. A
 learner who sees only the glyph learns that `upp` means "up" and nothing else.
 
-**Glyph on the introduction card too.** Deferred. See rule 8.
+**Glyph on the introduction card too (accepted, human decision G).** The
+learner gets the meaning picture at first encoding, when there is no answer to
+protect. Cost: the picture can make the first cloze of the verb easier, and
+that cloze is graded. See rule 8.
 
 ## Rules
 
 ### 1. Placement
 
-- The glyph shows only in the graded feedback panel (`showFeedback === true`)
-  of a cloze, recall or discrimination card.
-- It never shows on a prompt, on the introduction card, or on any screen
-  before the grade.
-- It sits at the top of the lemma card in the feedback panel. It is centred,
-  directly above the lemma heading, below the "Correct!" or "Not quite" block
-  (human decision F).
+- The glyph shows in two places only:
+  - in the graded feedback panel (`showFeedback === true`) of a cloze, recall
+    or discrimination card. It sits at the top of the lemma card, centred,
+    directly above the lemma heading, below the "Correct!" or "Not quite"
+    block (human decision F).
+  - on the introduction card (`kind === 'introduction'`). It sits at the top
+    of the card's lemma area, centred, directly above the lemma heading (human
+    decision G).
+- It never shows on a prompt or on any screen before the grade.
+- On the introduction card, the glyph never delays, hides, disables or
+  replaces "Got it". "Got it" works from the first frame. A tap on the glyph
+  never grades, schedules or advances anything.
 - The glyph box is 44 × 44 CSS px. This is the minimum touch target.
 - The glyph never replaces a text line. The sense line stays in its row as
   plain text. The glyph does not change the sense line at render time. (Rule
@@ -240,63 +283,118 @@ Conditions:
 Runner-up: correct answers only. It lost because it removes the meaning
 picture from the one screen where the learner did not have the meaning.
 
-### 3. Play once, tap to replay
+### 3. Loop, tap to restart
 
-- The glyph plays once when the feedback panel mounts. Iteration count is 1.
-- It does not play again on a re-render of the same feedback panel (for
-  example, after "Pronounce sentence").
-- A tap on the glyph plays it again from the start state. A tap during play
-  restarts it.
-- There is no replay limit.
-- The glyph never loops.
-- No control is disabled, hidden or delayed while the glyph plays. "Next
-  Card" works from the first frame. A tap on "Next Card" during play advances
-  at once.
+- The first cycle starts when the feedback panel or the introduction card
+  mounts. Each cycle is 700 ms of movement, then 2000 ms at the rest frame.
+  The cycle repeats without end while the panel or card is on screen (human
+  decision H).
+- A re-render of the same panel or card does not restart the cycle (for
+  example, after "Pronounce sentence"). The loop continues without a jump.
+- A tap on the glyph restarts the cycle from the start state, during movement
+  or during the pause.
+- There is no restart limit.
+- The loop stops when the panel or card unmounts.
+- No control is disabled, hidden or delayed while the glyph moves. "Next Card"
+  and "Got it" work from the first frame. A tap on either during movement
+  advances at once.
 - The glyph does not take focus. Focus stays where it is today.
+
+**Known costs of the loop. The human accepted these (decision H).**
+
+- **Distraction.** A loop that never stops is moving content next to text the
+  learner reads: the correct form, the sentence and the sense line. Moving
+  content pulls the eye. Every 2.7 s, it can take attention from the sentence
+  that carries the meaning. A single play did not have this cost after the
+  first 700 ms.
+- **WCAG 2.2.2 (Pause, Stop, Hide), level A.** Motion that starts by itself,
+  lasts more than 5 s and shows next to other content needs a way to pause,
+  stop or hide it. The glyph loop does not have one. A tap restarts the loop
+  and does not stop it. The OS reduced-motion setting is not the control that
+  2.2.2 asks for. **The app does not meet 2.2.2 for the glyph while motion is
+  allowed.**
+- **Recommended follow-up, not done.** Add a pause control, or stop the loop
+  automatically. Either one meets 2.2.2 only if the motion stops, or the
+  learner can pause it. A pause control is the clean fix: one tap stops the
+  loop at the rest frame. An automatic stop meets 2.2.2 only when all motion
+  ends 5 s or less after it starts. Report this to the lead as a separate
+  ticket for the maintainer to decide.
 
 ### 4. Duration
 
-| Parameter                              | Value                    |
-| -------------------------------------- | ------------------------ |
-| Main animation duration                | **700 ms**               |
-| Start delay after the feedback renders | **0 ms**                 |
-| Easing                                 | `ease-out`               |
-| Stagger of one secondary element       | delay **100 ms** or less |
-| Latest end of any keyframe, design     | **900 ms** after render  |
-| Hard cap, including every delay        | **1500 ms** after render |
-| Iterations                             | **1**                    |
+| Parameter                                   | Value                                          |
+| ------------------------------------------- | ---------------------------------------------- |
+| Movement duration (`GLYPH_DURATION_MS`)     | **700 ms** (allowed band 600–900 ms)           |
+| Pause at rest frame (`GLYPH_LOOP_PAUSE_MS`) | **2000 ms**                                    |
+| Cycle (`GLYPH_CYCLE_MS`)                    | **2700 ms** = movement + pause                 |
+| Movement share of the cycle                 | **25.926 %** of the keyframes                  |
+| Start delay after mount                     | **0 ms**                                       |
+| Easing of the movement                      | `ease-out`                                     |
+| Stagger of one secondary element            | delay **100 ms** or less, from the cycle start |
+| Latest end of any movement, design          | **900 ms** after the cycle start               |
+| Hard cap on movement, including every delay | **1500 ms** after the cycle start              |
+| Iterations                                  | infinite; 1 under reduced motion (rule 5)      |
 
-The hard cap applies to `animation-delay + animation-duration` of every
-animated element in the glyph. A glyph that needs more than 900 ms is a design
-defect, even below the cap.
+The hard cap applies to the movement in each cycle: `animation-delay` plus
+`GLYPH_DURATION_MS` of every animated element. It does not apply to the pause
+or the cycle. A movement that needs more than 900 ms is a design defect, even
+below the cap. Every element must reach the rest frame before the next cycle
+starts.
+
+**How to loop.** Use one infinite CSS animation per animated element, with
+duration `var(--glyph-cycle)` (2700 ms) and `animation-iteration-count:
+infinite`. The base style stays the complete rest frame with the faint path
+trace. The keyframes define the start state at `0%`. They hold the rest values
+from `25.926%` to `100%`. The movement is the first 25.926 % of the cycle
+(`GLYPH_DURATION_MS / GLYPH_CYCLE_MS`, rounded to 3 decimals). Use no
+JavaScript timer for the loop. A tap restarts the cycle by remounting the
+glyph element (for example a new React `key`). Under reduced motion the global
+rule in `src/index.css` forces one near-instant iteration, so nothing loops.
+Runner-up: keep 700 ms start-only keyframes and restart them with a timer
+every `GLYPH_CYCLE_MS`. It lost because it adds timers and cleanup on unmount
+and tap, and it bypasses the global reduced-motion rule, so the timer needs
+its own reduced-motion guard.
 
 **Make the timing testable.** jsdom does not compute keyframes or read
 durations from a stylesheet. So `frontend-expert` must expose every duration
 and every delay in one of two ways:
 
-- as exported TypeScript constants (for example `GLYPH_DURATION_MS`,
+- as exported TypeScript constants (`GLYPH_DURATION_MS = 700`,
+  `GLYPH_LOOP_PAUSE_MS = 2000`, `GLYPH_CYCLE_MS = 2700`, and for example
   `GLYPH_STAGGER_MS`) that the component uses, or
 - as inline CSS custom properties on the glyph elements (for example
-  `--glyph-duration: 700ms`) that the stylesheet reads.
+  `--glyph-cycle: 2700ms`) that the stylesheet reads.
 
-Vitest then asserts that delay plus duration is 1500 ms or less for each
-animated element.
+Vitest then asserts these points:
 
-Reason for 700 ms: it is long enough to read a direction. It ends before a
-typical learner reads the correct form and moves to the sense line. The glyph
-starts with the feedback, so it never delays the feedback. P1 holds.
+- Delay plus `GLYPH_DURATION_MS` is 1500 ms or less for each animated element.
+- `GLYPH_CYCLE_MS` equals `GLYPH_DURATION_MS + GLYPH_LOOP_PAUSE_MS`.
+- Delay plus `GLYPH_DURATION_MS` of each element is less than
+  `GLYPH_CYCLE_MS`.
+- The keyframe percentage in the stylesheet equals
+  `round(GLYPH_DURATION_MS / GLYPH_CYCLE_MS * 100, 3)` (25.926). The test
+  reads the stylesheet source as text, because jsdom does not parse keyframes.
+
+Reason for 700 ms: it is long enough to read a direction. Reason for 2000 ms:
+the glyph is still for most of each cycle (74 %), so the learner can read the
+text between movements. The 2000 ms pause is the human's value, not a measured
+one. The glyph starts with the feedback, so it never delays the feedback. P1
+holds.
 
 ### 5. Reduced motion
 
-- Under `prefers-reduced-motion: reduce`, the global rule in `src/index.css`
-  shows the rest frame. The glyph needs no extra CSS for this.
+- Under `prefers-reduced-motion: reduce`, there is no loop. The global rule in
+  `src/index.css` sets `animation-iteration-count: 1 !important` and
+  `animation-duration: 0.01ms !important`. So the infinite animation runs
+  once, at once, and stops at the rest frame. The glyph needs no extra CSS for
+  this.
 - Under reduced motion, the glyph is **not** a button. It has no `onClick`, no
   `tabIndex`, no pointer cursor and no focus ring. It is `aria-hidden="true"`.
 - With motion allowed, the glyph is a `<button type="button">` with an
   accessible name, for example `Replay movement: upp`.
-- The card reads the media query when the feedback panel mounts, as
-  `ConfettiEffect.tsx` does. A change of preference during one card does not
-  need to update that card.
+- The card reads the media query when the feedback panel or the introduction
+  card mounts, as `ConfettiEffect.tsx` does. A change of preference during one
+  card does not need to update that card.
 - In both modes the sense line carries the meaning in text. A screen-reader
   user loses nothing.
 
@@ -341,25 +439,48 @@ the feedback panel discloses alternates as also accepted, never as errors.
 
 ### 8. Introduction card
 
-**Deferred.** Not rejected.
+**Accepted** (human decision G, 2026-11-10). This replaces the earlier
+deferral.
 
-Reason: the first cloze of a new verb comes later in the same sitting
-([[particle-verb-practice]]). The learner sees the glyph on that feedback a few
-minutes after the introduction, so the gain from an earlier glyph is small.
-The introduction is the first encoding. A glyph that misleads there does more
-harm than on a later feedback screen. The introduction card already shows
-three sentences, the sense line, the contrast line and the reference line.
+The glyph shows on the introduction card of an entry that passes all six gates
+in rule 9. Placement, size, colour, timing, loop, tap restart and reduced
+motion are the same as on the feedback panel (rules 1, 3, 4 and 5). It never
+delays or replaces "Got it". A tap on it never grades or schedules anything.
 
-Revisit when all of these are true:
+**The risk, named.** `srs-engine` raised this concern, and it stays true. A
+picture of "out" on the introduction card can prime the answer `ut` for the
+first cloze of that verb. The first cloze is graded 0|5, and a correct answer
+gets full credit. So part of a first-cloze success can come from the picture,
+not from memory of the particle.
 
-1. The feedback glyph has shipped.
-2. The maintainer has used it for 14 days or more.
-3. The maintainer found no gated entry where the glyph misleads.
-4. A 360 × 640 screenshot shows that the introduction card with the glyph
-   needs no extra scroll to reach "Got it".
+**What limits the risk.**
 
-The introduction card is not graded, so red line 1 and P7 do not block it.
-Only the risk at first encoding and the screen budget block it.
+- The introduction card is not graded and creates no SRS item (`itemId:
+null`, `countsTowardGoal: false`, `src/lib/particleQueue.ts`). The glyph
+  cannot change a grade on that card.
+- The first cloze comes at least 2 cards after the introduction, and 6 if
+  possible (`MIN_INTERVENING_BEFORE_FIRST_CLOZE = 2`, preferred gap 6). If the
+  gap is below 2, the first cloze moves to a later sitting. The learner must
+  hold the particle across other cards.
+- The glyph shows only the direction of the particle. It does not show the
+  verb or the sentence. The cloze also needs the learner to put the particle
+  in a sentence.
+- The human accepted the remaining risk.
+
+The risk remains for the first cloze only. Later reviews come on the normal
+schedule, after the priming has faded.
+
+**What the maintainer watches.** The maintainer checks by hand. There is no
+telemetry. Compare first-cloze accuracy on verbs with a glyph and verbs
+without one. Also notice any time you answer a first cloze from the picture
+and not from the verb. "How we would know this was wrong" gives the threshold
+for action.
+
+**Screen budget.** The introduction card already shows three sentences, the
+sense line, the contrast line and the reference line. `frontend-expert` takes a
+360 × 640 screenshot of the introduction card with the glyph and records it in
+the PR. If "Got it" goes below the fold, report it to the lead. Do not remove
+the sense line to make space.
 
 ### 9. Eligibility, per entry
 
@@ -538,27 +659,29 @@ human. The linguist does not silently drop `upp`.
 
 ## Parameters, collected
 
-| Parameter                      | Value                                                                             |
-| ------------------------------ | --------------------------------------------------------------------------------- |
-| Screens                        | graded feedback panel only                                                        |
-| Answers                        | correct and wrong                                                                 |
-| Glyph shown                    | correct particle only, alias `ned` → `ner`                                        |
-| Size                           | 44 × 44 CSS px                                                                    |
-| Position                       | top of the lemma card, centred, above the lemma heading, below the result block   |
-| Colour                         | mover `text-primary`; landmark `text-muted-foreground`; never success/destructive |
-| Duration                       | 700 ms, `ease-out`, 0 ms delay                                                    |
-| Secondary stagger              | 100 ms or less                                                                    |
-| Design end                     | 900 ms or less                                                                    |
-| Hard cap (delay + duration)    | 1500 ms, exposed as constants or CSS custom properties                            |
-| Iterations                     | 1; tap replays; no limit                                                          |
-| Reduced motion                 | rest frame, not a button, `aria-hidden`                                           |
-| Confetti on the particle card  | none on a correct answer (P8); lands before the glyph                             |
-| Multi-glyph or no-glyph accept | no glyph                                                                          |
-| Multi-sense entry              | split; existing id keeps the majority sense; other sense is a new entry           |
-| Spatial test                   | every example; doubt = fail; hard-class table in rule 9                           |
-| Data flag                      | `motionGlyphVerified?: boolean`, default off                                      |
-| Gate 6 approval                | one human batch approval of the pass list, in the PR                              |
-| Introduction card              | deferred; revisit conditions in rule 8                                            |
+| Parameter                      | Value                                                                                         |
+| ------------------------------ | --------------------------------------------------------------------------------------------- |
+| Screens                        | graded feedback panel; introduction card (decision G); never a prompt                         |
+| Answers                        | correct and wrong                                                                             |
+| Glyph shown                    | correct particle only, alias `ned` → `ner`                                                    |
+| Size                           | 44 × 44 CSS px                                                                                |
+| Position                       | top of the lemma area, centred, above the lemma heading; on feedback, below the result block  |
+| Colour                         | mover `text-primary`; landmark `text-muted-foreground`; never success/destructive             |
+| Duration                       | movement 700 ms (band 600–900 ms), `ease-out`, 0 ms delay; pause 2000 ms; cycle 2700 ms       |
+| Secondary stagger              | 100 ms or less                                                                                |
+| Design end                     | movement ends 900 ms or less after the cycle start                                            |
+| Hard cap (delay + duration)    | 1500 ms per movement; `GLYPH_DURATION_MS`, `GLYPH_LOOP_PAUSE_MS`, `GLYPH_CYCLE_MS`            |
+| Loop mechanism                 | one infinite CSS animation over `var(--glyph-cycle)`; movement in first 25.926 %; no JS timer |
+| Iterations                     | infinite (decision H); tap restarts the cycle; no limit                                       |
+| Reduced motion                 | no loop; rest frame, not a button, `aria-hidden`                                              |
+| WCAG 2.2.2                     | not met while motion is allowed; pause control or auto-stop is a recommended follow-up        |
+| Confetti on the particle card  | none on a correct answer (P8); lands before the glyph                                         |
+| Multi-glyph or no-glyph accept | no glyph                                                                                      |
+| Multi-sense entry              | split; existing id keeps the majority sense; other sense is a new entry                       |
+| Spatial test                   | every example; doubt = fail; hard-class table in rule 9                                       |
+| Data flag                      | `motionGlyphVerified?: boolean`, default off                                                  |
+| Gate 6 approval                | one human batch approval of the pass list, in the PR                                          |
+| Introduction card              | yes, gated entries only; loops; never delays "Got it"; a tap never grades                     |
 
 ## What we will not claim
 
@@ -588,6 +711,22 @@ The maintainer checks these points by hand.
 - The separate P10 ticket brings "Next Card" above the fold, and then the
   glyph row pushes it below again. The glyph row is too tall. Reduce the glyph
   height and keep a 44 px tap area with padding.
+- First clozes after an introduction with a glyph feel too easy, or a learner
+  reports that they guessed the particle from the picture. The
+  introduction-card glyph primes the answer. Remove the glyph from the
+  introduction card. Keep the glyph on the feedback panel. A difference that
+  the maintainer notices by hand is enough. Example: first clozes on glyph
+  verbs almost never fail, but first clozes on similar verbs with no glyph
+  often fail. No statistics are needed.
+- The glyph on the introduction card pushes "Got it" below the fold on a
+  360 × 640 screen. Reduce the glyph row height and keep a 44 px tap area with
+  padding.
+- The looping motion pulls attention from reading the example sentence, or
+  the maintainer finds the loop tiring. Stop the loop at the rest frame after
+  a few cycles (2 or 3), or pause it on tap. Do not remove the glyph. Do not go
+  back to one play without a human decision.
+- The 2000 ms pause feels restless. Make the pause longer before you shorten
+  the movement.
 
 ## Hand-off
 
@@ -628,19 +767,57 @@ reason for each entry. After the human's batch approval, set the flag to
 the app does today").
 
 `frontend-expert` (ORD-119): the six glyphs, placed at the top of the lemma
-card in the feedback panel (rules 1–5, human decision F), inside `src/components/ParticleVerbCard.tsx` and `src/index.css`. Gates 1–4 in
-code; gate 6 read from data. Expose every glyph duration and delay as exported
-constants or inline CSS custom properties (rule 4).
+card in the feedback panel (human decision F) and at the top of the lemma area
+on the introduction card (human decision G, rule 8), by rules 1–5, inside
+`src/components/ParticleVerbCard.tsx` and `src/index.css`. Gates 1–4 in code;
+gate 6 read from data. Expose every glyph duration and delay as exported
+constants or inline CSS custom properties (rule 4). On the introduction card,
+the glyph never delays or replaces "Got it", and a tap on it never grades or
+schedules. Put a 360 × 640 screenshot of a gated introduction card in the PR.
+Loop the glyph by rules 3 and 4 (human decision H): one infinite CSS animation
+over `var(--glyph-cycle)`, movement in the first 25.926 % of the keyframes,
+rest values for the remainder, base style still the complete rest frame, no
+JavaScript timer. Export `GLYPH_DURATION_MS`, `GLYPH_LOOP_PAUSE_MS` and
+`GLYPH_CYCLE_MS`.
 
-`qa`: tests for the gate (each row of the rule-7 table), for "no glyph before
-the grade", for "no glyph on the introduction card", for "no button under
-reduced motion", for "no confetti on a correct particle answer", and for the
-1500 ms cap. The cap test reads the exported constants or the CSS custom
-properties, because jsdom does not compute keyframes. After ORD-123, add a
-test that every `pv:` id present before the split is still present.
+Recommended follow-up, not in ORD-119: a pause control, or an automatic stop,
+to meet WCAG 2.2.2 (rule 3). The lead puts this to the maintainer as a
+separate ticket.
 
-`srs-engine`: nothing. The glyph does not change a grade or an interval. New
-entries from splits are new keys and get the normal new-item treatment.
+`qa`: tests for these points:
+
+- the gate (each row of the rule-7 table);
+- no glyph before the grade;
+- the introduction card of a flagged entry shows the glyph;
+- the introduction card of an unflagged entry shows no glyph;
+- a tap on the introduction-card glyph reports no grade and does not advance
+  the card;
+- "Got it" is enabled on the first render of an introduction card with a
+  glyph;
+- no button under reduced motion, on the feedback panel and on the
+  introduction card;
+- the glyph CSS animation is infinite, with duration `var(--glyph-cycle)`;
+- the keyframe percentage in the stylesheet equals
+  `round(GLYPH_DURATION_MS / GLYPH_CYCLE_MS * 100, 3)`;
+- under reduced motion nothing loops (the global rule sets iteration count 1);
+- a tap restarts the cycle;
+- a re-render does not restart the cycle;
+- `GLYPH_CYCLE_MS === GLYPH_DURATION_MS + GLYPH_LOOP_PAUSE_MS`;
+- no confetti on a correct particle answer;
+- the 1500 ms cap on each movement, and every movement ends before
+  `GLYPH_CYCLE_MS`.
+
+The timing tests read the exported constants, the CSS custom properties or
+the stylesheet source as text, because jsdom does not compute keyframes. After
+ORD-123, add a test that every `pv:` id present before the split is still
+present.
+
+`srs-engine`: no code change. The glyph does not change a grade or an
+interval. The first-cloze priming risk is recorded in rule 8 and accepted by
+the human (decision G). The first-cloze gap rule in `src/lib/particleQueue.ts`
+(floor 2, preferred 6) is part of what limits that risk. Do not reduce the gap
+without a new learning-designer decision. New entries from splits are new keys
+and get the normal new-item treatment.
 
 ## Sources
 
