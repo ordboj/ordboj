@@ -84,8 +84,13 @@ export interface ParticleVerbData {
   //      holds pv:lasa-in (#336), so "låsa in" ships as pv:laasa-in.
   //      Only the id folds; baseInfinitive and lemma keep their diacritics.
   //   3. Byte-identical homographs, which digraphs cannot separate, fall
-  //      back to a semantic suffix and need staff-engineer review. No entry
-  //      needs this today; do not invent one without that review.
+  //      back to a semantic suffix and need staff-engineer review. First
+  //      use: the ORD-123 sense splits (docs/learning/2026-11-10-particle-
+  //      motion-glyphs.md, decision E). The incumbent id keeps its slug
+  //      and its majority sense; the new sense appends as
+  //      `<incumbent slug>-<tag>`, where <tag> is one ASCII-folded Swedish
+  //      word naming the new sense (pv:ga-ner-minska, pv:satta-upp-pjas).
+  //      Proposed by swedish-linguist, pending staff-engineer review.
   // Rule 2 is deliberately not applied retroactively: no existing id
   // changes, so no stored progress key changes.
   id: string;
@@ -395,7 +400,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['ut'],
     examples: [
-      { sv: 'Han tar ut leksakerna ur lådan på golvet.', blankIndex: 2 },
+      { sv: 'Han tar ut leksakerna ur den stora lådan.', blankIndex: 2 },
       { sv: 'Jag tar ut soporna innan jag går hemifrån.', blankIndex: 2 },
       { sv: 'Hon tar ut tallrikarna ur skåpet före middagen.', blankIndex: 2 },
     ],
@@ -626,11 +631,14 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'bort',
     reflexive: 'none',
     lemma: 'ta bort',
-    gloss: { en: 'to remove; to delete' },
+    // ORD-123 split (decision E): two of three frames moved a physical
+    // object, so this id keeps "remove". The digital sense is
+    // pv:ta-bort-radera, appended at the end of the array.
+    gloss: { en: 'to remove' },
     transparency: 'literal',
     acceptedParticles: ['bort'],
     examples: [
-      { sv: 'Jag tar bort filen från datorn i kväll.', blankIndex: 2 },
+      { sv: 'Vi tar bort snön från trappan på morgonen.', blankIndex: 2 },
       { sv: 'Läkaren tar bort förbandet efter en vecka.', blankIndex: 2 },
       { sv: 'Vi tar bort de gamla möblerna ur rummet.', blankIndex: 2 },
     ],
@@ -1273,12 +1281,15 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'upp',
     reflexive: 'none',
     lemma: 'sätta upp',
-    gloss: { en: 'to mount something on a wall; to stage a play' },
+    // ORD-123 split (decision E): two of three frames were physical, so this
+    // id keeps "mount on a wall". The theatre sense is pv:satta-upp-pjas,
+    // appended at the end of the array.
+    gloss: { en: 'to mount something on a wall' },
     transparency: 'literal',
     acceptedParticles: ['upp'],
     examples: [
       { sv: 'Hon sätter upp en tavla på väggen i hallen.', blankIndex: 2 },
-      { sv: 'Teatern sätter upp en ny pjäs i höst.', blankIndex: 2 },
+      { sv: 'Han sätter upp en hylla på väggen i köket.', blankIndex: 2 },
       { sv: 'Vi sätter upp affischer i hela staden.', blankIndex: 2 },
     ],
     verified: true,
@@ -1451,12 +1462,15 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'ut',
     reflexive: 'none',
     lemma: 'sätta ut',
-    gloss: { en: 'to place something outdoors; to discontinue a medicine' },
+    // ORD-123 split (decision E): two of three frames were physical, so this
+    // id keeps "place outdoors". The medical sense is pv:satta-ut-medicin,
+    // appended at the end of the array.
+    gloss: { en: 'to place something outdoors' },
     transparency: 'literal',
     acceptedParticles: ['ut'],
     examples: [
       { sv: 'Vi sätter ut blommorna på balkongen i maj.', blankIndex: 2 },
-      { sv: 'Läkaren sätter ut medicinen efter tre veckor.', blankIndex: 2 },
+      { sv: 'Han sätter ut fågelmat på balkongen varje vinter.', blankIndex: 2 },
       { sv: 'De sätter ut stolar i trädgården före festen.', blankIndex: 2 },
     ],
     verified: true,
@@ -1561,11 +1575,14 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'upp',
     reflexive: 'none',
     lemma: 'komma upp',
-    gloss: { en: 'to reach a higher place; to be raised as a topic' },
+    // ORD-123 split (decision E): two of three frames were physical, so this
+    // id keeps "reach a higher place". The topic sense is pv:komma-upp-amne,
+    // appended at the end of the array.
+    gloss: { en: 'to reach a higher place' },
     transparency: 'literal',
     acceptedParticles: ['upp'],
     examples: [
-      { sv: 'Frågan kommer upp på varje möte i styrelsen.', blankIndex: 2 },
+      { sv: 'Hon kommer upp ur vattnet efter en minut.', blankIndex: 2 },
       { sv: 'Han kommer upp på scenen efter pausen.', blankIndex: 2 },
       { sv: 'Vi kommer upp till toppen före lunch.', blankIndex: 2 },
     ],
@@ -4807,7 +4824,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Barnen klättrar upp i det stora trädet.', blankIndex: 2 },
       { sv: 'Han klättrar upp på taket med en stege.', blankIndex: 2 },
-      { sv: 'Vi klättrar upp för berget tidigt på morgonen.', blankIndex: 2 },
+      // ORD-123: replaces "klättrar upp för berget", where standard spelling
+      // is the preposition "uppför" and leaves no particle to blank.
+      { sv: 'Hon klättrar upp på stegen för att byta lampan.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'klättrar upp', preteritum: 'klättrade upp', supinum: 'klättrat upp' },
@@ -5783,7 +5802,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       // Round 1 review: "kommer upp/tillbaka om fem minuter" fits the old
       // frame just as well. Naming the ground floor rules both out.
       { sv: 'Jag kommer ner till bottenvåningen med hissen.', blankIndex: 2 },
-      { sv: 'Hon kommer ner för trappan med väskan.', blankIndex: 2 },
+      // ORD-123: replaces "kommer ner för trappan", where standard spelling
+      // is the preposition "nerför" and leaves no particle to blank.
+      { sv: 'Hon kommer ner från vinden med en låda.', blankIndex: 2 },
       { sv: 'Barnen kommer ner till frukosten klockan åtta.', blankIndex: 2 },
     ],
     verified: true,
@@ -6072,5 +6093,210 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'låser in', preteritum: 'låste in', supinum: 'låst in' },
+  },
+
+  // ---- ORD-123 sense splits (decision E) ----
+  // Each entry below is the second sense of an incumbent entry whose gloss
+  // used to list a spatial and a non-spatial sense. The incumbent keeps its
+  // id and its majority sense; ids follow rule 3 at the `id` field. Band
+  // and evidence are the incumbent's, because SVALex counts the
+  // verb+particle pair, not the sense.
+  {
+    // Physical half of pv:ga-ut. "Hon går ut genom dörren" was not moved
+    // here: "in genom dörren" fits that frame just as well. Every frame
+    // below uses "ut ur", which rules out "in".
+    id: 'pv:ga-ut-lamna',
+    cefr: 'A1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'gå',
+    particle: 'ut',
+    reflexive: 'none',
+    lemma: 'gå ut',
+    gloss: { en: 'to leave a room or building on foot' },
+    transparency: 'literal',
+    acceptedParticles: ['ut'],
+    examples: [
+      { sv: 'Han går ut ur rummet och stänger dörren.', blankIndex: 2 },
+      { sv: 'Läraren går ut ur klassrummet en stund.', blankIndex: 2 },
+      { sv: 'Alla går ut ur huset när brandlarmet hörs.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'går ut', preteritum: 'gick ut', supinum: 'gått ut' },
+  },
+  {
+    // Physical half of pv:ga-upp. The sun frame moved here from the
+    // incumbent.
+    id: 'pv:ga-upp-stiga',
+    cefr: 'A1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'gå',
+    particle: 'upp',
+    reflexive: 'none',
+    lemma: 'gå upp',
+    gloss: { en: 'to rise or ascend to a higher place' },
+    transparency: 'literal',
+    acceptedParticles: ['upp'],
+    examples: [
+      { sv: 'Solen går upp klockan fyra på morgonen i juni.', blankIndex: 2 },
+      { sv: 'Hon går upp på vinden för att hämta lådor.', blankIndex: 2 },
+      { sv: 'Vi går upp till toppen av berget.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'går upp', preteritum: 'gick upp', supinum: 'gått upp' },
+  },
+  {
+    // Scale half of pv:ga-ner. The prices frame moved here from the
+    // incumbent. Literal for the same reason as pv:ga-upp: a transparent
+    // scale metaphor, and "reduction" is already in the "ner" core sense.
+    id: 'pv:ga-ner-minska',
+    cefr: 'A1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'gå',
+    particle: 'ner',
+    reflexive: 'none',
+    lemma: 'gå ner',
+    gloss: { en: 'to decrease' },
+    transparency: 'literal',
+    // "ned" is the same verb in a more formal spelling (see pv:ga-ner).
+    acceptedParticles: ['ner', 'ned'],
+    examples: [
+      { sv: 'Priserna går ner efter jul varje år.', blankIndex: 2 },
+      { sv: 'Temperaturen går ner på natten i oktober.', blankIndex: 2 },
+      { sv: 'Febern går ner efter en dag i sängen.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'går ner', preteritum: 'gick ner', supinum: 'gått ner' },
+  },
+  {
+    // Admission half of pv:komma-in. The university frame moved here from
+    // the incumbent. Literal: entry into an institution, as transparent as
+    // English "get in".
+    id: 'pv:komma-in-antagning',
+    cefr: 'A1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'komma',
+    particle: 'in',
+    reflexive: 'none',
+    lemma: 'komma in',
+    gloss: { en: 'to gain admission to a school or course' },
+    transparency: 'literal',
+    acceptedParticles: ['in'],
+    examples: [
+      { sv: 'Hon kommer in på universitetet nästa höst.', blankIndex: 2 },
+      { sv: 'Han kommer in på läkarlinjen efter tre försök.', blankIndex: 2 },
+      { sv: 'Jag hoppas att jag kommer in på kursen.', blankIndex: 5 },
+    ],
+    verified: true,
+    forms: { presens: 'kommer in', preteritum: 'kom in', supinum: 'kommit in' },
+  },
+  {
+    // Money half of pv:ta-ut. The bank frame moved here from the
+    // incumbent. Literal: money taken out of an account composes from
+    // "ta" and "ut".
+    id: 'pv:ta-ut-uttag',
+    cefr: 'A1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'ta',
+    particle: 'ut',
+    reflexive: 'none',
+    lemma: 'ta ut',
+    gloss: { en: 'to withdraw money from an account' },
+    transparency: 'literal',
+    acceptedParticles: ['ut'],
+    examples: [
+      { sv: 'Han tar ut pengar från banken varje månad.', blankIndex: 2 },
+      { sv: 'Jag tar ut tvåhundra kronor i bankomaten.', blankIndex: 2 },
+      { sv: 'Vi tar ut kontanter innan vi åker på semester.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'tar ut', preteritum: 'tog ut', supinum: 'tagit ut' },
+  },
+  {
+    // Digital half of pv:ta-bort. The file frame moved here from the
+    // incumbent. Literal: the same "remove" sense applied to a digital
+    // object, which the glyph note's hard-class table rules non-physical.
+    id: 'pv:ta-bort-radera',
+    cefr: 'A2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'ta',
+    particle: 'bort',
+    reflexive: 'none',
+    lemma: 'ta bort',
+    gloss: { en: 'to delete something digital, such as a file' },
+    transparency: 'literal',
+    acceptedParticles: ['bort'],
+    examples: [
+      { sv: 'Jag tar bort filen från datorn i kväll.', blankIndex: 2 },
+      { sv: 'Hon tar bort bilden från sin profil.', blankIndex: 2 },
+      { sv: 'Han tar bort alla gamla mejl varje fredag.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'tar bort', preteritum: 'tog bort', supinum: 'tagit bort' },
+  },
+  {
+    // Theatre half of pv:satta-upp. The theatre frame moved here from the
+    // incumbent. Idiomatic: "stage a production" is not derivable from
+    // "sätta" plus "upp".
+    id: 'pv:satta-upp-pjas',
+    cefr: 'A1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'sätta',
+    particle: 'upp',
+    reflexive: 'none',
+    lemma: 'sätta upp',
+    gloss: { en: 'to stage a play or a show' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['upp'],
+    examples: [
+      { sv: 'Teatern sätter upp en ny pjäs i höst.', blankIndex: 2 },
+      { sv: 'Skolan sätter upp en musikal i vår.', blankIndex: 2 },
+      { sv: 'Eleverna sätter upp en egen pjäs före sommarlovet.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'sätter upp', preteritum: 'satte upp', supinum: 'satt upp' },
+  },
+  {
+    // Medical half of pv:satta-ut. The doctor frame moved here from the
+    // incumbent. Idiomatic: "stop a prescribed medicine" is not derivable
+    // from "sätta" plus "ut". The two new frames name a reason to stop, so
+    // "sätta in" (start a medicine) does not fit them.
+    id: 'pv:satta-ut-medicin',
+    cefr: 'A2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'sätta',
+    particle: 'ut',
+    reflexive: 'none',
+    lemma: 'sätta ut',
+    gloss: { en: 'to discontinue a medicine' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['ut'],
+    examples: [
+      { sv: 'Läkaren sätter ut medicinen efter tre veckor.', blankIndex: 2 },
+      { sv: 'Hon sätter ut tabletterna eftersom hon mår bättre.', blankIndex: 2 },
+      { sv: 'Vi sätter ut medicinen när febern är borta.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'sätter ut', preteritum: 'satte ut', supinum: 'satt ut' },
+  },
+  {
+    // Topic half of pv:komma-upp. The board-meeting frame moved here from
+    // the incumbent. Idiomatic, matching pv:ta-upp ("to raise a topic").
+    id: 'pv:komma-upp-amne',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'komma',
+    particle: 'upp',
+    reflexive: 'none',
+    lemma: 'komma upp',
+    gloss: { en: 'to be raised as a topic' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['upp'],
+    examples: [
+      { sv: 'Frågan kommer upp på varje möte i styrelsen.', blankIndex: 2 },
+      { sv: 'Förslaget kommer upp till diskussion på fredag.', blankIndex: 2 },
+      { sv: 'Ämnet kommer upp under middagen hos grannarna.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'kommer upp', preteritum: 'kom upp', supinum: 'kommit upp' },
   },
 ];
