@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle2, XCircle, Volume2 } from 'lucide-react';
-import { ConfettiEffect } from './ConfettiEffect';
 import type { Grade } from '@/lib/srs';
 import type { ParticleSittingCard } from '@/lib/particleQueue';
 import {
@@ -106,7 +105,6 @@ export function ParticleVerbCard({
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [submittedAnswer, setSubmittedAnswer] = useState('');
-  const [showConfetti, setShowConfetti] = useState(false);
   // The lure particle tapped on a discrimination card, or null while nothing
   // has been tapped yet / the target was tapped.
   const [selectedParticle, setSelectedParticle] = useState<string | null>(null);
@@ -142,7 +140,6 @@ export function ParticleVerbCard({
     setShowFeedback(false);
     setIsCorrect(false);
     setSubmittedAnswer('');
-    setShowConfetti(false);
     setSelectedParticle(null);
     stopSpeaking();
   }, [card.itemId, kind, entry.id]);
@@ -175,7 +172,6 @@ export function ParticleVerbCard({
       setIsCorrect(correct);
       setSubmittedAnswer(answer);
       setShowFeedback(true);
-      if (correct) setShowConfetti(true);
       // No audio. Web Speech cannot be trusted to put the stress on the
       // particle, and a construction stressed on the verb is not a particle
       // verb at all — hälsa PÅ (visit) against hälsa på (greet). Wrong
@@ -196,7 +192,6 @@ export function ParticleVerbCard({
       setSelectedParticle(option.particle);
       setIsCorrect(option.correct);
       setShowFeedback(true);
-      if (option.correct) setShowConfetti(true);
     },
     [showFeedback],
   );
@@ -314,7 +309,6 @@ export function ParticleVerbCard({
 
   return (
     <>
-      <ConfettiEffect trigger={showConfetti} />
       <Card className="w-full max-w-2xl shadow-xl">
         <CardContent className="p-8 space-y-6">
           <div className="text-center space-y-3">
