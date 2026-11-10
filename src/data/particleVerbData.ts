@@ -1432,13 +1432,19 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'sätta in',
-    gloss: { en: 'to deposit money at a bank; to fit something into place' },
+    // ORD-123 split (decision E, human ruling 2026-11-10): this id keeps
+    // the money sense. The physical sense (fit or put something into
+    // position) is pv:satta-in-montera, appended at the end of the array;
+    // the window-pane and chairs frames moved there. Stays literal: money
+    // put into an account composes from "sätta" and "in", like
+    // pv:ta-ut-uttag.
+    gloss: { en: 'to deposit money at a bank' },
     transparency: 'literal',
     acceptedParticles: ['in'],
     examples: [
       { sv: 'Jag sätter in pengar på kontot varje månad.', blankIndex: 2 },
-      { sv: 'Han sätter in en ny ruta i fönstret.', blankIndex: 2 },
-      { sv: 'Vi sätter in fler stolar före konserten.', blankIndex: 2 },
+      { sv: 'Hon sätter in lönen på sparkontot direkt.', blankIndex: 2 },
+      { sv: 'Vi sätter in tusen kronor på hans konto.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'sätter in', preteritum: 'satte in', supinum: 'satt in' },
@@ -5673,7 +5679,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'bort',
     reflexive: 'none',
     lemma: 'plocka bort',
-    gloss: { en: 'to take an item off a table or out of a set' },
+    // ORD-123 split (decision E, human ruling 2026-11-10): this id keeps
+    // the physical sense. The list sense is pv:plocka-bort-lista, appended
+    // at the end of the array; the list frame moved there and is replaced
+    // here by a physical one.
+    gloss: { en: 'to pick small items off something by hand' },
     transparency: 'literal',
     acceptedParticles: ['bort'],
     examples: [
@@ -5681,7 +5691,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       // well. Taking one thing out of a dish does not.
       { sv: 'Han plockar bort löken från sin tallrik.', blankIndex: 2 },
       { sv: 'Jag plockar bort de vissna bladen från plantan.', blankIndex: 2 },
-      { sv: 'Hon plockar bort en post ur listan.', blankIndex: 2 },
+      { sv: 'Jag plockar bort tomaten från min smörgås.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'plockar bort', preteritum: 'plockade bort', supinum: 'plockat bort' },
@@ -6306,5 +6316,50 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'kommer upp', preteritum: 'kom upp', supinum: 'kommit upp' },
+  },
+  {
+    // Physical half of pv:satta-in (human ruling 2026-11-10). The
+    // window-pane and chairs frames moved here from the incumbent. Literal:
+    // an object put into a frame, a room or a device.
+    id: 'pv:satta-in-montera',
+    cefr: 'A2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'sätta',
+    particle: 'in',
+    reflexive: 'none',
+    lemma: 'sätta in',
+    gloss: { en: 'to fit or put something into position' },
+    transparency: 'literal',
+    acceptedParticles: ['in'],
+    examples: [
+      { sv: 'Han sätter in en ny ruta i fönstret.', blankIndex: 2 },
+      { sv: 'Vi sätter in fler stolar före konserten.', blankIndex: 2 },
+      { sv: 'Hon sätter in ett nytt batteri i klockan.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'sätter in', preteritum: 'satte in', supinum: 'satt in' },
+  },
+  {
+    // List half of pv:plocka-bort (human ruling 2026-11-10). The list
+    // frame moved here from the incumbent. Literal: the same "remove"
+    // sense applied to an item in a list, as pv:ta-bort-radera applies it
+    // to a file. Band and evidence copy the incumbent (no SVALex row).
+    id: 'pv:plocka-bort-lista',
+    cefr: 'A2',
+    cefrEvidence: 'judgment',
+    baseInfinitive: 'plocka',
+    particle: 'bort',
+    reflexive: 'none',
+    lemma: 'plocka bort',
+    gloss: { en: 'to remove an item from a list or a plan' },
+    transparency: 'literal',
+    acceptedParticles: ['bort'],
+    examples: [
+      { sv: 'Hon plockar bort en post ur listan.', blankIndex: 2 },
+      { sv: 'Läraren plockar bort två frågor från provet.', blankIndex: 2 },
+      { sv: 'Vi plockar bort punkt tre från dagordningen.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'plockar bort', preteritum: 'plockade bort', supinum: 'plockat bort' },
   },
 ];

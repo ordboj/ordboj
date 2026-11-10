@@ -82,17 +82,6 @@ function PhraseWithParticle({ phrase, particle }: { phrase: string; particle: st
   );
 }
 
-// When several verified entries share base+particle, the first in data order
-// is the primary sense; split senses are appended after it (ORD-123). The
-// lure gloss shows only that primary sense, deliberately.
-function findPrimaryVerifiedEntry(baseInfinitive: string, particle: string) {
-  return (
-    getVerifiedParticleVerbs().find(
-      (candidate) => candidate.baseInfinitive === baseInfinitive && candidate.particle === particle,
-    ) ?? null
-  );
-}
-
 export function ParticleVerbCard({
   card,
   repetitions = 0,
@@ -165,7 +154,13 @@ export function ParticleVerbCard({
   // nothing when no such entry exists.
   const chosenLureEntry = useMemo(() => {
     if (!discriminationVariant || isCorrect || selectedParticle === null) return null;
-    return findPrimaryVerifiedEntry(entry.baseInfinitive, selectedParticle);
+    return (
+      getVerifiedParticleVerbs().find(
+        (candidate) =>
+          candidate.baseInfinitive === entry.baseInfinitive &&
+          candidate.particle === selectedParticle,
+      ) ?? null
+    );
   }, [discriminationVariant, isCorrect, selectedParticle, entry.baseInfinitive]);
 
   const handleSubmit = useCallback(
