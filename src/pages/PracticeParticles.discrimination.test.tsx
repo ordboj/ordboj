@@ -226,7 +226,7 @@ describe('particle practice discrimination card', () => {
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     // chosenLureEntry stays null on a correct tap (ParticleVerbCard.tsx
     // returns early when isCorrect), so neither lure gloss is shown.
-    expect(screen.queryByText(/to enter; to gain admission/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\bto enter\b/)).not.toBeInTheDocument();
     expect(screen.queryByText(/to arrive at a destination/)).not.toBeInTheDocument();
     expect(
       screen.queryByText((_, element) => {
@@ -311,7 +311,30 @@ describe('particle practice discrimination card', () => {
     // The gloss text is a sibling text node next to the bold lemma span
     // (ParticleVerbCard.tsx), not its own element, so match on the
     // containing paragraph's text via regex rather than an exact string.
-    expect(screen.getByText(/to enter; to gain admission/)).toBeInTheDocument();
+    expect(screen.getByText(/\bto enter\b/)).toBeInTheDocument();
+    // The narrowed gloss replaced the old multi-sense one (ORD-123).
+    expect(screen.queryByText(/gain admission/)).not.toBeInTheDocument();
+  });
+
+  it('shows the primary sense gloss, not an appended split sense, for a lure shared by split entries', async () => {
+    // pv:komma-in (primary, pre-existing) and pv:komma-in-antagning (appended
+    // ORD-123 sense) share base+particle; the lure gloss must be the first.
+    const user = userEvent.setup();
+    seedKommaIhag({ repetitions: 3 });
+
+    renderWithProviders(<PracticeParticles />, { route: '/practice-particles' });
+    await screen.findByText('Choose the correct particle verb');
+
+    await user.click(screen.getByRole('button', { name: 'komma in' }));
+    await screen.findByText('Not quite');
+
+    const gloss = screen.getByText(
+      (_, element) =>
+        element?.tagName === 'P' && (element.textContent ?? '').includes('komma in —'),
+    );
+    expect(gloss).toHaveTextContent('to enter');
+    expect(gloss).not.toHaveTextContent('admission');
+    expect(screen.queryByText(/to gain admission to a school or course/)).not.toBeInTheDocument();
   });
 
   it('(i) offers a pronounce-sentence control on the discrimination feedback screen', async () => {
