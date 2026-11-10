@@ -97,18 +97,28 @@ All colors MUST be HSL.
   }
 }
 
-/* ParticleGlyph mover (ORD-118). The element's own styles are the rest frame
-   (end of the path); the keyframes define only the start state. Timing comes
-   from inline custom properties set in ParticleGlyph.tsx. No fill-mode, so
-   the global reduced-motion rule below lands on the rest frame. */
+/* ParticleGlyph mover (ORD-118, loop: decision H). The element's own styles
+   are the rest frame (end of the path). One infinite animation spans a whole
+   cycle (--glyph-cycle = GLYPH_CYCLE_MS = GLYPH_DURATION_MS 700 ms movement +
+   GLYPH_LOOP_PAUSE_MS 2000 ms rest = 2700 ms). The movement takes the first
+   700 / 2700 = 25.926% of the cycle; the rest of it holds the rest frame.
+   Keep the percentage in step with those constants in ParticleGlyph.tsx.
+   Timing comes from inline custom properties. No fill-mode, so the global
+   reduced-motion rule below (one iteration, ~0 ms) lands on the rest frame
+   and never loops. */
 @keyframes particle-glyph-move {
-  from {
+  0% {
     transform: translate(var(--glyph-from-x), var(--glyph-from-y));
+    animation-timing-function: ease-out;
+  }
+  25.926%,
+  100% {
+    transform: translate(0, 0);
   }
 }
 
 .particle-glyph-mover {
-  animation: particle-glyph-move var(--glyph-duration) ease-out var(--glyph-delay) 1;
+  animation: particle-glyph-move var(--glyph-cycle) linear var(--glyph-delay) infinite;
 }
 
 /* Global prefers-reduced-motion rule (issue #110 AC). Confetti draws to a
