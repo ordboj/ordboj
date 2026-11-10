@@ -226,7 +226,7 @@ describe('particle practice discrimination card', () => {
     expect(await screen.findByText('Correct!')).toBeInTheDocument();
     // chosenLureEntry stays null on a correct tap (ParticleVerbCard.tsx
     // returns early when isCorrect), so neither lure gloss is shown.
-    expect(screen.queryByText(/to enter; to gain admission/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\bto enter\b/)).not.toBeInTheDocument();
     expect(screen.queryByText(/to arrive at a destination/)).not.toBeInTheDocument();
     expect(
       screen.queryByText((_, element) => {
@@ -311,7 +311,9 @@ describe('particle practice discrimination card', () => {
     // The gloss text is a sibling text node next to the bold lemma span
     // (ParticleVerbCard.tsx), not its own element, so match on the
     // containing paragraph's text via regex rather than an exact string.
-    expect(screen.getByText(/to enter; to gain admission/)).toBeInTheDocument();
+    expect(screen.getByText(/\bto enter\b/)).toBeInTheDocument();
+    // The narrowed gloss replaced the old multi-sense one (ORD-123).
+    expect(screen.queryByText(/gain admission/)).not.toBeInTheDocument();
   });
 
   it('(i) offers a pronounce-sentence control on the discrimination feedback screen', async () => {
