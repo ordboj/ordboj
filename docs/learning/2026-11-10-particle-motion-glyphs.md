@@ -4,9 +4,11 @@ Linear ORD-116 (GitHub #531).
 
 ## Decision
 
-A motion glyph shows only on the particle feedback screen. It sits in the same
-row as the sense line, to the left of the text. It never replaces the sense
-line. It shows after a correct answer and after a wrong answer. It always shows
+A motion glyph shows only on the particle feedback screen. It sits at the top
+of the lemma card in the feedback panel. It is centred, directly above the
+lemma heading (for example `gå in`), and below the "Correct!" or "Not quite"
+block. It never replaces a text line. The sense line stays plain text and does
+not change. It shows after a correct answer and after a wrong answer. It always shows
 the glyph of the correct particle, never the glyph of the learner's answer. It
 starts in the same frame as the feedback. It plays once for 700 ms, with no
 delay. The learner taps it to play it again. It never loops and never disables
@@ -42,7 +44,8 @@ The human approved these points. This note works inside them.
 
 ## Human decisions, 2026-11-10
 
-The human answered five review questions on 2026-11-10. These answers are
+The human answered five review questions on 2026-11-10, then decided the
+glyph placement after seeing the real screen (decision F). These answers are
 authoritative.
 
 - **A. Pool.** The human does not accept a small pool as it is. The
@@ -69,6 +72,14 @@ authoritative.
   non-spatial sense and never gets a glyph. No sense is lost from the app. The
   human accepts that this adds new SRS items for the learner. The split rule
   is in rule 9.
+- **F. Placement, 2026-11-10.** The human saw the real feedback screen. The
+  glyph does not go in the sense-line row. It goes at the top of the lemma
+  card, centred, directly above the lemma heading and below the "Correct!" or
+  "Not quite" block. The sense line stays plain text and does not change. All
+  other rules stay: feedback only, after the grade, after wrong answers too
+  (always the correct entry's glyph), play once, tap to replay, rest frame
+  with no button under reduced motion, never on a prompt or the introduction
+  card.
 
 ## What the app does today
 
@@ -190,15 +201,18 @@ learner who sees only the glyph learns that `upp` means "up" and nothing else.
   of a cloze, recall or discrimination card.
 - It never shows on a prompt, on the introduction card, or on any screen
   before the grade.
-- It sits in the sense-line row, to the left of the sense text. The row is a
-  flex row, centred.
+- It sits at the top of the lemma card in the feedback panel. It is centred,
+  directly above the lemma heading, below the "Correct!" or "Not quite" block
+  (human decision F).
 - The glyph box is 44 × 44 CSS px. This is the minimum touch target.
-- The sense line stays. The glyph does not change the sense line at render
-  time. (Rule 10 changes one data string. That is a data change, not a render
-  change.)
-- The glyph uses the neutral foreground colour. It never uses the success
-  colour or the destructive colour. It must look the same after a correct
-  answer and after a wrong answer.
+- The glyph never replaces a text line. The sense line stays in its row as
+  plain text. The glyph does not change the sense line at render time. (Rule
+  10 changes one data string. That is a data change, not a render change.)
+- The glyph uses two theme tokens. The mover uses the primary theme colour
+  (`text-primary`). The landmark uses the muted foreground colour
+  (`text-muted-foreground`). The glyph never uses the success colour or the
+  destructive colour. It looks the same after a correct answer and after a
+  wrong answer.
 - The glyph contains no text.
 
 ### 2. Correct and wrong answers
@@ -215,7 +229,8 @@ most.
 Conditions:
 
 - On a wrong answer, the "Not quite" marker and the correct form keep their
-  present size and position. The glyph is below them, in the sense-line row.
+  present size and position. The glyph is below them, at the top of the lemma
+  card.
   P3 holds.
 - On a discrimination card, the glyph of the tapped lure never shows. The
   lure gloss line (`chosenLureEntry`) stays text only.
@@ -500,12 +515,14 @@ frame. Pass.
 
 **Check against P10.** P10 is about the recall screen: no scroll to answer.
 This note extends P10 to the feedback panel on purpose: "Next Card" must stay
-above the fold. The glyph adds no row. It is 44 px tall in the sense-line row.
-The sense line is about 20 px tall. The glyph adds 24 px of height or less.
-Test: on a 360 × 640 viewport, the feedback panel with the glyph is 24 px or
-less taller than without it. If "Next Card" is already below the fold without
-the glyph, that is a defect that exists today. Report it. Do not fix it by
-removing the sense line.
+above the fold. The earlier sense-line placement added +4 px. The new
+placement adds a new row of about one glyph box (44 px), minus any spacing
+that `frontend-expert` tightens. `frontend-expert` measures the real number.
+On a 360 × 640 phone, "Next Card" is already below the fold on the feedback
+screen, even for entries with no glyph. The existing page layout causes this,
+not the glyph. So P10 on the feedback panel is not met today. It is an
+existing defect, and a separate ticket handles it. This note does not claim
+that P10 is met. Do not fix it by removing the sense line or the glyph.
 
 ### 10. `upp` sense line
 
@@ -521,27 +538,27 @@ human. The linguist does not silently drop `upp`.
 
 ## Parameters, collected
 
-| Parameter                      | Value                                                                   |
-| ------------------------------ | ----------------------------------------------------------------------- |
-| Screens                        | graded feedback panel only                                              |
-| Answers                        | correct and wrong                                                       |
-| Glyph shown                    | correct particle only, alias `ned` → `ner`                              |
-| Size                           | 44 × 44 CSS px                                                          |
-| Position                       | sense-line row, left of the text                                        |
-| Colour                         | neutral foreground; never success/destructive                           |
-| Duration                       | 700 ms, `ease-out`, 0 ms delay                                          |
-| Secondary stagger              | 100 ms or less                                                          |
-| Design end                     | 900 ms or less                                                          |
-| Hard cap (delay + duration)    | 1500 ms, exposed as constants or CSS custom properties                  |
-| Iterations                     | 1; tap replays; no limit                                                |
-| Reduced motion                 | rest frame, not a button, `aria-hidden`                                 |
-| Confetti on the particle card  | none on a correct answer (P8); lands before the glyph                   |
-| Multi-glyph or no-glyph accept | no glyph                                                                |
-| Multi-sense entry              | split; existing id keeps the majority sense; other sense is a new entry |
-| Spatial test                   | every example; doubt = fail; hard-class table in rule 9                 |
-| Data flag                      | `motionGlyphVerified?: boolean`, default off                            |
-| Gate 6 approval                | one human batch approval of the pass list, in the PR                    |
-| Introduction card              | deferred; revisit conditions in rule 8                                  |
+| Parameter                      | Value                                                                             |
+| ------------------------------ | --------------------------------------------------------------------------------- |
+| Screens                        | graded feedback panel only                                                        |
+| Answers                        | correct and wrong                                                                 |
+| Glyph shown                    | correct particle only, alias `ned` → `ner`                                        |
+| Size                           | 44 × 44 CSS px                                                                    |
+| Position                       | top of the lemma card, centred, above the lemma heading, below the result block   |
+| Colour                         | mover `text-primary`; landmark `text-muted-foreground`; never success/destructive |
+| Duration                       | 700 ms, `ease-out`, 0 ms delay                                                    |
+| Secondary stagger              | 100 ms or less                                                                    |
+| Design end                     | 900 ms or less                                                                    |
+| Hard cap (delay + duration)    | 1500 ms, exposed as constants or CSS custom properties                            |
+| Iterations                     | 1; tap replays; no limit                                                          |
+| Reduced motion                 | rest frame, not a button, `aria-hidden`                                           |
+| Confetti on the particle card  | none on a correct answer (P8); lands before the glyph                             |
+| Multi-glyph or no-glyph accept | no glyph                                                                          |
+| Multi-sense entry              | split; existing id keeps the majority sense; other sense is a new entry           |
+| Spatial test                   | every example; doubt = fail; hard-class table in rule 9                           |
+| Data flag                      | `motionGlyphVerified?: boolean`, default off                                      |
+| Gate 6 approval                | one human batch approval of the pass list, in the PR                              |
+| Introduction card              | deferred; revisit conditions in rule 8                                            |
 
 ## What we will not claim
 
@@ -568,9 +585,9 @@ The maintainer checks these points by hand.
   long. Drop it to 600 ms.
 - The glyph after a wrong answer feels like a reward. Make it smaller or
   dimmer on wrong answers. Do not remove it.
-- "Next Card" moves below the fold on a 360 × 640 phone because of the glyph.
-  The 44 px box is too large for this panel. Reduce the glyph to the
-  sense-line height and keep a 44 px tap area with padding.
+- The separate P10 ticket brings "Next Card" above the fold, and then the
+  glyph row pushes it below again. The glyph row is too tall. Reduce the glyph
+  height and keep a 44 px tap area with padding.
 
 ## Hand-off
 
@@ -610,8 +627,8 @@ reason for each entry. After the human's batch approval, set the flag to
 `src/lib/particleVerbs.ts` (confirmed by the human on 2026-11-10; see "What
 the app does today").
 
-`frontend-expert`: the six glyphs and the feedback-panel placement (rules 1–5),
-inside `src/components/ParticleVerbCard.tsx` and `src/index.css`. Gates 1–4 in
+`frontend-expert` (ORD-119): the six glyphs, placed at the top of the lemma
+card in the feedback panel (rules 1–5, human decision F), inside `src/components/ParticleVerbCard.tsx` and `src/index.css`. Gates 1–4 in
 code; gate 6 read from data. Expose every glyph duration and delay as exported
 constants or inline CSS custom properties (rule 4).
 
