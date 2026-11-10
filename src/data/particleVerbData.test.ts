@@ -10,6 +10,7 @@ import {
   getPhraseForms,
   isAcceptedRecall,
   getParticleCoreSense,
+  getParticleGlyph,
 } from '@/lib/particleVerbs';
 import { PARTICLE_ID_PREFIX } from '@/lib/itemIds';
 
@@ -1146,5 +1147,91 @@ describe('particle verb dataset - no repeated example sentences (#395 remediatio
       .filter(([, ids]) => ids.length > 1)
       .map(([sv, ids]) => `"${sv}" used by ${ids.join(', ')}`);
     expect(repeated).toEqual([]);
+  });
+});
+
+// ORD-120: the motion-glyph flag is a human-approved batch (ORD-117, 27
+// entries). Any change to this list must be a reviewed diff.
+const FLAGGED_GLYPH_IDS = [
+  'pv:ga-in',
+  'pv:ga-ner',
+  'pv:komma-tillbaka',
+  'pv:ta-ut',
+  'pv:satta-ut',
+  'pv:komma-upp',
+  'pv:kora-in',
+  'pv:dra-ut',
+  'pv:falla-ner',
+  'pv:fara-ut',
+  'pv:resa-bort',
+  'pv:flytta-bort',
+  'pv:rusa-ut',
+  'pv:grava-ner',
+  'pv:klattra-upp',
+  'pv:kasta-tillbaka',
+  'pv:kasta-in',
+  'pv:plocka-upp',
+  'pv:stoppa-in',
+  'pv:slappa-in',
+  'pv:springa-ut',
+  'pv:satta-sig-ner',
+  'pv:plocka-bort',
+  'pv:aka-bort',
+  'pv:hoppa-upp',
+  'pv:ga-ut-lamna',
+  'pv:ga-upp-stiga',
+];
+const SIX_GLYPHS = ['in', 'ut', 'upp', 'ner', 'bort', 'tillbaka'];
+const FLAGGED = PARTICLE_VERB_DATA.filter((entry) => entry.motionGlyphVerified === true);
+
+describe('particle verb dataset - motion glyph flags', () => {
+  it('flags exactly the approved 27 ids, in data order', () => {
+    expect(FLAGGED.map((entry) => entry.id)).toEqual(FLAGGED_GLYPH_IDS);
+  });
+
+  it('has the approved per-glyph counts (in 5, ut 7, upp 5, ner 4, bort 4, tillbaka 2)', () => {
+    const counts: Record<string, number> = {};
+    for (const entry of FLAGGED) {
+      const glyph = getParticleGlyph(entry) ?? 'none';
+      counts[glyph] = (counts[glyph] ?? 0) + 1;
+    }
+    expect(counts).toEqual({ in: 5, ut: 7, upp: 5, ner: 4, bort: 4, tillbaka: 2 });
+  });
+
+  it('only flags entries that are verified, literal and contrast-free', () => {
+    for (const entry of FLAGGED) {
+      expect(entry.verified, entry.id).toBe(true);
+      expect(entry.transparency, entry.id).toBe('literal');
+      expect(entry.contrast, entry.id).toBeUndefined();
+    }
+  });
+
+  it('only flags one of the six glyph particles (ned counts as ner)', () => {
+    for (const entry of FLAGGED) {
+      const primary = entry.particle === 'ned' ? 'ner' : entry.particle;
+      expect(SIX_GLYPHS, entry.id).toContain(primary);
+    }
+  });
+
+  it('only flags entries whose every accepted particle shares one glyph', () => {
+    const norm = (particle: string) => (particle === 'ned' ? 'ner' : particle);
+    for (const entry of FLAGGED) {
+      const glyphs = new Set(entry.acceptedParticles.map(norm));
+      expect([...glyphs], entry.id).toEqual([norm(entry.particle)]);
+    }
+  });
+
+  it('gives every flagged entry a glyph through the gate', () => {
+    for (const entry of FLAGGED) {
+      expect(getParticleGlyph(entry), entry.id).not.toBeNull();
+    }
+  });
+
+  it('does not flag the multi-accept entries with differing glyphs', () => {
+    for (const id of ['pv:skriva-ner', 'pv:stoppa-ner', 'pv:skramma-bort']) {
+      const found = PARTICLE_VERB_DATA.find((entry) => entry.id === id);
+      expect(found, id).toBeDefined();
+      expect(found?.motionGlyphVerified, id).toBeUndefined();
+    }
   });
 });

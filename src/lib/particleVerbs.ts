@@ -191,7 +191,7 @@ export function getPhraseForms(entry: ParticleVerbData): PhraseForms | null {
 // verb's meaning is not reliably compositional. Particles with no confident
 // line return null rather than an invented one.
 const PARTICLE_CORE_SENSE: Record<string, string> = {
-  upp: 'often completion, or making something visible or available',
+  upp: 'often upward movement, completion, or making something visible or available',
   ut: 'often outward movement, or making something public',
   in: 'often movement inwards, or entry',
   ner: 'often downward movement, or reduction',
@@ -248,4 +248,49 @@ const PARTICLE_CORE_SENSE: Record<string, string> = {
 
 export function getParticleCoreSense(particle: string): string | null {
   return PARTICLE_CORE_SENSE[particle.toLowerCase()] ?? null;
+}
+
+// The six motion glyphs (docs/learning/2026-11-10-particle-motion-glyphs.md).
+// Kept here rather than imported from the component so the data layer has no
+// dependency on the UI; the names match ParticleGlyphName one for one.
+export type ParticleGlyphId = 'upp' | 'ut' | 'in' | 'ner' | 'bort' | 'tillbaka';
+
+// Particle → glyph. "ned" is the formal variant of "ner" and draws the same
+// path. Every other particle, including near neighbours such as "iväg" or
+// "fram", has no glyph.
+const PARTICLE_GLYPH: Record<string, ParticleGlyphId> = {
+  upp: 'upp',
+  ut: 'ut',
+  in: 'in',
+  ner: 'ner',
+  ned: 'ner',
+  bort: 'bort',
+  tillbaka: 'tillbaka',
+};
+
+function glyphForParticle(particle: string): ParticleGlyphId | null {
+  return PARTICLE_GLYPH[particle.trim().toLowerCase()] ?? null;
+}
+
+// The single eligibility gate for the feedback-panel motion glyph (rule 9).
+// Returns a glyph only when every gate holds:
+//   1. the entry is verified;
+//   2. it is literal;
+//   3. it has no contrast line (a glyph could attach to either reading);
+//   4. its primary particle has a glyph, and every accepted particle maps
+//      to that same glyph (rule 7: a learner who typed an accepted
+//      alternative must never see a different direction);
+//   6. a human has set motionGlyphVerified (gate 5, the spatial test, is
+//      the linguist's work that this flag records).
+// Default deny. The card must call this and never re-check the conditions
+// itself, so the rule cannot drift between two copies.
+export function getParticleGlyph(entry: ParticleVerbData): ParticleGlyphId | null {
+  if (!entry.verified) return null;
+  if (entry.transparency !== 'literal') return null;
+  if (entry.motionGlyphVerified !== true) return null;
+  if (entry.contrast !== undefined) return null;
+  const glyph = glyphForParticle(entry.particle);
+  if (glyph === null) return null;
+  const allSame = entry.acceptedParticles.every((accepted) => glyphForParticle(accepted) === glyph);
+  return allSame ? glyph : null;
 }
