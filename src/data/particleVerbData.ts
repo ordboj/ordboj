@@ -167,6 +167,9 @@ export interface ParticleVerbData {
   // batch approval of the linguist's pass list; never set it without that
   // approval. Read only through getParticleGlyph, which also enforces
   // gates 1-4, so the flag alone never shows a glyph.
+  // Every flag currently set was set by the human's batch approval of the
+  // ORD-117 pass list on 2026-11-10 (27 entries); a new flag needs a new
+  // approval.
   motionGlyphVerified?: true;
 }
 
@@ -213,6 +216,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi går in genom den stora dörren.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'går in', preteritum: 'gick in', supinum: 'gått in' },
   },
   {
@@ -262,6 +266,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon går ner till bottenvåningen med sin väska.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'går ner', preteritum: 'gick ner', supinum: 'gått ner' },
   },
   {
@@ -380,6 +385,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Han kommer tillbaka till kontoret efter lunchen.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kommer tillbaka', preteritum: 'kom tillbaka', supinum: 'kommit tillbaka' },
   },
   {
@@ -421,6 +427,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon tar ut tallrikarna ur skåpet före middagen.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'tar ut', preteritum: 'tog ut', supinum: 'tagit ut' },
   },
   {
@@ -1496,6 +1503,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'De sätter ut stolar i trädgården före festen.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'sätter ut', preteritum: 'satte ut', supinum: 'satt ut' },
   },
   {
@@ -1609,6 +1617,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi kommer upp till toppen före lunch.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kommer upp', preteritum: 'kom upp', supinum: 'kommit upp' },
   },
   {
@@ -3049,6 +3058,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi kör in bussen på verkstaden i dag.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kör in', preteritum: 'körde in', supinum: 'kört in' },
   },
 
@@ -3089,6 +3099,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Han drar långsamt ut spiken ur brädan.', blankIndex: 3 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'drar ut', preteritum: 'drog ut', supinum: 'dragit ut' },
   },
 
@@ -3369,6 +3380,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Snön faller ner tungt över staden.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'faller ner', preteritum: 'föll ner', supinum: 'fallit ner' },
   },
 
@@ -3591,6 +3603,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Bilarna far ut från garaget samtidigt.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'far ut', preteritum: 'for ut', supinum: 'farit ut' },
   },
 
@@ -3791,6 +3804,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Han reser ofta bort i jobbet.', blankIndex: 3 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'reser bort', preteritum: 'reste bort', supinum: 'rest bort' },
   },
 
@@ -3851,6 +3865,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Familjen flyttar snart bort från kvarteret.', blankIndex: 3 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'flyttar bort', preteritum: 'flyttade bort', supinum: 'flyttat bort' },
   },
 
@@ -4678,6 +4693,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon rusar ut genom dörren i sista sekunden.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'rusar ut', preteritum: 'rusade ut', supinum: 'rusat ut' },
   },
   {
@@ -4718,6 +4734,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Bonden gräver ner en ny vattenledning på åkern.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'gräver ner', preteritum: 'grävde ner', supinum: 'grävt ner' },
   },
   {
@@ -4851,6 +4868,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon klättrar upp på stegen för att byta lampan.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'klättrar upp', preteritum: 'klättrade upp', supinum: 'klättrat upp' },
   },
   {
@@ -4870,6 +4888,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Jag kastar tillbaka pinnen till hunden igen.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: {
       presens: 'kastar tillbaka',
       preteritum: 'kastade tillbaka',
@@ -5026,6 +5045,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Jag kastar in veden i kaminen.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kastar in', preteritum: 'kastade in', supinum: 'kastat in' },
   },
   {
@@ -5107,6 +5127,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Barnen plockar upp sina vantar från snön.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'plockar upp', preteritum: 'plockade upp', supinum: 'plockat upp' },
   },
   {
@@ -5131,6 +5152,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon stoppar in ett brev i den smala springan.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'stoppar in', preteritum: 'stoppade in', supinum: 'stoppat in' },
   },
   {
@@ -5208,6 +5230,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon släpper in frisk luft i rummet.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'släpper in', preteritum: 'släppte in', supinum: 'släppt in' },
   },
   {
@@ -5227,6 +5250,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Jag springer ut i regnet utan paraply.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'springer ut', preteritum: 'sprang ut', supinum: 'sprungit ut' },
   },
   {
@@ -5585,6 +5609,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Han sätter sig ner i soffan efter jobbet.', blankIndex: 3 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'sätter sig ner', preteritum: 'satte sig ner', supinum: 'satt sig ner' },
   },
   {
@@ -5702,6 +5727,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Jag plockar bort tomaten från min smörgås.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'plockar bort', preteritum: 'plockade bort', supinum: 'plockat bort' },
   },
   {
@@ -5872,6 +5898,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Jag åker bort och hälsar på min bror.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'åker bort', preteritum: 'åkte bort', supinum: 'åkt bort' },
   },
   {
@@ -5891,6 +5918,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Barnen hoppar upp på bänken i parken.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'hoppar upp', preteritum: 'hoppade upp', supinum: 'hoppat upp' },
   },
   // "vara tillbaka" was removed in remediation round 1 and STAYS OUT after
@@ -6147,6 +6175,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Alla går ut ur huset när brandlarmet hörs.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'går ut', preteritum: 'gick ut', supinum: 'gått ut' },
   },
   {
@@ -6168,6 +6197,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi går upp till toppen av berget.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'går upp', preteritum: 'gick upp', supinum: 'gått upp' },
   },
   {
