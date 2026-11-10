@@ -14,6 +14,7 @@ import {
   RESET_TTL_SECONDS,
   VERIFICATION_TTL_SECONDS,
 } from './constants';
+import { microsoftEmailVerified } from './provider-email';
 import { dropUnprovenPassword } from './unproven-password';
 
 export interface AuthDeps {
@@ -35,6 +36,7 @@ function emptyName(): { name: string } {
 }
 
 function providerConfig(
+  providerId: string,
   factory: (options: {
     clientId: string;
     clientSecret: string;
@@ -53,35 +55,43 @@ function providerConfig(
     async getUserInfo(token: { accessToken?: string }) {
       const info = await base.getUserInfo(token);
       if (!info?.user?.email) return info;
-      if (info.user.emailVerified) await dropUnprovenPassword(db, info.user.email);
+      const profile = info.data as Record<string, unknown> | null | undefined;
+      const emailVerified =
+        providerId === 'microsoft'
+          ? microsoftEmailVerified(profile)
+          : Boolean(info.user.emailVerified);
+      if (emailVerified) await dropUnprovenPassword(db, info.user.email);
       return {
         ...info,
         user: {
           ...info.user,
           email: info.user.email,
           name: '',
-          emailVerified: Boolean(info.user.emailVerified),
+          emailVerified,
         },
       };
     },
   };
 }
 
-export function buildAuthOptions(env: Env, deps: AuthDeps): BetterAuthOptions {
+export function buildAuthOptions(env: Env & { DB: D1Database }, deps: AuthDeps): BetterAuthOptions {
   const socialProviders: NonNullable<BetterAuthOptions['socialProviders']> = {};
   const googleConfig = providerConfig(
+    'google',
     google as never,
     env.GOOGLE_CLIENT_ID,
     env.GOOGLE_CLIENT_SECRET,
     env.DB,
   );
   const githubConfig = providerConfig(
+    'github',
     github as never,
     env.GITHUB_CLIENT_ID,
     env.GITHUB_CLIENT_SECRET,
     env.DB,
   );
   const microsoftConfig = providerConfig(
+    'microsoft',
     microsoft as never,
     env.MICROSOFT_CLIENT_ID,
     env.MICROSOFT_CLIENT_SECRET,
@@ -253,8 +263,11 @@ export function buildAuthOptions(env: Env, deps: AuthDeps): BetterAuthOptions {
 }
 
 export function createAuth(env: Env, deps: AuthDeps) {
+  if (!env.DB) {
+    throw new Error('D1 binding DB is not configured.');
+  }
   if (!env.BETTER_AUTH_SECRET || env.BETTER_AUTH_SECRET.length < 32) {
     throw new Error('BETTER_AUTH_SECRET must contain at least 32 characters.');
   }
-  return betterAuth(buildAuthOptions(env, deps));
+  return betterAuth(buildAuthOptions({ ...env, DB: env.DB }, deps));
 }

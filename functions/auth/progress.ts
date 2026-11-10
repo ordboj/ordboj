@@ -37,6 +37,9 @@ function isProgressBody(value: unknown): value is ProgressBody {
 }
 
 export async function handleProgressRequest(request: Request, env: Env): Promise<Response> {
+  if (!env.DB || !env.BETTER_AUTH_SECRET) {
+    return Response.json({ message: 'Service unavailable' }, { status: 503 });
+  }
   const auth = createAuth(env, { mailer: null });
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session?.user) return unauthorized();

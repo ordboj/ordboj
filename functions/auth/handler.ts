@@ -51,6 +51,10 @@ export async function handleAuthRequest(
   env: Env,
   options: AuthHandlerOptions = {},
 ): Promise<Response> {
+  if (!env.DB || !env.BETTER_AUTH_SECRET) {
+    return json({ message: 'Service unavailable' }, 503);
+  }
+  const db = env.DB;
   const url = new URL(request.url);
   const mailer = resolveMailer(env, options.mailer);
   const now = options.now ?? (() => new Date());
@@ -73,12 +77,12 @@ export async function handleAuthRequest(
     const email = await readEmail(request);
     const ip = clientIp(request);
     const stamp = now();
-    const allowed = await mailSendAllowed(env.DB, { now: stamp, email, ip });
+    const allowed = await mailSendAllowed(db, { now: stamp, email, ip });
     if (!allowed) return json(MAIL_LIMIT_BODY, 429);
     const counting: Mailer = {
       async send(mail) {
         await mailer.send(mail);
-        await recordMailSend(env.DB, { now: stamp, email: mail.to.toLowerCase(), ip });
+        await recordMailSend(db, { now: stamp, email: mail.to.toLowerCase(), ip });
       },
     };
     const auth = createAuth(env, { mailer: counting });

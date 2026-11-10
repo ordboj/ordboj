@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildAuthOptions } from './auth/create-auth';
+import { microsoftEmailVerified } from './auth/provider-email';
 import { handleAuthRequest } from './auth/handler';
 import {
   ADDRESS_DAILY_CAP,
@@ -39,7 +40,7 @@ function recordingMailer(): { mailer: Mailer; sent: OutboundMail[] } {
   };
 }
 
-function testEnv(db: TestD1, overrides: Partial<Env> = {}): Env {
+function testEnv(db: TestD1, overrides: Partial<Env> = {}): Env & { DB: D1Database } {
   return {
     DB: db,
     BETTER_AUTH_SECRET: 'test-secret-0123456789abcdef0123',
@@ -680,6 +681,54 @@ describe('ORD-108 auth backend', () => {
     similarTiming(knownResetMs, unknownResetMs);
   });
 
+  it('unverified provider does not block a later verified sign-in for the same email', async () => {
+    const { db, env, mailer } = await boot();
+    const email = 'claim@example.com';
+    let attackerCookie = '';
+    await withGithubProfile(
+      { email, emailVerified: false, name: 'Attacker', id: '111' },
+      async () => {
+        const callback = await githubSignIn(env, mailer);
+        expect(callback.status).toBe(302);
+        attackerCookie = callback.cookies;
+      },
+    );
+    const created = await userByEmail(db, email);
+    expect(created?.emailVerified).toBe(0);
+    expect((await accountsFor(db, created?.id ?? '')).map((account) => account.accountId)).toEqual([
+      '111',
+    ]);
+
+    await withGithubProfile({ email, emailVerified: true, name: 'Owner', id: '222' }, async () => {
+      const callback = await githubSignIn(env, mailer);
+      expect(callback.status).toBe(302);
+    });
+
+    const owner = await userByEmail(db, email);
+    expect(owner?.id).toBe(created?.id);
+    expect(owner?.emailVerified).toBe(1);
+    const accounts = await accountsFor(db, owner?.id ?? '');
+    expect(accounts.map((account) => account.accountId)).toEqual(['222']);
+    const attacker = await authFetch(env, '/api/auth/get-session', {
+      method: 'GET',
+      cookie: attackerCookie,
+      mailer,
+    });
+    expect(JSON.stringify(attacker.body)).not.toContain(email);
+    const users = await db.prepare('SELECT COUNT(*) AS n FROM user').first<{ n: number }>();
+    expect(Number(users?.n)).toBe(1);
+  });
+
+  it('a Microsoft profile without email_verified or xms_edov is not verified', () => {
+    expect(microsoftEmailVerified(undefined)).toBe(false);
+    expect(microsoftEmailVerified({})).toBe(false);
+    expect(microsoftEmailVerified({ email_verified: false, xms_edov: false })).toBe(false);
+    expect(microsoftEmailVerified({ email_verified: 'false', xms_edov: 'false' })).toBe(false);
+    expect(microsoftEmailVerified({ email_verified: true })).toBe(true);
+    expect(microsoftEmailVerified({ xms_edov: true })).toBe(true);
+    expect(microsoftEmailVerified({ xms_edov: 'true' })).toBe(true);
+  });
+
   it('unverified password cannot sign in after magic link or verified OAuth', async () => {
     const magic = await boot();
     const magicEmail = 'hijack-magic@example.com';
@@ -1051,14 +1100,25 @@ describe('ORD-108 auth backend', () => {
   });
 
   it('preview D1 binding differs from production', () => {
+    const doc = readFileSync(resolve('docs/auth/cloudflare-setup.md'), 'utf8');
     const wrangler = readFileSync(resolve('wrangler.jsonc'), 'utf8');
-    const production = wrangler.match(/"database_id"\s*:\s*"([^"]+)"/);
-    const preview = wrangler.match(/"preview_database_id"\s*:\s*"([^"]+)"/);
-    expect(production?.[1]).toBeTruthy();
-    expect(preview?.[1]).toBeTruthy();
+    expect(wrangler).not.toMatch(/"database_id"/);
+    expect(wrangler).not.toMatch(/"preview_database_id"/);
+    expect(wrangler).toContain('pages_build_output_dir');
+    const production = doc.match(/"database_id"\s*:\s*"([^"]+)"/);
+    const preview = doc.match(/"preview_database_id"\s*:\s*"([^"]+)"/);
+    expect(production?.[1]).toBe('PASTE_PRODUCTION_D1_ID');
+    expect(preview?.[1]).toBe('PASTE_PREVIEW_D1_ID');
     expect(preview?.[1]).not.toBe(production?.[1]);
-    expect(wrangler).toContain('ordboj-auth-preview');
-    expect(wrangler).not.toMatch(/re_[A-Za-z0-9]/);
+    expect(doc).toContain('ordboj-auth-preview');
+  });
+
+  it('auth and progress return 503 when D1 is not bound', async () => {
+    const env = { ...testEnv(createSqliteD1()), DB: undefined };
+    const auth = await handleAuthRequest(new Request(`${ORIGIN}/api/auth/get-session`), env);
+    expect(auth.status).toBe(503);
+    const progress = await handleProgressRequest(new Request(`${ORIGIN}/api/progress`), env);
+    expect(progress.status).toBe(503);
   });
 
   it('Apple is not a provider', () => {

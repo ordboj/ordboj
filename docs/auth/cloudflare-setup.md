@@ -22,6 +22,32 @@ The binding name in the Functions code is `DB` for both databases.
 Preview does not read the production database.
 Preview does not write the production database.
 
+Do not commit a placeholder `database_id`.
+Pages looks up that id during the deploy.
+A missing id fails the deploy.
+Then the SPA on `ordboj.com` does not update.
+The committed `wrangler.jsonc` omits the D1 binding until both ids exist.
+Until the binding exists, `/api/auth` and `/api/progress` return 503.
+The static site in `dist` still deploys.
+
+After both databases exist, add this block to `wrangler.jsonc`:
+
+```jsonc
+"d1_databases": [
+  {
+    "binding": "DB",
+    "database_name": "ordboj-auth",
+    "database_id": "PASTE_PRODUCTION_D1_ID",
+    "preview_database_id": "PASTE_PREVIEW_D1_ID",
+    "migrations_dir": "migrations"
+  }
+]
+```
+
+Replace `PASTE_PRODUCTION_D1_ID` with the production database id.
+Replace `PASTE_PREVIEW_D1_ID` with the preview database id.
+The two ids are different.
+
 ## Set the secrets
 
 Set these secrets in the Cloudflare Pages project.
