@@ -115,7 +115,8 @@ export function ParticleVerbCard({
   const cloze = useMemo(() => renderCloze(example), [example]);
   const lemma = renderLemma(entry);
   const coreSense = getParticleCoreSense(entry.particle);
-  // Gate lives in getParticleGlyph; always the correct entry's glyph.
+  // Gate lives in getParticleGlyph; always the correct entry's glyph. Shown
+  // on the introduction card and, once graded, on the feedback card.
   const feedbackGlyph = getParticleGlyph(entry);
   const phraseForms = getPhraseForms(entry);
   const disclosure = getAcceptedParticlesDisclosure(entry);
@@ -259,6 +260,11 @@ export function ParticleVerbCard({
         <CardContent className="p-8 space-y-6">
           <div className="text-center space-y-3">
             <p className="text-muted-foreground text-sm font-medium">A new particle verb</p>
+            {feedbackGlyph && (
+              <div className="-my-1 flex justify-center">
+                <ParticleGlyph key={`${card.itemId ?? entry.id}:${kind}`} name={feedbackGlyph} />
+              </div>
+            )}
             <h2 className="text-4xl font-bold text-primary tracking-wide">
               <PhraseWithParticle phrase={lemma} particle={entry.particle} />
             </h2>
