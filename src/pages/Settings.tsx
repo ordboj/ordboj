@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { SupportLosevNotice } from '@/components/SupportLosevNotice';
 import { ArrowLeft, Download, Upload, Trash2 } from 'lucide-react';
 import { reloadSettingsFromStorage, useSettings } from '@/hooks/useSettings';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
@@ -330,6 +331,17 @@ export default function Settings() {
           Progress lives only in this browser's storage — clearing site data, switching browsers, or
           a new device loses it for good. Export regularly to keep a backup.
         </p>
+
+        <section aria-label="About">
+          <Card>
+            <CardHeader>
+              <CardTitle>About</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SupportLosevNotice />
+            </CardContent>
+          </Card>
+        </section>
       </div>
     </div>
   );
