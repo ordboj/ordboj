@@ -46,8 +46,8 @@ const GLYPHS: Record<ParticleGlyphName, GlyphGeometry> = {
   bort: { rest: { x: 20.5, y: 12 }, from: { x: -9, y: 0 }, landmark: 'point' },
   // Returns to a point: rests at least 2.5 units clear of the ring.
   tillbaka: { rest: { x: 13.5, y: 12 }, from: { x: 9.5, y: 0 }, landmark: 'point' },
-  // Comes out from behind the cover (start x 6.5, hidden) into the open.
-  fram: { rest: { x: 16, y: 12 }, from: { x: -9.5, y: 0 }, landmark: 'cover' },
+  // Comes out from behind the cover (start x 5, hidden) into the open.
+  fram: { rest: { x: 20, y: 12 }, from: { x: -15, y: 0 }, landmark: 'cover' },
   // Enters the house from outside through its open left side.
   hem: { rest: { x: 16.5, y: 16.5 }, from: { x: -13.5, y: 0 }, landmark: 'house' },
   // Slides in from the left until it overlaps the partner ring by 1 unit.
@@ -82,7 +82,7 @@ function Landmark({ kind }: { kind: GlyphGeometry['landmark'] }) {
       return <circle cx="5" cy="12" r="2.5" />;
     case 'cover':
       // Solid screen the mover hides behind; drawn above the mover.
-      return <rect x="3" y="6" width="7" height="12" rx="1" fill="currentColor" stroke="none" />;
+      return <rect x="2" y="6" width="6" height="12" rx="1" fill="currentColor" stroke="none" />;
     case 'house':
       // Roof and right wall and floor; no left wall below the eave.
       return <path d="M11 12L16.5 5L22 12M21 12V20H12" />;
