@@ -15,6 +15,11 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // Workers do not inherit the parent process's flags. The Progress heap
+    // regression (ORD-71) needs a real GC to tell a retained verb list from
+    // garbage that has not been collected yet. --expose-gc only adds
+    // global.gc; it does not change assertions in other files.
+    execArgv: ['--expose-gc'],
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     restoreMocks: true,

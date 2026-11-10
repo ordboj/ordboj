@@ -52,11 +52,27 @@ export default function Progress() {
   const [selectedVerb, setSelectedVerb] = useState<ConjugatedVerb | null>(null);
   const [visibleCount, setVisibleCount] = useState(VERB_ROW_PAGE_SIZE);
   const showMoreButtonRef = useRef<HTMLButtonElement>(null);
-  const tableCardRef = useRef<HTMLDivElement>(null);
-  const mobileListRef = useRef<HTMLDivElement>(null);
+  // Last mounted row in each layout. Focus moves here when Show more
+  // unmounts. A :last-child query would hand every sibling to jsdom's
+  // selector engine, which keeps that result after the page is gone.
+  const lastTableVerbButtonRef = useRef<HTMLButtonElement>(null);
+  const lastMobileVerbCardRef = useRef<HTMLDivElement>(null);
   // Set in the show-more click, read once after that commit, so focus stays
   // on the button (or moves to the last row when the button unmounts).
   const showMoreFocus = useRef<'button' | 'end' | null>(null);
+
+  useEffect(() => {
+    return () => {
+      // jsdom's selector engine (what getComputedStyle and :focus-visible
+      // use) keeps the last focus event on the window. focus() on a verb
+      // row makes that event's target the row, and the row's parent chain
+      // is the whole list, so the list survives unmount (ORD-71). A focus
+      // event aimed at the body drops that reference. :root does the same
+      // for the engine's "last matched node".
+      document.body?.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+      document.documentElement?.matches(':root');
+    };
+  }, []);
 
   useEffect(() => {
     const loadVerbs = async () => {
@@ -143,13 +159,9 @@ export default function Progress() {
       showMoreButtonRef.current?.focus();
       return;
     }
-    const tableButton = tableCardRef.current?.querySelector<HTMLButtonElement>(
-      'tbody tr:last-child button',
-    );
-    const card = mobileListRef.current?.querySelector<HTMLElement>(
-      ':scope > [role="button"]:last-child',
-    );
-    const candidates = [tableButton, card].filter((el): el is HTMLElement => el != null);
+    const tableButton = lastTableVerbButtonRef.current;
+    const card = lastMobileVerbCardRef.current;
+    const candidates = [tableButton, card].filter((el) => el != null);
     // display:none layouts (the hidden breakpoint) have no client rects, so
     // focus lands on the list the learner can actually see.
     const shown = candidates.find((el) => el.getClientRects().length > 0);
@@ -407,7 +419,7 @@ export default function Progress() {
         )}
 
         {/* Table - readable at sm and up; 7 columns need horizontal room */}
-        <Card ref={tableCardRef} className="hidden sm:block">
+        <Card className="hidden sm:block">
           <ScrollArea className="h-[min(600px,70dvh)]">
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
@@ -462,6 +474,7 @@ export default function Progress() {
                 {visibleVerbs.map((verb, index) => {
                   const stage = getSrsStage(verb.id);
                   const badge = getMasteryStageBadge(stage);
+                  const isLastVisible = index === visibleVerbs.length - 1;
                   // Reference-only surface (never rendered pre-answer on
                   // the practice card); undefined stays absent, never
                   // guessed (src/lib/verbs.ts:29-32).
@@ -484,6 +497,7 @@ export default function Progress() {
                             text is an adequate accessible name for a button
                             inside the "Verb" column. */}
                         <button
+                          ref={isLastVisible ? lastTableVerbButtonRef : undefined}
                           type="button"
                           className="inline-flex min-h-11 min-w-11 items-center justify-start text-left underline-offset-2 hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           onClick={(e) => {
@@ -556,7 +570,7 @@ export default function Progress() {
         {/* Card list - below sm, a 7-column table can't stay readable at 360px width.
             The sort headers live in the (hidden-below-sm) table, so this is the
             only sort affordance phone users have. */}
-        <div ref={mobileListRef} className="sm:hidden space-y-3">
+        <div className="sm:hidden space-y-3">
           {filteredAndSortedVerbs.length > 0 && (
             <div className="flex justify-end">
               <Select
@@ -580,12 +594,14 @@ export default function Progress() {
               </Select>
             </div>
           )}
-          {visibleVerbs.map((verb) => {
+          {visibleVerbs.map((verb, index) => {
             const stage = getSrsStage(verb.id);
             const badge = getMasteryStageBadge(stage);
             const grupp = getVerbGrupp(verb.infinitive);
+            const isLastVisible = index === visibleVerbs.length - 1;
             return (
               <Card
+                ref={isLastVisible ? lastMobileVerbCardRef : undefined}
                 key={verb.id}
                 role="button"
                 tabIndex={0}
