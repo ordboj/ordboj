@@ -1,7 +1,8 @@
 import { useState, type CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 
-export type ParticleGlyphName = 'upp' | 'ut' | 'in' | 'ner' | 'bort' | 'tillbaka';
+export type ParticleGlyphName =
+  'upp' | 'ut' | 'in' | 'ner' | 'bort' | 'tillbaka' | 'fram' | 'hem' | 'ihop';
 
 /** Main animation duration (learning decision 2026-11-10, rule 4). */
 export const GLYPH_DURATION_MS = 700;
@@ -27,7 +28,7 @@ interface GlyphGeometry {
   rest: { x: number; y: number };
   /** Offset of the start frame from the rest frame, viewBox units. */
   from: { x: number; y: number };
-  landmark: 'box' | 'ground' | 'point';
+  landmark: 'box' | 'ground' | 'point' | 'cover' | 'house' | 'partner';
 }
 
 // Shared square viewBox 0 0 24 24. The mover's path relative to the landmark
@@ -45,6 +46,12 @@ const GLYPHS: Record<ParticleGlyphName, GlyphGeometry> = {
   bort: { rest: { x: 20.5, y: 12 }, from: { x: -9, y: 0 }, landmark: 'point' },
   // Returns to a point: rests at least 2.5 units clear of the ring.
   tillbaka: { rest: { x: 13.5, y: 12 }, from: { x: 9.5, y: 0 }, landmark: 'point' },
+  // Comes out from behind the cover (start x 6.5, hidden) into the open.
+  fram: { rest: { x: 16, y: 12 }, from: { x: -9.5, y: 0 }, landmark: 'cover' },
+  // Enters the house from outside through its open left side.
+  hem: { rest: { x: 16.5, y: 16.5 }, from: { x: -13.5, y: 0 }, landmark: 'house' },
+  // Slides in from the left until it overlaps the partner ring by 1 unit.
+  ihop: { rest: { x: 11, y: 12 }, from: { x: -7, y: 0 }, landmark: 'partner' },
 };
 
 const MOVER_RADIUS = 2.5;
@@ -73,6 +80,14 @@ function Landmark({ kind }: { kind: GlyphGeometry['landmark'] }) {
       return <line x1="3" y1="20" x2="21" y2="20" />;
     case 'point':
       return <circle cx="5" cy="12" r="2.5" />;
+    case 'cover':
+      // Solid screen the mover hides behind; drawn above the mover.
+      return <rect x="3" y="6" width="7" height="12" rx="1" fill="currentColor" stroke="none" />;
+    case 'house':
+      // Roof and right wall and floor; no left wall below the eave.
+      return <path d="M11 12L16.5 5L22 12M21 12V20H12" />;
+    case 'partner':
+      return <circle cx="15" cy="12" r="2.5" />;
   }
 }
 
@@ -147,6 +162,14 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
     '--glyph-from-y': `${from.y}px`,
   };
 
+  // The cover hides the mover at its start, so it is drawn after the mover.
+  const landmarkLayer = (
+    <g className="text-muted-foreground" stroke="currentColor">
+      <Landmark kind={landmark} />
+    </g>
+  );
+  const coverAbove = landmark === 'cover';
+
   const svg = (
     <svg
       key={playCount}
@@ -159,9 +182,7 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <g className="text-muted-foreground" stroke="currentColor">
-        <Landmark kind={landmark} />
-      </g>
+      {coverAbove ? null : landmarkLayer}
       <DirectionCue rest={rest} from={from} />
       <circle
         className="particle-glyph-mover text-primary"
@@ -172,6 +193,7 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
         r={MOVER_RADIUS}
         style={moverVars}
       />
+      {coverAbove ? landmarkLayer : null}
     </svg>
   );
 
