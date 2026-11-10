@@ -2220,8 +2220,13 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['ihop'],
     examples: [
-      { sv: 'Han sätter ihop bokhyllan på en timme.', blankIndex: 2 },
-      { sv: 'Vi sätter ihop en grupp inför projektet.', blankIndex: 2 },
+      // ORD-132 rewrite (human decision A, assembly class of the glyph
+      // expansion note): every example names the parts that come together.
+      // Was "Han sätter ihop bokhyllan på en timme." (whole only) and
+      // "Vi sätter ihop en grupp inför projektet." (social grouping, outside
+      // the gloss).
+      { sv: 'Han sätter ihop bokhyllans delar på en timme.', blankIndex: 2 },
+      { sv: 'Barnen sätter ihop legobitarna till ett rymdskepp.', blankIndex: 2 },
       { sv: 'Hon sätter ihop delarna enligt instruktionen.', blankIndex: 2 },
     ],
     verified: true,
