@@ -9,12 +9,14 @@ import {
   selectDiscriminationVariant,
   type DiscriminationOption,
 } from '@/lib/discriminationVariant';
+import { ParticleGlyph } from '@/components/ParticleGlyph';
 import { speakSwedish, stopSpeaking } from '@/lib/speech';
 import {
   getAcceptedParticles,
   getAcceptedParticlesDisclosure,
   getAcceptedRecallAnswers,
   getParticleCoreSense,
+  getParticleGlyph,
   getPhraseForms,
   getVerifiedParticleVerbs,
   isAcceptedParticle,
@@ -113,6 +115,9 @@ export function ParticleVerbCard({
   const cloze = useMemo(() => renderCloze(example), [example]);
   const lemma = renderLemma(entry);
   const coreSense = getParticleCoreSense(entry.particle);
+  // Gate lives in getParticleGlyph; always the correct entry's glyph. Shown
+  // on the introduction card and, once graded, on the feedback card.
+  const feedbackGlyph = getParticleGlyph(entry);
   const phraseForms = getPhraseForms(entry);
   const disclosure = getAcceptedParticlesDisclosure(entry);
 
@@ -255,6 +260,11 @@ export function ParticleVerbCard({
         <CardContent className="p-8 space-y-6">
           <div className="text-center space-y-3">
             <p className="text-muted-foreground text-sm font-medium">A new particle verb</p>
+            {feedbackGlyph && (
+              <div className="-my-1 flex justify-center">
+                <ParticleGlyph key={`${card.itemId ?? entry.id}:${kind}`} name={feedbackGlyph} />
+              </div>
+            )}
             <h2 className="text-4xl font-bold text-primary tracking-wide">
               <PhraseWithParticle phrase={lemma} particle={entry.particle} />
             </h2>
@@ -475,6 +485,14 @@ export function ParticleVerbCard({
               )}
 
               <div className="bg-muted/30 rounded-lg p-4 space-y-2 text-center">
+                {feedbackGlyph && (
+                  <div className="-mt-3 -mb-1 flex justify-center">
+                    <ParticleGlyph
+                      key={`${card.itemId ?? entry.id}:${kind}`}
+                      name={feedbackGlyph}
+                    />
+                  </div>
+                )}
                 <p className="text-2xl font-bold text-primary">
                   <PhraseWithParticle phrase={lemma} particle={entry.particle} />
                 </p>

@@ -13,8 +13,12 @@ export const GLYPH_START_DELAY_MS = 0;
  * a test can assert the full sum.
  */
 export const GLYPH_STAGGER_MS = 0;
-/** Hard cap on delay + duration of every animated element. */
+/** Hard cap on delay + duration of the movement of every animated element. */
 export const GLYPH_MAX_TOTAL_MS = 1500;
+/** Rest in the rest frame between two plays (decision H: the glyph loops). */
+export const GLYPH_LOOP_PAUSE_MS = 2000;
+/** One loop: the movement, then the rest. Mirrored as 25.926% in index.css. */
+export const GLYPH_CYCLE_MS = GLYPH_DURATION_MS + GLYPH_LOOP_PAUSE_MS;
 
 type GlyphVars = CSSProperties & Record<`--${string}`, string>;
 
@@ -137,6 +141,7 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
 
   const moverVars: GlyphVars = {
     '--glyph-duration': `${GLYPH_DURATION_MS}ms`,
+    '--glyph-cycle': `${GLYPH_CYCLE_MS}ms`,
     '--glyph-delay': `${GLYPH_START_DELAY_MS}ms`,
     '--glyph-from-x': `${from.x}px`,
     '--glyph-from-y': `${from.y}px`,
@@ -148,7 +153,7 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
       viewBox="0 0 24 24"
       aria-hidden="true"
       focusable="false"
-      className="size-7 overflow-visible"
+      className="size-10 overflow-visible"
       fill="none"
       strokeWidth={STROKE_WIDTH}
       strokeLinecap="round"
@@ -187,7 +192,7 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
       onClick={() => setPlayCount((n) => n + 1)}
       className={cn(
         box,
-        'cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'cursor-pointer touch-manipulation hover:bg-muted active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         className,
       )}
     >
