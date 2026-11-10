@@ -38,6 +38,7 @@ export default tseslint.config(
       reactHooks.configs.flat.recommended,
     ],
     files: ['**/*.{ts,tsx}'],
+    ignores: ['functions/**', 'scripts/generate-auth-migration.ts'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -115,6 +116,25 @@ export default tseslint.config(
       // does not break CI on a file this role must not edit. Restore to
       // 'error' once that escape is removed.
       'no-useless-escape': 'warn',
+    },
+  },
+  {
+    name: 'ordboj/functions',
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['functions/**/*.ts', 'scripts/generate-auth-migration.ts'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: { ...globals.serviceworker, ...globals.node },
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
   prettierConfig,

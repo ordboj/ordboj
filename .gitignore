@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Cloudflare local state and secrets. Real ids and keys stay in the dashboard.
+.dev.vars
+.wrangler/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

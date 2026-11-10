@@ -51,9 +51,13 @@ jobs:
             code:
               - 'src/**'
               - 'scripts/**'
+              - 'functions/**'
+              - 'migrations/**'
+              - 'docs/auth/**'
               - 'public/**'
               - 'e2e/**'
               - '.github/**'
+              - 'wrangler.jsonc'
               - '*'
             verbdata:
               - 'docs/verb-data/**'

@@ -1,0 +1,22 @@
+{
+  // Pages project for the Ordböj SPA and the auth Functions.
+  // Create the databases with jurisdiction=eu. Do not put real database ids,
+  // OAuth secrets, or the Resend key in this file.
+  // Production binding DB -> ordboj-auth (database_id).
+  // Preview deployments -> ordboj-auth-preview (preview_database_id).
+  // Preview never reads or writes the production database.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ordboj",
+  "compatibility_date": "2026-11-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "pages_build_output_dir": "./dist",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ordboj-auth",
+      "database_id": "REPLACE_WITH_PRODUCTION_D1_ID",
+      "preview_database_id": "REPLACE_WITH_PREVIEW_D1_ID",
+      "migrations_dir": "migrations",
+    },
+  ],
+}
