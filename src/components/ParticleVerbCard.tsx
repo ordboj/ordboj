@@ -479,6 +479,14 @@ export function ParticleVerbCard({
               )}
 
               <div className="bg-muted/30 rounded-lg p-4 space-y-2 text-center">
+                {feedbackGlyph && (
+                  <div className="-mt-3 -mb-1 flex justify-center">
+                    <ParticleGlyph
+                      key={`${card.itemId ?? entry.id}:${kind}`}
+                      name={feedbackGlyph}
+                    />
+                  </div>
+                )}
                 <p className="text-2xl font-bold text-primary">
                   <PhraseWithParticle phrase={lemma} particle={entry.particle} />
                 </p>
@@ -505,14 +513,7 @@ export function ParticleVerbCard({
                 )}
               </div>
 
-              {feedbackGlyph ? (
-                <div className="flex items-center justify-center gap-2">
-                  <ParticleGlyph key={`${card.itemId ?? entry.id}:${kind}`} name={feedbackGlyph} />
-                  {senseLine}
-                </div>
-              ) : (
-                senseLine
-              )}
+              {senseLine}
               {contrastLine}
               {referenceLine}
 
