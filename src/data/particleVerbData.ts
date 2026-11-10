@@ -160,6 +160,14 @@ export interface ParticleVerbData {
   // never a cloze answer. Unset for every entry whose verb+particle string
   // stands on its own.
   preposition?: string;
+  // Gate 6 of the motion-glyph eligibility rule (docs/learning/2026-11-10-
+  // particle-motion-glyphs.md, rule 9): a human has confirmed that every
+  // example of this entry passes the spatial test. Default deny: absent
+  // means no glyph. Only the human approves which entries get it, as one
+  // batch approval of the linguist's pass list; never set it without that
+  // approval. Read only through getParticleGlyph, which also enforces
+  // gates 1-4, so the flag alone never shows a glyph.
+  motionGlyphVerified?: true;
 }
 
 export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
