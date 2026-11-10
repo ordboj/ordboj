@@ -11,23 +11,13 @@ async function findUser(db: D1Database, email: string): Promise<UserRow | null> 
     .first<UserRow>();
 }
 
-// A sign-up password was chosen before the mailbox was proven. The person who
-// set it still knows it, so using it does not prove the owner. It becomes
-// proven only after a successful password sign-in once the email is already
-// verified, or after a password reset (the reset link was mailed).
-export async function markPasswordProven(db: D1Database, email: string): Promise<void> {
-  const user = await findUser(db, email);
-  if (!user || !isVerified(user)) return;
-  const now = new Date().toISOString();
-  await db
-    .prepare(
-      `INSERT INTO password_proof (user_id, proven_at) VALUES (?, ?)
-       ON CONFLICT(user_id) DO UPDATE SET proven_at = excluded.proven_at`,
-    )
-    .bind(user.id, now)
-    .run();
-}
-
+// A sign-up password stays unproven forever. Signing in with it after the
+// verify click does not prove it: the person who chose it still knows it.
+// A password is proven only when it is set after the mailbox is proven.
+// Today that is the password-reset link. There is no signed-in set-password
+// route yet. A verified OAuth or magic-link sign-in deletes an unproven
+// password and the sessions opened with it. The owner sets a new password
+// with reset.
 export async function markPasswordProvenById(db: D1Database, userId: string): Promise<void> {
   const now = new Date().toISOString();
   await db

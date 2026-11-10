@@ -408,8 +408,10 @@ describe('ORD-108 auth backend', () => {
         expect(github?.accountId).toBe('99');
         expect(github?.accessToken).toBeNull();
         expect(github?.idToken).toBeNull();
+        // The sign-up password is never proven. GitHub removes it.
+        // The owner sets a new password with reset.
         const password = await signIn(env, email, PASSWORD, mailer);
-        expect(password.status).toBe(200);
+        expect(password.status).toBeGreaterThanOrEqual(400);
       },
     );
   });
@@ -807,6 +809,34 @@ describe('ORD-108 auth backend', () => {
     expect(second.status).toBe(200);
   });
 
+  it('attacker sign-in after verify does not keep P after the victim uses GitHub', async () => {
+    const { db, env, mailer, sent } = await boot();
+    const email = 'window@example.com';
+    await signUp(env, email, mailer);
+    const verification = sent.find((item) => item.kind === 'verification') as OutboundMail;
+    const verified = await verifyEmail(env, verification, mailer);
+    expect(verified.status).toBe(200);
+    const attacker = await signIn(env, email, PASSWORD, mailer);
+    expect(attacker.status).toBe(200);
+    await withGithubProfile({ email, emailVerified: true, name: 'Victim', id: '888' }, async () => {
+      const callback = await githubSignIn(env, mailer);
+      expect(callback.status).toBe(302);
+    });
+    const password = await signIn(env, email, PASSWORD, mailer);
+    expect(password.status).toBeGreaterThanOrEqual(400);
+    const session = await authFetch(env, '/api/auth/get-session', {
+      method: 'GET',
+      cookie: attacker.cookies,
+      mailer,
+    });
+    expect(JSON.stringify(session.body)).not.toContain(email);
+    const user = await userByEmail(db, email);
+    const accounts = await accountsFor(db, user?.id ?? '');
+    expect(
+      accounts.some((account) => account.providerId === 'credential' && account.password),
+    ).toBe(false);
+  });
+
   it('a sign-up password does not survive verify then verified GitHub', async () => {
     const { db, env, mailer, sent } = await boot();
     const email = 'victim-github@example.com';
@@ -884,10 +914,6 @@ describe('ORD-108 auth backend', () => {
     expect(jwtBody.exp - jwtBody.iat).toBeLessThanOrEqual(VERIFICATION_TTL_SECONDS);
     const firstVerify = await verifyEmail(env, verification, mailer);
     expect(firstVerify.status).toBe(200);
-    // The owner signs in after verification, so this password is proven and
-    // a later magic link must not delete it. The reset test below needs it.
-    const proved = await signIn(env, email, PASSWORD, mailer);
-    expect(proved.status).toBe(200);
     const secondVerify = await verifyEmail(env, verification, mailer);
     expect(secondVerify.status).toBeGreaterThanOrEqual(400);
 
@@ -901,50 +927,8 @@ describe('ORD-108 auth backend', () => {
     expect(expiredVerify.status).toBeGreaterThanOrEqual(400);
     expect((await userByEmail(db, 'expire-verify@example.com'))?.emailVerified).toBe(0);
 
-    const link = await authFetch(env, '/api/auth/sign-in/magic-link', {
-      body: jsonBody({ email, callbackURL: `${ORIGIN}/` }),
-      mailer,
-    });
-    expect(link.status).toBe(200);
-    const magic = sent.find((item) => item.kind === 'magic-link') as OutboundMail;
-    const magicRow = await db
-      .prepare(
-        "SELECT expiresAt, createdAt FROM verification WHERE identifier LIKE 'magic-link:%' ORDER BY createdAt DESC LIMIT 1",
-      )
-      .first<{ expiresAt: string | number; createdAt: string | number }>();
-    const magicTtl =
-      Date.parse(String(magicRow?.expiresAt)) - Date.parse(String(magicRow?.createdAt));
-    expect(magicTtl).toBeLessThanOrEqual(MAGIC_LINK_TTL_SECONDS * 1000 + 2000);
-    const magicUrl = urlIn(magic);
-    const magicOnce = await authFetch(env, `${magicUrl.pathname}${magicUrl.search}`, {
-      method: 'GET',
-      mailer,
-    });
-    expect(magicOnce.status).toBe(302);
-    const magicTwice = await authFetch(env, `${magicUrl.pathname}${magicUrl.search}`, {
-      method: 'GET',
-      mailer,
-    });
-    expect(magicTwice.location ?? magicTwice.text).toMatch(/INVALID_TOKEN|error/i);
-
-    const freshLink = await authFetch(env, '/api/auth/sign-in/magic-link', {
-      body: jsonBody({ email: 'expire-link@example.com', callbackURL: `${ORIGIN}/` }),
-      mailer,
-      ip: '203.0.113.50',
-    });
-    expect(freshLink.status).toBe(200);
-    await db
-      .prepare("UPDATE verification SET expiresAt = ? WHERE identifier LIKE 'magic-link:%'")
-      .bind('2000-01-01T00:00:00.000Z')
-      .run();
-    const expiredLink = sent.find((item) => item.to === 'expire-link@example.com') as OutboundMail;
-    const expiredUrl = urlIn(expiredLink);
-    const expiredMagic = await authFetch(env, `${expiredUrl.pathname}${expiredUrl.search}`, {
-      method: 'GET',
-      mailer,
-    });
-    expect(expiredMagic.location ?? expiredMagic.text).toMatch(/INVALID_TOKEN|error/i);
-
+    // Password sessions and reset run before any magic link. A magic link
+    // would delete this sign-up password, because a sign-in does not prove it.
     const first = await signIn(env, email, PASSWORD, mailer);
     const second = await signIn(env, email, PASSWORD, mailer);
     expect(first.status).toBe(200);
@@ -1013,6 +997,50 @@ describe('ORD-108 auth backend', () => {
     expect(expiredReset.status).toBeGreaterThanOrEqual(400);
     const stillNew = await signIn(env, email, NEW_PASSWORD, mailer);
     expect(stillNew.status).toBe(200);
+
+    const link = await authFetch(env, '/api/auth/sign-in/magic-link', {
+      body: jsonBody({ email, callbackURL: `${ORIGIN}/` }),
+      mailer,
+    });
+    expect(link.status).toBe(200);
+    const magic = sent.find((item) => item.kind === 'magic-link') as OutboundMail;
+    const magicRow = await db
+      .prepare(
+        "SELECT expiresAt, createdAt FROM verification WHERE identifier LIKE 'magic-link:%' ORDER BY createdAt DESC LIMIT 1",
+      )
+      .first<{ expiresAt: string | number; createdAt: string | number }>();
+    const magicTtl =
+      Date.parse(String(magicRow?.expiresAt)) - Date.parse(String(magicRow?.createdAt));
+    expect(magicTtl).toBeLessThanOrEqual(MAGIC_LINK_TTL_SECONDS * 1000 + 2000);
+    const magicUrl = urlIn(magic);
+    const magicOnce = await authFetch(env, `${magicUrl.pathname}${magicUrl.search}`, {
+      method: 'GET',
+      mailer,
+    });
+    expect(magicOnce.status).toBe(302);
+    const magicTwice = await authFetch(env, `${magicUrl.pathname}${magicUrl.search}`, {
+      method: 'GET',
+      mailer,
+    });
+    expect(magicTwice.location ?? magicTwice.text).toMatch(/INVALID_TOKEN|error/i);
+
+    const freshLink = await authFetch(env, '/api/auth/sign-in/magic-link', {
+      body: jsonBody({ email: 'expire-link@example.com', callbackURL: `${ORIGIN}/` }),
+      mailer,
+      ip: '203.0.113.50',
+    });
+    expect(freshLink.status).toBe(200);
+    await db
+      .prepare("UPDATE verification SET expiresAt = ? WHERE identifier LIKE 'magic-link:%'")
+      .bind('2000-01-01T00:00:00.000Z')
+      .run();
+    const expiredLink = sent.find((item) => item.to === 'expire-link@example.com') as OutboundMail;
+    const expiredUrl = urlIn(expiredLink);
+    const expiredMagic = await authFetch(env, `${expiredUrl.pathname}${expiredUrl.search}`, {
+      method: 'GET',
+      mailer,
+    });
+    expect(expiredMagic.location ?? expiredMagic.text).toMatch(/INVALID_TOKEN|error/i);
   });
 
   it('progress read and write without a session return 401 and do not leak another blob', async () => {

@@ -3,7 +3,6 @@ import { GENERIC_MAIL_BODY, MAIL_LIMIT_BODY, PASSKEY_ORIGIN } from './constants'
 import { createAuth } from './create-auth';
 import { mailSendAllowed, recordMailSend } from './mail-quota';
 import { resolveMailer, type Mailer } from './mailer';
-import { markPasswordProven } from './unproven-password';
 
 const MAIL_PATHS = new Set([
   '/api/auth/sign-up/email',
@@ -68,10 +67,6 @@ export async function handleAuthRequest(
   }
 
   const authDeps = { mailer, waitUntil: options.waitUntil };
-  const passwordSignIn =
-    request.method === 'POST' && url.pathname === '/api/auth/sign-in/email'
-      ? await readEmail(request)
-      : '';
 
   if (PASSKEY_REGISTRATION_PATHS.has(url.pathname)) {
     const auth = createAuth(env, authDeps);
@@ -95,7 +90,5 @@ export async function handleAuthRequest(
   }
 
   const auth = createAuth(env, authDeps);
-  const response = await auth.handler(request);
-  if (response.status === 200 && passwordSignIn) await markPasswordProven(db, passwordSignIn);
-  return response;
+  return auth.handler(request);
 }
