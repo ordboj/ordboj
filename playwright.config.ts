@@ -126,7 +126,7 @@ export default defineConfig({
 
   webServer: [
     {
-      command: `npm run dev -- --port ${PORT} --strictPort --host ${HOST}`,
+      command: `ORDBOJ_E2E_SESSION=1 npm run dev -- --port ${PORT} --strictPort --host ${HOST}`,
       url: BASE_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
@@ -139,7 +139,7 @@ export default defineConfig({
       // command rather than a separate CI step: `reuseExistingServer`
       // still short-circuits it locally once `dist/` + the preview server
       // are already up.
-      command: `npm run build && npm run preview -- --port ${PROD_PORT} --strictPort --host ${HOST}`,
+      command: `ORDBOJ_E2E_SESSION=1 npm run build && ORDBOJ_E2E_SESSION=1 npm run preview -- --port ${PROD_PORT} --strictPort --host ${HOST}`,
       url: PROD_BASE_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
