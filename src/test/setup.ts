@@ -1,10 +1,13 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { releaseJsdomSelectorCache } from '@/test/releaseJsdomSelectorCache';
 
-// Unmount any component tree rendered by the previous test.
+// Unmount any component tree rendered by the previous test, then drop
+// jsdom's selector-engine handles on the detached nodes (ORD-71).
 afterEach(() => {
   cleanup();
+  releaseJsdomSelectorCache();
 });
 
 // jsdom does not implement matchMedia. src/hooks/use-mobile.tsx and some
