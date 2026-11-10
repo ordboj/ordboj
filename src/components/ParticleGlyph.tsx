@@ -187,7 +187,7 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
       onClick={() => setPlayCount((n) => n + 1)}
       className={cn(
         box,
-        'cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'cursor-pointer touch-manipulation hover:bg-muted active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         className,
       )}
     >

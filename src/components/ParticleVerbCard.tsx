@@ -9,12 +9,14 @@ import {
   selectDiscriminationVariant,
   type DiscriminationOption,
 } from '@/lib/discriminationVariant';
+import { ParticleGlyph } from '@/components/ParticleGlyph';
 import { speakSwedish, stopSpeaking } from '@/lib/speech';
 import {
   getAcceptedParticles,
   getAcceptedParticlesDisclosure,
   getAcceptedRecallAnswers,
   getParticleCoreSense,
+  getParticleGlyph,
   getPhraseForms,
   getVerifiedParticleVerbs,
   isAcceptedParticle,
@@ -113,6 +115,8 @@ export function ParticleVerbCard({
   const cloze = useMemo(() => renderCloze(example), [example]);
   const lemma = renderLemma(entry);
   const coreSense = getParticleCoreSense(entry.particle);
+  // Gate lives in getParticleGlyph; always the correct entry's glyph.
+  const feedbackGlyph = getParticleGlyph(entry);
   const phraseForms = getPhraseForms(entry);
   const disclosure = getAcceptedParticlesDisclosure(entry);
 
@@ -501,7 +505,14 @@ export function ParticleVerbCard({
                 )}
               </div>
 
-              {senseLine}
+              {feedbackGlyph ? (
+                <div className="flex items-center justify-center gap-2">
+                  <ParticleGlyph key={`${card.itemId ?? entry.id}:${kind}`} name={feedbackGlyph} />
+                  {senseLine}
+                </div>
+              ) : (
+                senseLine
+              )}
               {contrastLine}
               {referenceLine}
 
