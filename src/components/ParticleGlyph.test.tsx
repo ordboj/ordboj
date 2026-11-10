@@ -4,7 +4,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
+  GLYPH_CYCLE_MS,
   GLYPH_DURATION_MS,
+  GLYPH_LOOP_PAUSE_MS,
   GLYPH_MAX_TOTAL_MS,
   GLYPH_STAGGER_MS,
   GLYPH_START_DELAY_MS,
@@ -186,6 +188,40 @@ describe('ParticleGlyph timing contract', () => {
     expect(mover).not.toBeNull();
     expect(mover.style.getPropertyValue('--glyph-duration')).toBe(`${GLYPH_DURATION_MS}ms`);
     expect(mover.style.getPropertyValue('--glyph-delay')).toBe(`${GLYPH_START_DELAY_MS}ms`);
+  });
+});
+
+describe('ParticleGlyph loop contract (decision H)', () => {
+  it('moves 600-900 ms, within the 1.5 s cap, then rests 2000 ms; cycle is their sum', () => {
+    expect(GLYPH_DURATION_MS).toBeGreaterThanOrEqual(600);
+    expect(GLYPH_DURATION_MS).toBeLessThanOrEqual(900);
+    expect(GLYPH_START_DELAY_MS + GLYPH_DURATION_MS).toBeLessThanOrEqual(GLYPH_MAX_TOTAL_MS);
+    expect(GLYPH_LOOP_PAUSE_MS).toBe(2000);
+    expect(GLYPH_CYCLE_MS).toBe(GLYPH_DURATION_MS + GLYPH_LOOP_PAUSE_MS);
+  });
+
+  it.each(NAMES)('sets --glyph-cycle and --glyph-duration from the constants on "%s"', (name) => {
+    mockReducedMotion(false);
+    const { container } = render(<ParticleGlyph name={name} />);
+    const mover = container.querySelector<SVGElement>('.particle-glyph-mover')!;
+    expect(mover.style.getPropertyValue('--glyph-cycle')).toBe(`${GLYPH_CYCLE_MS}ms`);
+    expect(mover.style.getPropertyValue('--glyph-duration')).toBe(`${GLYPH_DURATION_MS}ms`);
+  });
+
+  const css = readFileSync(join(__dirname, '..', 'index.css'), 'utf8');
+
+  it('keyframe movement percentage equals round(duration / cycle * 100, 3)', () => {
+    const expected = Math.round((GLYPH_DURATION_MS / GLYPH_CYCLE_MS) * 100 * 1000) / 1000;
+    const block = css.match(/@keyframes particle-glyph-move\s*\{[\s\S]*?\n\}/)![0];
+    const percentages = Array.from(block.matchAll(/(\d+(?:\.\d+)?)%/g)).map((m) => Number(m[1]));
+    expect(percentages).toContain(expected);
+    expect(percentages).toContain(0);
+    expect(percentages).toContain(100);
+  });
+
+  it('the mover animation is infinite and spans var(--glyph-cycle)', () => {
+    const rule = css.match(/\.particle-glyph-mover\s*\{[^}]*\}/)![0];
+    expect(rule).toMatch(/animation:[^;]*var\(--glyph-cycle\)[^;]*\binfinite\b/);
   });
 });
 
