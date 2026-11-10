@@ -148,7 +148,7 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
       viewBox="0 0 24 24"
       aria-hidden="true"
       focusable="false"
-      className="size-7 overflow-visible"
+      className="size-10 overflow-visible"
       fill="none"
       strokeWidth={STROKE_WIDTH}
       strokeLinecap="round"
