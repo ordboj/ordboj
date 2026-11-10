@@ -97,6 +97,20 @@ All colors MUST be HSL.
   }
 }
 
+/* ParticleGlyph mover (ORD-118). The element's own styles are the rest frame
+   (end of the path); the keyframes define only the start state. Timing comes
+   from inline custom properties set in ParticleGlyph.tsx. No fill-mode, so
+   the global reduced-motion rule below lands on the rest frame. */
+@keyframes particle-glyph-move {
+  from {
+    transform: translate(var(--glyph-from-x), var(--glyph-from-y));
+  }
+}
+
+.particle-glyph-mover {
+  animation: particle-glyph-move var(--glyph-duration) ease-out var(--glyph-delay) 1;
+}
+
 /* Global prefers-reduced-motion rule (issue #110 AC). Confetti draws to a
    canvas and is not reachable by CSS, so it keeps its own matchMedia guard
    in ConfettiEffect.tsx; everything else (dialog/select/tooltip animate-in,
