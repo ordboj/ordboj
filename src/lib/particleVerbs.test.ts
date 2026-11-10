@@ -4,6 +4,8 @@ import {
   getAcceptedParticlesDisclosure,
   getAcceptedRecallAnswers,
   getParticleCoreSense,
+  getParticleGlyph,
+  type ParticleGlyphId,
   getPhraseForms,
   getVerifiedParticleVerbs,
   hasRecallItem,
@@ -15,7 +17,8 @@ import {
   selectExample,
   type ReflexivePerson,
 } from '@/lib/particleVerbs';
-import { type ParticleVerbData } from '@/data/particleVerbData';
+import { PARTICLE_VERB_DATA, type ParticleVerbData } from '@/data/particleVerbData';
+import { type ParticleGlyphName } from '@/components/ParticleGlyph';
 
 function entry(overrides: Partial<ParticleVerbData> & { id: string }): ParticleVerbData {
   return {
@@ -369,5 +372,143 @@ describe('recall eligibility', () => {
     for (const shipped of getVerifiedParticleVerbs()) {
       expect(hasRecallItem(shipped)).toBe(shipped.reflexive === 'none');
     }
+  });
+});
+
+// ORD-120: the motion-glyph gate (learning note 2026-11-10, rules 7, 9, 10).
+describe('getParticleGlyph', () => {
+  const real = (id: string): ParticleVerbData => {
+    const found = PARTICLE_VERB_DATA.find((candidate) => candidate.id === id);
+    if (!found) throw new Error(`fixture entry missing: ${id}`);
+    return found;
+  };
+  // A flagged real entry; every denial test breaks exactly one condition.
+  const flagged = (): ParticleVerbData => ({ ...real('pv:ga-in') });
+
+  it('allows the untouched flagged baseline', () => {
+    expect(getParticleGlyph(flagged())).toBe('in');
+  });
+
+  it('denies an unverified entry (gate 1)', () => {
+    expect(getParticleGlyph({ ...flagged(), verified: false })).toBeNull();
+  });
+
+  it('denies an idiomatic entry (gate 2)', () => {
+    expect(getParticleGlyph({ ...flagged(), transparency: 'idiomatic' })).toBeNull();
+  });
+
+  it('denies a semi-literal entry (gate 2)', () => {
+    expect(getParticleGlyph({ ...flagged(), transparency: 'semi' })).toBeNull();
+  });
+
+  it('denies an entry with a contrast line (gate 3)', () => {
+    expect(getParticleGlyph({ ...flagged(), contrast: 'in vs. på' })).toBeNull();
+  });
+
+  it('denies an entry with an empty-string contrast (gate 3)', () => {
+    expect(getParticleGlyph({ ...flagged(), contrast: '' })).toBeNull();
+  });
+
+  it('denies a particle with no glyph (gate 4)', () => {
+    for (const particle of ['iväg', 'av']) {
+      expect(
+        getParticleGlyph({ ...flagged(), particle, acceptedParticles: [particle] }),
+      ).toBeNull();
+    }
+  });
+
+  it('denies when an accepted particle maps to a different glyph (gate 4)', () => {
+    expect(getParticleGlyph({ ...flagged(), acceptedParticles: ['in', 'ut'] })).toBeNull();
+  });
+
+  it('denies when an accepted particle has no glyph at all (gate 4)', () => {
+    expect(getParticleGlyph({ ...flagged(), acceptedParticles: ['in', 'iväg'] })).toBeNull();
+  });
+
+  it('denies a flag-less entry (gate 6)', () => {
+    const { motionGlyphVerified: _flag, ...unflagged } = flagged();
+    expect(getParticleGlyph(unflagged)).toBeNull();
+  });
+
+  it('denies a flag-less real entry whose other gates pass (gate 6)', () => {
+    // pv:ga-ut is verified, literal, has no contrast and a glyph particle.
+    const candidate = real('pv:ga-ut');
+    expect(candidate.motionGlyphVerified).toBeUndefined();
+    expect(getParticleGlyph(candidate)).toBeNull();
+  });
+
+  it('allows several accepted particles when they all map to one glyph', () => {
+    expect(
+      getParticleGlyph({ ...flagged(), particle: 'ner', acceptedParticles: ['ner', 'ned'] }),
+    ).toBe('ner');
+  });
+
+  it('maps a ner entry that accepts ned to the ner glyph', () => {
+    expect(getParticleGlyph(real('pv:ga-ner'))).toBe('ner');
+    expect(real('pv:ga-ner').acceptedParticles).toContain('ned');
+  });
+
+  it('maps a ned primary particle to the ner glyph', () => {
+    expect(getParticleGlyph({ ...flagged(), particle: 'ned', acceptedParticles: ['ned'] })).toBe(
+      'ner',
+    );
+  });
+
+  it('is case- and whitespace-tolerant about particles', () => {
+    expect(getParticleGlyph({ ...flagged(), particle: ' Ut ', acceptedParticles: ['UT'] })).toBe(
+      'ut',
+    );
+  });
+
+  it('returns null for the shipped multi-accept entries with differing glyphs (rule 7)', () => {
+    for (const id of ['pv:skriva-ner', 'pv:stoppa-ner', 'pv:skramma-bort']) {
+      expect(real(id).motionGlyphVerified).toBeUndefined();
+      expect(getParticleGlyph(real(id))).toBeNull();
+    }
+  });
+
+  it('keeps denying those entries even if someone flags them (rule 7 in the gate itself)', () => {
+    for (const id of ['pv:skriva-ner', 'pv:stoppa-ner', 'pv:skramma-bort']) {
+      expect(getParticleGlyph({ ...real(id), motionGlyphVerified: true })).toBeNull();
+    }
+  });
+
+  it('returns null for every idiomatic or unflagged shipped entry', () => {
+    for (const shipped of PARTICLE_VERB_DATA) {
+      if (shipped.transparency !== 'literal' || shipped.motionGlyphVerified !== true) {
+        expect(getParticleGlyph(shipped), shipped.id).toBeNull();
+      }
+    }
+  });
+
+  it('returns null for shipped idiomatic entries even if flagged', () => {
+    const idiomatic = PARTICLE_VERB_DATA.filter((e) => e.transparency === 'idiomatic');
+    expect(idiomatic.length).toBeGreaterThan(0);
+    for (const shipped of idiomatic) {
+      expect(getParticleGlyph({ ...shipped, motionGlyphVerified: true }), shipped.id).toBeNull();
+    }
+  });
+
+  it('ParticleGlyphId and ParticleGlyphName are the same union (compile-time)', () => {
+    const toName = (id: ParticleGlyphId): ParticleGlyphName => id;
+    const toId = (name: ParticleGlyphName): ParticleGlyphId => name;
+    expect(toName('ner')).toBe('ner');
+    expect(toId('tillbaka')).toBe('tillbaka');
+  });
+});
+
+describe('getParticleCoreSense after ORD-124', () => {
+  it('names upward movement for upp and keeps the completion and visible/available senses', () => {
+    const sense = getParticleCoreSense('upp') ?? '';
+    expect(sense).toContain('upward');
+    expect(sense).toContain('completion');
+    expect(sense).toMatch(/visible/);
+    expect(sense).toMatch(/available/);
+  });
+
+  it('keeps the directional words of the other lines', () => {
+    expect(getParticleCoreSense('ner')).toContain('downward');
+    expect(getParticleCoreSense('ut')).toContain('outward');
+    expect(getParticleCoreSense('in')).toContain('inwards');
   });
 });
