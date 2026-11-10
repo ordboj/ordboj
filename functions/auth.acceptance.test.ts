@@ -636,10 +636,10 @@ describe('ORD-108 auth backend', () => {
 
     const knownSignUpMs = await medianMs(async () => {
       await signUp(env, existing, mailer);
-    });
+    }, 1);
     const unknownSignUpMs = await medianMs(async () => {
       await signUp(env, `fresh-${crypto.randomUUID()}@example.com`, mailer);
-    });
+    }, 1);
     similarTiming(knownSignUpMs, unknownSignUpMs);
 
     const knownLinkMs = await medianMs(async () => {
@@ -648,7 +648,7 @@ describe('ORD-108 auth backend', () => {
         mailer,
         ip: '203.0.113.40',
       });
-    });
+    }, 1);
     const unknownLinkMs = await medianMs(async () => {
       await authFetch(env, '/api/auth/sign-in/magic-link', {
         body: jsonBody({
@@ -658,7 +658,7 @@ describe('ORD-108 auth backend', () => {
         mailer,
         ip: '203.0.113.41',
       });
-    });
+    }, 1);
     similarTiming(knownLinkMs, unknownLinkMs);
 
     const knownResetMs = await medianMs(async () => {
@@ -667,7 +667,7 @@ describe('ORD-108 auth backend', () => {
         mailer,
         ip: '203.0.113.42',
       });
-    });
+    }, 1);
     const unknownResetMs = await medianMs(async () => {
       await authFetch(env, '/api/auth/request-password-reset', {
         body: jsonBody({
@@ -677,7 +677,7 @@ describe('ORD-108 auth backend', () => {
         mailer,
         ip: '203.0.113.43',
       });
-    });
+    }, 1);
     similarTiming(knownResetMs, unknownResetMs);
   });
 
@@ -727,6 +727,108 @@ describe('ORD-108 auth backend', () => {
     expect(microsoftEmailVerified({ email_verified: true })).toBe(true);
     expect(microsoftEmailVerified({ xms_edov: true })).toBe(true);
     expect(microsoftEmailVerified({ xms_edov: 'true' })).toBe(true);
+  });
+
+  it('unknown and existing reset requests hit the address cap together', async () => {
+    const { db, env, mailer } = await boot();
+    const existing = 'cap-known@example.com';
+    await signUp(env, existing, mailer);
+    await db.prepare('DELETE FROM mail_counter').run();
+    const known: number[] = [];
+    const unknown: number[] = [];
+    for (let index = 0; index < ADDRESS_DAILY_CAP + 1; index += 1) {
+      const knownResponse = await authFetch(env, '/api/auth/request-password-reset', {
+        body: jsonBody({ email: existing, redirectTo: `${ORIGIN}/` }),
+        mailer,
+        ip: '203.0.113.80',
+      });
+      const unknownResponse = await authFetch(env, '/api/auth/request-password-reset', {
+        body: jsonBody({ email: 'cap-unknown@example.com', redirectTo: `${ORIGIN}/` }),
+        mailer,
+        ip: '203.0.113.81',
+      });
+      known.push(knownResponse.status);
+      unknown.push(unknownResponse.status);
+    }
+    expect(known).toEqual(unknown);
+    expect(known[ADDRESS_DAILY_CAP - 1]).toBe(200);
+    expect(known[ADDRESS_DAILY_CAP]).toBe(429);
+  });
+
+  it('reset does not await the mailer for an existing or an unknown email', async () => {
+    const { env, mailer, sent } = await boot();
+    const existing = 'await-known@example.com';
+    await signUp(env, existing, mailer);
+    expect(sent.some((mail) => mail.kind === 'verification')).toBe(true);
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const hanging: Mailer = {
+      async send() {
+        await gate;
+      },
+    };
+    const race = async (email: string, ip: string) => {
+      const pending = authFetch(env, '/api/auth/request-password-reset', {
+        body: jsonBody({ email, redirectTo: `${ORIGIN}/` }),
+        mailer: hanging,
+        ip,
+      });
+      return Promise.race([
+        pending.then((response) => ({ kind: 'returned' as const, status: response.status })),
+        new Promise<{ kind: 'blocked' }>((resolve) => {
+          setTimeout(() => resolve({ kind: 'blocked' }), 80);
+        }),
+      ]);
+    };
+    const known = await race(existing, '203.0.113.90');
+    const unknown = await race('await-unknown@example.com', '203.0.113.91');
+    release();
+    expect(known.kind).toBe('returned');
+    expect(unknown.kind).toBe('returned');
+    if (known.kind === 'returned') expect(known.status).toBe(200);
+    if (unknown.kind === 'returned') expect(unknown.status).toBe(200);
+  });
+
+  it('two verification resends in the same second both return 200', async () => {
+    const { env, mailer } = await boot();
+    const email = 'resend@example.com';
+    await signUp(env, email, mailer);
+    const first = await authFetch(env, '/api/auth/send-verification-email', {
+      body: jsonBody({ email }),
+      mailer,
+    });
+    const second = await authFetch(env, '/api/auth/send-verification-email', {
+      body: jsonBody({ email }),
+      mailer,
+    });
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+  });
+
+  it('a sign-up password does not survive verify then verified GitHub', async () => {
+    const { db, env, mailer, sent } = await boot();
+    const email = 'victim-github@example.com';
+    await signUp(env, email, mailer);
+    const verification = sent.find((item) => item.kind === 'verification') as OutboundMail;
+    const verified = await verifyEmail(env, verification, mailer);
+    expect(verified.status).toBe(200);
+    expect((await userByEmail(db, email))?.emailVerified).toBe(1);
+    await withGithubProfile({ email, emailVerified: true, name: 'Victim', id: '777' }, async () => {
+      const callback = await githubSignIn(env, mailer);
+      expect(callback.status).toBe(302);
+    });
+    const password = await signIn(env, email, PASSWORD, mailer);
+    expect(password.status).toBeGreaterThanOrEqual(400);
+    const user = await userByEmail(db, email);
+    const accounts = await accountsFor(db, user?.id ?? '');
+    expect(
+      accounts.some((account) => account.providerId === 'credential' && account.password),
+    ).toBe(false);
+    expect(
+      accounts.some((account) => account.providerId === 'github' && account.accountId === '777'),
+    ).toBe(true);
   });
 
   it('unverified password cannot sign in after magic link or verified OAuth', async () => {
@@ -782,6 +884,10 @@ describe('ORD-108 auth backend', () => {
     expect(jwtBody.exp - jwtBody.iat).toBeLessThanOrEqual(VERIFICATION_TTL_SECONDS);
     const firstVerify = await verifyEmail(env, verification, mailer);
     expect(firstVerify.status).toBe(200);
+    // The owner signs in after verification, so this password is proven and
+    // a later magic link must not delete it. The reset test below needs it.
+    const proved = await signIn(env, email, PASSWORD, mailer);
+    expect(proved.status).toBe(200);
     const secondVerify = await verifyEmail(env, verification, mailer);
     expect(secondVerify.status).toBeGreaterThanOrEqual(400);
 

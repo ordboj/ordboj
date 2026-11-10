@@ -3,6 +3,7 @@ import { GENERIC_MAIL_BODY, MAIL_LIMIT_BODY, PASSKEY_ORIGIN } from './constants'
 import { createAuth } from './create-auth';
 import { mailSendAllowed, recordMailSend } from './mail-quota';
 import { resolveMailer, type Mailer } from './mailer';
+import { markPasswordProven } from './unproven-password';
 
 const MAIL_PATHS = new Set([
   '/api/auth/sign-up/email',
@@ -19,6 +20,7 @@ const PASSKEY_REGISTRATION_PATHS = new Set([
 export interface AuthHandlerOptions {
   mailer?: Mailer | null;
   now?: () => Date;
+  waitUntil?: (promise: Promise<unknown>) => void;
 }
 
 function json(body: unknown, status: number): Response {
@@ -65,8 +67,14 @@ export async function handleAuthRequest(
     }
   }
 
+  const authDeps = { mailer, waitUntil: options.waitUntil };
+  const passwordSignIn =
+    request.method === 'POST' && url.pathname === '/api/auth/sign-in/email'
+      ? await readEmail(request)
+      : '';
+
   if (PASSKEY_REGISTRATION_PATHS.has(url.pathname)) {
-    const auth = createAuth(env, { mailer });
+    const auth = createAuth(env, authDeps);
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) return json({ message: 'Unauthorized' }, 401);
     if (!session.user.emailVerified) return json({ message: 'Verified sign-in required' }, 403);
@@ -79,16 +87,15 @@ export async function handleAuthRequest(
     const stamp = now();
     const allowed = await mailSendAllowed(db, { now: stamp, email, ip });
     if (!allowed) return json(MAIL_LIMIT_BODY, 429);
-    const counting: Mailer = {
-      async send(mail) {
-        await mailer.send(mail);
-        await recordMailSend(db, { now: stamp, email: mail.to.toLowerCase(), ip });
-      },
-    };
-    const auth = createAuth(env, { mailer: counting });
+    // Count the request itself. A missing account sends no mail, and that
+    // must not leave its counter behind an existing account.
+    await recordMailSend(db, { now: stamp, email, ip });
+    const auth = createAuth(env, authDeps);
     return auth.handler(request);
   }
 
-  const auth = createAuth(env, { mailer });
-  return auth.handler(request);
+  const auth = createAuth(env, authDeps);
+  const response = await auth.handler(request);
+  if (response.status === 200 && passwordSignIn) await markPasswordProven(db, passwordSignIn);
+  return response;
 }

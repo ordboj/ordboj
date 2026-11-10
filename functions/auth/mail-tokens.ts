@@ -10,8 +10,10 @@ export async function storeMailToken(
   now = Date.now(),
 ): Promise<void> {
   const tokenHash = await sha256Hex(token);
+  // The verification JWT is identical for the same email inside one second.
+  // A second insert of that hash must not turn the response into 500.
   await db
-    .prepare('INSERT INTO mail_token (token_hash, kind, expires_at) VALUES (?, ?, ?)')
+    .prepare('INSERT OR IGNORE INTO mail_token (token_hash, kind, expires_at) VALUES (?, ?, ?)')
     .bind(tokenHash, 'verification', now + ttlSeconds * 1000)
     .run();
 }

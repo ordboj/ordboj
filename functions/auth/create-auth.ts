@@ -15,10 +15,16 @@ import {
   VERIFICATION_TTL_SECONDS,
 } from './constants';
 import { microsoftEmailVerified } from './provider-email';
-import { dropUnprovenPassword } from './unproven-password';
+import { dropUnprovenPassword, markPasswordProvenById } from './unproven-password';
 
 export interface AuthDeps {
   mailer: Mailer | null;
+  waitUntil?: (promise: Promise<unknown>) => void;
+}
+
+function enqueueMail(deps: AuthDeps, task: () => Promise<void>): void {
+  const promise = task().catch(() => {});
+  if (deps.waitUntil) deps.waitUntil(promise);
 }
 
 interface ProviderUserInfo {
@@ -141,7 +147,12 @@ export function buildAuthOptions(env: Env & { DB: D1Database }, deps: AuthDeps):
         if (parsed.pathname.startsWith('/reset-password/')) {
           parsed.pathname = `/api/auth${parsed.pathname}`;
         }
-        await sendAuthMail(mailer, { kind: 'reset', to: user.email, url: parsed.toString() });
+        enqueueMail(deps, () =>
+          sendAuthMail(mailer, { kind: 'reset', to: user.email, url: parsed.toString() }),
+        );
+      },
+      onPasswordReset: async ({ user }) => {
+        await markPasswordProvenById(env.DB, user.id);
       },
     },
     emailVerification: {
@@ -154,11 +165,13 @@ export function buildAuthOptions(env: Env & { DB: D1Database }, deps: AuthDeps):
         await storeMailToken(env.DB, token, VERIFICATION_TTL_SECONDS);
         const parsed = new URL(url);
         if (parsed.pathname === '/verify-email') parsed.pathname = '/api/auth/verify-email';
-        await sendAuthMail(mailer, {
-          kind: 'verification',
-          to: user.email,
-          url: parsed.toString(),
-        });
+        enqueueMail(deps, () =>
+          sendAuthMail(mailer, {
+            kind: 'verification',
+            to: user.email,
+            url: parsed.toString(),
+          }),
+        );
       },
     },
     account: {
@@ -236,7 +249,7 @@ export function buildAuthOptions(env: Env & { DB: D1Database }, deps: AuthDeps):
         rateLimit: { window: 600, max: 40 },
         sendMagicLink: async ({ email, url }) => {
           if (!mailer) return;
-          await sendAuthMail(mailer, { kind: 'magic-link', to: email, url });
+          enqueueMail(deps, () => sendAuthMail(mailer, { kind: 'magic-link', to: email, url }));
         },
       }),
       passkey({
@@ -248,14 +261,28 @@ export function buildAuthOptions(env: Env & { DB: D1Database }, deps: AuthDeps):
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         const path = ctx.path ?? '';
-        if (path !== '/verify-email' && !path.endsWith('/verify-email')) return;
         const fromQuery = ctx.query?.token;
         const fromUrl = ctx.request ? new URL(ctx.request.url).searchParams.get('token') : null;
         const token = (typeof fromQuery === 'string' ? fromQuery : null) ?? fromUrl;
+        if (path === '/verify-email' || path.endsWith('/verify-email')) {
+          if (!token) return;
+          const consumed = await consumeMailToken(env.DB, token);
+          if (!consumed) {
+            throw new APIError('UNAUTHORIZED', { message: 'Invalid token' });
+          }
+          return;
+        }
+        if (path !== '/magic-link/verify' && !path.endsWith('/magic-link/verify')) return;
         if (!token) return;
-        const consumed = await consumeMailToken(env.DB, token);
-        if (!consumed) {
-          throw new APIError('UNAUTHORIZED', { message: 'Invalid token' });
+        const row = await env.DB.prepare('SELECT value FROM verification WHERE identifier = ?')
+          .bind(`magic-link:${token}`)
+          .first<{ value: string }>();
+        if (!row?.value) return;
+        try {
+          const parsed = JSON.parse(row.value) as { email?: string };
+          if (parsed.email) await dropUnprovenPassword(env.DB, parsed.email);
+        } catch {
+          return;
         }
       }),
     },

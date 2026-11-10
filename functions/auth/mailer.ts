@@ -61,7 +61,7 @@ export async function sendAuthMail(
 ): Promise<void> {
   const text =
     input.kind === 'verification'
-      ? `Verify your email for Ordboj.\n\n${input.url}\n`
+      ? `Verify your email for Ordboj.\n\n${input.url}\n\nIf you didn't sign up, ignore this email.\n`
       : input.kind === 'reset'
         ? `Reset your Ordboj password.\n\n${input.url}\n`
         : `Sign in to Ordboj.\n\n${input.url}\n`;
