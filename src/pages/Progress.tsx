@@ -62,19 +62,6 @@ export default function Progress() {
   const showMoreFocus = useRef<'button' | 'end' | null>(null);
 
   useEffect(() => {
-    return () => {
-      // jsdom's selector engine (what getComputedStyle and :focus-visible
-      // use) keeps the last focus event on the window. focus() on a verb
-      // row makes that event's target the row, and the row's parent chain
-      // is the whole list, so the list survives unmount (ORD-71). A focus
-      // event aimed at the body drops that reference. :root does the same
-      // for the engine's "last matched node".
-      document.body?.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
-      document.documentElement?.matches(':root');
-    };
-  }, []);
-
-  useEffect(() => {
     const loadVerbs = async () => {
       setIsLoading(true);
       const conjugated = await getAllConjugatedVerbs();

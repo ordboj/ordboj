@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { releaseJsdomSelectorCache } from '@/test/releaseJsdomSelectorCache';
 import Progress from '@/pages/Progress';
 
 // Same boundaries as the other Progress suites: real VERB_DATA through
@@ -83,6 +84,9 @@ async function mountFullVerbList(): Promise<number> {
   const rows = countBodyRows(container);
   view.unmount();
   cleanup();
+  // afterEach releases the cache too late: this assertion measures inside
+  // the test, before that hook runs.
+  releaseJsdomSelectorCache();
   return rows;
 }
 
