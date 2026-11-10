@@ -50,24 +50,22 @@ vi.mock('canvas-confetti', () => ({
 
 // jsdom does not implement URL.createObjectURL/revokeObjectURL. Export flows
 // (Settings "Export Progress") build a Blob and call this to produce a
-// download link; without a stub, exercising that click throws
-// "URL.createObjectURL is not a function" for reasons unrelated to the
-// behavior under test.
+// download link.
 //
-// Vitest's jsdom environment does install a createObjectURL, so a
-// "only if missing" guard is not enough. That wrapper reads the Blob impl
-// off the first own symbol (`blob[implSymbol]._buffer`). jsdom 30.1 moved
-// the impl into a private field, the symbol is undefined, and the call
-// throws "Cannot read properties of undefined (reading '_buffer')". React
-// reports that click-dispatch exception as an unhandled error, which fails
-// the run after the test assertions have already passed. Always replace the
-// method. Tests only need a URL string here.
+// Vitest's jsdom environment installs its own createObjectURL, so a
+// "only if missing" guard is not enough. After jsdom 30.1 that wrapper read
+// blob internals off a symbol that no longer existed and threw
+// "Cannot read properties of undefined (reading '_buffer')". React reports
+// a click-dispatch exception as an unhandled error, which fails the run
+// after the assertions have already passed.
 //
-// configurable: true matches the deliberately-configurable local stub
-// pattern in AppErrorBoundary.test.tsx (which vi.spyOn()s these same
-// properties per-test): a non-configurable global stub here would silently
-// pre-empt that file's own `if (!('createObjectURL' in URL))` guard and
-// leave the property unable to be cleanly reconfigured/restored.
+// Rechecked on vitest 5.1.0 + jsdom 31.0.0: the wrapper now reads bytes
+// through jsdom's implForWrapper, and a direct call returns a blob:nodedata:
+// URL instead of throwing. The replacement stays. Export tests only need a
+// URL string, and this property has to stay configurable so
+// AppErrorBoundary.test.tsx can vi.spyOn() it. A non-configurable global
+// stub would silently pre-empt that file's `if (!('createObjectURL' in URL))`
+// guard and leave the property unable to be cleanly reconfigured/restored.
 Object.defineProperty(window.URL, 'createObjectURL', {
   writable: true,
   configurable: true,

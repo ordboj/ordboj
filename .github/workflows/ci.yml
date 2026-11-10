@@ -16,10 +16,12 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # package.json pins `engines.node` to >=20; no .nvmrc. 22 is the active
-  # Node LTS and matches what's already used locally. Kept in one place so
-  # every job (including the Playwright one) stays in lockstep.
-  NODE_VERSION: '22'
+  # package.json engines.node is ^22.22.2 || ^24.15.0 || >=26.0.0 (the
+  # intersection of vitest 5, jsdom 31, and lint-staged 17). No .nvmrc and
+  # no Cloudflare Pages Node setting. Pin the 22 line at its floor so CI
+  # cannot resolve an older 22.x that those packages reject. Kept in one
+  # place so every job (including the Playwright one) stays in lockstep.
+  NODE_VERSION: '22.22.2'
 
 jobs:
   # Path-based gating so a docs-only or verb-data-only push doesn't pay for
