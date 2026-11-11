@@ -1151,7 +1151,7 @@ describe('particle verb dataset - no repeated example sentences (#395 remediatio
 });
 
 // ORD-120: the motion-glyph flag is a human-approved batch (ORD-117 27 entries,
-// ORD-131 +10 = 37). Any change to this list must be a reviewed diff.
+// ORD-131 +10 = 37, ORD-132 +9 = 46). Any change to this list must be a reviewed diff.
 const FLAGGED_GLYPH_IDS = [
   'pv:ga-in',
   'pv:ga-ner',
@@ -1159,9 +1159,14 @@ const FLAGGED_GLYPH_IDS = [
   'pv:komma-tillbaka',
   'pv:ta-ut',
   'pv:ta-bort',
+  'pv:ta-fram',
   'pv:satta-ut',
   'pv:komma-upp',
   'pv:ta-ner',
+  'pv:komma-hem',
+  'pv:ga-hem',
+  'pv:satta-ihop',
+  'pv:kora-hem',
   'pv:slappa-ut',
   'pv:kora-in',
   'pv:dra-ut',
@@ -1170,7 +1175,9 @@ const FLAGGED_GLYPH_IDS = [
   'pv:resa-bort',
   'pv:flytta-bort',
   'pv:trycka-ner',
+  'pv:plocka-ihop',
   'pv:skjuta-in',
+  'pv:samla-ihop',
   'pv:rusa-ut',
   'pv:grava-ner',
   'pv:klattra-upp',
@@ -1181,9 +1188,11 @@ const FLAGGED_GLYPH_IDS = [
   'pv:stoppa-in',
   'pv:slappa-in',
   'pv:springa-ut',
+  'pv:plocka-fram',
   'pv:kasta-ut',
   'pv:satta-sig-ner',
   'pv:plocka-bort',
+  'pv:stalla-fram',
   'pv:komma-ner',
   'pv:aka-bort',
   'pv:hoppa-upp',
@@ -1191,21 +1200,31 @@ const FLAGGED_GLYPH_IDS = [
   'pv:ga-upp-stiga',
   'pv:satta-in-montera',
 ];
-const SIX_GLYPHS = ['in', 'ut', 'upp', 'ner', 'bort', 'tillbaka'];
+const NINE_GLYPHS = ['in', 'ut', 'upp', 'ner', 'bort', 'tillbaka', 'fram', 'hem', 'ihop'];
 const FLAGGED = PARTICLE_VERB_DATA.filter((entry) => entry.motionGlyphVerified === true);
 
 describe('particle verb dataset - motion glyph flags', () => {
-  it('flags exactly the approved 37 ids, in data order', () => {
+  it('flags exactly the approved 46 ids, in data order', () => {
     expect(FLAGGED.map((entry) => entry.id)).toEqual(FLAGGED_GLYPH_IDS);
   });
 
-  it('has the approved per-glyph counts (in 9, ut 9, upp 5, ner 7, bort 5, tillbaka 2)', () => {
+  it('has the approved per-glyph counts (in 9, ut 9, upp 5, ner 7, bort 5, tillbaka 2, fram 3, hem 3, ihop 3)', () => {
     const counts: Record<string, number> = {};
     for (const entry of FLAGGED) {
       const glyph = getParticleGlyph(entry) ?? 'none';
       counts[glyph] = (counts[glyph] ?? 0) + 1;
     }
-    expect(counts).toEqual({ in: 9, ut: 9, upp: 5, ner: 7, bort: 5, tillbaka: 2 });
+    expect(counts).toEqual({
+      in: 9,
+      ut: 9,
+      upp: 5,
+      ner: 7,
+      bort: 5,
+      tillbaka: 2,
+      fram: 3,
+      hem: 3,
+      ihop: 3,
+    });
   });
 
   it('only flags entries that are verified, literal and contrast-free', () => {
@@ -1216,10 +1235,10 @@ describe('particle verb dataset - motion glyph flags', () => {
     }
   });
 
-  it('only flags one of the six glyph particles (ned counts as ner)', () => {
+  it('only flags one of the nine glyph particles (ned counts as ner)', () => {
     for (const entry of FLAGGED) {
       const primary = entry.particle === 'ned' ? 'ner' : entry.particle;
-      expect(SIX_GLYPHS, entry.id).toContain(primary);
+      expect(NINE_GLYPHS, entry.id).toContain(primary);
     }
   });
 
@@ -1239,6 +1258,13 @@ describe('particle verb dataset - motion glyph flags', () => {
 
   it('leaves pv:flytta-ut without a glyph', () => {
     const found = PARTICLE_VERB_DATA.find((entry) => entry.id === 'pv:flytta-ut');
+    expect(found).toBeDefined();
+    expect(found?.motionGlyphVerified).toBeUndefined();
+    expect(getParticleGlyph(found!)).toBeNull();
+  });
+
+  it('leaves pv:ta-hem without a glyph (split pending, ORD-135)', () => {
+    const found = PARTICLE_VERB_DATA.find((entry) => entry.id === 'pv:ta-hem');
     expect(found).toBeDefined();
     expect(found?.motionGlyphVerified).toBeUndefined();
     expect(getParticleGlyph(found!)).toBeNull();
