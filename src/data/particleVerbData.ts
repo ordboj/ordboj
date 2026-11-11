@@ -167,9 +167,11 @@ export interface ParticleVerbData {
   // batch approval of the linguist's pass list; never set it without that
   // approval. Read only through getParticleGlyph, which also enforces
   // gates 1-4, so the flag alone never shows a glyph.
-  // Every flag currently set was set by the human's batch approval of the
-  // ORD-117 pass list on 2026-11-10 (27 entries); a new flag needs a new
-  // approval.
+  // Every flag currently set was set by one of two human batch approvals,
+  // both on 2026-11-10: the ORD-117 pass list (27 entries) and the ORD-131
+  // pass list (10 entries: komma-in, stromma-in, skjuta-in, ta-ner,
+  // trycka-ner, komma-ner, ta-bort, satta-in-montera, slappa-ut,
+  // kasta-ut). A new flag needs a new approval.
   motionGlyphVerified?: true;
 }
 
@@ -306,10 +308,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['in'],
     examples: [
       { sv: 'Han kommer in i rummet med en stor låda.', blankIndex: 2 },
-      { sv: 'Ljuset kommer in genom det stora fönstret.', blankIndex: 2 },
+      { sv: 'Katten kommer in genom det öppna fönstret.', blankIndex: 2 },
       { sv: 'Grannen kommer in i köket utan att knacka.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kommer in', preteritum: 'kom in', supinum: 'kommit in' },
   },
   {
@@ -662,10 +665,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['bort'],
     examples: [
       { sv: 'Vi tar bort snön från trappan på morgonen.', blankIndex: 2 },
-      { sv: 'Läkaren tar bort förbandet efter en vecka.', blankIndex: 2 },
+      { sv: 'Hon tar bort leksakerna från golvet.', blankIndex: 2 },
       { sv: 'Vi tar bort de gamla möblerna ur rummet.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'tar bort', preteritum: 'tog bort', supinum: 'tagit bort' },
   },
   {
@@ -1711,9 +1715,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Vi tar ner gardinerna och tvättar dem.', blankIndex: 2 },
       { sv: 'Han tar ner tavlan från väggen i hallen.', blankIndex: 2 },
-      { sv: 'De tar ner julgranen i mitten av januari.', blankIndex: 2 },
+      { sv: 'Hon tar ner en skål från den översta hyllan.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'tar ner', preteritum: 'tog ner', supinum: 'tagit ner' },
   },
   {
@@ -3000,9 +3005,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Fabriken släpper ut rök från skorstenen.', blankIndex: 2 },
       { sv: 'Han släpper ut hunden i trädgården varje morgon.', blankIndex: 2 },
-      { sv: 'Vi släpper ut fångarna efter tio år.', blankIndex: 2 },
+      { sv: 'Bonden släpper ut korna på bete i maj.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'släpper ut', preteritum: 'släppte ut', supinum: 'släppt ut' },
   },
 
@@ -3706,7 +3712,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Jag flyttar ut från lägenheten snart.', blankIndex: 2 },
       { sv: 'Han flyttar ut hemifrån nästa månad.', blankIndex: 2 },
-      { sv: 'De flyttar ut i sommar tillsammans.', blankIndex: 2 },
+      { sv: 'De flyttar ut ur den gamla villan i augusti.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'flyttar ut', preteritum: 'flyttade ut', supinum: 'flyttat ut' },
@@ -3906,11 +3912,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['ner', 'ned'],
     examples: [
-      { sv: 'Jag trycker ner knappen på fjärrkontrollen.', blankIndex: 2 },
+      { sv: 'Jag trycker ner pinnen i den mjuka jorden.', blankIndex: 2 },
       { sv: 'Hon trycker hårt ner spaken med handen.', blankIndex: 3 },
       { sv: 'Vi trycker ner pedalen till botten.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'trycker ner', preteritum: 'tryckte ner', supinum: 'tryckt ner' },
   },
 
@@ -4588,11 +4595,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['in'],
     examples: [
-      { sv: 'Han skjuter in lådan under sängen.', blankIndex: 2 },
+      { sv: 'Bagaren skjuter in brödet i ugnen.', blankIndex: 2 },
       { sv: 'Vi skjuter in brevet under dörren.', blankIndex: 2 },
-      { sv: 'Jag skjuter in stolen under bordet efter maten.', blankIndex: 2 },
+      { sv: 'Jag skjuter in kartongen i garderoben.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'skjuter in', preteritum: 'sköt in', supinum: 'skjutit in' },
   },
   {
@@ -5007,11 +5015,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['in'],
     examples: [
-      { sv: 'Ljuset strömmar in genom det stora fönstret.', blankIndex: 2 },
+      { sv: 'Vattnet strömmar in i båten genom ett hål i botten.', blankIndex: 2 },
       { sv: 'Publiken strömmar in i salen före konserten.', blankIndex: 2 },
       { sv: 'Vattnet strömmar in i källaren under regnet.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'strömmar in', preteritum: 'strömmade in', supinum: 'strömmat in' },
   },
   {
@@ -5494,10 +5503,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['ut'],
     examples: [
       { sv: 'Vakten kastar ut de bråkiga gästerna.', blankIndex: 2 },
-      { sv: 'Värden kastar ut hyresgästen efter många klagomål.', blankIndex: 2 },
+      { sv: 'Bartendern kastar ut den berusade mannen på gatan.', blankIndex: 2 },
       { sv: 'De kastar ut oss innan klockan tolv.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kastar ut', preteritum: 'kastade ut', supinum: 'kastat ut' },
   },
   {
@@ -5862,9 +5872,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       // ORD-123: replaces "kommer ner för trappan", where standard spelling
       // is the preposition "nerför" and leaves no particle to blank.
       { sv: 'Hon kommer ner från vinden med en låda.', blankIndex: 2 },
-      { sv: 'Barnen kommer ner till frukosten klockan åtta.', blankIndex: 2 },
+      { sv: 'Katten kommer ner från trädet till slut.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kommer ner', preteritum: 'kom ner', supinum: 'kommit ner' },
   },
   {
@@ -6363,7 +6374,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   {
     // Physical half of pv:satta-in (human ruling 2026-11-10). The
     // window-pane and chairs frames moved here from the incumbent. Literal:
-    // an object put into a frame, a room or a device.
+    // an object put into a frame or a device. ORD-131: the chairs frame
+    // ("sätter in fler stolar", add more) named no container, so it is
+    // replaced by a memory card going into a camera.
     id: 'pv:satta-in-montera',
     cefr: 'A2',
     cefrEvidence: 'svalex',
@@ -6376,10 +6389,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['in'],
     examples: [
       { sv: 'Han sätter in en ny ruta i fönstret.', blankIndex: 2 },
-      { sv: 'Vi sätter in fler stolar före konserten.', blankIndex: 2 },
+      { sv: 'Jag sätter in minneskortet i kameran.', blankIndex: 2 },
       { sv: 'Hon sätter in ett nytt batteri i klockan.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'sätter in', preteritum: 'satte in', supinum: 'satt in' },
   },
   {
