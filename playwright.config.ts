@@ -32,8 +32,11 @@ function resolveLocalChromiumExecutable(): string | undefined {
     .filter((name) => /^chromium-\d+$/.test(name))
     .sort((a, b) => Number(b.split('-')[1]) - Number(a.split('-')[1]));
   for (const revision of revisions) {
-    const candidate = path.join(browsersPath, revision, 'chrome-linux', 'chrome');
-    if (fs.existsSync(candidate)) {
+    // Newer Playwright builds unpack to chrome-linux64, older ones to chrome-linux.
+    const candidate = ['chrome-linux64', 'chrome-linux']
+      .map((dir) => path.join(browsersPath, revision, dir, 'chrome'))
+      .find((p) => fs.existsSync(p));
+    if (candidate) {
       // Loud on purpose: this is a version-unverified substitution for
       // whatever Chromium build @playwright/test actually expects, and a
       // silent one is exactly what F2 flagged as the risk.
