@@ -167,11 +167,14 @@ export interface ParticleVerbData {
   // batch approval of the linguist's pass list; never set it without that
   // approval. Read only through getParticleGlyph, which also enforces
   // gates 1-4, so the flag alone never shows a glyph.
-  // Every flag currently set was set by one of two human batch approvals,
-  // both on 2026-11-10: the ORD-117 pass list (27 entries) and the ORD-131
-  // pass list (10 entries: komma-in, stromma-in, skjuta-in, ta-ner,
+  // Every flag currently set was set by one of three human batch approvals:
+  // the ORD-117 pass list (2026-11-10, 27 entries), the ORD-131 pass list
+  // (2026-11-10, 10 entries: komma-in, stromma-in, skjuta-in, ta-ner,
   // trycka-ner, komma-ner, ta-bort, satta-in-montera, slappa-ut,
-  // kasta-ut). A new flag needs a new approval.
+  // kasta-ut) and the ORD-132 pass list (2026-11-11, 9 entries: komma-hem,
+  // ga-hem, kora-hem, satta-ihop, plocka-ihop, samla-ihop, ta-fram,
+  // plocka-fram, stalla-fram; the rewritten satta-ihop sentences were
+  // approved with it). A new flag needs a new approval.
   motionGlyphVerified?: true;
 }
 
@@ -708,6 +711,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi tar fram kartan när vi kör vilse.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'tar fram', preteritum: 'tog fram', supinum: 'tagit fram' },
   },
   {
@@ -2112,6 +2116,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi kommer hem sent på söndag kväll.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kommer hem', preteritum: 'kom hem', supinum: 'kommit hem' },
   },
   {
@@ -2131,6 +2136,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Jag går hem och lagar mat åt barnen.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'går hem', preteritum: 'gick hem', supinum: 'gått hem' },
   },
   {
@@ -2235,6 +2241,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Hon sätter ihop delarna enligt instruktionen.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'sätter ihop', preteritum: 'satte ihop', supinum: 'satt ihop' },
   },
   {
@@ -2968,6 +2975,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi kör hem grannen när det regnar.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kör hem', preteritum: 'körde hem', supinum: 'kört hem' },
   },
 
@@ -3978,6 +3986,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi plockar ihop utrustningen efter matchen.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'plockar ihop', preteritum: 'plockade ihop', supinum: 'plockat ihop' },
   },
 
@@ -4665,6 +4674,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi samlar ihop grenarna i en stor hög.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'samlar ihop', preteritum: 'samlade ihop', supinum: 'samlat ihop' },
   },
   {
@@ -5466,6 +5476,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Jag plockar fram varma kläder inför resan norrut.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'plockar fram', preteritum: 'plockade fram', supinum: 'plockat fram' },
   },
   {
@@ -5762,9 +5773,13 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Jag ställer fram tallrikar och bestick på bordet.', blankIndex: 2 },
       { sv: 'Hon ställer fram frukosten innan barnen vaknar.', blankIndex: 2 },
-      { sv: 'Vi ställer fram stolar inför mötet.', blankIndex: 2 },
+      // ORD-132 rewrite (human approval 2026-11-11): every example now puts
+      // food or tableware out, matching the gloss. Was "Vi ställer fram
+      // stolar inför mötet." (furniture for a meeting, outside the gloss).
+      { sv: 'Vi ställer fram kaffe och kakor till gästerna.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'ställer fram', preteritum: 'ställde fram', supinum: 'ställt fram' },
   },
   {
