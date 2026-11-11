@@ -103,7 +103,8 @@ additional protection.
   After 3400 ms nothing moves next to the sentence and the sense line.
 - It keeps a part of the reason for the loop. The record does not give the
   reason for decision H, other than the transience remedy (Ayres & Paas 2007)
-  and the "attention" reason in the picture note. The second play starts
+  that the glyph note records for the loop. The picture note gives "attention"
+  as a reason for the animation, not for the loop. The second play starts
   2700 ms after the mount, so a learner who looks late still sees one repeat.
 - After the second play, the meaning does not disappear. The rest frame is
   complete: the mover is at the end of its path, and the direction cue shows
@@ -238,7 +239,8 @@ The maintainer makes these checks by hand.
   rest between plays to 1400 ms and set `GLYPH_PLAY_COUNT` to 3. Then all
   movement ends at 4900 ms. A rest of 1400 ms makes the cycle 2100 ms. The
   keyframe value 25.926 % must then change to 33.333 % in all six keyframes in
-  `src/index.css`. Do not go back to a loop without end unless a new
+  `src/index.css`. Also scale the other stops by 2700 / 2100: sway 6.5 % to
+  8.357 % and 19.4 % to 24.943 %, pulse 13 % to 16.714 %. Do not go back to a loop without end unless a new
   decision adds a pause control.
 - The second play still distracts from the sentence. Set `GLYPH_PLAY_COUNT` to 1. This needs a human decision, because it goes back to one play.
 - The learner does not find the tap. This is not a 2.2.2 problem, because the
