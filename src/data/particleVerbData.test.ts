@@ -1401,3 +1401,13 @@ describe('particle verb dataset - meaning pictures (ORD-134)', () => {
     });
   });
 });
+
+describe('particle verb dataset - ner/ned primary particle (ORD-126/ORD-138)', () => {
+  // The queue lemma key uses the primary particle only and has no alias table.
+  // If an entry ever has 'ned' as primary, ner/ned siblings stop sharing a key:
+  // get a learning-designer ruling before adding an alias.
+  it('no entry has "ned" as its primary particle', () => {
+    const offenders = PARTICLE_VERB_DATA.filter((entry) => entry.particle === 'ned');
+    expect(offenders.map((entry) => entry.id)).toEqual([]);
+  });
+});

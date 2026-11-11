@@ -6,12 +6,13 @@ import {
   isBaseRecentlyUsed,
   isBaseStarted,
   orderForIntroduction,
+  particleLemmaKey,
   particleNewAllowedToday,
   particleNewCardsPerDay,
   MAX_NEW_PER_PARTICLE_PER_SITTING,
 } from '@/lib/particleQueue';
 import { conjugationItemId, particleItemId } from '@/lib/itemIds';
-import { getVerifiedParticleVerbs } from '@/lib/particleVerbs';
+import { findParticleVerb, getVerifiedParticleVerbs } from '@/lib/particleVerbs';
 import { verbs } from '@/lib/verbs';
 import type { SrsState } from '@/lib/srs';
 import type { ParticleVerbData } from '@/data/particleVerbData';
@@ -600,7 +601,10 @@ describe('first cloze placement', () => {
     const states: Record<string, SrsState> = { ...readyBase('gå'), ...readyBase('ta') };
     for (let i = 0; i < reviewCount; i++) {
       const id = `pv:review-${i}`;
-      entries.push(entry({ id, baseInfinitive: 'gå' }));
+      // Distinct particle per review: same-lemma-key entries are held apart.
+      entries.push(
+        entry({ id, baseInfinitive: 'gå', particle: `p${i}`, acceptedParticles: [`p${i}`] }),
+      );
       const itemId = particleItemId(id, 'cloze');
       states[itemId] = state({ itemId, repetitions: 3, dueAt: NOW - DAY });
     }
@@ -787,13 +791,209 @@ describe('sibling separation', () => {
   });
 });
 
+describe('lemma-key sibling separation (ORD-138)', () => {
+  function real(id: string): ParticleVerbData {
+    const found = findParticleVerb(id);
+    if (!found) throw new Error(`fixture error: ${id} is not in PARTICLE_VERB_DATA`);
+    return found;
+  }
+  const A = real('pv:ga-upp');
+  const B = real('pv:ga-upp-stiga');
+  const cloze = (e: ParticleVerbData) => particleItemId(e.id, 'cloze');
+  const recall = (e: ParticleVerbData) => particleItemId(e.id, 'recall');
+  const sit = (states: Record<string, SrsState>, entries: ParticleVerbData[], goal = 12) =>
+    buildParticleSitting({
+      srsStates: { ...readyBase('gå'), ...states },
+      particleDailyGoal: goal,
+      now: NOW,
+      shuffle: noShuffle,
+      entries,
+    });
+  const due = (id: string, days: number, repetitions = 3) =>
+    state({ itemId: id, repetitions, dueAt: NOW - days * DAY });
+  const later = (id: string, repetitions = 3) =>
+    state({ itemId: id, repetitions, dueAt: NOW + 10 * DAY });
+
+  describe('particleLemmaKey', () => {
+    it('is base infinitive plus primary particle, from fields only', () => {
+      expect(particleLemmaKey(A)).toBe('gå upp');
+      expect(particleLemmaKey(B)).toBe('gå upp');
+      expect(particleLemmaKey(real('pv:ga-ut'))).toBe('gå ut');
+    });
+
+    it('ignores reflexive and id: plain and reflexive entries share a key', () => {
+      const plain = real('pv:ta-av');
+      const reflexive = real('pv:ta-av-sig');
+      expect(plain.reflexive).toBe('none');
+      expect(reflexive.reflexive).not.toBe('none');
+      expect(particleLemmaKey(plain)).toBe('ta av');
+      expect(particleLemmaKey(reflexive)).toBe(particleLemmaKey(plain));
+    });
+
+    it('uses the primary particle only, not acceptedParticles or lemma', () => {
+      const e = entry({
+        id: 'pv:x',
+        baseInfinitive: 'gå',
+        particle: 'ner',
+        acceptedParticles: ['ner', 'ned'],
+        lemma: 'something else entirely',
+      });
+      expect(particleLemmaKey(e)).toBe('gå ner');
+    });
+  });
+
+  it('1. due cloze of A holds the due recall of B; reviewsDue is 1', () => {
+    const sitting = sit({ [cloze(A)]: due(cloze(A), 1), [recall(B)]: due(recall(B), 5) }, [A, B]);
+    expect(sitting.cards.map((c) => c.itemId)).toEqual([cloze(A)]);
+    expect(sitting.reviewsDue).toBe(1);
+  });
+
+  it('1b. the recall of B is served when the cloze of A is not due', () => {
+    const sitting = sit({ [cloze(A)]: later(cloze(A)), [recall(B)]: due(recall(B), 1) }, [A, B]);
+    expect(sitting.cards.map((c) => c.itemId)).toEqual([recall(B)]);
+  });
+
+  it('1c. a held card stays due: state untouched, served once the winner is not due', () => {
+    const states = { [cloze(A)]: due(cloze(A), 1), [recall(B)]: due(recall(B), 5) };
+    const before = JSON.stringify(states);
+    sit(states, [A, B]);
+    expect(JSON.stringify(states)).toBe(before);
+    expect(countParticleReviewsDue({ ...readyBase('gå'), ...states }, NOW, [A, B])).toBe(1);
+    const next = sit({ ...states, [cloze(A)]: later(cloze(A)) }, [A, B]);
+    expect(next.cards.map((c) => c.itemId)).toEqual([recall(B)]);
+  });
+
+  it('2. two due clozes: the smaller dueAt wins, whatever the entry order', () => {
+    const states = { [cloze(A)]: due(cloze(A), 1), [cloze(B)]: due(cloze(B), 4) };
+    expect(sit(states, [A, B]).cards.map((c) => c.itemId)).toEqual([cloze(B)]);
+    expect(sit(states, [B, A]).cards.map((c) => c.itemId)).toEqual([cloze(B)]);
+  });
+
+  it('2b. equal dueAt: the first entry in `entries` wins', () => {
+    const states = { [cloze(A)]: due(cloze(A), 2), [cloze(B)]: due(cloze(B), 2) };
+    expect(sit(states, [A, B]).cards.map((c) => c.itemId)).toEqual([cloze(A)]);
+    expect(sit(states, [B, A]).cards.map((c) => c.itemId)).toEqual([cloze(B)]);
+  });
+
+  it('2c. a cloze beats a recall even when the recall is more overdue', () => {
+    const states = { [cloze(B)]: due(cloze(B), 1), [recall(A)]: due(recall(A), 9) };
+    expect(sit(states, [A, B]).cards.map((c) => c.itemId)).toEqual([cloze(B)]);
+  });
+
+  it('3. two due recalls: the smaller dueAt wins', () => {
+    const states = { [recall(A)]: due(recall(A), 1), [recall(B)]: due(recall(B), 4) };
+    const sitting = sit(states, [A, B]);
+    expect(sitting.cards.map((c) => c.itemId)).toEqual([recall(B)]);
+    expect(sitting.reviewsDue).toBe(1);
+  });
+
+  it('3b. a held card does not use a goal slot (dedupe before the goal slice)', () => {
+    const other = real('pv:ga-ut');
+    const states = {
+      [cloze(A)]: due(cloze(A), 3),
+      [recall(B)]: due(recall(B), 9),
+      [cloze(other)]: due(cloze(other), 1),
+    };
+    const sitting = sit(states, [A, B, other], 2);
+    expect(sitting.cards.map((c) => c.itemId).sort()).toEqual([cloze(A), cloze(other)].sort());
+    expect(sitting.reviewsDue).toBe(2);
+  });
+
+  it('4. a recall unlock of B is not served when a card of A is in the reviews', () => {
+    const states = { [cloze(A)]: due(cloze(A), 1), [cloze(B)]: later(cloze(B)) };
+    expect(sit(states, [A, B]).cards.map((c) => c.itemId)).toEqual([cloze(A)]);
+  });
+
+  it('4b. the recall unlock of B is served when A has no card in the sitting', () => {
+    const states = {
+      [cloze(A)]: later(cloze(A)),
+      [recall(A)]: later(recall(A)),
+      [cloze(B)]: later(cloze(B)),
+    };
+    expect(sit(states, [A, B]).cards.map((c) => c.itemId)).toEqual([recall(B)]);
+  });
+
+  it('4c. two recall unlocks with one lemma key: only one is served', () => {
+    const states = { [cloze(A)]: later(cloze(A)), [cloze(B)]: later(cloze(B)) };
+    expect(sit(states, [A, B]).cards.map((c) => c.itemId)).toEqual([recall(A)]);
+  });
+
+  it('5. B is not introduced when a due card of A is in the sitting', () => {
+    const states = { [cloze(A)]: due(cloze(A), 1, 2), [recall(A)]: later(recall(A)) };
+    const sitting = sit(states, [A, B]);
+    expect(sitting.cards.map((c) => c.itemId)).toEqual([cloze(A)]);
+    expect(sitting.cards.some((c) => c.kind === 'introduction')).toBe(false);
+  });
+
+  it('5b. B is not introduced beside a recall unlock of A', () => {
+    const sitting = sit({ [cloze(A)]: later(cloze(A), 2) }, [A, B]);
+    expect(sitting.cards.map((c) => c.itemId)).toEqual([recall(A)]);
+  });
+
+  it('5c. B is introduced in a sitting with no card of A', () => {
+    const states = { [cloze(A)]: later(cloze(A), 2), [recall(A)]: later(recall(A), 2) };
+    const sitting = sit(states, [A, B]);
+    expect(sitting.cards.map((c) => [c.kind, c.entry.id])).toContainEqual(['introduction', B.id]);
+  });
+
+  it('6. free practice returns one item for the pair', () => {
+    const states = {
+      ...readyBase('gå'),
+      [cloze(A)]: later(cloze(A)),
+      [recall(A)]: later(recall(A)),
+      [cloze(B)]: later(cloze(B)),
+      [recall(B)]: later(recall(B)),
+    };
+    expect(buildFreeParticlePractice(states, NOW, [A, B])).toHaveLength(1);
+  });
+
+  it('6b. free practice keeps the nearest-due item of the pair', () => {
+    const states = {
+      ...readyBase('gå'),
+      [cloze(A)]: state({ itemId: cloze(A), repetitions: 3, dueAt: NOW + 9 * DAY }),
+      [cloze(B)]: state({ itemId: cloze(B), repetitions: 3, dueAt: NOW + 2 * DAY }),
+    };
+    expect(buildFreeParticlePractice(states, NOW, [A, B]).map((c) => c.itemId)).toEqual([cloze(B)]);
+  });
+
+  it('7. reflexive: a due cloze of ta av sig holds the due recall of ta av', () => {
+    const plain = real('pv:ta-av');
+    const refl = real('pv:ta-av-sig');
+    const states = {
+      ...readyBase('ta'),
+      [cloze(refl)]: due(cloze(refl), 1),
+      [recall(plain)]: due(recall(plain), 6),
+    };
+    const sitting = buildParticleSitting({
+      srsStates: states,
+      particleDailyGoal: 12,
+      now: NOW,
+      shuffle: noShuffle,
+      entries: [plain, refl],
+    });
+    expect(sitting.cards.map((c) => c.itemId)).toEqual([cloze(refl)]);
+    expect(sitting.reviewsDue).toBe(1);
+  });
+
+  it('8. control: same base, different particles still share a sitting', () => {
+    const up = real('pv:ga-upp');
+    const out = real('pv:ga-ut');
+    expect(particleLemmaKey(up)).not.toBe(particleLemmaKey(out));
+    const states = { [cloze(up)]: due(cloze(up), 1), [recall(out)]: due(recall(out), 2) };
+    const sitting = sit(states, [up, out]);
+    expect(sitting.cards.map((c) => c.itemId).sort()).toEqual([cloze(up), recall(out)].sort());
+    expect(sitting.reviewsDue).toBe(2);
+  });
+});
+
 describe('review ordering and caps', () => {
   function dueEntries(count: number) {
     const entries: ParticleVerbData[] = [];
     const states: Record<string, SrsState> = { ...readyBase('gå') };
     for (let i = 0; i < count; i++) {
       const id = `pv:review-${i}`;
-      entries.push(entry({ id }));
+      // Distinct particle per entry: same-lemma-key entries are held apart.
+      entries.push(entry({ id, particle: `p${i}`, acceptedParticles: [`p${i}`] }));
       const itemId = particleItemId(id, 'cloze');
       // Later index = more overdue, so corpus order is the reverse of the
       // order the sitting should produce.
