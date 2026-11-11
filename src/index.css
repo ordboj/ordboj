@@ -121,6 +121,83 @@ All colors MUST be HSL.
   animation: particle-glyph-move var(--glyph-cycle) linear var(--glyph-delay) infinite;
 }
 
+/* MeaningPicture mover (ORD-134). Same cycle as the glyph: the first
+   25.926% of --glyph-cycle is the 700 ms movement, the rest holds the rest
+   frame. The element's own styles are the rest frame; keyframes name only the
+   non-rest states and end on it. In place only (rotate, scale, fade). No
+   fill-mode, so the global reduced-motion rule lands on the rest frame. */
+.meaning-picture-mover {
+  transform-box: view-box;
+  animation-duration: var(--glyph-cycle);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.meaning-picture-sway {
+  animation-name: meaning-picture-sway;
+}
+.meaning-picture-close {
+  animation-name: meaning-picture-close;
+}
+.meaning-picture-pulse {
+  animation-name: meaning-picture-pulse;
+}
+.meaning-picture-fade {
+  animation-name: meaning-picture-fade;
+}
+.meaning-picture-burst {
+  animation-name: meaning-picture-burst;
+}
+@keyframes meaning-picture-sway {
+  6.5% {
+    transform: rotate(var(--mp-angle));
+  }
+  19.4% {
+    transform: rotate(calc(var(--mp-angle) * -1));
+  }
+  25.926%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+@keyframes meaning-picture-close {
+  0% {
+    transform: rotate(var(--mp-angle));
+  }
+  25.926%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+@keyframes meaning-picture-pulse {
+  13% {
+    transform: scale(var(--mp-scale));
+  }
+  25.926%,
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes meaning-picture-fade {
+  0% {
+    opacity: 0;
+  }
+  25.926%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes meaning-picture-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  25.926%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* Global prefers-reduced-motion rule (issue #110 AC). Confetti draws to a
    canvas and is not reachable by CSS, so it keeps its own matchMedia guard
    in ConfettiEffect.tsx; everything else (dialog/select/tooltip animate-in,
