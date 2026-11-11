@@ -2206,7 +2206,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['hem'],
     examples: [
       { sv: 'Vi tar hem maten från restaurangen på fredagar.', blankIndex: 2 },
-      { sv: 'Hon tar hem blommorna från torget på lördagar.', blankIndex: 2 },
+      { sv: 'Hon tar hem blommor från torget på lördagar.', blankIndex: 2 },
       { sv: 'Han tar hem böcker från biblioteket varje vecka.', blankIndex: 2 },
     ],
     verified: true,
@@ -6513,12 +6513,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'hem',
     reflexive: 'none',
     lemma: 'ta hem',
-    gloss: { en: 'to win a victory' },
+    gloss: { en: 'to win (a match or a prize)' },
     transparency: 'idiomatic',
     acceptedParticles: ['hem'],
     examples: [
       { sv: 'Laget tar hem segern efter en jämn match.', blankIndex: 2 },
-      { sv: 'Hon tar hem guldet i simning i år.', blankIndex: 2 },
+      { sv: 'Laget tar hem tre poäng mot Malmö i kväll.', blankIndex: 2 },
       { sv: 'Vi tar hem matchen med två mål.', blankIndex: 2 },
     ],
     verified: true,
