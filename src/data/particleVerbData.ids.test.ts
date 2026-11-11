@@ -334,7 +334,9 @@ describe('particle verb id stability (ORD-123 pin)', () => {
     // Later tickets (ORD-135) append after these; the ORD-123 block itself
     // stays exactly in place directly after the frozen 274.
     expect(
-      PARTICLE_VERB_DATA.slice(MAIN_COUNT, MAIN_COUNT + APPENDED_IDS.length).map((entry) => entry.id),
+      PARTICLE_VERB_DATA.slice(MAIN_COUNT, MAIN_COUNT + APPENDED_IDS.length).map(
+        (entry) => entry.id,
+      ),
     ).toEqual(APPENDED_IDS);
   });
 
@@ -425,7 +427,7 @@ describe('particle verb id stability (ORD-135 pin)', () => {
     expect(entry?.particle).toBe('hem');
     expect(entry?.acceptedParticles).toEqual(['hem']);
     expect(entry?.transparency).toBe('idiomatic');
-    expect(entry?.gloss.en).toBe('to win a victory');
+    expect(entry?.gloss.en).toBe('to win (a match or a prize)');
     expect(entry?.examples).toHaveLength(3);
     expect(entry?.verified).toBe(true);
     expect(entry?.motionGlyphVerified).toBeUndefined();
