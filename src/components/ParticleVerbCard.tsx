@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, Volume2 } from 'lucide-react';
 import type { Grade } from '@/lib/srs';
 import type { ParticleSittingCard } from '@/lib/particleQueue';
@@ -227,21 +228,19 @@ export function ParticleVerbCard({
   }, [userAnswer, showFeedback, accepted, kind, handleSubmit]);
 
   const referenceLine = phraseForms && (
-    <div className="bg-muted/20 rounded-lg p-4 space-y-2">
-      <p className="text-xs text-muted-foreground text-center uppercase tracking-wide">
+    <p className="text-center text-base">
+      <span className="text-xs text-muted-foreground uppercase tracking-wide">
         For reference — not tested
-      </p>
-      <p className="text-center text-base">
-        {[phraseForms.infinitive, phraseForms.presens, phraseForms.preteritum, phraseForms.supinum]
-          .filter(Boolean)
-          .map((form, index) => (
-            <span key={index}>
-              {index > 0 ? <span className="text-muted-foreground"> – </span> : null}
-              <PhraseWithParticle phrase={form} particle={entry.particle} />
-            </span>
-          ))}
-      </p>
-    </div>
+      </span>{' '}
+      {[phraseForms.infinitive, phraseForms.presens, phraseForms.preteritum, phraseForms.supinum]
+        .filter(Boolean)
+        .map((form, index) => (
+          <span key={index}>
+            {index > 0 ? <span className="text-muted-foreground"> – </span> : null}
+            <PhraseWithParticle phrase={form} particle={entry.particle} />
+          </span>
+        ))}
+    </p>
   );
 
   const senseLine = coreSense && (
@@ -312,9 +311,7 @@ export function ParticleVerbCard({
           <span
             className="inline-block min-w-16 border-b-4 border-primary align-bottom"
             aria-label="missing particle"
-          >
-            {showFeedback ? <strong>{cloze.answer}</strong> : ''}
-          </span>{' '}
+          />{' '}
           {cloze.after.join(' ')}
         </h2>
         <p className="text-sm text-muted-foreground">{entry.gloss.en}</p>
@@ -331,17 +328,21 @@ export function ParticleVerbCard({
   return (
     <>
       <Card className="w-full max-w-2xl shadow-xl">
-        <CardContent className="p-8 space-y-6">
-          <div className="text-center space-y-3">
-            <p className="text-muted-foreground text-sm font-medium">
-              {kind !== 'cloze'
-                ? 'Produce the whole phrase'
-                : discriminationVariant
-                  ? 'Choose the correct particle verb'
-                  : 'Fill in the missing particle'}
-            </p>
-            {prompt}
-          </div>
+        <CardContent className={cn('space-y-6', showFeedback ? 'p-3 sm:p-8' : 'p-8')}>
+          {/* Hidden once graded: the feedback panel below repeats the gloss
+              and the full sentence, and 360x640 has no room for both. */}
+          {!showFeedback && (
+            <div className="text-center space-y-3">
+              <p className="text-muted-foreground text-sm font-medium">
+                {kind !== 'cloze'
+                  ? 'Produce the whole phrase'
+                  : discriminationVariant
+                    ? 'Choose the correct particle verb'
+                    : 'Fill in the missing particle'}
+              </p>
+              {prompt}
+            </div>
+          )}
 
           {!showFeedback && discriminationVariant && (
             // First tap commits — no re-tap, no retry
@@ -412,21 +413,21 @@ export function ParticleVerbCard({
           )}
 
           {showFeedback && (
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div
-                className={`flex items-center justify-center gap-3 p-4 rounded-lg ${
+                className={`flex items-center justify-center gap-3 p-2 rounded-lg ${
                   isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
                 }`}
               >
                 {isCorrect ? (
                   <>
-                    <CheckCircle2 className="w-8 h-8" />
-                    <span className="text-2xl font-bold">Correct!</span>
+                    <CheckCircle2 className="w-6 h-6" />
+                    <span className="text-xl font-bold">Correct!</span>
                   </>
                 ) : (
                   <>
-                    <XCircle className="w-8 h-8" />
-                    <span className="text-2xl font-bold">Not quite</span>
+                    <XCircle className="w-6 h-6" />
+                    <span className="text-xl font-bold">Not quite</span>
                   </>
                 )}
               </div>
@@ -435,7 +436,7 @@ export function ParticleVerbCard({
                 // The tapped option marked wrong and muted, the target
                 // marked correct — never at equal weight (P21 of
                 // docs/learning/2026-08-08-ux-pedagogy-red-lines.md).
-                <div className="space-y-2">
+                <div className="flex flex-wrap justify-center gap-2">
                   {discriminationVariant.options.map((option) => {
                     const wasTapped = option.particle === selectedParticle;
                     const stateClasses = option.correct
@@ -446,7 +447,7 @@ export function ParticleVerbCard({
                     return (
                       <div
                         key={option.particle}
-                        className={`rounded-lg border px-4 py-3 text-center text-lg font-semibold ${stateClasses}`}
+                        className={`rounded-lg border px-2 py-1 text-center text-base font-semibold ${stateClasses}`}
                         lang="sv"
                       >
                         {entry.baseInfinitive} {option.particle}
@@ -457,23 +458,21 @@ export function ParticleVerbCard({
               )}
 
               {!isCorrect && !discriminationVariant && (
-                <div className="flex flex-wrap items-center justify-center gap-4 text-center">
-                  <div className="space-y-1 min-w-0 max-w-full">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                      You wrote
-                    </p>
-                    <p className="text-lg font-semibold text-destructive break-words">
-                      {submittedAnswer.trim() || '(nothing)'}
-                    </p>
-                  </div>
-                  <span className="text-muted-foreground text-xl shrink-0">→</span>
-                  <div className="space-y-1 min-w-0 max-w-full">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Correct</p>
-                    <p className="text-lg font-semibold text-success break-words" lang="sv">
-                      {accepted[0]}
-                    </p>
-                  </div>
-                </div>
+                <p className="text-center text-lg">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                    You wrote
+                  </span>{' '}
+                  <span className="font-semibold text-destructive break-words">
+                    {submittedAnswer.trim() || '(nothing)'}
+                  </span>{' '}
+                  <span className="text-muted-foreground">→</span>{' '}
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                    Correct
+                  </span>{' '}
+                  <span className="font-semibold text-success break-words" lang="sv">
+                    {accepted[0]}
+                  </span>
+                </p>
               )}
 
               {/* The chosen-lure gloss, feedback point 3 of
@@ -495,7 +494,7 @@ export function ParticleVerbCard({
                 <p className="text-sm text-muted-foreground text-center">{disclosure}</p>
               )}
 
-              <div className="bg-muted/30 rounded-lg p-4 space-y-2 text-center">
+              <div className="bg-muted/30 rounded-lg p-3 space-y-1 text-center">
                 {feedbackGlyph && (
                   <div className="-mt-3 -mb-1 flex justify-center">
                     <ParticleGlyph
@@ -512,30 +511,37 @@ export function ParticleVerbCard({
                     />
                   </div>
                 )}
-                <p className="text-2xl font-bold text-primary">
+                {/* The prompt h2 is unmounted once graded, so the panel lemma is
+                    the card's heading. A <p> with an explicit heading role, not
+                    an <h2>: glyph.test.tsx and the ORD-128 e2e spec (qa-owned)
+                    locate the lemma as a <p>. */}
+                <p role="heading" aria-level={2} className="text-2xl font-bold text-primary">
                   <PhraseWithParticle phrase={lemma} particle={entry.particle} />
                 </p>
                 <p className="text-sm text-muted-foreground">{entry.gloss.en}</p>
-                <p className="text-base" lang="sv">
-                  <PhraseWithParticle phrase={example.sv} particle={entry.particle} />
-                </p>
-                {discriminationVariant && (
-                  // Audio speaks the corrected sentence only — no pronounce
-                  // control on any wrong option (feedback point 5). The
-                  // isolated-particle stress risk the typed cloze's comment
-                  // above describes does not apply to a full sentence, which
-                  // is why this control exists here and nowhere else on this
-                  // card.
-                  <Button
-                    onClick={() => speakSwedish(example.sv, muteAudio)}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 min-h-11"
-                  >
-                    <Volume2 className="w-4 h-4" />
-                    Pronounce sentence
-                  </Button>
-                )}
+                <div className="flex items-center justify-center gap-2">
+                  <p className="text-base" lang="sv">
+                    <PhraseWithParticle phrase={example.sv} particle={entry.particle} />
+                  </p>
+                  {discriminationVariant && (
+                    // Audio speaks the corrected sentence only — no pronounce
+                    // control on any wrong option (feedback point 5). The
+                    // isolated-particle stress risk the typed cloze's comment
+                    // above describes does not apply to a full sentence, which
+                    // is why this control exists here and nowhere else on this
+                    // card. Icon-only and beside the sentence it speaks, so it
+                    // costs no row of its own at 360x640.
+                    <Button
+                      onClick={() => speakSwedish(example.sv, muteAudio)}
+                      variant="outline"
+                      size="icon"
+                      className="size-11 shrink-0"
+                      aria-label="Pronounce sentence"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {senseLine}
