@@ -331,8 +331,11 @@ describe('particle verb id stability (ORD-123 pin)', () => {
   it('exactly the 11 pinned ORD-123 entries are appended, in order', () => {
     expect(APPENDED_IDS).toHaveLength(11);
     expect(new Set(APPENDED_IDS).size).toBe(11);
-    expect(PARTICLE_VERB_DATA).toHaveLength(MAIN_COUNT + APPENDED_IDS.length);
-    expect(PARTICLE_VERB_DATA.slice(MAIN_COUNT).map((entry) => entry.id)).toEqual(APPENDED_IDS);
+    // Later tickets (ORD-135) append after these; the ORD-123 block itself
+    // stays exactly in place directly after the frozen 274.
+    expect(
+      PARTICLE_VERB_DATA.slice(MAIN_COUNT, MAIN_COUNT + APPENDED_IDS.length).map((entry) => entry.id),
+    ).toEqual(APPENDED_IDS);
   });
 
   it('every pinned appended entry is verified and served by getVerifiedParticleVerbs', () => {
@@ -391,5 +394,41 @@ describe('primary sense of split particle verbs (ORD-123)', () => {
     expect(shared.length).toBeGreaterThan(0);
     const appendedPrimaries = shared.filter(([, ids]) => !mainIds.has(ids[0]!)).map(([key]) => key);
     expect(appendedPrimaries).toEqual([]);
+  });
+});
+
+// ORD-135: pv:ta-hem was split; the victory sense is appended last.
+const ORD135_IDS: readonly string[] = ['pv:ta-hem-seger'];
+
+describe('particle verb id stability (ORD-135 pin)', () => {
+  it('appends exactly the ORD-135 id directly after the ORD-123 entries, and nothing else', () => {
+    expect(PARTICLE_VERB_DATA).toHaveLength(MAIN_COUNT + APPENDED_IDS.length + ORD135_IDS.length);
+    expect(PARTICLE_VERB_DATA.slice(MAIN_COUNT + APPENDED_IDS.length).map((e) => e.id)).toEqual(
+      ORD135_IDS,
+    );
+    expect(PARTICLE_VERB_DATA[PARTICLE_VERB_DATA.length - 1]?.id).toBe('pv:ta-hem-seger');
+  });
+
+  it('pv:ta-hem keeps exactly one physical sense with three examples and no victory sentence', () => {
+    const entry = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:ta-hem');
+    expect(entry?.gloss.en).toBe('to bring something to one’s home');
+    expect(entry?.examples).toHaveLength(3);
+    for (const ex of entry?.examples ?? []) {
+      expect(ex.sv).not.toMatch(/seger|match|guld/i);
+    }
+    expect(entry?.motionGlyphVerified).toBeUndefined();
+  });
+
+  it('pv:ta-hem-seger holds the victory sense: hem, idiomatic, verified, no glyph', () => {
+    const entry = PARTICLE_VERB_DATA.find((e) => e.id === 'pv:ta-hem-seger');
+    expect(entry?.baseInfinitive).toBe('ta');
+    expect(entry?.particle).toBe('hem');
+    expect(entry?.acceptedParticles).toEqual(['hem']);
+    expect(entry?.transparency).toBe('idiomatic');
+    expect(entry?.gloss.en).toBe('to win a victory');
+    expect(entry?.examples).toHaveLength(3);
+    expect(entry?.verified).toBe(true);
+    expect(entry?.motionGlyphVerified).toBeUndefined();
+    expect(getVerifiedParticleVerbs().some((e) => e.id === 'pv:ta-hem-seger')).toBe(true);
   });
 });
