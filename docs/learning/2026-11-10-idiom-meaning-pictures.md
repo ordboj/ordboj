@@ -2,6 +2,10 @@
 
 Linear ORD-130 (epic). Pilot: `ge upp` and about four more entries.
 
+**Amended on 2026-11-11.** [[2026-11-11-glyph-loop-auto-stop]] (ORD-137)
+replaces the loop without end. The picture plays two times, then stops at the
+rest frame. A tap plays the sequence again.
+
 ## Decision
 
 An idiomatic particle verb can show a meaning picture. A meaning picture shows

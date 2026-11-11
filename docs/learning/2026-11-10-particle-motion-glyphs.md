@@ -2,6 +2,10 @@
 
 Linear ORD-116 (GitHub #531).
 
+**Amended on 2026-11-11.** [[2026-11-11-glyph-loop-auto-stop]] (ORD-137)
+replaces "repeats without end" in decision H and in rule 3. The glyph plays two
+times, then stops at the rest frame. A tap plays the sequence again.
+
 ## Decision
 
 A motion glyph shows in two places: on the particle feedback screen and on the
