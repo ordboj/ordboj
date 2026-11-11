@@ -83,11 +83,13 @@ function expectNoGlyph(container: HTMLElement) {
 }
 
 function findParagraph(container: HTMLElement, text: string): HTMLElement {
-  const found = Array.from(container.querySelectorAll('p')).find(
-    (candidate) => candidate.textContent === text,
-  );
-  if (!found) throw new Error(`no <p> with exact text "${text}"`);
-  return found as HTMLElement;
+  // The graded panel's lemma is the card's level-2 heading (ORD-128): located
+  // by role, so it may be a <p role="heading"> or a real <h2>.
+  const found = within(container)
+    .getAllByRole('heading', { level: 2 })
+    .find((candidate) => candidate.textContent === text);
+  if (!found) throw new Error(`no level-2 heading with exact text "${text}"`);
+  return found;
 }
 
 async function typeAnswer(user: ReturnType<typeof userEvent.setup>, value: string) {
