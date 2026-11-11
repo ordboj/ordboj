@@ -10,11 +10,13 @@ import {
   type DiscriminationOption,
 } from '@/lib/discriminationVariant';
 import { ParticleGlyph } from '@/components/ParticleGlyph';
+import { MeaningPicture } from '@/components/MeaningPicture';
 import { speakSwedish, stopSpeaking } from '@/lib/speech';
 import {
   getAcceptedParticles,
   getAcceptedParticlesDisclosure,
   getAcceptedRecallAnswers,
+  getMeaningPicture,
   getParticleCoreSense,
   getParticleGlyph,
   getPhraseForms,
@@ -25,6 +27,7 @@ import {
   renderLemma,
   selectExample,
 } from '@/lib/particleVerbs';
+import type { ParticleVerbData } from '@/data/particleVerbData';
 
 // What onAnswer carries for a discrimination (choice) commit, so the caller
 // (PracticeParticles.tsx) can log the presented lures and the tapped one
@@ -118,6 +121,9 @@ export function ParticleVerbCard({
   // Gate lives in getParticleGlyph; always the correct entry's glyph. Shown
   // on the introduction card and, once graded, on the feedback card.
   const feedbackGlyph = getParticleGlyph(entry);
+  // Never both: the gate of the picture excludes literal entries, and a glyph
+  // wins if that ever fails. Same positions as the glyph.
+  const meaningPicture = feedbackGlyph ? null : getMeaningPicture(entry);
   const phraseForms = getPhraseForms(entry);
   const disclosure = getAcceptedParticlesDisclosure(entry);
 
@@ -263,6 +269,11 @@ export function ParticleVerbCard({
             {feedbackGlyph && (
               <div className="-my-1 flex justify-center">
                 <ParticleGlyph key={`${card.itemId ?? entry.id}:${kind}`} name={feedbackGlyph} />
+              </div>
+            )}
+            {meaningPicture && (
+              <div className="-my-1 flex justify-center">
+                <MeaningPicture key={`${card.itemId ?? entry.id}:${kind}`} id={meaningPicture} />
               </div>
             )}
             <h2 className="text-4xl font-bold text-primary tracking-wide">
@@ -490,6 +501,14 @@ export function ParticleVerbCard({
                     <ParticleGlyph
                       key={`${card.itemId ?? entry.id}:${kind}`}
                       name={feedbackGlyph}
+                    />
+                  </div>
+                )}
+                {meaningPicture && (
+                  <div className="-mt-3 -mb-1 flex justify-center">
+                    <MeaningPicture
+                      key={`${card.itemId ?? entry.id}:${kind}`}
+                      id={meaningPicture}
                     />
                   </div>
                 )}

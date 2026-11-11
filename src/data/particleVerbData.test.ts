@@ -11,6 +11,7 @@ import {
   isAcceptedRecall,
   getParticleCoreSense,
   getParticleGlyph,
+  getMeaningPicture,
 } from '@/lib/particleVerbs';
 import { PARTICLE_ID_PREFIX } from '@/lib/itemIds';
 
@@ -454,10 +455,10 @@ describe('particle verb dataset - discrimination-variant gate depth (#386/#387/#
     return frames;
   }
 
-  it('certifies exactly 17 frames across exactly 6 distinct base verbs at the ruled 2-lure depth', () => {
+  it('certifies exactly 18 frames across exactly 6 distinct base verbs at the ruled 2-lure depth', () => {
     const frames = certifiedFrames();
     const distinctBases = new Set(frames.map((frame) => frame.base));
-    expect(frames.length).toBe(17);
+    expect(frames.length).toBe(18);
     expect(distinctBases.size).toBe(6);
   });
 
@@ -700,6 +701,8 @@ describe('particle verb dataset - cross-entry excluded-particle hazard (#389)', 
     'pv:bli-av | Resan blir av trots det dåliga vädret. | över',
     'pv:ge-upp | Han ger upp efter tre timmar av hårt arbete. | bort',
     'pv:ge-upp | Han ger upp efter tre timmar av hårt arbete. | ut',
+    'pv:ge-upp | Hon ger upp när hon inte hittar lösningen. | bort',
+    'pv:ge-upp | Hon ger upp när hon inte hittar lösningen. | ut',
     'pv:ge-upp | Vi ger aldrig upp trots alla svåra problem. | bort',
     'pv:ge-upp | Vi ger aldrig upp trots alla svåra problem. | ut',
     'pv:komma-ihag | Han kommer ihåg alla telefonnummer utan att skriva. | fram',
@@ -765,22 +768,22 @@ describe('particle verb dataset - cross-entry excluded-particle hazard (#389)', 
     expect(unjustified).toEqual([]);
   });
 
-  it('regression #389: the third pv:ge-upp frame carries no excludedParticles', () => {
-    // src/data/particleVerbData.ts documents, in the comment on the pv:ge-upp
-    // entry, that this third frame ("Hon ger upp sin plats i tävlingen.")
-    // must stay unannotated: "ge upp" and "ge bort" are both real, correct
-    // Swedish for this sentence, so excluding "bort" here would mark a
-    // correct answer wrong. A per-entry hazard guard cannot catch this,
-    // because the entry's other two frames already carry a justifying
-    // comment for "bort"/"ut" -- only a per-frame check (see the KNOWN_HAZARDS
-    // pin above) fails when this frame picks up excludedParticles it must not
-    // have.
+  it('regression #389: the third pv:ge-upp frame excludes bort and ut (was unannotated for "Hon ger upp sin plats i tävlingen.")', () => {
+    // History: this third frame was "Hon ger upp sin plats i tävlingen." and
+    // had to stay unannotated, because "ge upp" and "ge bort" are both real,
+    // correct Swedish for that sentence, so excluding "bort" would mark a
+    // correct answer wrong. A per-entry hazard guard cannot catch that,
+    // because the entry's other frames already carry a justifying comment
+    // for "bort"/"ut" -- only a per-frame check (see the KNOWN_HAZARDS pin
+    // above) notices a frame picking up excludedParticles it must not have.
+    // The frame was then replaced (human-approved) by a sentence where only
+    // "upp" is correct Swedish ("give up"), so it now excludes bort and ut.
     const entry = PARTICLE_VERB_DATA.find((candidate) => candidate.id === 'pv:ge-upp')!;
-    const thirdFrame = entry.examples.find(
-      (example) => example.sv === 'Hon ger upp sin plats i tävlingen.',
-    )!;
-    expect(thirdFrame).toBeDefined();
-    expect(thirdFrame.excludedParticles ?? []).toEqual([]);
+    expect(entry.examples[2]?.sv).toBe('Hon ger upp när hon inte hittar lösningen.');
+    expect([...(entry.examples[2]?.excludedParticles ?? [])].sort()).toEqual(['bort', 'ut']);
+    expect(
+      entry.examples.some((example) => example.sv === 'Hon ger upp sin plats i tävlingen.'),
+    ).toBe(false);
   });
 });
 
@@ -1276,5 +1279,125 @@ describe('particle verb dataset - motion glyph flags', () => {
       expect(found, id).toBeDefined();
       expect(found?.motionGlyphVerified, id).toBeUndefined();
     }
+  });
+});
+
+// ORD-134: the meaning-picture gate is default deny. No entry shows a picture
+// until a human approves the drawing per entry (gate 7).
+describe('particle verb dataset - meaning pictures (ORD-134)', () => {
+  const PILOT: Record<string, string> = {
+    'pv:ge-upp': 'white-flag',
+    'pv:skriva-ut': 'printer',
+    'pv:se-upp': 'warning-triangle',
+    'pv:ta-fast': 'handcuffs',
+    'pv:ga-av': 'snapping-rod',
+    'pv:kora-om': 'overtaking-car',
+    'pv:kora-pa': 'car-collision',
+  };
+
+  it('shows a picture for exactly the 7 human-approved pairs and null elsewhere', () => {
+    const shown: Record<string, string> = {};
+    for (const entry of PARTICLE_VERB_DATA) {
+      const picture = getMeaningPicture(entry);
+      if (picture !== null) shown[entry.id] = picture;
+    }
+    expect(shown).toEqual(PILOT);
+  });
+
+  it('meaningPictureApproved is set on exactly the 7 approved entries', () => {
+    const approved = PARTICLE_VERB_DATA.filter(
+      (entry) => entry.meaningPictureApproved !== undefined,
+    )
+      .map((entry) => entry.id)
+      .sort();
+    expect(approved).toEqual(Object.keys(PILOT).sort());
+    for (const entry of PARTICLE_VERB_DATA) {
+      if (entry.meaningPictureApproved !== undefined) {
+        expect(entry.meaningPictureApproved, entry.id).toBe(true);
+      }
+    }
+  });
+
+  it('pv:sla-in has no meaningPictureId (wrapping-parcel was dropped)', () => {
+    const entry = PARTICLE_VERB_DATA.find((candidate) => candidate.id === 'pv:sla-in');
+    expect(entry).toBeDefined();
+    expect(entry!.meaningPictureId).toBeUndefined();
+    expect(entry!.meaningPictureApproved).toBeUndefined();
+    expect(getMeaningPicture(entry!)).toBeNull();
+  });
+
+  it('pins the 7 approved ids to their entries and to no other entry', () => {
+    const actual: Record<string, string> = {};
+    for (const entry of PARTICLE_VERB_DATA) {
+      if (entry.meaningPictureId !== undefined) actual[entry.id] = entry.meaningPictureId;
+    }
+    expect(actual).toEqual(PILOT);
+  });
+
+  it('never gives one entry both a meaning picture id and motionGlyphVerified', () => {
+    const both = PARTICLE_VERB_DATA.filter(
+      (entry) => entry.meaningPictureId !== undefined && entry.motionGlyphVerified !== undefined,
+    );
+    expect(both.map((entry) => entry.id)).toEqual([]);
+  });
+
+  it('gives meaningPictureId only to idiomatic entries', () => {
+    const wrong = PARTICLE_VERB_DATA.filter(
+      (entry) => entry.meaningPictureId !== undefined && entry.transparency !== 'idiomatic',
+    );
+    expect(wrong.map((entry) => entry.id)).toEqual([]);
+  });
+
+  describe('getMeaningPicture gate on synthetic entries', () => {
+    const base = PARTICLE_VERB_DATA.find((entry) => entry.id === 'pv:ge-upp')!;
+    const eligible = (): typeof base => {
+      const entry = {
+        ...base,
+        verified: true as const,
+        transparency: 'idiomatic' as const,
+        meaningPictureId: 'white-flag' as const,
+        meaningPictureApproved: true as const,
+      };
+      delete (entry as { motionGlyphVerified?: true }).motionGlyphVerified;
+      return entry;
+    };
+
+    it('returns the id when every condition holds', () => {
+      expect(getMeaningPicture(eligible())).toBe('white-flag');
+    });
+
+    it('returns null when not verified', () => {
+      expect(getMeaningPicture({ ...eligible(), verified: false } as typeof base)).toBeNull();
+    });
+
+    it('returns null when not idiomatic', () => {
+      expect(getMeaningPicture({ ...eligible(), transparency: 'literal' })).toBeNull();
+    });
+
+    it('returns null when meaningPictureApproved is absent', () => {
+      const entry = eligible();
+      delete entry.meaningPictureApproved;
+      expect(getMeaningPicture(entry)).toBeNull();
+    });
+
+    it('returns null when meaningPictureApproved is not exactly true', () => {
+      const entry = { ...eligible(), meaningPictureApproved: false } as unknown as typeof base;
+      expect(getMeaningPicture(entry)).toBeNull();
+    });
+
+    it('returns null when motionGlyphVerified is set (never both)', () => {
+      expect(getMeaningPicture({ ...eligible(), motionGlyphVerified: true })).toBeNull();
+    });
+
+    it('returns null when meaningPictureId is absent', () => {
+      const entry = eligible();
+      delete entry.meaningPictureId;
+      expect(getMeaningPicture(entry)).toBeNull();
+    });
+
+    it('returns null when the id is unknown', () => {
+      const entry = { ...eligible(), meaningPictureId: 'unicorn' } as unknown as typeof base;
+      expect(getMeaningPicture(entry)).toBeNull();
+    });
   });
 });
