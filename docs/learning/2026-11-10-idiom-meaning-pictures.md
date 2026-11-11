@@ -2,6 +2,10 @@
 
 Linear ORD-130 (epic). Pilot: `ge upp` and about four more entries.
 
+Amended 2026-11-11 by ORD-136, after the pilot shipped (ORD-134). The changes
+are: two data fields, the `contrast` ruling, the pilot counts, the failure
+threshold and the drawing lessons. See "Amendments, 2026-11-11 (ORD-136)".
+
 ## Decision
 
 An idiomatic particle verb can show a meaning picture. A meaning picture shows
@@ -13,9 +17,10 @@ the motion glyph: above the lemma on the feedback card and on the introduction
 card, 700 ms of motion, 2000 ms of rest, repeat; under reduced motion, the rest
 frame only, and it is not a button. The default is no picture. An entry with no
 clear, true picture gets no picture. Most of the 141 idiomatic entries will get
-none, and that is correct. The data field is `meaningPictureId`. It is absent
-by default. The `swedish-linguist` sets it only after the human approves that
-picture for that entry.
+none, and that is correct. The data fields are `meaningPictureId` and
+`meaningPictureApproved`. Both are absent by default. The id names the drawing.
+The `swedish-linguist` sets the flag only after the human approves that picture
+for that entry. A picture shows only when the entry has both (amendment A1).
 
 ## Question
 
@@ -227,8 +232,10 @@ no picture.
 6. **One picture.** Exactly one picture id per entry. The field holds one value,
    not a list.
 7. **Human approval, per picture.** The human approves each picture for each
-   entry. The `swedish-linguist` sets `meaningPictureId` on the entry only
-   after that approval. Absent means no picture.
+   entry. The `swedish-linguist` sets `meaningPictureApproved` on the entry
+   only after that approval. Absent means no picture (amendment A1).
+
+A `contrast` line on the entry is not a gate (amendment A2).
 
 Gates 1, 2 and 6 are code. Gates 3 and 4 are the linguist's native check. Gate
 5 is the `ui-ux-expert`'s review. Gate 7 is the human's sign-off. Unlike the
@@ -249,7 +256,8 @@ keeps the gloss; doubt = do not rewrite). See open question 1.
 | Location          | entry type in `src/data/particleVerbData.ts` (owner: `swedish-linguist`)                                      |
 | Type              | a string union of picture ids, for example `'white-flag'`; defined in the data file                           |
 | Default           | absent = no picture                                                                                           |
-| Meaning           | the id **and** the human approval in one field                                                                |
+| Meaning           | the drawing for this entry; the id alone shows no picture (amendment A1)                                      |
+| Approval flag     | `meaningPictureApproved?: true` on the same entry; gate 7; absent = no picture                                |
 | Allowed when      | `transparency === 'idiomatic'` and `verified === true`; a dataset test fails on any other entry               |
 | Exclusive with    | `motionGlyphVerified`; a dataset test fails if one entry has both                                             |
 | Drawing registry  | `Record<MeaningPictureId, …>` in the frontend component, so `npm run typecheck` fails if an id has no drawing |
@@ -258,7 +266,8 @@ keeps the gloss; doubt = do not rewrite). See open question 1.
 Runner-up: a boolean `meaningPictureVerified` plus a separate id map. It lost
 because it has two sources of truth: an entry could be verified with no
 drawing, or have a drawing with no approval. One optional id field can not be
-in either state.
+in either state. (Amended by ORD-136. The code uses an id and an approval flag
+on the same entry. Amendment A1 gives the reason.)
 
 A picture id can be shared by two entries only when both entries pass all seven
 gates for it on their own, and the human approves each entry separately.
@@ -325,6 +334,8 @@ picture. So the picture does not give a free grade.
 | Entries                   | `idiomatic`, `verified`, one sense, all seven gates                     |
 | Default                   | no picture                                                              |
 | Data field                | `meaningPictureId?: MeaningPictureId`, absent by default                |
+| Approval flag             | `meaningPictureApproved?: true`, absent by default                      |
+| `contrast` line           | not a gate for a meaning picture                                        |
 | Pictures per entry        | exactly 1                                                               |
 | Approval                  | human, per picture per entry                                            |
 | Screens                   | introduction card and feedback card, above the lemma; never on a prompt |
@@ -338,7 +349,8 @@ picture. So the picture does not give a free grade.
 | Net translation per cycle | 0; peak 2 viewBox units or less                                         |
 | Rotation                  | 20° or less                                                             |
 | Forbidden                 | people, faces, text, lone dot + chevron, arrows, axis path traces       |
-| Pilot size                | about 5 entries                                                         |
+| Pilot size                | 8 pictures drawn, 7 approved and shipped, 1 dropped (`slå in`)          |
+| Style failure threshold   | 3 or more of the 7 shipped pictures in 14 days                          |
 
 ## What we will not claim
 
@@ -353,14 +365,15 @@ after the pilot ships.
 
 - **Rest frame alone.** On a 360 × 640 phone with reduced motion on, look at
   each pilot picture. Cover the gloss. Can you name the meaning in a few words?
-  If not, the picture fails. Remove `meaningPictureId` from that entry.
+  If not, the picture fails. Remove both fields from that entry.
 - **Every example.** Practise each pilot entry until you have seen each of its
   examples with the picture. If the picture feels wrong beside one example,
   remove the field from that entry.
 - **Literal reading.** If a picture makes you think of the particle direction
-  (up, down, in, out, away, back), remove the field. If this happens on 2 or
-  more of the 5 pilot pictures, the style rules are too loose. Report it to the
-  lead.
+  (up, down, in, out, away, back), remove the field. If this happens on 3 or
+  more of the 7 shipped pictures, the style rules are too loose. Report it to the
+  lead. (Amended by ORD-136. Before, the threshold was 2 of 5. See amendment
+  A3.)
 - **Attention.** If you look at the picture instead of the correct form on a
   wrong answer, the picture takes attention from the form (Boers et al. 2009).
   Report it to the lead. A possible fix is to show the picture on the
@@ -373,6 +386,124 @@ after the pilot ships.
 
 The pilot expands to more entries only when the maintainer reports no failure
 from this list after 14 days.
+
+## Amendments, 2026-11-11 (ORD-136)
+
+The pilot shipped on 2026-11-11 (ORD-134, PR #551). The code differs from the
+first version of this note in three places, and the pilot gave drawing
+lessons (A4). These rulings make the note agree
+with the code. Where an earlier paragraph disagrees with this section, this
+section applies.
+
+### A1. Two fields: the id is data, the flag is the approval
+
+The entry type has two optional fields (`src/data/particleVerbData.ts`):
+
+- `meaningPictureId?: MeaningPictureId` names the drawing for the entry. It is
+  data. It does not show a picture.
+- `meaningPictureApproved?: true` records gate 7. The human approved that drawn
+  picture for that entry.
+
+The first version of this note put the id and the approval in one field. The
+code uses two fields, because the approval comes after the drawing. Hand-off
+steps 3 to 5 draw and review a picture for a named entry. In the pilot, the entry held
+the id during those steps, before the human approves the drawing. One field can
+not record "a drawing exists, and the human did not approve it yet". In the
+pilot, eight entries held an id while no picture was approved.
+
+The first version rejected two fields because two fields can disagree. The
+code prevents the harm. `getMeaningPicture` in `src/lib/particleVerbs.ts` is
+the only read path. It returns an id only when the flag is `true` and the id is
+a known id. An id with no flag shows no picture. A flag with no id shows no
+picture. Each disagreement fails to "no picture", which is the safe default.
+
+Rules that follow from this:
+
+- Where this note says "remove `meaningPictureId`" or "remove the field",
+  remove both fields.
+- Hand-off step 6 changes. The linguist sets the id when the human picks the
+  pilot set. The linguist sets the flag after the approval of gate 7.
+- A dropped picture leaves no id on the entry and no id in the
+  `MeaningPictureId` union.
+
+### A2. The `contrast` line is not a gate for a meaning picture
+
+The motion glyph gate denies an entry that has a `contrast` line
+(`getParticleGlyph`, gate 3). `getMeaningPicture` has no such check. This is
+correct, and it stays.
+
+Reason. A motion glyph shows the particle. The contrast reading uses the same
+particle, so the glyph can attach to the two readings. A meaning picture shows
+the meaning of the entry. The contrast reading has a different meaning, so a
+true picture of the entry is false for the contrast reading. The picture then
+helps the learner to keep the two readings apart.
+
+Three pilot entries have a `contrast` line and an approved picture:
+
+| Entry     | Picture            | Contrast reading in the data               |
+| --------- | ------------------ | ------------------------------------------ |
+| `se upp`  | `warning-triangle` | to admire someone; to raise one's gaze     |
+| `gå av`   | `snapping-rod`     | to get off a vehicle                       |
+| `köra på` | `car-collision`    | to drive on the road (unstressed particle) |
+
+The three pictures stay. The linguist did not yet do the contrast check on
+them. The `swedish-linguist` must confirm the contrast check for these three
+entries (Linear follow-up). If one fails, remove both fields from that entry.
+
+One condition applies to an entry with a `contrast` line. At gate 4, the
+linguist also checks the picture against the contrast reading. The picture must
+be false for that reading. If the picture is also true for the contrast
+reading, the entry fails. Doubt = fail. This condition is a part of the native
+check. It is not a code gate.
+
+### A3. Pilot counts and the 14-day threshold
+
+Pilot counts, from the approval record in `src/data/particleVerbData.ts`:
+
+| Count                      | Value | Entries                                                                   |
+| -------------------------- | ----- | ------------------------------------------------------------------------- |
+| Pictures drawn             | 8     | the 7 below and `slå in`                                                  |
+| Pictures approved, shipped | 7     | `ge upp`, `skriva ut`, `se upp`, `köra på`, `gå av`, `köra om`, `ta fast` |
+| Pictures dropped           | 1     | `slå in` (`wrapping-parcel`, tried 3 times)                               |
+| Approved after a redraw    | 1     | `ta fast` (`handcuffs`)                                                   |
+
+The first version said "2 or more of the 5 pilot pictures" for the literal
+reading check. That is 40 % of the pilot. The new threshold is **3 or more of
+the 7 shipped pictures**.
+
+Rationale:
+
+- 40 % of 7 is 2.8. The threshold is a count of pictures, so it is 3 (43 %).
+- A threshold of 2 of 7 is 29 %. That is more strict than the rate the note
+  set. Nothing in the pilot is a reason to change the rate.
+- The threshold counts shipped pictures only. `slå in` did not ship, so it is
+  not in the 7. The human did not approve its drawing in three attempts. That
+  is not a literal reading.
+- The threshold controls one decision only: are the style rules too loose?
+  Each picture that fails still loses its two fields immediately, at the first
+  failure. The protection of the learner does not depend on the threshold.
+
+Other numbers do not change. The window is 14 days. It starts on the ship date,
+2026-11-11, and ends on 2026-11-25. The pilot expands only when the maintainer
+reports no failure from the list in 14 days.
+
+### A4. Drawing lessons from the pilot
+
+These lessons add to rule 2. The `frontend-expert` applies them to each new
+drawing. The `ui-ux-expert` checks them at the rest-frame review.
+
+1. **Paper and cloth need a surface.** Outline strokes alone do not show paper
+   or cloth. A picture that depends on such a surface needs a fill or a colour
+   contrast between the surface and the object. Rule 2 permits a fill where it
+   is necessary to recognize the object. If the two colour tokens can not show
+   the surface, the entry gets no picture.
+2. **Handcuffs need two cuffs and a visible chain.** Two cuffs with a visible
+   chain between them read as handcuffs. The approved `handcuffs` drawing has
+   two cuffs and a chain of three links.
+3. **A single cuff reads as a key ring.** Do not draw one cuff.
+
+Lessons 2 and 3 show a general point. An object with two joined parts needs the
+two parts and the joint in the rest frame.
 
 ## Hand-off
 
@@ -402,8 +533,10 @@ In order:
 5. **`swedish-linguist`: native check of the drawings.** Check each drawn
    picture against every example of its entry (gate 4 again, on the real
    drawing, not the description).
-6. **Human: approval per picture** (gate 7). Then the linguist adds
-   `meaningPictureId` to the type and sets it on the approved entries only.
+6. **Human: approval per picture** (gate 7). Then the linguist sets
+   `meaningPictureApproved: true` on each approved entry. The linguist set
+   `meaningPictureId` on the entry when the human picked the pilot set (step 2).
+   See amendment A1.
 7. **`qa`: tests.**
    - An entry with `meaningPictureId` is `idiomatic` and `verified`.
    - No entry has both `meaningPictureId` and `motionGlyphVerified`.
