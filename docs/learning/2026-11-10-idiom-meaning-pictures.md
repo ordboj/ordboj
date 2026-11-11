@@ -3,8 +3,8 @@
 Linear ORD-130 (epic). Pilot: `ge upp` and about four more entries.
 
 Amended 2026-11-11 by ORD-136, after the pilot shipped (ORD-134). The changes
-are: two data fields, the `contrast` ruling, the pilot counts and the failure
-threshold. See "Amendments, 2026-11-11 (ORD-136)".
+are: two data fields, the `contrast` ruling, the pilot counts, the failure
+threshold and the drawing lessons. See "Amendments, 2026-11-11 (ORD-136)".
 
 ## Decision
 
@@ -365,13 +365,13 @@ after the pilot ships.
 
 - **Rest frame alone.** On a 360 × 640 phone with reduced motion on, look at
   each pilot picture. Cover the gloss. Can you name the meaning in a few words?
-  If not, the picture fails. Remove `meaningPictureId` from that entry.
+  If not, the picture fails. Remove both fields from that entry.
 - **Every example.** Practise each pilot entry until you have seen each of its
   examples with the picture. If the picture feels wrong beside one example,
   remove the field from that entry.
 - **Literal reading.** If a picture makes you think of the particle direction
   (up, down, in, out, away, back), remove the field. If this happens on 3 or
-  more of the 7 pilot pictures, the style rules are too loose. Report it to the
+  more of the 7 shipped pictures, the style rules are too loose. Report it to the
   lead. (Amended by ORD-136. Before, the threshold was 2 of 5. See amendment
   A3.)
 - **Attention.** If you look at the picture instead of the correct form on a
@@ -390,7 +390,8 @@ from this list after 14 days.
 ## Amendments, 2026-11-11 (ORD-136)
 
 The pilot shipped on 2026-11-11 (ORD-134, PR #551). The code differs from the
-first version of this note in three places. These rulings make the note agree
+first version of this note in three places, and the pilot gave drawing
+lessons (A4). These rulings make the note agree
 with the code. Where an earlier paragraph disagrees with this section, this
 section applies.
 
@@ -403,9 +404,9 @@ The entry type has two optional fields (`src/data/particleVerbData.ts`):
 - `meaningPictureApproved?: true` records gate 7. The human approved that drawn
   picture for that entry.
 
-The first version of this note put the id and the approval in one field. That
-design does not work, because the approval comes after the drawing. Hand-off
-steps 3 to 5 draw and review a picture for a named entry. The entry must hold
+The first version of this note put the id and the approval in one field. The
+code uses two fields, because the approval comes after the drawing. Hand-off
+steps 3 to 5 draw and review a picture for a named entry. In the pilot, the entry held
 the id during those steps, before the human approves the drawing. One field can
 not record "a drawing exists, and the human did not approve it yet". In the
 pilot, eight entries held an id while no picture was approved.
@@ -445,7 +446,9 @@ Three pilot entries have a `contrast` line and an approved picture:
 | `gå av`   | `snapping-rod`     | to get off a vehicle                       |
 | `köra på` | `car-collision`    | to drive on the road (unstressed particle) |
 
-Each of the three pictures is false for its contrast reading. They stay.
+The three pictures stay. The linguist did not yet do the contrast check on
+them. The `swedish-linguist` must confirm the contrast check for these three
+entries (Linear follow-up). If one fails, remove both fields from that entry.
 
 One condition applies to an entry with a `contrast` line. At gate 4, the
 linguist also checks the picture against the contrast reading. The picture must
@@ -483,9 +486,6 @@ Rationale:
 Other numbers do not change. The window is 14 days. It starts on the ship date,
 2026-11-11, and ends on 2026-11-25. The pilot expands only when the maintainer
 reports no failure from the list in 14 days.
-
-A cap applies to each new picture: 3 drawing attempts. If the human does not
-approve the third attempt, the entry gets no picture. `slå in` set this cap.
 
 ### A4. Drawing lessons from the pilot
 
@@ -533,8 +533,10 @@ In order:
 5. **`swedish-linguist`: native check of the drawings.** Check each drawn
    picture against every example of its entry (gate 4 again, on the real
    drawing, not the description).
-6. **Human: approval per picture** (gate 7). Then the linguist adds
-   `meaningPictureId` to the type and sets it on the approved entries only.
+6. **Human: approval per picture** (gate 7). Then the linguist sets
+   `meaningPictureApproved: true` on each approved entry. The linguist set
+   `meaningPictureId` on the entry when the human picked the pilot set (step 2).
+   See amendment A1.
 7. **`qa`: tests.**
    - An entry with `meaningPictureId` is `idiomatic` and `verified`.
    - No entry has both `meaningPictureId` and `motionGlyphVerified`.
