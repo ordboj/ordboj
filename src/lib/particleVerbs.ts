@@ -314,7 +314,6 @@ const MEANING_PICTURE_IDS = {
   handcuffs: true,
   'snapping-rod': true,
   'overtaking-car': true,
-  'wrapping-parcel': true,
   'car-collision': true,
 } as const satisfies Record<MeaningPictureId, true>;
 
