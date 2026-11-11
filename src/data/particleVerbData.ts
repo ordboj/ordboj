@@ -191,6 +191,12 @@ export interface ParticleVerbData {
   // drawing against every example. Approval is per picture per entry, never
   // a batch. Default deny: absent means no picture. Never set it without
   // that approval.
+  // Approval record: on 2026-11-11 (ORD-134) the human approved six drawn
+  // pictures, each individually for its entry: ge-upp (white-flag),
+  // skriva-ut (printer), se-upp (warning-triangle), kora-pa (car-collision),
+  // ga-av (snapping-rod) and kora-om (overtaking-car). ta-fast (handcuffs)
+  // and sla-in (wrapping-parcel) are not approved: their pictures are being
+  // redrawn. A new flag needs a new per-picture approval.
   meaningPictureApproved?: true;
 }
 
@@ -595,6 +601,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'ger upp', preteritum: 'gav upp', supinum: 'gett upp' },
     meaningPictureId: 'white-flag',
+    meaningPictureApproved: true,
   },
   {
     id: 'pv:komma-ut',
@@ -836,6 +843,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'skriver ut', preteritum: 'skrev ut', supinum: 'skrivit ut' },
     meaningPictureId: 'printer',
+    meaningPictureApproved: true,
   },
   {
     id: 'pv:tanka-om',
@@ -2897,6 +2905,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'ser upp', preteritum: 'såg upp', supinum: 'sett upp' },
     meaningPictureId: 'warning-triangle',
+    meaningPictureApproved: true,
   },
 
   // ---- #395: Wave B, band 3-4 of docs/research/partikelverb/partikelverb-list.csv ----
@@ -3568,6 +3577,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'kör på', preteritum: 'körde på', supinum: 'kört på' },
     meaningPictureId: 'car-collision',
+    meaningPictureApproved: true,
   },
 
   {
@@ -5393,6 +5403,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'kör om', preteritum: 'körde om', supinum: 'kört om' },
     meaningPictureId: 'overtaking-car',
+    meaningPictureApproved: true,
   },
   {
     id: 'pv:lara-ut',
@@ -5778,6 +5789,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'går av', preteritum: 'gick av', supinum: 'gått av' },
     meaningPictureId: 'snapping-rod',
+    meaningPictureApproved: true,
   },
   {
     id: 'pv:plocka-bort',
