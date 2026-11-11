@@ -176,7 +176,38 @@ export interface ParticleVerbData {
   // plocka-fram, stalla-fram; the rewritten satta-ihop sentences were
   // approved with it). A new flag needs a new approval.
   motionGlyphVerified?: true;
+  // Meaning picture for an idiomatic entry (docs/learning/2026-11-10-idiom-
+  // meaning-pictures.md, ORD-130/ORD-134). Default deny: absent means no
+  // picture. The id names the drawing the human picked for this entry's
+  // pilot set (2026-11-11); it does not by itself show anything. Read only
+  // through getMeaningPicture, which also requires verified, idiomatic, no
+  // motionGlyphVerified and meaningPictureApproved, so the id alone never
+  // shows a picture. Maintenance rule: any change to this entry's examples
+  // or gloss must remove both fields or re-run gates 3, 4 and 7 in the
+  // same PR.
+  meaningPictureId?: MeaningPictureId;
+  // Gate 7: the human has approved the drawn picture for this entry, after
+  // the ui-ux rest-frame review and the linguist's native check of the
+  // drawing against every example. Approval is per picture per entry, never
+  // a batch. Default deny: absent means no picture. Never set it without
+  // that approval.
+  meaningPictureApproved?: true;
 }
+
+// The meaning-picture ids of the ORD-134 pilot set, approved by the human on
+// 2026-11-11 as entry/picture pairings (not yet as drawings). Defined here
+// because the entry type needs it; re-exported from src/lib/particleVerbs.ts.
+// The frontend registry is a Record<MeaningPictureId, …>, so adding an id
+// here without a drawing fails typecheck.
+export type MeaningPictureId =
+  | 'white-flag'
+  | 'printer'
+  | 'warning-triangle'
+  | 'handcuffs'
+  | 'snapping-rod'
+  | 'overtaking-car'
+  | 'wrapping-parcel'
+  | 'car-collision';
 
 export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   // ---- A1 ----
@@ -530,13 +561,15 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     // blank is followed by a prepositional phrase with no object anywhere in
     // the clause, so the substitution leaves the verb with nothing to give:
     // *"Han ger bort efter tre timmar" and *"Vi ger aldrig ut trots alla
-    // problem" are ungrammatical, not merely odd. The third frame does supply
-    // an object ("sin plats"), where the argument collapses — "ge bort sin
-    // plats" is perfectly good Swedish — so that frame stays unannotated
-    // rather than carrying an exclusion that would mark correct Swedish
-    // wrong. "av" is deliberately not used: this corpus has only the
-    // reflexive "ge {refl} av" (pv:ge-sig-av), so a bare "av" option would
-    // test a lemma the learner was never taught.
+    // problem" are ungrammatical, not merely odd. The third frame, rewritten
+    // for ORD-134, is intransitive in the same way ("när"-clause, no object),
+    // so it carries the same exclusion. "av" is deliberately not used: this
+    // corpus has only the reflexive "ge {refl} av" (pv:ge-sig-av), so a bare
+    // "av" option would test a lemma the learner was never taught.
+    //
+    // Gate 3 ruling (meaning pictures): "abandon an effort; surrender" is one
+    // sense, two paraphrases — to stop resisting or trying. Gate 4: all three
+    // frames are that sense, so the white flag is true for each.
     examples: [
       {
         sv: 'Han ger upp efter tre timmar av hårt arbete.',
@@ -549,10 +582,19 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
         blankIndex: 3,
         excludedParticles: ['bort', 'ut'],
       },
-      { sv: 'Hon ger upp sin plats i tävlingen.', blankIndex: 2 },
+      // ORD-134, human-approved 2026-11-11. Replaced
+      // 'Hon ger upp sin plats i tävlingen.' (blankIndex 2, no exclusions),
+      // which meant "relinquish something" — outside this entry's gloss and
+      // not clearly true for the white flag (meaning-picture gate 4).
+      {
+        sv: 'Hon ger upp när hon inte hittar lösningen.',
+        blankIndex: 2,
+        excludedParticles: ['bort', 'ut'],
+      },
     ],
     verified: true,
     forms: { presens: 'ger upp', preteritum: 'gav upp', supinum: 'gett upp' },
+    meaningPictureId: 'white-flag',
   },
   {
     id: 'pv:komma-ut',
@@ -793,6 +835,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'skriver ut', preteritum: 'skrev ut', supinum: 'skrivit ut' },
+    meaningPictureId: 'printer',
   },
   {
     id: 'pv:tanka-om',
@@ -2398,6 +2441,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'tar fast', preteritum: 'tog fast', supinum: 'tagit fast' },
+    meaningPictureId: 'handcuffs',
   },
 
   // ---- #336 batch 3: the tail of bands 1-5, ranks 169-242 ----
@@ -2852,6 +2896,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'ser upp', preteritum: 'såg upp', supinum: 'sett upp' },
+    meaningPictureId: 'warning-triangle',
   },
 
   // ---- #395: Wave B, band 3-4 of docs/research/partikelverb/partikelverb-list.csv ----
@@ -3522,6 +3567,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'kör på', preteritum: 'körde på', supinum: 'kört på' },
+    meaningPictureId: 'car-collision',
   },
 
   {
@@ -4129,6 +4175,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'slår in', preteritum: 'slog in', supinum: 'slagit in' },
+    meaningPictureId: 'wrapping-parcel',
   },
 
   {
@@ -5345,6 +5392,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'kör om', preteritum: 'körde om', supinum: 'kört om' },
+    meaningPictureId: 'overtaking-car',
   },
   {
     id: 'pv:lara-ut',
@@ -5729,6 +5777,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'går av', preteritum: 'gick av', supinum: 'gått av' },
+    meaningPictureId: 'snapping-rod',
   },
   {
     id: 'pv:plocka-bort',
