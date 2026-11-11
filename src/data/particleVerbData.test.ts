@@ -1292,23 +1292,41 @@ describe('particle verb dataset - meaning pictures (ORD-134)', () => {
     'pv:ta-fast': 'handcuffs',
     'pv:ga-av': 'snapping-rod',
     'pv:kora-om': 'overtaking-car',
-    'pv:sla-in': 'wrapping-parcel',
     'pv:kora-pa': 'car-collision',
   };
 
-  it('returns null for every entry in the dataset today (nothing approved yet)', () => {
-    const shown = PARTICLE_VERB_DATA.filter((entry) => getMeaningPicture(entry) !== null);
-    expect(shown.map((entry) => entry.id)).toEqual([]);
+  it('shows a picture for exactly the 7 human-approved pairs and null elsewhere', () => {
+    const shown: Record<string, string> = {};
+    for (const entry of PARTICLE_VERB_DATA) {
+      const picture = getMeaningPicture(entry);
+      if (picture !== null) shown[entry.id] = picture;
+    }
+    expect(shown).toEqual(PILOT);
   });
 
-  it('zero entries carry meaningPictureApproved today', () => {
+  it('meaningPictureApproved is set on exactly the 7 approved entries', () => {
     const approved = PARTICLE_VERB_DATA.filter(
       (entry) => entry.meaningPictureApproved !== undefined,
-    );
-    expect(approved.map((entry) => entry.id)).toEqual([]);
+    )
+      .map((entry) => entry.id)
+      .sort();
+    expect(approved).toEqual(Object.keys(PILOT).sort());
+    for (const entry of PARTICLE_VERB_DATA) {
+      if (entry.meaningPictureApproved !== undefined) {
+        expect(entry.meaningPictureApproved, entry.id).toBe(true);
+      }
+    }
   });
 
-  it('pins the 8 pilot ids to their entries and to no other entry', () => {
+  it('pv:sla-in has no meaningPictureId (wrapping-parcel was dropped)', () => {
+    const entry = PARTICLE_VERB_DATA.find((candidate) => candidate.id === 'pv:sla-in');
+    expect(entry).toBeDefined();
+    expect(entry!.meaningPictureId).toBeUndefined();
+    expect(entry!.meaningPictureApproved).toBeUndefined();
+    expect(getMeaningPicture(entry!)).toBeNull();
+  });
+
+  it('pins the 7 approved ids to their entries and to no other entry', () => {
     const actual: Record<string, string> = {};
     for (const entry of PARTICLE_VERB_DATA) {
       if (entry.meaningPictureId !== undefined) actual[entry.id] = entry.meaningPictureId;
