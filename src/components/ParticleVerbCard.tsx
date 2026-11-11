@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, Volume2 } from 'lucide-react';
 import type { Grade } from '@/lib/srs';
 import type { ParticleSittingCard } from '@/lib/particleQueue';
@@ -227,7 +228,7 @@ export function ParticleVerbCard({
   }, [userAnswer, showFeedback, accepted, kind, handleSubmit]);
 
   const referenceLine = phraseForms && (
-    <div className="bg-muted/20 rounded-lg p-4 space-y-2">
+    <div className="bg-muted/20 rounded-lg p-3 space-y-1">
       <p className="text-xs text-muted-foreground text-center uppercase tracking-wide">
         For reference — not tested
       </p>
@@ -331,17 +332,21 @@ export function ParticleVerbCard({
   return (
     <>
       <Card className="w-full max-w-2xl shadow-xl">
-        <CardContent className="p-8 space-y-6">
-          <div className="text-center space-y-3">
-            <p className="text-muted-foreground text-sm font-medium">
-              {kind !== 'cloze'
-                ? 'Produce the whole phrase'
-                : discriminationVariant
-                  ? 'Choose the correct particle verb'
-                  : 'Fill in the missing particle'}
-            </p>
-            {prompt}
-          </div>
+        <CardContent className={cn('space-y-6', showFeedback ? 'p-4 sm:p-8' : 'p-8')}>
+          {/* Hidden once graded: the feedback panel below repeats the gloss
+              and the full sentence, and 360x640 has no room for both. */}
+          {!showFeedback && (
+            <div className="text-center space-y-3">
+              <p className="text-muted-foreground text-sm font-medium">
+                {kind !== 'cloze'
+                  ? 'Produce the whole phrase'
+                  : discriminationVariant
+                    ? 'Choose the correct particle verb'
+                    : 'Fill in the missing particle'}
+              </p>
+              {prompt}
+            </div>
+          )}
 
           {!showFeedback && discriminationVariant && (
             // First tap commits — no re-tap, no retry
@@ -412,9 +417,9 @@ export function ParticleVerbCard({
           )}
 
           {showFeedback && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div
-                className={`flex items-center justify-center gap-3 p-4 rounded-lg ${
+                className={`flex items-center justify-center gap-3 p-3 rounded-lg ${
                   isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
                 }`}
               >
@@ -495,7 +500,7 @@ export function ParticleVerbCard({
                 <p className="text-sm text-muted-foreground text-center">{disclosure}</p>
               )}
 
-              <div className="bg-muted/30 rounded-lg p-4 space-y-2 text-center">
+              <div className="bg-muted/30 rounded-lg p-4 space-y-1 text-center">
                 {feedbackGlyph && (
                   <div className="-mt-3 -mb-1 flex justify-center">
                     <ParticleGlyph
