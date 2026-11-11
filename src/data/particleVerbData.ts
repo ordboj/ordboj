@@ -191,17 +191,21 @@ export interface ParticleVerbData {
   // drawing against every example. Approval is per picture per entry, never
   // a batch. Default deny: absent means no picture. Never set it without
   // that approval.
-  // Approval record: on 2026-11-11 (ORD-134) the human approved six drawn
+  // Approval record: on 2026-11-11 (ORD-134) the human approved seven drawn
   // pictures, each individually for its entry: ge-upp (white-flag),
   // skriva-ut (printer), se-upp (warning-triangle), kora-pa (car-collision),
-  // ga-av (snapping-rod) and kora-om (overtaking-car). ta-fast (handcuffs)
-  // and sla-in (wrapping-parcel) are not approved: their pictures are being
-  // redrawn. A new flag needs a new per-picture approval.
+  // ga-av (snapping-rod), kora-om (overtaking-car) and ta-fast (handcuffs,
+  // approved after a redraw). sla-in had a wrapping-parcel picture; it was
+  // tried three times and dropped (human, 2026-11-11), so sla-in carries no
+  // picture id and 'wrapping-parcel' is no longer an id. A new flag needs a
+  // new per-picture approval.
   meaningPictureApproved?: true;
 }
 
-// The meaning-picture ids of the ORD-134 pilot set, approved by the human on
-// 2026-11-11 as entry/picture pairings (not yet as drawings). Defined here
+// The meaning-picture ids of the ORD-134 pilot set: seven ids, all seven
+// approved by the human as drawings on 2026-11-11 (see the approval record on
+// meaningPictureApproved). 'wrapping-parcel' (slå in) was tried three times
+// and dropped (human, 2026-11-11). Defined here
 // because the entry type needs it; re-exported from src/lib/particleVerbs.ts.
 // The frontend registry is a Record<MeaningPictureId, …>, so adding an id
 // here without a drawing fails typecheck.
@@ -212,7 +216,6 @@ export type MeaningPictureId =
   | 'handcuffs'
   | 'snapping-rod'
   | 'overtaking-car'
-  | 'wrapping-parcel'
   | 'car-collision';
 
 export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
@@ -2450,6 +2453,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     verified: true,
     forms: { presens: 'tar fast', preteritum: 'tog fast', supinum: 'tagit fast' },
     meaningPictureId: 'handcuffs',
+    meaningPictureApproved: true,
   },
 
   // ---- #336 batch 3: the tail of bands 1-5, ranks 169-242 ----
@@ -3571,7 +3575,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['på'],
     examples: [
       { sv: 'Bilen kör på en cyklist vid korsningen.', blankIndex: 2 },
-      { sv: 'Han kör tyvärr på ett rådjur i kväll.', blankIndex: 3 },
+      // Was 'Han kör tyvärr på ett rådjur i kväll.' until 2026-11-11 (ORD-134):
+      // replaced with the human's approval so the example matches the
+      // approved car-collision picture.
+      { sv: 'Han kör tyvärr på ett rådjur i mörkret.', blankIndex: 3 },
       { sv: 'Lastbilen kör på staketet vid halkan.', blankIndex: 2 },
     ],
     verified: true,
@@ -4185,7 +4192,6 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'slår in', preteritum: 'slog in', supinum: 'slagit in' },
-    meaningPictureId: 'wrapping-parcel',
   },
 
   {
