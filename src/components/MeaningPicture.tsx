@@ -81,19 +81,21 @@ const PICTURES: Record<MeaningPictureId, PictureSpec> = {
     ),
     moverSpec: { motion: 'pulse', origin: { x: 12, y: 13.5 }, scale: 1.08 },
   },
-  // One cuff: chain link and stub, a solid hinge block, the lower half of the
-  // ring. The upper jaw swings shut about the hinge.
+  // Top view: two equal open-ring cuffs joined by a three-link chain. Each ring
+  // is a C-shaped body plus a jaw leaving a small gap; the right jaw closes.
   handcuffs: {
     landmark: (
       <>
-        <ellipse cx="3.8" cy="12" rx="2.4" ry="1.7" />
-        <line x1="6.2" y1="12" x2="8" y2="12" />
-        <rect x="7.6" y="9" width="3.2" height="6" rx="1" fill="currentColor" />
-        <path d="M10 12A5.5 5.5 0 0 0 21 12" strokeWidth="2.4" />
+        <path d="M8.6 12A4 4 0 1 1 3.23 8.24" strokeWidth="2.4" />
+        <path d="M8.54 11.31A4 4 0 0 0 5.64 8.14" strokeWidth="2.4" />
+        <path d="M15.4 12A4 4 0 1 0 20.77 8.24" strokeWidth="2.4" />
+        <ellipse cx="9.8" cy="12" rx="1.5" ry="1.1" strokeWidth="1.3" />
+        <line x1="12" y1="10.9" x2="12" y2="13.1" strokeWidth="1.8" />
+        <ellipse cx="14.2" cy="12" rx="1.5" ry="1.1" strokeWidth="1.3" />
       </>
     ),
-    mover: <path d="M10 12A5.5 5.5 0 0 1 21 12" strokeWidth="2.4" />,
-    moverSpec: { motion: 'close', origin: { x: 10, y: 12 }, angle: -15 },
+    mover: <path d="M15.46 11.31A4 4 0 0 1 18.36 8.14" strokeWidth="2.4" />,
+    moverSpec: { motion: 'close', origin: { x: 15.4, y: 12 }, angle: -15 },
   },
   // Left half is still; the right half sways about the wide, jagged break.
   'snapping-rod': {
@@ -115,17 +117,18 @@ const PICTURES: Record<MeaningPictureId, PictureSpec> = {
     mover: <TopCar x={14.3} y={3} />,
     moverSpec: { motion: 'sway', origin: { x: 17, y: 8.2 }, angle: 8 },
   },
-  // Box with a strip of tape across the seam; the paper sheet over the top
-  // folds shut a little about its right edge.
+  // Box wrapped in paper: the paper's zigzag hem runs across the front, a tape
+  // strip across the hem holds it. The right end of the hem lifts a little and settles.
   'wrapping-parcel': {
     landmark: (
       <>
-        <rect x="3.5" y="12" width="17" height="9" rx="1.5" />
-        <line x1="9" y1="9.5" x2="9" y2="15" strokeWidth="3" />
+        <rect x="3.5" y="5" width="17" height="16" rx="1.5" />
+        <path d="M3.5 10.5L6 8.8L8.5 10.5L11 8.8L13.5 10.5" />
+        <line x1="8" y1="7.5" x2="8" y2="14.5" strokeWidth="3" />
       </>
     ),
-    mover: <path d="M3.5 12L6.5 6H20.5V12" />,
-    moverSpec: { motion: 'close', origin: { x: 20.5, y: 12 }, angle: 12 },
+    mover: <path d="M13.5 10.5L16 8.8L18.5 10.5L20.5 9.3" />,
+    moverSpec: { motion: 'close', origin: { x: 13.5, y: 10.5 }, angle: -10 },
   },
   // Side view: car nose touches the post; the impact burst grows in.
   'car-collision': {
