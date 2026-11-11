@@ -250,14 +250,18 @@ export function getParticleCoreSense(particle: string): string | null {
   return PARTICLE_CORE_SENSE[particle.toLowerCase()] ?? null;
 }
 
-// The six motion glyphs (docs/learning/2026-11-10-particle-motion-glyphs.md).
-// Kept here rather than imported from the component so the data layer has no
-// dependency on the UI; the names match ParticleGlyphName one for one.
-export type ParticleGlyphId = 'upp' | 'ut' | 'in' | 'ner' | 'bort' | 'tillbaka';
+// The motion glyphs: the six of docs/learning/2026-11-10-particle-motion-glyphs.md
+// plus fram, hem and ihop from docs/learning/2026-11-10-particle-glyph-expansion.md
+// (ORD-132). Kept here rather than imported from the component so the data
+// layer has no dependency on the UI; the names match ParticleGlyphName one
+// for one.
+export type ParticleGlyphId =
+  'upp' | 'ut' | 'in' | 'ner' | 'bort' | 'tillbaka' | 'fram' | 'hem' | 'ihop';
 
 // Particle → glyph. "ned" is the formal variant of "ner" and draws the same
-// path. Every other particle, including near neighbours such as "iväg" or
-// "fram", has no glyph.
+// path; it is the only alias. Every other particle has no glyph, including
+// near neighbours: "iväg" is not "bort", "samman" is not "ihop", "ur" is not
+// "ut", and "hemma" (locative, at home) is not "hem" (directional, home).
 const PARTICLE_GLYPH: Record<string, ParticleGlyphId> = {
   upp: 'upp',
   ut: 'ut',
@@ -266,6 +270,9 @@ const PARTICLE_GLYPH: Record<string, ParticleGlyphId> = {
   ned: 'ner',
   bort: 'bort',
   tillbaka: 'tillbaka',
+  fram: 'fram',
+  hem: 'hem',
+  ihop: 'ihop',
 };
 
 function glyphForParticle(particle: string): ParticleGlyphId | null {

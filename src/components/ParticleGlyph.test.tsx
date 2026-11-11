@@ -14,7 +14,17 @@ import {
   type ParticleGlyphName,
 } from './ParticleGlyph';
 
-const NAMES: ParticleGlyphName[] = ['upp', 'ut', 'in', 'ner', 'bort', 'tillbaka'];
+const NAMES: ParticleGlyphName[] = [
+  'upp',
+  'ut',
+  'in',
+  'ner',
+  'bort',
+  'tillbaka',
+  'fram',
+  'hem',
+  'ihop',
+];
 
 const originalMatchMedia = window.matchMedia;
 
@@ -222,6 +232,36 @@ describe('ParticleGlyph loop contract (decision H)', () => {
   it('the mover animation is infinite and spans var(--glyph-cycle)', () => {
     const rule = css.match(/\.particle-glyph-mover\s*\{[^}]*\}/)![0];
     expect(rule).toMatch(/animation:[^;]*var\(--glyph-cycle\)[^;]*\binfinite\b/);
+  });
+});
+
+describe('ParticleGlyph fram geometry', () => {
+  // Read from the rendered DOM: the constants are not exported.
+  it('hides the mover start fully behind the cover and draws the cover on top', () => {
+    mockReducedMotion(false);
+    const { container } = render(<ParticleGlyph name="fram" />);
+    const mover = container.querySelector<SVGCircleElement>('.particle-glyph-mover')!;
+    const cover = container.querySelector<SVGRectElement>('svg rect')!;
+    expect(cover).not.toBeNull();
+
+    const startX =
+      Number(mover.getAttribute('cx')) + parseFloat(mover.style.getPropertyValue('--glyph-from-x'));
+    const startY =
+      Number(mover.getAttribute('cy')) + parseFloat(mover.style.getPropertyValue('--glyph-from-y'));
+    const r = Number(mover.getAttribute('r'));
+    const x = Number(cover.getAttribute('x'));
+    const y = Number(cover.getAttribute('y'));
+    const w = Number(cover.getAttribute('width'));
+    const h = Number(cover.getAttribute('height'));
+
+    expect(startX).toBe(5);
+    expect(r).toBe(2.5);
+    expect(startX - r).toBeGreaterThanOrEqual(x);
+    expect(startX + r).toBeLessThanOrEqual(x + w);
+    expect(startY - r).toBeGreaterThanOrEqual(y);
+    expect(startY + r).toBeLessThanOrEqual(y + h);
+    // Painted after the mover, so it covers it.
+    expect(mover.compareDocumentPosition(cover) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
