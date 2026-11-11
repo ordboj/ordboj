@@ -10,12 +10,13 @@ import {
   type DiscriminationOption,
 } from '@/lib/discriminationVariant';
 import { ParticleGlyph } from '@/components/ParticleGlyph';
-import { MeaningPicture, type MeaningPictureId } from '@/components/MeaningPicture';
+import { MeaningPicture } from '@/components/MeaningPicture';
 import { speakSwedish, stopSpeaking } from '@/lib/speech';
 import {
   getAcceptedParticles,
   getAcceptedParticlesDisclosure,
   getAcceptedRecallAnswers,
+  getMeaningPicture,
   getParticleCoreSense,
   getParticleGlyph,
   getPhraseForms,
@@ -27,12 +28,6 @@ import {
   selectExample,
 } from '@/lib/particleVerbs';
 import type { ParticleVerbData } from '@/data/particleVerbData';
-
-// TODO(ORD-134): replace with `getMeaningPicture` from '@/lib/particleVerbs'
-// once the linguist's gate is merged. Until then no entry has a picture.
-function getMeaningPicture(_entry: ParticleVerbData): MeaningPictureId | null {
-  return null;
-}
 
 // What onAnswer carries for a discrimination (choice) commit, so the caller
 // (PracticeParticles.tsx) can log the presented lures and the tapped one
