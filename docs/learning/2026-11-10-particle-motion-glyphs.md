@@ -2,9 +2,11 @@
 
 Linear ORD-116 (GitHub #531).
 
-**Amended on 2026-11-11.** [[2026-11-11-glyph-loop-auto-stop]] (ORD-137)
-replaces "repeats without end" in decision H and in rule 3. The glyph plays two
-times, then stops at the rest frame. A tap plays the sequence again.
+**Proposed amendment, pending the human's decision (2026-11-11).**
+[[2026-11-11-glyph-loop-auto-stop]] (ORD-137) proposes to replace "repeats
+without end" in the Decision section, decision H, the transience evidence,
+rule 3 and the parameter table. The glyph would play two times, then stop at
+the rest frame. A tap would play the sequence again.
 
 ## Decision
 

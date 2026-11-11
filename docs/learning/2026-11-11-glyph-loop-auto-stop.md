@@ -2,6 +2,8 @@
 
 Linear ORD-137.
 
+Status: awaiting the human's decision (replaces decision H only if approved).
+
 ## Decision
 
 A motion glyph and a meaning picture play their movement two times, then
@@ -19,9 +21,13 @@ cycle repeats without end"). It applies in the same way to
 apply to the glyph or the picture, because no automatic movement lasts more
 than 5 s.
 
-**Human approval.** Decision H is a human decision. The human approves this
-amendment when the human merges the PR that adds this note. The
-implementation ticket must not start before that merge.
+**Human approval.** This note proposes to amend human decision H of the
+glyph note and settled point 2 of the picture note ("waves for 0.7 s, rests for
+2 s, and repeats"). Both are human decisions. The change takes effect only
+after the human decides. The human's decision will be recorded here as a new
+lettered human decision (for example I), with the date. Until then, decision H
+and settled point 2 stay in force. The implementation ticket must not start
+before that record exists.
 
 ## Question
 
@@ -99,17 +105,19 @@ additional protection.
   distracted by movement does not have to find a control first.
 - It also removes the distraction cost that rule 3 of the glyph note records.
   After 3400 ms nothing moves next to the sentence and the sense line.
-- It keeps the reason for the loop. Decision H added the loop for the learner
-  who reads the result block during the first play (transient information,
-  Ayres & Paas 2007). The second play starts 2700 ms after the mount, and that
-  learner sees it.
+- It keeps a part of the reason for the loop. The record does not give the
+  reason for decision H, other than the transience remedy (Ayres & Paas 2007)
+  and the "attention" reason in the picture note. The second play starts
+  2700 ms after the mount, so a learner who looks late still sees one repeat.
 - After the second play, the meaning does not disappear. The rest frame is
   complete: the mover is at the end of its path, and the direction cue shows
   the travel direction. The sense line gives the meaning in text.
 - It needs no new control, no new string, no layout change and no stored
   field. The change is one CSS value.
 - Its cost: a learner who first looks at the glyph after 3400 ms sees no
-  movement. The tap is the remedy, as it was before decision H.
+  movement. After 3400 ms the state is the state before decision H: play, rest
+  frame, tap to replay. The transience remedy of the loop is lost. The tap is
+  the remedy, as it was before decision H.
 
 **Pause button on each card (rejected).**
 
@@ -232,7 +240,9 @@ The maintainer makes these checks by hand.
 - The maintainer frequently looks at the glyph after it stopped and wants to
   see the movement. First, use the tap. If the tap is not enough, reduce the
   rest between plays to 1400 ms and set `GLYPH_PLAY_COUNT` to 3. Then all
-  movement ends at 4900 ms. Do not go back to a loop without end unless a new
+  movement ends at 4900 ms. A rest of 1400 ms makes the cycle 2100 ms. The
+  keyframe value 25.926 % must then change to 33.333 % in all six keyframes in
+  `src/index.css`. Do not go back to a loop without end unless a new
   decision adds a pause control.
 - The second play still distracts from the sentence. Set `GLYPH_PLAY_COUNT` to 1. This needs a human decision, because it goes back to one play.
 - The learner does not find the tap. This is not a 2.2.2 problem, because the
@@ -266,15 +276,21 @@ Files: `src/components/ParticleGlyph.tsx`, `src/components/MeaningPicture.tsx`,
 5. In `src/index.css`, replace `animation-iteration-count: infinite` with
    `animation-iteration-count: var(--glyph-plays)` on `.meaning-picture-mover`.
 6. Do not give `var(--glyph-plays)` a fallback value. If the property is
-   absent, the declaration is invalid and the count is 1. That is the safe
-   result.
+   absent, the result is safe in both cases. For the glyph, the shorthand
+   `animation` contains `var(--glyph-plays)`, so the complete `animation`
+   declaration is invalid at computed-value time: the animation name is
+   `none`, the glyph shows the rest frame, and nothing moves. For the picture,
+   the longhand `animation-iteration-count` becomes 1.
 7. Do not add a fill mode. Do not change the keyframes or the 25.926 % value.
 8. Do not add a JavaScript timer. The CSS iteration count stops the movement.
 9. Keep the restart by React key. A click remounts the SVG, and the new
    animation plays 2 times.
 10. Keep the button, its classes, its 44 px box and its `aria-label` exactly
     as they are. Keep the reduced-motion branch exactly as it is.
-11. Update the comments in the two components and in `src/index.css` that say
+11. Rename the tap state `playCount` in `ParticleGlyph.tsx` and
+    `MeaningPicture.tsx` (for example to `replayKey`). Then "play count" has
+    one meaning: `GLYPH_PLAY_COUNT`.
+12. Update the comments in the two components and in `src/index.css` that say
     "infinite" or "loops", and refer to this note.
 
 ### `qa`
