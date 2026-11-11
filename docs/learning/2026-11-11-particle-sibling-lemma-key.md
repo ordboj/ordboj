@@ -5,6 +5,20 @@ Linear ORD-126. Follow-up from the `staff-engineer` review of ORD-123 (PR
 within a particle sitting"). It changes no interval, no stored shape and no
 Swedish data.
 
+## Amendment to the 08-17 rule
+
+This note amends [[2026-08-17-reflexive-only-verbs-and-entries-per-base]],
+Decision 2, rule 3 ("never drop a due review") and its table row "same-base
+due reviews dropped: 0 — never".
+
+- The "never drop" rule still applies to same-base cards with **different**
+  particles. For those cards the queue reorders only.
+- A card with the **same lemma key** as another card in the sitting is held to
+  the next sitting. This is the only exception to the 08-17 rule.
+- Reason: the same base and the same particle give an identical cloze answer
+  or an identical recall string. The second card is not a retrieval.
+- A held card is not dropped. It stays due and is not rescheduled.
+
 ## Decision
 
 **Yes.** Sibling separation keys on the lemma, not on the entry id. The lemma
@@ -82,7 +96,10 @@ same lemma show the same phrase.
 - **Two clozes, or an introduction and a cloze.** The second sentence contains
   the same base verb, and the answer is the same particle. The learner can
   repeat the particle from the first card without retrieval of the second
-  sense.
+  sense. The 08-17 note says that contrast between established same-base items
+  builds discrimination (Kornell & Bjork). Contrast helps when the answers
+  differ. Here the particle answer is the same, so the second cloze gives no
+  discrimination practice.
 
 In each case the scheduler records a success that long-term memory did not
 produce. Each false success lengthens an interval that is not earned. That is
@@ -116,8 +133,8 @@ export function particleLemmaKey(entry: ParticleVerbData): string {
   entry has no recall item, but its cloze feedback shows the base and the
   particle together, and that primes the recall of the plain entry.
 - **Lemmas with a third word.** The key ignores words after the particle
-  (`se fram emot` has the key `se fram`). No two entries collide through this
-  today. If a later entry collides, the two entries are held apart. That is the
+  (`se fram emot` has the key `se fram`). Apart from `pv:ta-av-sig` (see Reflexive verbs), no two entries collide
+  through this today. If a later entry collides, the two entries are held apart. That is the
   safe direction.
 - **`acceptedParticles` variants (`ner`/`ned`).** The key uses the primary
   particle only. `acceptedParticles` is not part of the key, and the queue has
@@ -220,8 +237,10 @@ not give one key per entry. See "Not decided here".
 
 ## How we know this rule is wrong
 
-- A card of a split pair stays due and unserved for more than 3 sittings in a
-  row, because its sibling wins each time. Then change the tie rule to "the
+- The maintainer sees that a card of a split pair stays due and is not served
+  for several days in a row, because its sibling wins each time. The app has
+  no per-sitting log, so `qa` can also show this with a simulation over 30
+  simulated days. Then change the tie rule to "the
   more overdue card wins, whatever the kind".
 - The maintainer reports that the second entry of a split pair is not
   introduced for weeks after the 7-day same-base block ends. Then remove the
@@ -261,6 +280,10 @@ and different ids (for example the ids `pv:ga-upp` and `pv:ga-upp-stiga`):
    entry with the same base and particle.
 8. Control: two entries with the same base and different particles still share
    a sitting.
+
+A future 08-17 test, "due-review count unchanged by reordering", must exclude
+pairs of cards that have the same lemma key. The queue holds one card of such
+a pair on purpose.
 
 `qa` also adds one assertion to the dataset-integrity test
 (`particleVerbData.test.ts`): no entry has `particle === 'ned'`.
