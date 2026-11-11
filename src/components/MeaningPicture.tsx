@@ -117,19 +117,6 @@ const PICTURES: Record<MeaningPictureId, PictureSpec> = {
     mover: <TopCar x={14.3} y={3} />,
     moverSpec: { motion: 'sway', origin: { x: 17, y: 8.2 }, angle: 8 },
   },
-  // Box wrapped in paper: the paper's zigzag hem runs across the front, a tape
-  // strip across the hem holds it. The right end of the hem lifts a little and settles.
-  'wrapping-parcel': {
-    landmark: (
-      <>
-        <rect x="3.5" y="5" width="17" height="16" rx="1.5" />
-        <path d="M3.5 10.5L6 8.8L8.5 10.5L11 8.8L13.5 10.5" />
-        <line x1="8" y1="7.5" x2="8" y2="14.5" strokeWidth="3" />
-      </>
-    ),
-    mover: <path d="M13.5 10.5L16 8.8L18.5 10.5L20.5 9.3" />,
-    moverSpec: { motion: 'close', origin: { x: 13.5, y: 10.5 }, angle: -10 },
-  },
   // Side view: car nose touches the post; the impact burst grows in.
   'car-collision': {
     landmark: (
