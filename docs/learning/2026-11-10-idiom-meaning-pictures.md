@@ -6,10 +6,10 @@ Amended 2026-11-11 by ORD-136, after the pilot shipped (ORD-134). The changes
 are: two data fields, the `contrast` ruling, the pilot counts, the failure
 threshold and the drawing lessons. See "Amendments, 2026-11-11 (ORD-136)".
 
-**Proposed amendment, pending the human's decision (2026-11-11).**
-[[2026-11-11-glyph-loop-auto-stop]] (ORD-137) proposes to replace the loop
-without end in settled point 2. The picture would play two times, then stop at
-the rest frame. A tap would play the sequence again.
+**Amended by human decision I (2026-11-11).**
+[[2026-11-11-glyph-loop-auto-stop]] (ORD-137) replaces the loop without end in
+settled point 2. The picture plays two times, then stops at the rest frame. A
+tap plays the sequence again.
 
 ## Decision
 

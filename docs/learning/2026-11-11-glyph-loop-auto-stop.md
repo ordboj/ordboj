@@ -2,8 +2,6 @@
 
 Linear ORD-137.
 
-Status: awaiting the human's decision (replaces decision H only if approved).
-
 ## Decision
 
 A motion glyph and a meaning picture play their movement two times, then
@@ -21,13 +19,11 @@ cycle repeats without end"). It applies in the same way to
 apply to the glyph or the picture, because no automatic movement lasts more
 than 5 s.
 
-**Human approval.** This note proposes to amend human decision H of the
-glyph note and settled point 2 of the picture note ("waves for 0.7 s, rests for
-2 s, and repeats"). Both are human decisions. The change takes effect only
-after the human decides. The human's decision will be recorded here as a new
-lettered human decision (for example I), with the date. Until then, decision H
-and settled point 2 stay in force. The implementation ticket must not start
-before that record exists.
+**Human decision I, 2026-11-11.** The human chose auto-stop after two plays
+(movement ends at 3400 ms, rest frame, tap replays) over a pause control or
+keeping the loop. This replaces decision H's endless loop in the glyph note and
+settled point 2 of the picture note ("waves for 0.7 s, rests for 2 s, and
+repeats"). The implementation ticket may start.
 
 ## Question
 
