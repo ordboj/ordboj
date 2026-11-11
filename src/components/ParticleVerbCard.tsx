@@ -328,7 +328,7 @@ export function ParticleVerbCard({
   return (
     <>
       <Card className="w-full max-w-2xl shadow-xl">
-        <CardContent className={cn('space-y-6', showFeedback ? 'p-4 sm:p-8' : 'p-8')}>
+        <CardContent className={cn('space-y-6', showFeedback ? 'p-3 sm:p-8' : 'p-8')}>
           {/* Hidden once graded: the feedback panel below repeats the gloss
               and the full sentence, and 360x640 has no room for both. */}
           {!showFeedback && (
@@ -413,21 +413,21 @@ export function ParticleVerbCard({
           )}
 
           {showFeedback && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div
-                className={`flex items-center justify-center gap-3 p-3 rounded-lg ${
+                className={`flex items-center justify-center gap-3 p-2 rounded-lg ${
                   isCorrect ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
                 }`}
               >
                 {isCorrect ? (
                   <>
-                    <CheckCircle2 className="w-8 h-8" />
-                    <span className="text-2xl font-bold">Correct!</span>
+                    <CheckCircle2 className="w-6 h-6" />
+                    <span className="text-xl font-bold">Correct!</span>
                   </>
                 ) : (
                   <>
-                    <XCircle className="w-8 h-8" />
-                    <span className="text-2xl font-bold">Not quite</span>
+                    <XCircle className="w-6 h-6" />
+                    <span className="text-xl font-bold">Not quite</span>
                   </>
                 )}
               </div>
@@ -494,7 +494,7 @@ export function ParticleVerbCard({
                 <p className="text-sm text-muted-foreground text-center">{disclosure}</p>
               )}
 
-              <div className="bg-muted/30 rounded-lg p-4 space-y-1 text-center">
+              <div className="bg-muted/30 rounded-lg p-3 space-y-1 text-center">
                 {feedbackGlyph && (
                   <div className="-mt-3 -mb-1 flex justify-center">
                     <ParticleGlyph
