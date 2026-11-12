@@ -80,7 +80,11 @@ function providerConfig(
   };
 }
 
-export function buildAuthOptions(env: Env & { DB: D1Database }, deps: AuthDeps): BetterAuthOptions {
+export function buildAuthOptions(
+  env: Env & { DB: D1Database },
+  deps: AuthDeps,
+  authOrigin: string = AUTH_BASE_URL,
+): BetterAuthOptions {
   const socialProviders: NonNullable<BetterAuthOptions['socialProviders']> = {};
   const googleConfig = providerConfig(
     'google',
@@ -119,12 +123,13 @@ export function buildAuthOptions(env: Env & { DB: D1Database }, deps: AuthDeps):
 
   const mailer = deps.mailer;
 
+  const secureCookies = authOrigin.startsWith('https:');
   return {
     appName: 'Ordboj',
-    baseURL: AUTH_BASE_URL,
+    baseURL: authOrigin,
     secret: env.BETTER_AUTH_SECRET,
     database: env.DB,
-    trustedOrigins: [AUTH_BASE_URL],
+    trustedOrigins: [authOrigin],
     telemetry: { enabled: false },
     logger: { level: 'error' },
     socialProviders,
@@ -198,13 +203,16 @@ export function buildAuthOptions(env: Env & { DB: D1Database }, deps: AuthDeps):
       },
     },
     advanced: {
-      useSecureCookies: true,
+      useSecureCookies: secureCookies,
+      // Tests must run the same origin check as production. Vitest would
+      // otherwise skip it, and a foreign callbackURL would look allowed.
+      disableOriginCheck: false,
       ipAddress: {
         ipAddressHeaders: ['cf-connecting-ip'],
       },
       defaultCookieAttributes: {
         httpOnly: true,
-        secure: true,
+        secure: secureCookies,
         sameSite: 'lax',
       },
     },
@@ -289,12 +297,12 @@ export function buildAuthOptions(env: Env & { DB: D1Database }, deps: AuthDeps):
   };
 }
 
-export function createAuth(env: Env, deps: AuthDeps) {
+export function createAuth(env: Env, deps: AuthDeps, authOrigin: string = AUTH_BASE_URL) {
   if (!env.DB) {
     throw new Error('D1 binding DB is not configured.');
   }
   if (!env.BETTER_AUTH_SECRET || env.BETTER_AUTH_SECRET.length < 32) {
     throw new Error('BETTER_AUTH_SECRET must contain at least 32 characters.');
   }
-  return betterAuth(buildAuthOptions({ ...env, DB: env.DB }, deps));
+  return betterAuth(buildAuthOptions({ ...env, DB: env.DB }, deps, authOrigin));
 }

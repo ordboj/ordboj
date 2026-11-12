@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '@/App';
+import { resetAuthForTests } from '@/lib/auth/session';
 
 // This suite exercises the acceptance criteria for issue #18 end-to-end
 // through the real App.tsx wiring (AppErrorBoundary + per-route
@@ -46,6 +47,27 @@ beforeEach(() => {
   // is expected here, not something to let spam (or fail) the test run.
   vi.spyOn(console, 'error').mockImplementation(() => {});
   window.history.pushState({}, '', '/');
+  resetAuthForTests();
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/auth/get-session')) {
+        return new Response(
+          JSON.stringify({
+            user: { id: 'user-1', email: 'learner@example.com', emailVerified: true },
+            session: { id: 'sess-1' },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }
+      return new Response('null', { status: 404 });
+    }),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('route-level crash containment (issue #18)', () => {

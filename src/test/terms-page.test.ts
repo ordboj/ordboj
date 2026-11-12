@@ -56,8 +56,12 @@ describe('GET /terms', () => {
     expect(body).not.toContain('id="root"');
     expect(body).not.toContain('/src/main.tsx');
     expect(body).not.toMatch(/needs JavaScript/i);
-    expect(body).not.toContain('To use the site, you must sign in.');
-    expect(body).not.toContain('We currently offer sign-in with Google.');
+    expect(body).not.toMatch(/cloudflareinsights/i);
+    expect(body).not.toMatch(/Content-Security-Policy/i);
+    // Sign-in is required, and Google is the provider this release offers
+    // (ORD-109). Main omitted these sentences while sign-in was not required.
+    expect(body).toContain('To use the site, you must sign in.');
+    expect(body).toContain('We currently offer sign-in with Google.');
     expect(body).not.toMatch(/\bgdpr\b/i);
     expect(body).not.toMatch(/encrypt/i);
   });

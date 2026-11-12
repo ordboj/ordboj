@@ -119,6 +119,37 @@ Register these redirect URLs on `https://ordboj.com`.
 
 Do not add an Apple provider.
 
+## Preview sign-in
+
+Production sign-in stays on `https://ordboj.com`.
+A preview sign-in stays on the host of that request.
+The server accepts only these hosts:
+
+- `https://ordboj.com`
+- `https://<name>.ordboj.pages.dev` (one label, HTTPS)
+- `http://localhost`, `http://127.0.0.1`, and the same names with HTTPS, with or without a port
+
+The server rejects every other host.
+If the `Host` header is present and names a different host, the server rejects the request.
+The server does not use `X-Forwarded-Host`.
+The server does not use `BETTER_AUTH_URL`.
+The state cookie is for that host only. It has no `Domain` attribute.
+
+Google already allows this preview callback:
+
+`https://cursor-ord-109-client-auth-u.ordboj.pages.dev/api/auth/callback/google`
+
+Open this URL to test Google sign-in on the preview:
+
+`https://cursor-ord-109-client-auth-u.ordboj.pages.dev`
+
+A hashed preview URL changes on every deploy.
+One example is `https://05b54ff5.ordboj.pages.dev`.
+Google does not have that callback URL.
+Sign-in on a hashed URL fails at Google until you add that exact callback URL.
+Use the branch alias above for the Google test.
+A person who opens the branch alias stays on that alias.
+
 ## Run the migrations
 
 Migrations `0001` to `0003` are already applied on both remote databases.
