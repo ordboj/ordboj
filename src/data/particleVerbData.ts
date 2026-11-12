@@ -1925,12 +1925,15 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'upp',
     reflexive: 'none',
     lemma: 'hålla upp',
-    gloss: { en: 'to hold something raised; (of rain) to cease' },
+    // ORD-127 split (decision E): this id keeps "hold something raised".
+    // The rain sense is pv:halla-upp-regn and the door sense is
+    // pv:halla-upp-dorr, both appended at the end of the array.
+    gloss: { en: 'to hold something raised' },
     transparency: 'literal',
     acceptedParticles: ['upp'],
     examples: [
-      { sv: 'Han håller upp dörren för den äldre kvinnan.', blankIndex: 2 },
-      { sv: 'Regnet håller upp precis före matchen.', blankIndex: 2 },
+      { sv: 'Fiskaren håller upp en stor fisk för kameran.', blankIndex: 2 },
+      { sv: 'Polisen håller upp handen och bilarna stannar.', blankIndex: 2 },
       { sv: 'Hon håller upp skylten så alla ser den.', blankIndex: 2 },
     ],
     verified: true,
@@ -2560,7 +2563,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['upp'],
     examples: [
       { sv: 'Alla står upp när domaren kommer in.', blankIndex: 2 },
-      { sv: 'Publiken står upp och applåderar länge.', blankIndex: 2 },
+      { sv: 'Publiken står upp när kungen kommer in i salen.', blankIndex: 2 },
       { sv: 'Han står upp för att hälsa på gästen.', blankIndex: 2 },
     ],
     verified: true,
@@ -2593,12 +2596,14 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'ner',
     reflexive: 'none',
     lemma: 'se ner',
-    gloss: { en: 'to direct one’s gaze lower; with på, to despise someone' },
+    // ORD-127 split (decision E): this id keeps the gaze sense. The
+    // "despise" sense is pv:se-ner-forakta, appended at the end of the array.
+    gloss: { en: 'to direct one’s gaze lower' },
     transparency: 'literal',
     acceptedParticles: ['ner', 'ned'],
     examples: [
       { sv: 'Han ser ner i marken när han går.', blankIndex: 2 },
-      { sv: 'Hon ser ner på dem som inte pluggar.', blankIndex: 2 },
+      { sv: 'Barnet ser ner i brunnen och ropar.', blankIndex: 2 },
       { sv: 'Vi ser ner från tornet över hela staden.', blankIndex: 2 },
     ],
     verified: true,
@@ -3070,11 +3075,15 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'ut',
     reflexive: 'none',
     lemma: 'släppa ut',
-    gloss: { en: 'to release something so it escapes confinement, or to emit a substance' },
+    // ORD-127 split (decision E): this id keeps "release from confinement".
+    // The "emit a substance" sense is pv:slappa-ut-utslapp, appended at the
+    // end of the array. The smoke frame moved there; the cat frame replaces
+    // it here.
+    gloss: { en: 'to release something so it escapes confinement' },
     transparency: 'literal',
     acceptedParticles: ['ut'],
     examples: [
-      { sv: 'Fabriken släpper ut rök från skorstenen.', blankIndex: 2 },
+      { sv: 'Hon släpper ut katten innan hon går till jobbet.', blankIndex: 2 },
       { sv: 'Han släpper ut hunden i trädgården varje morgon.', blankIndex: 2 },
       { sv: 'Bonden släpper ut korna på bete i maj.', blankIndex: 2 },
     ],
@@ -6536,5 +6545,95 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'tar hem', preteritum: 'tog hem', supinum: 'tagit hem' },
+  },
+  {
+    // Rain half of pv:halla-upp (ORD-127, decision E). Idiomatic: nothing is
+    // held. The incumbent keeps "hold something raised". Band and evidence
+    // copy the incumbent. No motion glyph.
+    id: 'pv:halla-upp-regn',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'hålla',
+    particle: 'upp',
+    reflexive: 'none',
+    lemma: 'hålla upp',
+    gloss: { en: '(of rain) to stop falling' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['upp'],
+    examples: [
+      { sv: 'Regnet håller upp precis före matchen.', blankIndex: 2 },
+      { sv: 'Det håller upp efter lunch, lovar prognosen.', blankIndex: 2 },
+      { sv: 'Regnet håller upp och solen kommer fram.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'håller upp', preteritum: 'höll upp', supinum: 'hållit upp' },
+  },
+  {
+    // Door half of pv:halla-upp (ORD-127, decision E). Literal: the door is
+    // held open for someone to pass. Band and evidence copy the incumbent.
+    // No motion glyph.
+    id: 'pv:halla-upp-dorr',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'hålla',
+    particle: 'upp',
+    reflexive: 'none',
+    lemma: 'hålla upp',
+    gloss: { en: 'to hold a door open for someone' },
+    transparency: 'literal',
+    acceptedParticles: ['upp'],
+    examples: [
+      { sv: 'Han håller upp dörren för den äldre kvinnan.', blankIndex: 2 },
+      { sv: 'Killen håller upp dörren för oss när vi går in.', blankIndex: 2 },
+      { sv: 'Portvakten håller upp porten åt gästerna.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'håller upp', preteritum: 'höll upp', supinum: 'hållit upp' },
+  },
+  {
+    // Despise half of pv:se-ner (ORD-127, decision E). Idiomatic: nothing is
+    // looked at lower. Obligatory trailing "på". The incumbent keeps the
+    // gaze sense. Band and evidence copy the incumbent. No motion glyph.
+    id: 'pv:se-ner-forakta',
+    cefr: 'B2',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'se',
+    particle: 'ner',
+    reflexive: 'none',
+    lemma: 'se ner på',
+    gloss: { en: 'to despise someone as inferior' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['ner', 'ned'],
+    preposition: 'på',
+    examples: [
+      { sv: 'Hon ser ner på dem som inte pluggar.', blankIndex: 2 },
+      { sv: 'Chefen ser ner på sina anställda.', blankIndex: 2 },
+      { sv: 'Han ser ner på alla som inte har pengar.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'ser ner på', preteritum: 'såg ner på', supinum: 'sett ner på' },
+  },
+  {
+    // Emission half of pv:slappa-ut (ORD-127, decision E). Literal sense
+    // but no single drawable figure moving through a door: no motion glyph.
+    // The incumbent keeps "release from confinement". Band and evidence
+    // copy the incumbent.
+    id: 'pv:slappa-ut-utslapp',
+    cefr: 'B1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'släppa',
+    particle: 'ut',
+    reflexive: 'none',
+    lemma: 'släppa ut',
+    gloss: { en: 'to emit a substance into the environment' },
+    transparency: 'literal',
+    acceptedParticles: ['ut'],
+    examples: [
+      { sv: 'Fabriken släpper ut rök från skorstenen.', blankIndex: 2 },
+      { sv: 'Den gamla bilen släpper ut mycket avgaser.', blankIndex: 4 },
+      { sv: 'Kraftverket släpper ut mycket koldioxid varje år.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'släpper ut', preteritum: 'släppte ut', supinum: 'släppt ut' },
   },
 ];
