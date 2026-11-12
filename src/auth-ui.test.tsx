@@ -18,6 +18,20 @@ function paragraphText(expected: string) {
     node?.tagName === 'P' && (node.textContent ?? '').replace(/\s+/g, ' ').trim() === expected;
 }
 
+// WCAG 2 relative luminance. White on #5D83E5 is 3.59:1, under the 4.5:1
+// needed for this 16px medium label. The sign-in pill must clear 4.5:1.
+function contrastRatio(foreground: string, background: string): number {
+  const channel = (hex: string, shift: number) => {
+    const s = ((parseInt(hex.slice(1), 16) >> shift) & 255) / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = (hex: string) =>
+    0.2126 * channel(hex, 16) + 0.7152 * channel(hex, 8) + 0.0722 * channel(hex, 0);
+  const lighter = Math.max(luminance(foreground), luminance(background));
+  const darker = Math.min(luminance(foreground), luminance(background));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 const preserved = {
   [SRS_KEY]: JSON.stringify({
     version: 3,
@@ -175,6 +189,8 @@ describe('client auth UI', () => {
     const privacy = await screen.findByRole('link', { name: /^Privacy$/ });
     expect(privacy.tagName).toBe('A');
     expect(privacy).toHaveAttribute('href', '/privacy');
+    expect(privacy.parentElement).toHaveClass('text-center');
+    expect(privacy.parentElement?.tagName).toBe('P');
     expect(privacy).not.toHaveAttribute('data-discover');
     expect(privacy.getAttribute('href')).not.toMatch(/^https?:/);
 
@@ -247,7 +263,21 @@ describe('client auth UI', () => {
     box.config = { oauth: { google: true, github: false, microsoft: false }, mail: false };
     mount('/sign-in');
     const button = await screen.findByRole('button', { name: 'Sign in with Google' });
-    expect(button).toHaveClass('w-full', 'rounded-full', 'bg-[#5D83E5]', 'text-white');
+    expect(button).toHaveClass(
+      'h-12',
+      'w-full',
+      'rounded-full',
+      'bg-[#4F6FC3]',
+      'text-white',
+      'text-base',
+      'font-medium',
+      'hover:bg-[#4A69B7]',
+    );
+    const fill = button.className.match(/(?:^|\s)bg-\[(#[0-9A-Fa-f]{6})\]/)?.[1] ?? '';
+    const hover = button.className.match(/hover:bg-\[(#[0-9A-Fa-f]{6})\]/)?.[1] ?? '';
+    expect(contrastRatio('#FFFFFF', fill)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio('#FFFFFF', hover)).toBeGreaterThanOrEqual(4.5);
+    expect(screen.getAllByRole('button', { name: 'Sign in with Google' })).toHaveLength(1);
     const logo = button.querySelector('img');
     expect(logo).toHaveAttribute('src', '/brand/google-g.png');
     expect(logo).toHaveAttribute('alt', '');
@@ -281,6 +311,8 @@ describe('client auth UI', () => {
     const terms = within(consent).getByRole('link', { name: 'Terms of Use' });
     expect(policy).toHaveAttribute('href', '/privacy');
     expect(terms).toHaveAttribute('href', '/terms');
+    expect(policy).toHaveClass('whitespace-nowrap');
+    expect(terms).toHaveClass('whitespace-nowrap');
     expect(policy.tagName).toBe('A');
     expect(terms.tagName).toBe('A');
     expect(policy).not.toHaveAttribute('data-discover');
@@ -303,6 +335,10 @@ describe('client auth UI', () => {
     );
     const policy = within(notice).getByRole('link', { name: 'Privacy Policy' });
     expect(policy).toHaveAttribute('href', '/privacy');
+    expect(policy.parentElement).toHaveClass('whitespace-nowrap');
+    expect(policy.parentElement?.textContent).toMatch(/Privacy Policy\./);
+    const ok = screen.getByRole('button', { name: 'OK' });
+    expect(ok).toHaveClass('min-h-11', 'min-w-11');
     expect(policy).not.toHaveAttribute('data-discover');
     expect(policy.getAttribute('href')).not.toMatch(/^https?:/);
     expect(screen.queryByRole('button', { name: /reject/i })).not.toBeInTheDocument();

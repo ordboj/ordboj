@@ -59,14 +59,16 @@ function CookieNotice() {
     <div className="space-y-1 text-center">
       <p className="text-sm text-muted-foreground">
         {AUTH_COPY.cookieNotice}{' '}
-        <a href="/privacy" className="text-primary underline underline-offset-4">
-          {AUTH_COPY.privacyPolicy}
-        </a>
-        {'.'}
+        <span className="whitespace-nowrap">
+          <a href="/privacy" className="text-primary underline underline-offset-4">
+            {AUTH_COPY.privacyPolicy}
+          </a>
+          {'.'}
+        </span>
       </p>
       <button
         type="button"
-        className="text-sm font-medium text-primary underline underline-offset-4"
+        className="inline-flex min-h-11 min-w-11 items-center justify-center px-3 text-sm font-medium text-primary underline underline-offset-4"
         onClick={dismiss}
       >
         {AUTH_COPY.cookieNoticeOk}
@@ -79,7 +81,7 @@ function GoogleSignInButton({ disabled, onClick }: { disabled: boolean; onClick:
   return (
     <button
       type="button"
-      className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-full bg-[#5D83E5] px-5 text-base font-medium text-white transition-colors hover:bg-[#4F74D4] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+      className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-full bg-[#4F6FC3] px-5 text-base font-medium text-white transition-colors hover:bg-[#4A69B7] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       disabled={disabled}
       onClick={onClick}
     >
@@ -191,11 +193,17 @@ export default function SignIn() {
             {/* Plain <a>, not a router link: a full load stays on this origin. */}
             <p className="text-center text-sm text-muted-foreground">
               {AUTH_COPY.signInConsentBefore}{' '}
-              <a href="/privacy" className="text-primary underline underline-offset-4">
+              <a
+                href="/privacy"
+                className="whitespace-nowrap text-primary underline underline-offset-4"
+              >
                 {AUTH_COPY.privacyPolicy}
               </a>
               {' and '}
-              <a href="/terms" className="text-primary underline underline-offset-4">
+              <a
+                href="/terms"
+                className="whitespace-nowrap text-primary underline underline-offset-4"
+              >
                 {AUTH_COPY.termsOfUse}
               </a>
             </p>
@@ -264,9 +272,11 @@ export default function SignIn() {
         <p>{AUTH_COPY.emailUnavailable}</p>
       ) : null}
       {/* Plain <a>, not a router link: /privacy is a Pages Function. */}
-      <a href="/privacy" className="text-sm text-primary underline underline-offset-4">
-        {AUTH_COPY.privacyLink}
-      </a>
+      <p className="text-center">
+        <a href="/privacy" className="text-sm text-primary underline underline-offset-4">
+          {AUTH_COPY.privacyLink}
+        </a>
+      </p>
       <CookieNotice />
     </AuthScreen>
   );
