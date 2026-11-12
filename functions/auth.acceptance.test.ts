@@ -1236,15 +1236,15 @@ describe('ORD-108 auth backend', () => {
   it('preview D1 binding differs from production', () => {
     const doc = readFileSync(resolve('docs/auth/cloudflare-setup.md'), 'utf8');
     const wrangler = readFileSync(resolve('wrangler.jsonc'), 'utf8');
-    expect(wrangler).not.toMatch(/"database_id"/);
-    expect(wrangler).not.toMatch(/"preview_database_id"/);
     expect(wrangler).toContain('pages_build_output_dir');
-    const production = doc.match(/"database_id"\s*:\s*"([^"]+)"/);
-    const preview = doc.match(/"preview_database_id"\s*:\s*"([^"]+)"/);
-    expect(production?.[1]).toBe('PASTE_PRODUCTION_D1_ID');
-    expect(preview?.[1]).toBe('PASTE_PREVIEW_D1_ID');
-    expect(preview?.[1]).not.toBe(production?.[1]);
+    expect(doc).toContain('env.production');
+    expect(doc).toContain('env.preview');
+    expect(doc).toContain('ebdb1667-044a-430b-8412-c8b03da1f229');
+    expect(doc).toContain('ba9a4066-b4e4-4058-885d-a20fae74d05d');
+    expect(doc).toContain('Pages does not read `preview_database_id` for a preview deploy.');
     expect(doc).toContain('ordboj-auth-preview');
+    expect(doc).not.toContain('PASTE_PRODUCTION_D1_ID');
+    expect(doc).not.toContain('PASTE_PREVIEW_D1_ID');
   });
 
   it('auth and progress return 503 when D1 is not bound', async () => {

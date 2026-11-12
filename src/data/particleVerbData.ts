@@ -167,11 +167,56 @@ export interface ParticleVerbData {
   // batch approval of the linguist's pass list; never set it without that
   // approval. Read only through getParticleGlyph, which also enforces
   // gates 1-4, so the flag alone never shows a glyph.
-  // Every flag currently set was set by the human's batch approval of the
-  // ORD-117 pass list on 2026-11-10 (27 entries); a new flag needs a new
-  // approval.
+  // Every flag currently set was set by one of three human batch approvals:
+  // the ORD-117 pass list (2026-11-10, 27 entries), the ORD-131 pass list
+  // (2026-11-10, 10 entries: komma-in, stromma-in, skjuta-in, ta-ner,
+  // trycka-ner, komma-ner, ta-bort, satta-in-montera, slappa-ut,
+  // kasta-ut) and the ORD-132 pass list (2026-11-11, 9 entries: komma-hem,
+  // ga-hem, kora-hem, satta-ihop, plocka-ihop, samla-ihop, ta-fram,
+  // plocka-fram, stalla-fram; the rewritten satta-ihop sentences were
+  // approved with it). A new flag needs a new approval.
   motionGlyphVerified?: true;
+  // Meaning picture for an idiomatic entry (docs/learning/2026-11-10-idiom-
+  // meaning-pictures.md, ORD-130/ORD-134). Default deny: absent means no
+  // picture. The id names the drawing the human picked for this entry's
+  // pilot set (2026-11-11); it does not by itself show anything. Read only
+  // through getMeaningPicture, which also requires verified, idiomatic, no
+  // motionGlyphVerified and meaningPictureApproved, so the id alone never
+  // shows a picture. Maintenance rule: any change to this entry's examples
+  // or gloss must remove both fields or re-run gates 3, 4 and 7 in the
+  // same PR.
+  meaningPictureId?: MeaningPictureId;
+  // Gate 7: the human has approved the drawn picture for this entry, after
+  // the ui-ux rest-frame review and the linguist's native check of the
+  // drawing against every example. Approval is per picture per entry, never
+  // a batch. Default deny: absent means no picture. Never set it without
+  // that approval.
+  // Approval record: on 2026-11-11 (ORD-134) the human approved seven drawn
+  // pictures, each individually for its entry: ge-upp (white-flag),
+  // skriva-ut (printer), se-upp (warning-triangle), kora-pa (car-collision),
+  // ga-av (snapping-rod), kora-om (overtaking-car) and ta-fast (handcuffs,
+  // approved after a redraw). sla-in had a wrapping-parcel picture; it was
+  // tried three times and dropped (human, 2026-11-11), so sla-in carries no
+  // picture id and 'wrapping-parcel' is no longer an id. A new flag needs a
+  // new per-picture approval.
+  meaningPictureApproved?: true;
 }
+
+// The meaning-picture ids of the ORD-134 pilot set: seven ids, all seven
+// approved by the human as drawings on 2026-11-11 (see the approval record on
+// meaningPictureApproved). 'wrapping-parcel' (slå in) was tried three times
+// and dropped (human, 2026-11-11). Defined here
+// because the entry type needs it; re-exported from src/lib/particleVerbs.ts.
+// The frontend registry is a Record<MeaningPictureId, …>, so adding an id
+// here without a drawing fails typecheck.
+export type MeaningPictureId =
+  | 'white-flag'
+  | 'printer'
+  | 'warning-triangle'
+  | 'handcuffs'
+  | 'snapping-rod'
+  | 'overtaking-car'
+  | 'car-collision';
 
 export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   // ---- A1 ----
@@ -306,10 +351,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['in'],
     examples: [
       { sv: 'Han kommer in i rummet med en stor låda.', blankIndex: 2 },
-      { sv: 'Ljuset kommer in genom det stora fönstret.', blankIndex: 2 },
+      { sv: 'Katten kommer in genom det öppna fönstret.', blankIndex: 2 },
       { sv: 'Grannen kommer in i köket utan att knacka.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kommer in', preteritum: 'kom in', supinum: 'kommit in' },
   },
   {
@@ -524,13 +570,15 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     // blank is followed by a prepositional phrase with no object anywhere in
     // the clause, so the substitution leaves the verb with nothing to give:
     // *"Han ger bort efter tre timmar" and *"Vi ger aldrig ut trots alla
-    // problem" are ungrammatical, not merely odd. The third frame does supply
-    // an object ("sin plats"), where the argument collapses — "ge bort sin
-    // plats" is perfectly good Swedish — so that frame stays unannotated
-    // rather than carrying an exclusion that would mark correct Swedish
-    // wrong. "av" is deliberately not used: this corpus has only the
-    // reflexive "ge {refl} av" (pv:ge-sig-av), so a bare "av" option would
-    // test a lemma the learner was never taught.
+    // problem" are ungrammatical, not merely odd. The third frame, rewritten
+    // for ORD-134, is intransitive in the same way ("när"-clause, no object),
+    // so it carries the same exclusion. "av" is deliberately not used: this
+    // corpus has only the reflexive "ge {refl} av" (pv:ge-sig-av), so a bare
+    // "av" option would test a lemma the learner was never taught.
+    //
+    // Gate 3 ruling (meaning pictures): "abandon an effort; surrender" is one
+    // sense, two paraphrases — to stop resisting or trying. Gate 4: all three
+    // frames are that sense, so the white flag is true for each.
     examples: [
       {
         sv: 'Han ger upp efter tre timmar av hårt arbete.',
@@ -543,10 +591,20 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
         blankIndex: 3,
         excludedParticles: ['bort', 'ut'],
       },
-      { sv: 'Hon ger upp sin plats i tävlingen.', blankIndex: 2 },
+      // ORD-134, human-approved 2026-11-11. Replaced
+      // 'Hon ger upp sin plats i tävlingen.' (blankIndex 2, no exclusions),
+      // which meant "relinquish something" — outside this entry's gloss and
+      // not clearly true for the white flag (meaning-picture gate 4).
+      {
+        sv: 'Hon ger upp när hon inte hittar lösningen.',
+        blankIndex: 2,
+        excludedParticles: ['bort', 'ut'],
+      },
     ],
     verified: true,
     forms: { presens: 'ger upp', preteritum: 'gav upp', supinum: 'gett upp' },
+    meaningPictureId: 'white-flag',
+    meaningPictureApproved: true,
   },
   {
     id: 'pv:komma-ut',
@@ -662,10 +720,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['bort'],
     examples: [
       { sv: 'Vi tar bort snön från trappan på morgonen.', blankIndex: 2 },
-      { sv: 'Läkaren tar bort förbandet efter en vecka.', blankIndex: 2 },
+      { sv: 'Hon tar bort leksakerna från golvet.', blankIndex: 2 },
       { sv: 'Vi tar bort de gamla möblerna ur rummet.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'tar bort', preteritum: 'tog bort', supinum: 'tagit bort' },
   },
   {
@@ -704,6 +763,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi tar fram kartan när vi kör vilse.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'tar fram', preteritum: 'tog fram', supinum: 'tagit fram' },
   },
   {
@@ -785,6 +845,8 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'skriver ut', preteritum: 'skrev ut', supinum: 'skrivit ut' },
+    meaningPictureId: 'printer',
+    meaningPictureApproved: true,
   },
   {
     id: 'pv:tanka-om',
@@ -1711,9 +1773,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Vi tar ner gardinerna och tvättar dem.', blankIndex: 2 },
       { sv: 'Han tar ner tavlan från väggen i hallen.', blankIndex: 2 },
-      { sv: 'De tar ner julgranen i mitten av januari.', blankIndex: 2 },
+      { sv: 'Hon tar ner en skål från den översta hyllan.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'tar ner', preteritum: 'tog ner', supinum: 'tagit ner' },
   },
   {
@@ -2107,6 +2170,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi kommer hem sent på söndag kväll.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kommer hem', preteritum: 'kom hem', supinum: 'kommit hem' },
   },
   {
@@ -2126,6 +2190,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Jag går hem och lagar mat åt barnen.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'går hem', preteritum: 'gick hem', supinum: 'gått hem' },
   },
   {
@@ -2136,12 +2201,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'hem',
     reflexive: 'none',
     lemma: 'ta hem',
-    gloss: { en: 'to bring something to one’s home; to win a victory' },
+    gloss: { en: 'to bring something to one’s home' },
     transparency: 'literal',
     acceptedParticles: ['hem'],
     examples: [
       { sv: 'Vi tar hem maten från restaurangen på fredagar.', blankIndex: 2 },
-      { sv: 'Laget tar hem segern efter en jämn match.', blankIndex: 2 },
+      { sv: 'Hon tar hem blommor från torget på lördagar.', blankIndex: 2 },
       { sv: 'Han tar hem böcker från biblioteket varje vecka.', blankIndex: 2 },
     ],
     verified: true,
@@ -2220,11 +2285,17 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['ihop'],
     examples: [
-      { sv: 'Han sätter ihop bokhyllan på en timme.', blankIndex: 2 },
-      { sv: 'Vi sätter ihop en grupp inför projektet.', blankIndex: 2 },
+      // ORD-132 rewrite (human decision A, assembly class of the glyph
+      // expansion note): every example names the parts that come together.
+      // Was "Han sätter ihop bokhyllan på en timme." (whole only) and
+      // "Vi sätter ihop en grupp inför projektet." (social grouping, outside
+      // the gloss).
+      { sv: 'Han sätter ihop bokhyllans delar på en timme.', blankIndex: 2 },
+      { sv: 'Barnen sätter ihop legobitarna till ett rymdskepp.', blankIndex: 2 },
       { sv: 'Hon sätter ihop delarna enligt instruktionen.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'sätter ihop', preteritum: 'satte ihop', supinum: 'satt ihop' },
   },
   {
@@ -2381,6 +2452,8 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'tar fast', preteritum: 'tog fast', supinum: 'tagit fast' },
+    meaningPictureId: 'handcuffs',
+    meaningPictureApproved: true,
   },
 
   // ---- #336 batch 3: the tail of bands 1-5, ranks 169-242 ----
@@ -2835,6 +2908,8 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'ser upp', preteritum: 'såg upp', supinum: 'sett upp' },
+    meaningPictureId: 'warning-triangle',
+    meaningPictureApproved: true,
   },
 
   // ---- #395: Wave B, band 3-4 of docs/research/partikelverb/partikelverb-list.csv ----
@@ -2958,6 +3033,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi kör hem grannen när det regnar.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kör hem', preteritum: 'körde hem', supinum: 'kört hem' },
   },
 
@@ -2995,9 +3071,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Fabriken släpper ut rök från skorstenen.', blankIndex: 2 },
       { sv: 'Han släpper ut hunden i trädgården varje morgon.', blankIndex: 2 },
-      { sv: 'Vi släpper ut fångarna efter tio år.', blankIndex: 2 },
+      { sv: 'Bonden släpper ut korna på bete i maj.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'släpper ut', preteritum: 'släppte ut', supinum: 'släppt ut' },
   },
 
@@ -3498,11 +3575,16 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['på'],
     examples: [
       { sv: 'Bilen kör på en cyklist vid korsningen.', blankIndex: 2 },
-      { sv: 'Han kör tyvärr på ett rådjur i kväll.', blankIndex: 3 },
+      // Was 'Han kör tyvärr på ett rådjur i kväll.' until 2026-11-11 (ORD-134):
+      // replaced with the human's approval so the example matches the
+      // approved car-collision picture.
+      { sv: 'Han kör tyvärr på ett rådjur i mörkret.', blankIndex: 3 },
       { sv: 'Lastbilen kör på staketet vid halkan.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'kör på', preteritum: 'körde på', supinum: 'kört på' },
+    meaningPictureId: 'car-collision',
+    meaningPictureApproved: true,
   },
 
   {
@@ -3701,7 +3783,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Jag flyttar ut från lägenheten snart.', blankIndex: 2 },
       { sv: 'Han flyttar ut hemifrån nästa månad.', blankIndex: 2 },
-      { sv: 'De flyttar ut i sommar tillsammans.', blankIndex: 2 },
+      { sv: 'De flyttar ut ur den gamla villan i augusti.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'flyttar ut', preteritum: 'flyttade ut', supinum: 'flyttat ut' },
@@ -3901,11 +3983,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['ner', 'ned'],
     examples: [
-      { sv: 'Jag trycker ner knappen på fjärrkontrollen.', blankIndex: 2 },
+      { sv: 'Jag trycker ner pinnen i den mjuka jorden.', blankIndex: 2 },
       { sv: 'Hon trycker hårt ner spaken med handen.', blankIndex: 3 },
       { sv: 'Vi trycker ner pedalen till botten.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'trycker ner', preteritum: 'tryckte ner', supinum: 'tryckt ner' },
   },
 
@@ -3966,6 +4049,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi plockar ihop utrustningen efter matchen.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'plockar ihop', preteritum: 'plockade ihop', supinum: 'plockat ihop' },
   },
 
@@ -4583,11 +4667,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['in'],
     examples: [
-      { sv: 'Han skjuter in lådan under sängen.', blankIndex: 2 },
+      { sv: 'Bagaren skjuter in brödet i ugnen.', blankIndex: 2 },
       { sv: 'Vi skjuter in brevet under dörren.', blankIndex: 2 },
-      { sv: 'Jag skjuter in stolen under bordet efter maten.', blankIndex: 2 },
+      { sv: 'Jag skjuter in kartongen i garderoben.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'skjuter in', preteritum: 'sköt in', supinum: 'skjutit in' },
   },
   {
@@ -4652,6 +4737,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Vi samlar ihop grenarna i en stor hög.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'samlar ihop', preteritum: 'samlade ihop', supinum: 'samlat ihop' },
   },
   {
@@ -5002,11 +5088,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'literal',
     acceptedParticles: ['in'],
     examples: [
-      { sv: 'Ljuset strömmar in genom det stora fönstret.', blankIndex: 2 },
+      { sv: 'Vattnet strömmar in i båten genom ett hål i botten.', blankIndex: 2 },
       { sv: 'Publiken strömmar in i salen före konserten.', blankIndex: 2 },
       { sv: 'Vattnet strömmar in i källaren under regnet.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'strömmar in', preteritum: 'strömmade in', supinum: 'strömmat in' },
   },
   {
@@ -5321,6 +5408,8 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'kör om', preteritum: 'körde om', supinum: 'kört om' },
+    meaningPictureId: 'overtaking-car',
+    meaningPictureApproved: true,
   },
   {
     id: 'pv:lara-ut',
@@ -5452,6 +5541,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       { sv: 'Jag plockar fram varma kläder inför resan norrut.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'plockar fram', preteritum: 'plockade fram', supinum: 'plockat fram' },
   },
   {
@@ -5489,10 +5579,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['ut'],
     examples: [
       { sv: 'Vakten kastar ut de bråkiga gästerna.', blankIndex: 2 },
-      { sv: 'Värden kastar ut hyresgästen efter många klagomål.', blankIndex: 2 },
+      { sv: 'Bartendern kastar ut den berusade mannen på gatan.', blankIndex: 2 },
       { sv: 'De kastar ut oss innan klockan tolv.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kastar ut', preteritum: 'kastade ut', supinum: 'kastat ut' },
   },
   {
@@ -5703,6 +5794,8 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'går av', preteritum: 'gick av', supinum: 'gått av' },
+    meaningPictureId: 'snapping-rod',
+    meaningPictureApproved: true,
   },
   {
     id: 'pv:plocka-bort',
@@ -5747,9 +5840,13 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Jag ställer fram tallrikar och bestick på bordet.', blankIndex: 2 },
       { sv: 'Hon ställer fram frukosten innan barnen vaknar.', blankIndex: 2 },
-      { sv: 'Vi ställer fram stolar inför mötet.', blankIndex: 2 },
+      // ORD-132 rewrite (human approval 2026-11-11): every example now puts
+      // food or tableware out, matching the gloss. Was "Vi ställer fram
+      // stolar inför mötet." (furniture for a meeting, outside the gloss).
+      { sv: 'Vi ställer fram kaffe och kakor till gästerna.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'ställer fram', preteritum: 'ställde fram', supinum: 'ställt fram' },
   },
   {
@@ -5857,9 +5954,10 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
       // ORD-123: replaces "kommer ner för trappan", where standard spelling
       // is the preposition "nerför" and leaves no particle to blank.
       { sv: 'Hon kommer ner från vinden med en låda.', blankIndex: 2 },
-      { sv: 'Barnen kommer ner till frukosten klockan åtta.', blankIndex: 2 },
+      { sv: 'Katten kommer ner från trädet till slut.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'kommer ner', preteritum: 'kom ner', supinum: 'kommit ner' },
   },
   {
@@ -6358,7 +6456,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
   {
     // Physical half of pv:satta-in (human ruling 2026-11-10). The
     // window-pane and chairs frames moved here from the incumbent. Literal:
-    // an object put into a frame, a room or a device.
+    // an object put into a frame or a device. ORD-131: the chairs frame
+    // ("sätter in fler stolar", add more) named no container, so it is
+    // replaced by a memory card going into a camera.
     id: 'pv:satta-in-montera',
     cefr: 'A2',
     cefrEvidence: 'svalex',
@@ -6371,10 +6471,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['in'],
     examples: [
       { sv: 'Han sätter in en ny ruta i fönstret.', blankIndex: 2 },
-      { sv: 'Vi sätter in fler stolar före konserten.', blankIndex: 2 },
+      { sv: 'Jag sätter in minneskortet i kameran.', blankIndex: 2 },
       { sv: 'Hon sätter in ett nytt batteri i klockan.', blankIndex: 2 },
     ],
     verified: true,
+    motionGlyphVerified: true,
     forms: { presens: 'sätter in', preteritum: 'satte in', supinum: 'satt in' },
   },
   {
@@ -6399,5 +6500,28 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'plockar bort', preteritum: 'plockade bort', supinum: 'plockat bort' },
+  },
+  {
+    // Victory half of pv:ta-hem (ORD-135, decision E). Idiomatic: winning
+    // is not carrying anything home. The incumbent keeps the physical
+    // sense. Band and evidence copy the incumbent (the SVALex row is for
+    // ta + hem, not for one sense). No motion glyph.
+    id: 'pv:ta-hem-seger',
+    cefr: 'A1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'ta',
+    particle: 'hem',
+    reflexive: 'none',
+    lemma: 'ta hem',
+    gloss: { en: 'to win (a match or a prize)' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['hem'],
+    examples: [
+      { sv: 'Laget tar hem segern efter en jämn match.', blankIndex: 2 },
+      { sv: 'Laget tar hem tre poäng mot Malmö i kväll.', blankIndex: 2 },
+      { sv: 'Vi tar hem matchen med två mål.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'tar hem', preteritum: 'tog hem', supinum: 'tagit hem' },
   },
 ];

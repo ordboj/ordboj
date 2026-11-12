@@ -97,18 +97,107 @@ All colors MUST be HSL.
   }
 }
 
-/* ParticleGlyph mover (ORD-118). The element's own styles are the rest frame
-   (end of the path); the keyframes define only the start state. Timing comes
-   from inline custom properties set in ParticleGlyph.tsx. No fill-mode, so
-   the global reduced-motion rule below lands on the rest frame. */
+/* ParticleGlyph mover (ORD-118; two plays then rest: decision I,
+   docs/learning/2026-11-11-glyph-loop-auto-stop.md). The element's own styles
+   are the rest frame (end of the path). One animation of --glyph-plays
+   (GLYPH_PLAY_COUNT = 2) cycles ends all movement at 3400 ms. One cycle
+   (--glyph-cycle = GLYPH_CYCLE_MS = GLYPH_DURATION_MS 700 ms movement +
+   GLYPH_LOOP_PAUSE_MS 2000 ms rest = 2700 ms). The movement takes the first
+   700 / 2700 = 25.926% of the cycle; the rest of it holds the rest frame.
+   Keep the percentage in step with those constants in ParticleGlyph.tsx.
+   Timing comes from inline custom properties. No fill-mode, so the global
+   reduced-motion rule below (one iteration, ~0 ms) lands on the rest frame
+   and never repeats. */
 @keyframes particle-glyph-move {
-  from {
+  0% {
     transform: translate(var(--glyph-from-x), var(--glyph-from-y));
+    animation-timing-function: ease-out;
+  }
+  25.926%,
+  100% {
+    transform: translate(0, 0);
   }
 }
 
 .particle-glyph-mover {
-  animation: particle-glyph-move var(--glyph-duration) ease-out var(--glyph-delay) 1;
+  animation: particle-glyph-move var(--glyph-cycle) linear var(--glyph-delay) var(--glyph-plays);
+}
+
+/* MeaningPicture mover (ORD-134). Same cycle as the glyph: the first
+   25.926% of --glyph-cycle is the 700 ms movement, the rest holds the rest
+   frame. It plays --glyph-plays times, then stops. The element's own styles are the rest frame; keyframes name only the
+   non-rest states and end on it. In place only (rotate, scale, fade). No
+   fill-mode, so the global reduced-motion rule lands on the rest frame. */
+.meaning-picture-mover {
+  transform-box: view-box;
+  animation-duration: var(--glyph-cycle);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: var(--glyph-plays);
+}
+.meaning-picture-sway {
+  animation-name: meaning-picture-sway;
+}
+.meaning-picture-close {
+  animation-name: meaning-picture-close;
+}
+.meaning-picture-pulse {
+  animation-name: meaning-picture-pulse;
+}
+.meaning-picture-fade {
+  animation-name: meaning-picture-fade;
+}
+.meaning-picture-burst {
+  animation-name: meaning-picture-burst;
+}
+@keyframes meaning-picture-sway {
+  6.5% {
+    transform: rotate(var(--mp-angle));
+  }
+  19.4% {
+    transform: rotate(calc(var(--mp-angle) * -1));
+  }
+  25.926%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+@keyframes meaning-picture-close {
+  0% {
+    transform: rotate(var(--mp-angle));
+  }
+  25.926%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+@keyframes meaning-picture-pulse {
+  13% {
+    transform: scale(var(--mp-scale));
+  }
+  25.926%,
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes meaning-picture-fade {
+  0% {
+    opacity: 0;
+  }
+  25.926%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes meaning-picture-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  25.926%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Global prefers-reduced-motion rule (issue #110 AC). Confetti draws to a

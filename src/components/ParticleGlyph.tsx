@@ -1,7 +1,8 @@
 import { useState, type CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 
-export type ParticleGlyphName = 'upp' | 'ut' | 'in' | 'ner' | 'bort' | 'tillbaka';
+export type ParticleGlyphName =
+  'upp' | 'ut' | 'in' | 'ner' | 'bort' | 'tillbaka' | 'fram' | 'hem' | 'ihop';
 
 /** Main animation duration (learning decision 2026-11-10, rule 4). */
 export const GLYPH_DURATION_MS = 700;
@@ -13,8 +14,19 @@ export const GLYPH_START_DELAY_MS = 0;
  * a test can assert the full sum.
  */
 export const GLYPH_STAGGER_MS = 0;
-/** Hard cap on delay + duration of every animated element. */
+/** Hard cap on delay + duration of the movement of every animated element. */
 export const GLYPH_MAX_TOTAL_MS = 1500;
+/** Rest in the rest frame between two plays. */
+export const GLYPH_LOOP_PAUSE_MS = 2000;
+/** One cycle: the movement, then the rest. Mirrored as 25.926% in index.css. */
+export const GLYPH_CYCLE_MS = GLYPH_DURATION_MS + GLYPH_LOOP_PAUSE_MS;
+/** Plays in one sequence (human decision I, 2026-11-11: two plays, then rest). */
+export const GLYPH_PLAY_COUNT = 2;
+/** All movement of a sequence ends here: 0 + 1 * 2700 + 700 = 3400 ms. */
+export const GLYPH_MOTION_END_MS =
+  GLYPH_START_DELAY_MS + (GLYPH_PLAY_COUNT - 1) * GLYPH_CYCLE_MS + GLYPH_DURATION_MS;
+/** WCAG 2.2.2: automatic movement must not last longer than this. */
+export const GLYPH_MOTION_LIMIT_MS = 5000;
 
 type GlyphVars = CSSProperties & Record<`--${string}`, string>;
 
@@ -23,7 +35,7 @@ interface GlyphGeometry {
   rest: { x: number; y: number };
   /** Offset of the start frame from the rest frame, viewBox units. */
   from: { x: number; y: number };
-  landmark: 'box' | 'ground' | 'point';
+  landmark: 'box' | 'ground' | 'point' | 'cover' | 'house' | 'partner';
 }
 
 // Shared square viewBox 0 0 24 24. The mover's path relative to the landmark
@@ -41,6 +53,12 @@ const GLYPHS: Record<ParticleGlyphName, GlyphGeometry> = {
   bort: { rest: { x: 20.5, y: 12 }, from: { x: -9, y: 0 }, landmark: 'point' },
   // Returns to a point: rests at least 2.5 units clear of the ring.
   tillbaka: { rest: { x: 13.5, y: 12 }, from: { x: 9.5, y: 0 }, landmark: 'point' },
+  // Comes out from behind the cover (start x 5, hidden) into the open.
+  fram: { rest: { x: 20, y: 12 }, from: { x: -15, y: 0 }, landmark: 'cover' },
+  // Enters the house from outside through its open left side.
+  hem: { rest: { x: 16.5, y: 16.5 }, from: { x: -13.5, y: 0 }, landmark: 'house' },
+  // Slides in from the left until it overlaps the partner ring by 1 unit.
+  ihop: { rest: { x: 11, y: 12 }, from: { x: -7, y: 0 }, landmark: 'partner' },
 };
 
 const MOVER_RADIUS = 2.5;
@@ -69,6 +87,14 @@ function Landmark({ kind }: { kind: GlyphGeometry['landmark'] }) {
       return <line x1="3" y1="20" x2="21" y2="20" />;
     case 'point':
       return <circle cx="5" cy="12" r="2.5" />;
+    case 'cover':
+      // Solid screen the mover hides behind; drawn above the mover.
+      return <rect x="2" y="6" width="6" height="12" rx="1" fill="currentColor" stroke="none" />;
+    case 'house':
+      // Roof and right wall and floor; no left wall below the eave.
+      return <path d="M11 12L16.5 5L22 12M21 12V20H12" />;
+    case 'partner':
+      return <circle cx="15" cy="12" r="2.5" />;
   }
 }
 
@@ -131,32 +157,40 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
   // Read once at mount, as ConfettiEffect does.
   const [reducedMotion] = useState(readsReducedMotion);
   // Bumping the key remounts the SVG, which restarts the CSS animation.
-  const [playCount, setPlayCount] = useState(0);
+  const [replayKey, setReplayKey] = useState(0);
 
   const { rest, from, landmark } = GLYPHS[name];
 
   const moverVars: GlyphVars = {
     '--glyph-duration': `${GLYPH_DURATION_MS}ms`,
+    '--glyph-cycle': `${GLYPH_CYCLE_MS}ms`,
+    '--glyph-plays': String(GLYPH_PLAY_COUNT),
     '--glyph-delay': `${GLYPH_START_DELAY_MS}ms`,
     '--glyph-from-x': `${from.x}px`,
     '--glyph-from-y': `${from.y}px`,
   };
 
+  // The cover hides the mover at its start, so it is drawn after the mover.
+  const landmarkLayer = (
+    <g className="text-muted-foreground" stroke="currentColor">
+      <Landmark kind={landmark} />
+    </g>
+  );
+  const coverAbove = landmark === 'cover';
+
   const svg = (
     <svg
-      key={playCount}
+      key={replayKey}
       viewBox="0 0 24 24"
       aria-hidden="true"
       focusable="false"
-      className="size-7 overflow-visible"
+      className="size-10 overflow-visible"
       fill="none"
       strokeWidth={STROKE_WIDTH}
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <g className="text-muted-foreground" stroke="currentColor">
-        <Landmark kind={landmark} />
-      </g>
+      {coverAbove ? null : landmarkLayer}
       <DirectionCue rest={rest} from={from} />
       <circle
         className="particle-glyph-mover text-primary"
@@ -167,6 +201,7 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
         r={MOVER_RADIUS}
         style={moverVars}
       />
+      {coverAbove ? landmarkLayer : null}
     </svg>
   );
 
@@ -184,10 +219,10 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
     <button
       type="button"
       aria-label={`Replay movement: ${name}`}
-      onClick={() => setPlayCount((n) => n + 1)}
+      onClick={() => setReplayKey((n) => n + 1)}
       className={cn(
         box,
-        'cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'cursor-pointer touch-manipulation hover:bg-muted active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         className,
       )}
     >

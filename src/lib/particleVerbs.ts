@@ -1,8 +1,11 @@
 import {
   PARTICLE_VERB_DATA,
+  type MeaningPictureId,
   type ParticleVerbData,
   type ParticleVerbExample,
 } from '@/data/particleVerbData';
+
+export type { MeaningPictureId } from '@/data/particleVerbData';
 
 // Grammatical person for rendering a reflexive particle verb. Swedish uses
 // `sig` only in the third person; a learner who meets `höra av sig` as a
@@ -250,14 +253,18 @@ export function getParticleCoreSense(particle: string): string | null {
   return PARTICLE_CORE_SENSE[particle.toLowerCase()] ?? null;
 }
 
-// The six motion glyphs (docs/learning/2026-11-10-particle-motion-glyphs.md).
-// Kept here rather than imported from the component so the data layer has no
-// dependency on the UI; the names match ParticleGlyphName one for one.
-export type ParticleGlyphId = 'upp' | 'ut' | 'in' | 'ner' | 'bort' | 'tillbaka';
+// The motion glyphs: the six of docs/learning/2026-11-10-particle-motion-glyphs.md
+// plus fram, hem and ihop from docs/learning/2026-11-10-particle-glyph-expansion.md
+// (ORD-132). Kept here rather than imported from the component so the data
+// layer has no dependency on the UI; the names match ParticleGlyphName one
+// for one.
+export type ParticleGlyphId =
+  'upp' | 'ut' | 'in' | 'ner' | 'bort' | 'tillbaka' | 'fram' | 'hem' | 'ihop';
 
 // Particle → glyph. "ned" is the formal variant of "ner" and draws the same
-// path. Every other particle, including near neighbours such as "iväg" or
-// "fram", has no glyph.
+// path; it is the only alias. Every other particle has no glyph, including
+// near neighbours: "iväg" is not "bort", "samman" is not "ihop", "ur" is not
+// "ut", and "hemma" (locative, at home) is not "hem" (directional, home).
 const PARTICLE_GLYPH: Record<string, ParticleGlyphId> = {
   upp: 'upp',
   ut: 'ut',
@@ -266,6 +273,9 @@ const PARTICLE_GLYPH: Record<string, ParticleGlyphId> = {
   ned: 'ner',
   bort: 'bort',
   tillbaka: 'tillbaka',
+  fram: 'fram',
+  hem: 'hem',
+  ihop: 'ihop',
 };
 
 function glyphForParticle(particle: string): ParticleGlyphId | null {
@@ -293,4 +303,46 @@ export function getParticleGlyph(entry: ParticleVerbData): ParticleGlyphId | nul
   if (glyph === null) return null;
   const allSame = entry.acceptedParticles.every((accepted) => glyphForParticle(accepted) === glyph);
   return allSame ? glyph : null;
+}
+
+// Every meaning-picture id, as a runtime set. `satisfies` makes typecheck fail
+// if this list and the MeaningPictureId union drift apart in either direction.
+const MEANING_PICTURE_IDS = {
+  'white-flag': true,
+  printer: true,
+  'warning-triangle': true,
+  handcuffs: true,
+  'snapping-rod': true,
+  'overtaking-car': true,
+  'car-collision': true,
+} as const satisfies Record<MeaningPictureId, true>;
+
+function isMeaningPictureId(value: unknown): value is MeaningPictureId {
+  return (
+    typeof value === 'string' && Object.prototype.hasOwnProperty.call(MEANING_PICTURE_IDS, value)
+  );
+}
+
+// The single eligibility gate for the idiom meaning picture
+// (docs/learning/2026-11-10-idiom-meaning-pictures.md, rule 3). Returns a
+// picture id only when every code-checkable gate holds:
+//   1. the entry is verified;
+//   2. it is idiomatic;
+//   6. it carries exactly one known picture id;
+//   7. a human has approved the drawn picture for this entry
+//      (meaningPictureApproved);
+// and the entry can never also show a motion glyph: motionGlyphVerified must
+// be absent and getParticleGlyph must return null (rule 1: never both).
+// Gates 3 and 4 (one sense, true for every example) are the linguist's
+// check and gate 5 (not readable as literal motion) is the ui-ux review;
+// the approval flag records that they passed. Default deny. The card must
+// call this and never re-check the conditions itself.
+export function getMeaningPicture(entry: ParticleVerbData): MeaningPictureId | null {
+  if (!entry.verified) return null;
+  if (entry.transparency !== 'idiomatic') return null;
+  if (entry.meaningPictureApproved !== true) return null;
+  if (entry.motionGlyphVerified !== undefined) return null;
+  if (getParticleGlyph(entry) !== null) return null;
+  const id = entry.meaningPictureId;
+  return isMeaningPictureId(id) ? id : null;
 }
