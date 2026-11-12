@@ -1933,7 +1933,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['upp'],
     examples: [
       { sv: 'Fiskaren håller upp en stor fisk för kameran.', blankIndex: 2 },
-      { sv: 'Han håller upp tröjan för att se om den passar.', blankIndex: 2 },
+      { sv: 'Polisen håller upp handen och bilarna stannar.', blankIndex: 2 },
       { sv: 'Hon håller upp skylten så alla ser den.', blankIndex: 2 },
     ],
     verified: true,
@@ -6563,7 +6563,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Regnet håller upp precis före matchen.', blankIndex: 2 },
       { sv: 'Det håller upp efter lunch, lovar prognosen.', blankIndex: 2 },
-      { sv: 'Regnet håller upp en stund före middagen.', blankIndex: 2 },
+      { sv: 'Regnet håller upp och solen kommer fram.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'håller upp', preteritum: 'höll upp', supinum: 'hållit upp' },
@@ -6608,7 +6608,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Hon ser ner på dem som inte pluggar.', blankIndex: 2 },
       { sv: 'Chefen ser ner på sina anställda.', blankIndex: 2 },
-      { sv: 'Många ser ner på det yrket.', blankIndex: 2 },
+      { sv: 'Han ser ner på alla som inte har pengar.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'ser ner på', preteritum: 'såg ner på', supinum: 'sett ner på' },
@@ -6631,7 +6631,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Fabriken släpper ut rök från skorstenen.', blankIndex: 2 },
       { sv: 'Den gamla bilen släpper ut mycket avgaser.', blankIndex: 4 },
-      { sv: 'Fabriken släpper ut avloppsvatten i sjön.', blankIndex: 2 },
+      { sv: 'Kraftverket släpper ut mycket koldioxid varje år.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'släpper ut', preteritum: 'släppte ut', supinum: 'släppt ut' },
