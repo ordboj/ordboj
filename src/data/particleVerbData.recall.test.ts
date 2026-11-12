@@ -27,7 +27,7 @@ const PAIRS: ReadonlyArray<Row> = [
   ['pv:lamna-in', 'in', ['in'], undefined, 'lämna in'],
   ['pv:skicka-in', 'in', ['in'], undefined, 'skicka in'],
   ['pv:sla-in', 'in', ['in'], ['slå in', 'packa in'], 'slå in'],
-  ['pv:packa-in', 'in', ['in'], ['packa in'], 'packa in'],
+  ['pv:packa-in', 'in', ['in'], ['packa in', 'slå in'], 'packa in'],
   ['pv:aka-bort', 'bort', ['bort'], ['åka bort', 'resa bort'], 'åka bort'],
   ['pv:resa-bort', 'bort', ['bort'], ['resa bort', 'åka bort'], 'resa bort'],
   ['pv:plocka-ihop', 'ihop', ['ihop'], ['plocka ihop', 'samla ihop'], 'plocka ihop'],
@@ -47,19 +47,25 @@ const PAIRS: ReadonlyArray<Row> = [
 ];
 
 describe('ORD-125 sharpened glosses', () => {
-  it('pv:ta-bort names an unwanted physical object', () => {
+  it('pv:ta-bort clears a place of whatever covers or fills it', () => {
     expect(byId('pv:ta-bort').gloss.en).toBe('to clear a place of whatever covers or fills it');
   });
   it('pv:skicka-ut names a large group of recipients', () => {
     expect(byId('pv:skicka-ut').gloss.en).toBe('to send something to a large group of recipients');
   });
-  it('pv:komma-upp names arriving at the top, the stage or the surface', () => {
-    expect(byId('pv:komma-upp').gloss.en).toBe('to arrive at the top, the stage or the surface');
-  });
-  it('pv:lamna-in is a personal hand-over at an office', () => {
-    expect(byId('pv:lamna-in').gloss.en).toBe(
-      'to hand over a document or application personally at an office',
+  it('pv:komma-upp names arriving at the top, onto the stage or at the surface', () => {
+    expect(byId('pv:komma-upp').gloss.en).toBe(
+      'to arrive at the top, onto the stage or at the surface',
     );
+  });
+  it('pv:lamna-in is a personal hand-over of documents or schoolwork', () => {
+    expect(byId('pv:lamna-in').gloss.en).toBe(
+      'to hand over a document, an application or schoolwork personally',
+    );
+  });
+  it('pv:kanna-till means being familiar with, and does not accept veta om', () => {
+    expect(byId('pv:kanna-till').gloss.en).toBe('to be familiar with; to be acquainted with');
+    expect(isAcceptedRecall(byId('pv:kanna-till'), 'veta om')).toBe(false);
   });
   it('pv:skicka-in is sending off by post or online', () => {
     expect(byId('pv:skicka-in').gloss.en).toBe(
@@ -120,7 +126,6 @@ describe('ORD-125 cross-listed recall alternatives', () => {
   });
 
   it.each([
-    ['pv:packa-in', 'slå in'],
     ['pv:tala-om', 'säga till'],
     ['pv:kanna-till', 'veta om'],
     ['pv:veta-om', 'känna till'],
@@ -130,6 +135,11 @@ describe('ORD-125 cross-listed recall alternatives', () => {
     ['pv:skicka-in', 'lämna in'],
   ])('removed pair: %s does NOT accept %s', (id, phrase) => {
     expect(isAcceptedRecall(byId(id), phrase)).toBe(false);
+  });
+
+  it('pv:packa-in now accepts slå in, with its own lemma first', () => {
+    expect(isAcceptedRecall(byId('pv:packa-in'), 'slå in')).toBe(true);
+    expect(getAcceptedRecallAnswers(byId('pv:packa-in'))).toEqual(['packa in', 'slå in']);
   });
 
   it('does not accept sibling lemmas that were not cross-listed', () => {
