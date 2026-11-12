@@ -32,6 +32,48 @@ const PROVIDERS: { id: OAuthProvider; label: string }[] = [
 // Official multi-color G (standard color), not a redraw:
 // https://www.gstatic.com/images/branding/googleg/2x/googleg_standard_color_128dp.png
 const GOOGLE_G_SRC = '/brand/google-g.png';
+const COOKIE_NOTICE_KEY = 'ordboj-necessary-cookie-notice';
+
+function cookieNoticeOpen(): boolean {
+  try {
+    return localStorage.getItem(COOKIE_NOTICE_KEY) !== '1';
+  } catch {
+    return true;
+  }
+}
+
+function CookieNotice() {
+  const [open, setOpen] = useState(cookieNoticeOpen);
+  if (!open) return null;
+
+  function dismiss() {
+    try {
+      localStorage.setItem(COOKIE_NOTICE_KEY, '1');
+    } catch {
+      // Storage can be blocked. Closing the line still leaves every other key alone.
+    }
+    setOpen(false);
+  }
+
+  return (
+    <div className="space-y-1 text-center">
+      <p className="text-sm text-muted-foreground">
+        {AUTH_COPY.cookieNotice}{' '}
+        <a href="/privacy" className="text-primary underline underline-offset-4">
+          {AUTH_COPY.privacyPolicy}
+        </a>
+        {'.'}
+      </p>
+      <button
+        type="button"
+        className="text-sm font-medium text-primary underline underline-offset-4"
+        onClick={dismiss}
+      >
+        {AUTH_COPY.cookieNoticeOk}
+      </button>
+    </div>
+  );
+}
 
 function GoogleSignInButton({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
   return (
@@ -144,11 +186,20 @@ export default function SignIn() {
       {ready === null ? <AuthStatus>{AUTH_COPY.loading}</AuthStatus> : null}
       {providers.map((provider) =>
         provider.id === 'google' ? (
-          <GoogleSignInButton
-            key={provider.id}
-            disabled={pending}
-            onClick={() => void onProvider(provider.id)}
-          />
+          <div key={provider.id} className="space-y-2">
+            <GoogleSignInButton disabled={pending} onClick={() => void onProvider(provider.id)} />
+            {/* Plain <a>, not a router link: a full load stays on this origin. */}
+            <p className="text-center text-sm text-muted-foreground">
+              {AUTH_COPY.signInConsentBefore}{' '}
+              <a href="/privacy" className="text-primary underline underline-offset-4">
+                {AUTH_COPY.privacyPolicy}
+              </a>
+              {' and '}
+              <a href="/terms" className="text-primary underline underline-offset-4">
+                {AUTH_COPY.termsOfUse}
+              </a>
+            </p>
+          </div>
         ) : (
           <Button
             key={provider.id}
@@ -213,6 +264,7 @@ export default function SignIn() {
         <p>{AUTH_COPY.emailUnavailable}</p>
       ) : null}
       <TextLink to="/privacy">{AUTH_COPY.privacyLink}</TextLink>
+      <CookieNotice />
     </AuthScreen>
   );
 }

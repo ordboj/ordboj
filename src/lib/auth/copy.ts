@@ -60,5 +60,11 @@ export const AUTH_COPY = {
     'Ordböj stores your email address to sign you in. A sign-in cookie is stored on this device when you sign in. Practice progress stays in this browser.',
   privacyBack: 'Back to sign in',
   privacyLink: 'Privacy',
+  privacyPolicy: 'Privacy Policy',
+  termsOfUse: 'Terms of Use',
+  signInConsentBefore: 'By signing in, you agree to the',
+  cookieNotice:
+    'Ordböj uses a necessary cookie to keep you signed in, and stores practice progress in this browser. See the',
+  cookieNoticeOk: 'OK',
   loading: 'Loading…',
 } as const;

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '@/App';
 import { callbackURL } from '@/lib/auth/origin';
@@ -12,6 +12,11 @@ const SRS_KEY = 'swedish-verbs-srs-progress';
 const SETTINGS_KEY = 'swedish-verbs-settings';
 const BACKUP_KEY = 'swedish-verbs-srs-progress-backup-pre-v3';
 const LOG_KEY = 'swedish-verbs-answer-log';
+
+function paragraphText(expected: string) {
+  return (_: unknown, node: Element | null) =>
+    node?.tagName === 'P' && (node.textContent ?? '').replace(/\s+/g, ' ').trim() === expected;
+}
 
 const preserved = {
   [SRS_KEY]: JSON.stringify({
@@ -248,6 +253,63 @@ describe('client auth UI', () => {
     expect(social?.body).toContain(callbackURL('/'));
     expect(social?.body).toContain(callbackURL('/sign-in'));
     expect(social?.body).not.toContain('pages.dev');
+  });
+
+  it('states that signing in agrees to the privacy policy and the terms of use', async () => {
+    box.config = { oauth: { google: true, github: false, microsoft: false }, mail: false };
+    mount('/sign-in');
+    const button = await screen.findByRole('button', { name: 'Sign in with Google' });
+    const consent = screen.getByText(
+      paragraphText('By signing in, you agree to the Privacy Policy and Terms of Use'),
+    );
+    const policy = within(consent).getByRole('link', { name: 'Privacy Policy' });
+    const terms = within(consent).getByRole('link', { name: 'Terms of Use' });
+    expect(policy).toHaveAttribute('href', '/privacy');
+    expect(terms).toHaveAttribute('href', '/terms');
+    expect(policy.tagName).toBe('A');
+    expect(terms.tagName).toBe('A');
+    expect(policy).not.toHaveAttribute('data-discover');
+    expect(terms).not.toHaveAttribute('data-discover');
+    expect(policy.getAttribute('href')).not.toMatch(/^https?:/);
+    expect(terms.getAttribute('href')).not.toMatch(/^https?:/);
+    expect(button.compareDocumentPosition(consent) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it('explains the necessary cookie and dismisses it without touching stored practice', async () => {
+    seedPreserved();
+    box.config = { oauth: { google: true, github: false, microsoft: false }, mail: false };
+    const first = mount('/sign-in');
+    const notice = await screen.findByText(
+      paragraphText(
+        'Ordböj uses a necessary cookie to keep you signed in, and stores practice progress in this browser. See the Privacy Policy.',
+      ),
+    );
+    const policy = within(notice).getByRole('link', { name: 'Privacy Policy' });
+    expect(policy).toHaveAttribute('href', '/privacy');
+    expect(policy).not.toHaveAttribute('data-discover');
+    expect(policy.getAttribute('href')).not.toMatch(/^https?:/);
+    expect(screen.queryByRole('button', { name: /reject/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /accept/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'OK' }));
+    expect(
+      screen.queryByText(/uses a necessary cookie to keep you signed in/i),
+    ).not.toBeInTheDocument();
+    expect(localStorage.getItem('ordboj-necessary-cookie-notice')).toBe('1');
+    expectPreserved();
+
+    first.unmount();
+    resetAuthForTests();
+    mount('/sign-in');
+    expect(await screen.findByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument();
+    expect(
+      screen.queryByText(/uses a necessary cookie to keep you signed in/i),
+    ).not.toBeInTheDocument();
+    expectPreserved();
   });
 
   it('shows Google, GitHub, and Microsoft only when that provider is configured', async () => {
