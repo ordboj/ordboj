@@ -22,28 +22,6 @@ const preserved = {
   [LOG_KEY]: '{"entries":[]}',
 } as const;
 
-const passkeyMocks = vi.hoisted(() => ({
-  addPasskey: vi.fn(async () => ({ data: { id: 'pk' }, error: null })),
-  signInPasskey: vi.fn(async () => ({
-    data: {
-      user: { id: 'user-1', email: 'learner@example.com', emailVerified: true },
-      session: { id: 's' },
-    },
-    error: null,
-  })),
-}));
-
-vi.mock('better-auth/client', () => ({
-  createAuthClient: () => ({
-    passkey: { addPasskey: passkeyMocks.addPasskey },
-    signIn: { passkey: passkeyMocks.signInPasskey },
-  }),
-}));
-
-vi.mock('@better-auth/passkey/client', () => ({
-  passkeyClient: () => ({ id: 'passkey' }),
-}));
-
 vi.mock('@/pages/Home', () => ({
   default: function MockHome() {
     return <h1>Home screen</h1>;
@@ -147,8 +125,6 @@ describe('client auth UI', () => {
     box.user = null;
     box.config = { oauth: { google: false, github: false, microsoft: false }, mail: false };
     box.requests = [];
-    passkeyMocks.addPasskey.mockClear();
-    passkeyMocks.signInPasskey.mockClear();
     window.history.pushState({}, '', '/');
     installFetch();
   });
@@ -292,13 +268,16 @@ describe('client auth UI', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('does not offer passkey registration before a verified sign-in, and does offer it after', async () => {
+  it('never offers a passkey, before or after sign-in', async () => {
+    localStorage.setItem('ordboj-passkey-on-device', '1');
+    box.config = { oauth: { google: true, github: false, microsoft: false }, mail: false };
     const signedOut = mount('/sign-in');
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add a passkey' })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Sign in with a passkey' }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText(/passkey/i)).not.toBeInTheDocument();
     signedOut.unmount();
 
     resetAuthForTests();
@@ -306,20 +285,18 @@ describe('client auth UI', () => {
     const unverified = mount('/');
     expect(await screen.findByText(/learner@example.com/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add a passkey' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/passkey/i)).not.toBeInTheDocument();
     unverified.unmount();
 
     resetAuthForTests();
     box.user = { id: 'user-1', email: 'learner@example.com', emailVerified: true };
     mount('/');
-    expect(await screen.findByRole('button', { name: 'Add a passkey' })).toBeInTheDocument();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Add a passkey' }));
-    await waitFor(() => expect(passkeyMocks.addPasskey).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign out' })).toBeEnabled());
-    await user.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add a passkey' })).not.toBeInTheDocument();
     expect(
-      await screen.findByRole('button', { name: 'Sign in with a passkey' }),
-    ).toBeInTheDocument();
+      screen.queryByRole('button', { name: 'Sign in with a passkey' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/passkey/i)).not.toBeInTheDocument();
   });
 
   it('tells an offline learner with no session to connect, and does not open practice', async () => {

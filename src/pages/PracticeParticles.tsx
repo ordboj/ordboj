@@ -197,8 +197,11 @@ export default function PracticeParticles() {
   const progressPercent = countedTotal > 0 ? (countedDone / countedTotal) * 100 : 100;
 
   return (
-    <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4">
-      <div className="max-w-2xl mx-auto mb-6 space-y-4">
+    // pt-2 / mb-2 / space-y-2: the account bar already uses a row. The old
+    // p-4 + mb-6 header pushed Check Answer just below 640px, and the click
+    // scrolled the page (ORD-128).
+    <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 px-4 pt-2 pb-4">
+      <div className="max-w-2xl mx-auto mb-2 space-y-2">
         {isReadOnly && <ReadOnlyBanner />}
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">

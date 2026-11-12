@@ -25,8 +25,6 @@ export const AUTH_COPY = {
   google: 'Sign in with Google',
   github: 'Sign in with GitHub',
   microsoft: 'Sign in with Microsoft',
-  passkeySignIn: 'Sign in with a passkey',
-  addPasskey: 'Add a passkey',
   signedInAs: 'Signed in as',
   signOut: 'Sign out',
   signOutKept:
@@ -63,7 +61,4 @@ export const AUTH_COPY = {
   privacyBack: 'Back to sign in',
   privacyLink: 'Privacy',
   loading: 'Loading…',
-  passkeyFailed: 'The passkey could not be saved.',
-  passkeySignInFailed: 'The passkey sign-in did not work.',
-  passkeyUnsupported: 'This browser cannot use a passkey.',
 } as const;

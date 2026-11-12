@@ -21,8 +21,7 @@ import {
 import { loadAuthConfig, type AuthConfig } from '@/lib/auth/config';
 import { AUTH_COPY } from '@/lib/auth/copy';
 import { safeNextPath } from '@/lib/auth/origin';
-import { signInWithPasskey } from '@/lib/auth/passkey';
-import { hasPasskeyOnDevice, useAuthSession } from '@/lib/auth/session';
+import { useAuthSession } from '@/lib/auth/session';
 
 const PROVIDERS: { id: OAuthProvider; label: string }[] = [
   { id: 'google', label: AUTH_COPY.google },
@@ -54,7 +53,6 @@ export default function SignIn() {
     search.get('error') ? AUTH_COPY.genericError : null,
   );
   const [pending, setPending] = useState(false);
-  const passkeyReady = hasPasskeyOnDevice();
 
   useEffect(() => {
     if (session.status === 'authenticated') navigate(next, { replace: true });
@@ -113,14 +111,6 @@ export default function SignIn() {
     if (!result.ok) setError(result.message);
   }
 
-  async function onPasskey() {
-    setPending(true);
-    setError(null);
-    const result = await signInWithPasskey();
-    setPending(false);
-    if (!result.ok) setError(result.message);
-  }
-
   const ready = config ?? null;
   const mail = ready?.mail === true;
   const providers = PROVIDERS.filter((provider) => ready?.oauth[provider.id] === true);
@@ -141,17 +131,6 @@ export default function SignIn() {
           {provider.label}
         </Button>
       ))}
-      {passkeyReady ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          disabled={pending}
-          onClick={() => void onPasskey()}
-        >
-          {AUTH_COPY.passkeySignIn}
-        </Button>
-      ) : null}
       {mail ? (
         <>
           <form className="space-y-3" onSubmit={(event) => void onMagicLink(event)}>

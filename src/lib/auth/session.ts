@@ -8,7 +8,6 @@ import { AUTH_COPY } from '@/lib/auth/copy';
  * pre-v3 backup, or the answer log).
  */
 const HINT_KEY = 'ordboj-auth-hint';
-const PASSKEY_FLAG_KEY = 'ordboj-passkey-on-device';
 
 export interface AuthUser {
   id: string;
@@ -230,22 +229,6 @@ export async function signOut(): Promise<SignOutResult> {
   clearHint();
   publish({ status: 'anonymous' });
   return { ok: true };
-}
-
-export function hasPasskeyOnDevice(): boolean {
-  try {
-    return localStorage.getItem(PASSKEY_FLAG_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-export function markPasskeyOnDevice(): void {
-  try {
-    localStorage.setItem(PASSKEY_FLAG_KEY, '1');
-  } catch {
-    // The flag only shows the passkey sign-in button later. Ignore quota.
-  }
 }
 
 /** Test isolation. Does not remove practice stores. */
