@@ -8,6 +8,9 @@ import {
   GLYPH_DURATION_MS,
   GLYPH_LOOP_PAUSE_MS,
   GLYPH_MAX_TOTAL_MS,
+  GLYPH_MOTION_END_MS,
+  GLYPH_MOTION_LIMIT_MS,
+  GLYPH_PLAY_COUNT,
   GLYPH_STAGGER_MS,
   GLYPH_START_DELAY_MS,
   ParticleGlyph,
@@ -229,9 +232,96 @@ describe('ParticleGlyph loop contract (decision H)', () => {
     expect(percentages).toContain(100);
   });
 
-  it('the mover animation is infinite and spans var(--glyph-cycle)', () => {
+  it('the mover animation plays var(--glyph-plays) times over var(--glyph-cycle), never infinite', () => {
     const rule = css.match(/\.particle-glyph-mover\s*\{[^}]*\}/)![0];
-    expect(rule).toMatch(/animation:[^;]*var\(--glyph-cycle\)[^;]*\binfinite\b/);
+    expect(rule).toMatch(/animation:[^;]*var\(--glyph-cycle\)[^;]*var\(--glyph-plays\)\s*;/);
+  });
+});
+
+// Human decision I (2026-11-11), docs/learning/2026-11-11-glyph-loop-auto-stop.md:
+// two plays, all movement ends at 3400 ms, rest frame, tap replays.
+describe('ParticleGlyph two-play rule (decision I)', () => {
+  const css = readFileSync(join(__dirname, '..', 'index.css'), 'utf8');
+  const glyphRule = css.match(/\.particle-glyph-mover\s*\{[^}]*\}/)![0];
+  const pictureRule = css.match(/\.meaning-picture-mover\s*\{[^}]*\}/)![0];
+
+  it('plays twice', () => {
+    expect(GLYPH_PLAY_COUNT).toBe(2);
+  });
+
+  it('ends all movement at start delay + (plays - 1) cycles + one movement, which is 3400 ms', () => {
+    expect(GLYPH_MOTION_END_MS).toBe(
+      GLYPH_START_DELAY_MS + (GLYPH_PLAY_COUNT - 1) * GLYPH_CYCLE_MS + GLYPH_DURATION_MS,
+    );
+    expect(GLYPH_MOTION_END_MS).toBe(3400);
+  });
+
+  it('keeps automatic movement within the WCAG 2.2.2 limit of 5000 ms', () => {
+    expect(GLYPH_MOTION_LIMIT_MS).toBe(5000);
+    expect(GLYPH_MOTION_END_MS).toBeLessThanOrEqual(GLYPH_MOTION_LIMIT_MS);
+    expect(GLYPH_MOTION_END_MS).toBeLessThanOrEqual(5000);
+  });
+
+  it.each(NAMES)('sets --glyph-plays to "2" on the mover of "%s"', (name) => {
+    mockReducedMotion(false);
+    const { container } = render(<ParticleGlyph name={name} />);
+    const mover = container.querySelector<SVGElement>('.particle-glyph-mover')!;
+    expect(mover.style.getPropertyValue('--glyph-plays')).toBe('2');
+  });
+
+  it('the glyph rule uses var(--glyph-plays) without a fallback and var(--glyph-cycle)', () => {
+    expect(glyphRule).toContain('var(--glyph-plays)');
+    expect(glyphRule).not.toMatch(/var\(--glyph-plays\s*,/);
+    expect(glyphRule).toContain('var(--glyph-cycle)');
+  });
+
+  it('the picture rule sets animation-iteration-count: var(--glyph-plays)', () => {
+    expect(pictureRule).toMatch(/animation-iteration-count:\s*var\(--glyph-plays\)\s*;/);
+  });
+
+  it('neither mover rule, nor any rule that animates them, says infinite', () => {
+    expect(glyphRule).not.toMatch(/infinite/i);
+    expect(pictureRule).not.toMatch(/infinite/i);
+    // The picture's per-kind rules (sway, pulse, ...) carry the animation-name.
+    const pictureRules = css.match(/\.meaning-picture-[a-z-]+\s*\{[^}]*\}/g) ?? [];
+    expect(pictureRules.length).toBeGreaterThan(1);
+    for (const rule of pictureRules) expect(rule).not.toMatch(/infinite/i);
+  });
+
+  it('sets no fill mode on either mover (the base style is the rest frame)', () => {
+    for (const rule of [glyphRule, pictureRule]) {
+      expect(rule).not.toMatch(/animation-fill-mode/);
+      expect(rule).not.toMatch(/\b(forwards|both|backwards)\b/);
+    }
+  });
+
+  it('has exactly one button, and nothing named Pause or Stop', () => {
+    mockReducedMotion(false);
+    const { container } = render(<ParticleGlyph name="upp" />);
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(container.querySelectorAll('button, [role="button"]')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /pause|stop/i })).toBeNull();
+    expect(container.querySelector('[aria-label*="ause" i], [aria-label*="top" i]')).toBeNull();
+  });
+
+  it('keeps the button name through a replay', async () => {
+    mockReducedMotion(false);
+    const user = userEvent.setup();
+    render(<ParticleGlyph name="hem" />);
+    await user.click(screen.getByRole('button', { name: 'Replay movement: hem' }));
+    await user.click(screen.getByRole('button', { name: 'Replay movement: hem' }));
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('button')).not.toHaveAttribute('aria-pressed');
+  });
+
+  it('does not remount the SVG on a re-render with the same props', () => {
+    mockReducedMotion(false);
+    const { container, rerender } = render(<ParticleGlyph name="ut" />);
+    const before = container.querySelector('svg');
+    const mover = container.querySelector('.particle-glyph-mover');
+    rerender(<ParticleGlyph name="ut" />);
+    expect(container.querySelector('svg')).toBe(before);
+    expect(container.querySelector('.particle-glyph-mover')).toBe(mover);
   });
 });
 
