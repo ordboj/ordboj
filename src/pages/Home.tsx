@@ -249,6 +249,14 @@ export default function Home() {
           <p className="text-center text-sm text-muted-foreground">
             Practicing Swedish verbs with confidence ✨
           </p>
+          <p className="text-center">
+            <a
+              href="/privacy"
+              className="inline-flex min-h-11 items-center justify-center px-3 text-sm text-muted-foreground underline underline-offset-4"
+            >
+              Privacy
+            </a>
+          </p>
           <SupportLosevNotice className="text-center" />
         </footer>
       </div>
