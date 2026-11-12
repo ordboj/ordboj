@@ -36,8 +36,8 @@ test.describe('terms of use', () => {
     await expect(
       page.getByText('Ordböj is a free site for practicing Swedish verbs.'),
     ).toBeVisible();
-    await expect(page.getByText('To use the site, you must sign in.')).toBeVisible();
-    await expect(page.getByText('We currently offer sign-in with Google.')).toBeVisible();
+    await expect(page.getByText('To use the site, you must sign in.')).toHaveCount(0);
+    await expect(page.getByText('We currently offer sign-in with Google.')).toHaveCount(0);
     await expect(page.getByText(/Do not misuse the service/)).toBeVisible();
     await expect(page.getByText('The service is provided as is.')).toBeVisible();
     await expect(page.getByText('These terms are governed by the laws of Sweden.')).toBeVisible();

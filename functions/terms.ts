@@ -49,7 +49,6 @@ export const TERMS_HTML = `<!doctype html>
     <main>
       <h1>Terms of Use</h1>
       <p>Ordböj is a free site for practicing Swedish verbs.</p>
-      <p>To use the site, you must sign in. We currently offer sign-in with Google.</p>
       <p>You may use Ordböj for your own learning. Do not misuse the service, try to break it, or harm other users.</p>
       <p>How we handle your data is described in the <a href="/privacy">Privacy Policy</a>.</p>
       <p>The service is provided as is. We may change or stop it.</p>

@@ -13,7 +13,6 @@ const repoRoot = resolve(__dirname, '../..');
 
 const CLAUSES = [
   'Ordböj is a free site for practicing Swedish verbs.',
-  'To use the site, you must sign in. We currently offer sign-in with Google.',
   'You may use Ordböj for your own learning. Do not misuse the service, try to break it, or harm other users.',
   'The service is provided as is. We may change or stop it.',
   'These terms are governed by the laws of Sweden.',
@@ -57,6 +56,8 @@ describe('GET /terms', () => {
     expect(body).not.toContain('id="root"');
     expect(body).not.toContain('/src/main.tsx');
     expect(body).not.toMatch(/needs JavaScript/i);
+    expect(body).not.toContain('To use the site, you must sign in.');
+    expect(body).not.toContain('We currently offer sign-in with Google.');
     expect(body).not.toMatch(/\bgdpr\b/i);
     expect(body).not.toMatch(/encrypt/i);
   });
