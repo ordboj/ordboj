@@ -14,8 +14,10 @@ import {
   getParticleGlyph,
   getPhraseForms,
   getVerifiedParticleVerbs,
+  selectExample,
   type ParticleVerbData,
 } from '../src/lib/particleVerbs';
+import { selectDiscriminationVariant } from '../src/lib/discriminationVariant';
 
 // ORD-128: on the 360x640 mobile-chrome viewport, "Next Card" on the particle
 // feedback panel must be reachable WITHOUT scrolling, after a correct and a
@@ -223,6 +225,136 @@ test.describe('ORD-128: worst-case feedback panels at 360x640', () => {
       await page.goto('/practice-particles');
       await gradeTyped(page, 'xyz', 'Write the Swedish particle verb');
       await expectNextCardAboveFold(page, entry);
+    });
+  }
+});
+
+// ORD-144: pv:plocka-undan after a wrong tap on a choice card put Next Card's
+// bottom at 665 px (about 673 in CI). The fix keeps the three result chips on
+// one row and moves the 44x44 pronounce button onto the lemma row. Limit is
+// the viewport height; the sweep below covers every choice-eligible entry so
+// the same overflow cannot hide in another entry.
+const CHOICE_REPETITIONS = [3, 6, 9];
+
+// seedTarget introduces every verified particle, so this is the introduced
+// set the page itself sees.
+function introducedParticles(): Set<string> {
+  return new Set(getVerifiedParticleVerbs().map((e) => e.particle));
+}
+
+function choiceVariantFor(entry: ParticleVerbData, repetitions: number) {
+  const example = selectExample(entry, repetitions);
+  return selectDiscriminationVariant(
+    {
+      reflexive: entry.reflexive,
+      acceptedParticles: entry.acceptedParticles,
+      excludedParticles: example.excludedParticles,
+    },
+    repetitions,
+    introducedParticles(),
+  );
+}
+
+async function wrongChoiceTap(
+  page: Page,
+  entry: ParticleVerbData,
+  lureLabel: string,
+  reps: number,
+) {
+  page.setDefaultTimeout(15_000);
+  await seedTarget(page, entry.id, 'cloze', reps);
+  await page.goto('/practice-particles');
+  const group = page.getByRole('group', { name: 'Choose the particle verb' });
+  await expect(group).toBeVisible();
+  expect(page.viewportSize()).toEqual({ width: 360, height: VIEWPORT_HEIGHT });
+  await group.getByRole('button', { name: lureLabel, exact: true }).click();
+  await expect(page.getByText('Not quite')).toBeVisible();
+}
+
+async function expectNextCardBottomWithinViewport(page: Page) {
+  const next = page.getByRole('button', { name: 'Next Card' });
+  await expect(next).toBeVisible();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  const box = (await next.boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(VIEWPORT_HEIGHT);
+}
+
+test.describe('ORD-144: pv:plocka-undan wrong choice at 360x640', () => {
+  const entryId = 'pv:plocka-undan';
+  for (const lure of ['plocka upp', 'plocka bort']) {
+    for (const reps of CHOICE_REPETITIONS) {
+      test(`wrong tap "${lure}" at repetitions ${reps}: Next Card bottom <= 640 and new layout`, async ({
+        page,
+      }) => {
+        const entry = findParticleVerb(entryId)!;
+        // Guard the fixture: this repetitions count really renders a choice card
+        // offering this lure.
+        const variant = choiceVariantFor(entry, reps);
+        expect(variant).not.toBeNull();
+        const labels = variant!.options.map((o) => `${entry.baseInfinitive} ${o.particle}`);
+        expect(labels).toContain(lure);
+
+        await wrongChoiceTap(page, entry, lure, reps);
+        await expectNextCardAboveFold(page, entry);
+
+        // Chips: all three on one row, nothing pushed past the viewport edge.
+        const chips = page.locator('div[lang="sv"]').filter({
+          hasText: new RegExp(`^(${labels.join('|')})$`),
+        });
+        await expect(chips).toHaveCount(3);
+        const boxes = await Promise.all(
+          [0, 1, 2].map(async (i) => (await chips.nth(i).boundingBox())!),
+        );
+        for (const b of boxes) {
+          expect(Math.abs(b.y - boxes[0]!.y)).toBeLessThanOrEqual(1);
+          expect(b.x).toBeGreaterThanOrEqual(0);
+          expect(b.x + b.width).toBeLessThanOrEqual(360);
+        }
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+          360,
+        );
+
+        // Pronounce: >= 44x44 and on the lemma row (right of it), above the
+        // example sentence, not beside it.
+        const pronounce = page.getByRole('button', { name: 'Pronounce sentence' });
+        await expect(pronounce).toBeVisible();
+        const pb = (await pronounce.boundingBox())!;
+        expect(pb.width).toBeGreaterThanOrEqual(44);
+        expect(pb.height).toBeGreaterThanOrEqual(44);
+        const lemma = page.getByRole('heading', { level: 2 }).filter({ hasText: entry.lemma });
+        const lb = (await lemma.boundingBox())!;
+        const pCenterY = pb.y + pb.height / 2;
+        expect(pCenterY).toBeGreaterThanOrEqual(lb.y);
+        expect(pCenterY).toBeLessThanOrEqual(lb.y + lb.height);
+        expect(pb.x).toBeGreaterThanOrEqual(lb.x + lb.width);
+        const exampleBox = (await page.locator('p[lang="sv"].text-base').first().boundingBox())!;
+        expect(pb.y + pb.height).toBeLessThanOrEqual(exampleBox.y + 1);
+      });
+    }
+  }
+});
+
+// Data-driven: every verified entry that can render a choice card, at every
+// trigger repetitions count, for every lure the card offers.
+const choiceSweep = getVerifiedParticleVerbs().flatMap((entry) =>
+  CHOICE_REPETITIONS.flatMap((reps) => {
+    const variant = choiceVariantFor(entry, reps);
+    if (!variant) return [];
+    return variant.options
+      .filter((o) => !o.correct)
+      .map((o) => ({ entry, reps, lure: `${entry.baseInfinitive} ${o.particle}` }));
+  }),
+);
+
+test.describe('ORD-144: every choice-eligible entry, wrong tap, Next Card bottom <= 640', () => {
+  test('the sweep is not vacuous', () => {
+    expect(choiceSweep.length).toBeGreaterThan(0);
+    expect(choiceSweep.some((c) => c.entry.id === 'pv:plocka-undan')).toBe(true);
+  });
+  for (const c of choiceSweep) {
+    test(`${c.entry.id} wrong "${c.lure}" at repetitions ${c.reps}`, async ({ page }) => {
+      await wrongChoiceTap(page, c.entry, c.lure, c.reps);
+      await expectNextCardBottomWithinViewport(page);
     });
   }
 });
