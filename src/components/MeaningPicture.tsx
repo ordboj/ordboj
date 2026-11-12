@@ -1,6 +1,6 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { GLYPH_CYCLE_MS } from '@/components/ParticleGlyph';
+import { GLYPH_CYCLE_MS, GLYPH_PLAY_COUNT } from '@/components/ParticleGlyph';
 import type { MeaningPictureId } from '@/lib/particleVerbs';
 
 const STROKE_WIDTH = 2;
@@ -155,12 +155,13 @@ export function MeaningPicture({ id, className }: MeaningPictureProps) {
   // Read once at mount, as ParticleGlyph and ConfettiEffect do.
   const [reducedMotion] = useState(readsReducedMotion);
   // Bumping the key remounts the SVG, which restarts the CSS animation.
-  const [playCount, setPlayCount] = useState(0);
+  const [replayKey, setReplayKey] = useState(0);
 
   const { landmark, mover, moverSpec } = PICTURES[id];
 
   const moverVars: PictureVars = {
     '--glyph-cycle': `${GLYPH_CYCLE_MS}ms`,
+    '--glyph-plays': String(GLYPH_PLAY_COUNT),
     '--mp-angle': `${moverSpec.angle ?? 0}deg`,
     '--mp-scale': `${moverSpec.scale ?? 1}`,
     transformOrigin: `${moverSpec.origin.x}px ${moverSpec.origin.y}px`,
@@ -168,7 +169,7 @@ export function MeaningPicture({ id, className }: MeaningPictureProps) {
 
   const svg = (
     <svg
-      key={playCount}
+      key={replayKey}
       data-meaning-picture={id}
       viewBox="0 0 24 24"
       aria-hidden="true"
@@ -206,7 +207,7 @@ export function MeaningPicture({ id, className }: MeaningPictureProps) {
     <button
       type="button"
       aria-label="Replay picture"
-      onClick={() => setPlayCount((n) => n + 1)}
+      onClick={() => setReplayKey((n) => n + 1)}
       className={cn(
         box,
         'cursor-pointer touch-manipulation hover:bg-muted active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
