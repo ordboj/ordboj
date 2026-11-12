@@ -1266,7 +1266,7 @@ describe('particle verb dataset - motion glyph flags', () => {
     expect(getParticleGlyph(found!)).toBeNull();
   });
 
-  it('leaves pv:ta-hem without a glyph (split pending, ORD-135)', () => {
+  it('leaves pv:ta-hem without a glyph (glyph approval pending, ORD-135)', () => {
     const found = PARTICLE_VERB_DATA.find((entry) => entry.id === 'pv:ta-hem');
     expect(found).toBeDefined();
     expect(found?.motionGlyphVerified).toBeUndefined();
