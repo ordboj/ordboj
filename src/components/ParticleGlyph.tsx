@@ -16,10 +16,21 @@ export const GLYPH_START_DELAY_MS = 0;
 export const GLYPH_STAGGER_MS = 0;
 /** Hard cap on delay + duration of the movement of every animated element. */
 export const GLYPH_MAX_TOTAL_MS = 1500;
-/** Rest in the rest frame between two plays (decision H: the glyph loops). */
+/** Rest in the rest frame between two plays. */
 export const GLYPH_LOOP_PAUSE_MS = 2000;
 /** One loop: the movement, then the rest. Mirrored as 25.926% in index.css. */
 export const GLYPH_CYCLE_MS = GLYPH_DURATION_MS + GLYPH_LOOP_PAUSE_MS;
+
+/** The movement plays this many times, then stops (ORD-142, decision I). */
+export const GLYPH_PLAY_COUNT = 2;
+/**
+ * Movement ends this long after mount: delay + gaps between plays + the last
+ * movement (3400 ms). Learning note 2026-11-11-glyph-loop-auto-stop.
+ */
+export const GLYPH_MOTION_END_MS =
+  GLYPH_START_DELAY_MS + (GLYPH_PLAY_COUNT - 1) * GLYPH_CYCLE_MS + GLYPH_DURATION_MS;
+/** WCAG 2.2.2: automatic movement must not last longer than this. */
+export const GLYPH_MOTION_LIMIT_MS = 5000;
 
 type GlyphVars = CSSProperties & Record<`--${string}`, string>;
 
@@ -150,13 +161,14 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
   // Read once at mount, as ConfettiEffect does.
   const [reducedMotion] = useState(readsReducedMotion);
   // Bumping the key remounts the SVG, which restarts the CSS animation.
-  const [playCount, setPlayCount] = useState(0);
+  const [replayKey, setReplayKey] = useState(0);
 
   const { rest, from, landmark } = GLYPHS[name];
 
   const moverVars: GlyphVars = {
     '--glyph-duration': `${GLYPH_DURATION_MS}ms`,
     '--glyph-cycle': `${GLYPH_CYCLE_MS}ms`,
+    '--glyph-plays': String(GLYPH_PLAY_COUNT),
     '--glyph-delay': `${GLYPH_START_DELAY_MS}ms`,
     '--glyph-from-x': `${from.x}px`,
     '--glyph-from-y': `${from.y}px`,
@@ -172,7 +184,7 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
 
   const svg = (
     <svg
-      key={playCount}
+      key={replayKey}
       viewBox="0 0 24 24"
       aria-hidden="true"
       focusable="false"
@@ -211,7 +223,7 @@ export function ParticleGlyph({ name, className }: ParticleGlyphProps) {
     <button
       type="button"
       aria-label={`Replay movement: ${name}`}
-      onClick={() => setPlayCount((n) => n + 1)}
+      onClick={() => setReplayKey((n) => n + 1)}
       className={cn(
         box,
         'cursor-pointer touch-manipulation hover:bg-muted active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',

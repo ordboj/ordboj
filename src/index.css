@@ -97,13 +97,15 @@ All colors MUST be HSL.
   }
 }
 
-/* ParticleGlyph mover (ORD-118, loop: decision H). The element's own styles
-   are the rest frame (end of the path). One infinite animation spans a whole
+/* ParticleGlyph mover (ORD-118; ORD-142: two plays, then rest, see
+   docs/learning/2026-11-11-glyph-loop-auto-stop.md). The element's own styles
+   are the rest frame (end of the path). One animation spans a whole
    cycle (--glyph-cycle = GLYPH_CYCLE_MS = GLYPH_DURATION_MS 700 ms movement +
    GLYPH_LOOP_PAUSE_MS 2000 ms rest = 2700 ms). The movement takes the first
    700 / 2700 = 25.926% of the cycle; the rest of it holds the rest frame.
    Keep the percentage in step with those constants in ParticleGlyph.tsx.
-   Timing comes from inline custom properties. No fill-mode, so the global
+   Timing and play count (--glyph-plays, no fallback) come from inline custom
+   properties; the iteration count ends the movement, no JS timer. No fill-mode, so the global
    reduced-motion rule below (one iteration, ~0 ms) lands on the rest frame
    and never loops. */
 @keyframes particle-glyph-move {
@@ -118,19 +120,19 @@ All colors MUST be HSL.
 }
 
 .particle-glyph-mover {
-  animation: particle-glyph-move var(--glyph-cycle) linear var(--glyph-delay) infinite;
+  animation: particle-glyph-move var(--glyph-cycle) linear var(--glyph-delay) var(--glyph-plays);
 }
 
 /* MeaningPicture mover (ORD-134). Same cycle as the glyph: the first
    25.926% of --glyph-cycle is the 700 ms movement, the rest holds the rest
-   frame. The element's own styles are the rest frame; keyframes name only the
+   frame. It plays --glyph-plays times, then stops (ORD-142). The element's own styles are the rest frame; keyframes name only the
    non-rest states and end on it. In place only (rotate, scale, fade). No
    fill-mode, so the global reduced-motion rule lands on the rest frame. */
 .meaning-picture-mover {
   transform-box: view-box;
   animation-duration: var(--glyph-cycle);
   animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
+  animation-iteration-count: var(--glyph-plays);
 }
 .meaning-picture-sway {
   animation-name: meaning-picture-sway;
