@@ -27,6 +27,21 @@ test.describe('privacy policy', () => {
     await expect(page.getByText(/openid/i)).toBeVisible();
     await expect(page.getByText(/sign-in cookie/i)).toBeVisible();
     await expect(page.getByText(/Practice progress is stored in this browser/i)).toBeVisible();
+    await expect(
+      page.getByText(
+        'When you sign in, Ordböj stores the IP address and the user agent with the sign-in session for up to 7 days.',
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText('A visit after the first day can extend that session by another 7 days.'),
+    ).toBeVisible();
+    await expect(page.getByText(/Cloudflare Web Analytics/)).toBeVisible();
+    await expect(
+      page.getByText(/does not use cookies, including advertising cookies/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/does not fingerprint you by IP address or user agent/),
+    ).toBeVisible();
     await expect(page.getByText(/Cloudflare D1/i)).toHaveCount(0);
     await expect(page.getByText('Ordböj does not sell this data.')).toBeVisible();
     await expect(page.getByText(/needs JavaScript/i)).toHaveCount(0);

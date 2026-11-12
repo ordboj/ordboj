@@ -3,6 +3,19 @@ import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 import { PRIVACY_HTML } from './functions/privacy.ts';
 import { TERMS_HTML } from './functions/terms.ts';
+import { applyWebAnalyticsToken } from './src/lib/webAnalyticsHtml.ts';
+
+function webAnalyticsPlugin(): Plugin {
+  return {
+    name: 'ordboj-web-analytics',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        return applyWebAnalyticsToken(html, process.env.CLOUDFLARE_WEB_ANALYTICS_TOKEN);
+      },
+    },
+  };
+}
 
 // Vite does not run Pages Functions. This middleware serves the same HTML
 // the Function returns, so local dev and Playwright match the deploy.
@@ -60,7 +73,7 @@ export default defineConfig(() => ({
     host: '::',
     port: 8080,
   },
-  plugins: [privacyPagePlugin(), termsPagePlugin(), react()],
+  plugins: [webAnalyticsPlugin(), privacyPagePlugin(), termsPagePlugin(), react()],
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),

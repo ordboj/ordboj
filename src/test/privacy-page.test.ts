@@ -16,8 +16,19 @@ const DISCLOSURES: { label: string; pattern: RegExp }[] = [
   { label: 'basic profile', pattern: /profile/i },
   { label: 'openid', pattern: /openid/i },
   { label: 'sign-in cookie', pattern: /sign-in cookie/i },
+  { label: 'session ip address', pattern: /IP address/ },
+  { label: 'session user agent', pattern: /user agent/ },
+  { label: 'session retention', pattern: /for up to 7 days/ },
+  { label: 'session extension', pattern: /extend that session by another 7 days/ },
   { label: 'practice progress', pattern: /practice progress/i },
   { label: 'this browser', pattern: /Practice progress is stored in this browser/ },
+  { label: 'web analytics', pattern: /Cloudflare Web Analytics/ },
+  { label: 'page views', pattern: /page views/ },
+  { label: 'page performance', pattern: /page performance/ },
+  { label: 'no cookies', pattern: /does not use cookies, including advertising cookies/ },
+  { label: 'nothing on the device', pattern: /does not store anything on your device/ },
+  { label: 'no fingerprint', pattern: /does not fingerprint you by IP address or user agent/ },
+  { label: 'cloudflare processes', pattern: /Cloudflare processes this data/ },
   { label: 'does not sell', pattern: /does not sell/i },
 ];
 
@@ -50,10 +61,18 @@ describe('GET /privacy', () => {
     );
     expect(missing).toEqual([]);
     expect(body).toContain('Practice progress is stored in this browser.');
+    expect(body).toContain(
+      'When you sign in, Ordböj stores the IP address and the user agent with the sign-in session for up to 7 days.',
+    );
+    expect(body).toContain(
+      'A visit after the first day can extend that session by another 7 days.',
+    );
     expect(body).not.toContain(
       'When you are signed in, Ordböj also stores that progress on a Cloudflare D1 database in the EU.',
     );
     expect(body).not.toMatch(/cloudflare d1/i);
+    expect(body).not.toMatch(/product event/i);
+    expect(body).not.toMatch(/GDPR compliant/i);
     expect(body).not.toContain('id="root"');
     expect(body).not.toContain('/src/main.tsx');
     expect(body).not.toMatch(/needs JavaScript/i);

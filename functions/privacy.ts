@@ -55,7 +55,16 @@ export const PRIVACY_HTML = `<!doctype html>
         you in.
       </p>
       <p>A sign-in cookie is stored in your browser when you sign in.</p>
+      <p>
+        When you sign in, Ordböj stores the IP address and the user agent with the sign-in session for up to 7 days.
+        A visit after the first day can extend that session by another 7 days.
+      </p>
       <p>Practice progress is stored in this browser.</p>
+      <p>
+        Ordböj uses Cloudflare Web Analytics to count page views and to measure page performance.
+        It does not use cookies, including advertising cookies, and it does not store anything on your device.
+        It does not fingerprint you by IP address or user agent. Cloudflare processes this data.
+      </p>
       <p>Ordböj does not sell this data.</p>
       <p><a href="/">Back to Ordböj</a></p>
     </main>

@@ -29,13 +29,26 @@ describe('index.html Content-Security-Policy meta tag', () => {
     expect(() => extractCspContent(html)).not.toThrow();
   });
 
-  it('restricts script-src to self, with no unsafe-inline', () => {
+  it('allows the Cloudflare Web Analytics script origin and no other script hosts', () => {
     const csp = extractCspContent(html);
     const scriptSrc = csp.match(/script-src\s+([^;]+);/)?.[1];
     expect(scriptSrc, 'script-src directive must be present').toBeDefined();
-    expect(scriptSrc).toContain("'self'");
+    expect(scriptSrc).toBe("'self' https://static.cloudflareinsights.com");
     expect(scriptSrc).not.toContain('unsafe-inline');
     expect(scriptSrc).not.toContain('unsafe-eval');
+  });
+
+  it('allows the Cloudflare Web Analytics beacon host and no other connect hosts', () => {
+    const csp = extractCspContent(html);
+    const connectSrc = csp.match(/connect-src\s+([^;]+);/)?.[1];
+    expect(connectSrc, 'connect-src directive must be present').toBeDefined();
+    expect(connectSrc).toBe("'self' https://cloudflareinsights.com");
+  });
+
+  it('keeps the rest of the policy unchanged', () => {
+    expect(extractCspContent(html)).toBe(
+      "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';",
+    );
   });
 
   it('allows worker-src blob:, required by canvas-confetti', () => {
