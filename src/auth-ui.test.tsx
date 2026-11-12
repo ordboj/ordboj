@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -220,6 +221,33 @@ describe('client auth UI', () => {
     expect(await screen.findByLabelText('New password')).toBeInTheDocument();
     expect(screen.getByLabelText('Confirm new password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save new password' })).toBeInTheDocument();
+  });
+
+  it('shows Google as a full-width blue pill with the official G, and a click still starts Google sign-in', async () => {
+    box.config = { oauth: { google: true, github: false, microsoft: false }, mail: false };
+    mount('/sign-in');
+    const button = await screen.findByRole('button', { name: 'Sign in with Google' });
+    expect(button).toHaveClass('w-full', 'rounded-full', 'bg-[#5D83E5]', 'text-white');
+    const logo = button.querySelector('img');
+    expect(logo).toHaveAttribute('src', '/brand/google-g.png');
+    expect(logo).toHaveAttribute('alt', '');
+    // Published standard-color G, not a redraw:
+    // https://www.gstatic.com/images/branding/googleg/2x/googleg_standard_color_128dp.png
+    const mark = readFileSync(resolve(process.cwd(), 'public/brand/google-g.png'));
+    expect(createHash('sha256').update(mark).digest('hex')).toBe(
+      '6fae509b81bc94fef1b4ac2cdae8f1889df2da9f736f050cd32e337517494084',
+    );
+
+    const user = userEvent.setup();
+    await user.click(button);
+    await waitFor(() => {
+      expect(box.requests.some((call) => call.url.includes('/api/auth/sign-in/social'))).toBe(true);
+    });
+    const social = box.requests.find((call) => call.url.includes('/api/auth/sign-in/social'));
+    expect(social?.body).toContain('"provider":"google"');
+    expect(social?.body).toContain(callbackURL('/'));
+    expect(social?.body).toContain(callbackURL('/sign-in'));
+    expect(social?.body).not.toContain('pages.dev');
   });
 
   it('shows Google, GitHub, and Microsoft only when that provider is configured', async () => {

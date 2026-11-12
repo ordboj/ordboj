@@ -29,6 +29,29 @@ const PROVIDERS: { id: OAuthProvider; label: string }[] = [
   { id: 'microsoft', label: AUTH_COPY.microsoft },
 ];
 
+// Official multi-color G (standard color), not a redraw:
+// https://www.gstatic.com/images/branding/googleg/2x/googleg_standard_color_128dp.png
+const GOOGLE_G_SRC = '/brand/google-g.png';
+
+function GoogleSignInButton({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-full bg-[#5D83E5] px-5 text-base font-medium text-white transition-colors hover:bg-[#4F74D4] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <span
+        className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-white"
+        aria-hidden="true"
+      >
+        <img src={GOOGLE_G_SRC} alt="" width={22} height={22} className="size-[22px]" />
+      </span>
+      {AUTH_COPY.google}
+    </button>
+  );
+}
+
 function useAuthConfig(): AuthConfig | null {
   const [config, setConfig] = useState<AuthConfig | null>(null);
   useEffect(() => {
@@ -119,18 +142,26 @@ export default function SignIn() {
     <AuthScreen title={AUTH_COPY.signInTitle} intro={AUTH_COPY.signInIntro} showLosev>
       {error ? <AuthError>{error}</AuthError> : null}
       {ready === null ? <AuthStatus>{AUTH_COPY.loading}</AuthStatus> : null}
-      {providers.map((provider) => (
-        <Button
-          key={provider.id}
-          type="button"
-          variant="outline"
-          className="w-full"
-          disabled={pending}
-          onClick={() => void onProvider(provider.id)}
-        >
-          {provider.label}
-        </Button>
-      ))}
+      {providers.map((provider) =>
+        provider.id === 'google' ? (
+          <GoogleSignInButton
+            key={provider.id}
+            disabled={pending}
+            onClick={() => void onProvider(provider.id)}
+          />
+        ) : (
+          <Button
+            key={provider.id}
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={pending}
+            onClick={() => void onProvider(provider.id)}
+          >
+            {provider.label}
+          </Button>
+        ),
+      )}
       {mail ? (
         <>
           <form className="space-y-3" onSubmit={(event) => void onMagicLink(event)}>
