@@ -436,7 +436,7 @@ export function ParticleVerbCard({
                 // The tapped option marked wrong and muted, the target
                 // marked correct — never at equal weight (P21 of
                 // docs/learning/2026-08-08-ux-pedagogy-red-lines.md).
-                <div className="flex flex-wrap justify-center gap-2">
+                <div className="flex flex-nowrap justify-center gap-1.5">
                   {discriminationVariant.options.map((option) => {
                     const wasTapped = option.particle === selectedParticle;
                     const stateClasses = option.correct
@@ -447,7 +447,10 @@ export function ParticleVerbCard({
                     return (
                       <div
                         key={option.particle}
-                        className={`rounded-lg border px-2 py-1 text-center text-base font-semibold ${stateClasses}`}
+                        className={cn(
+                          'min-w-0 whitespace-nowrap rounded-lg border px-1.5 py-1 text-center text-sm font-semibold',
+                          stateClasses,
+                        )}
                         lang="sv"
                       >
                         {entry.baseInfinitive} {option.particle}
@@ -479,7 +482,7 @@ export function ParticleVerbCard({
                   docs/learning/2026-08-12-sentence-completion-distractors.md:
                   only when a verified entry actually carries that lemma. */}
               {chosenLureEntry && (
-                <p className="text-sm text-muted-foreground text-center">
+                <p className="text-sm leading-tight text-muted-foreground text-center">
                   <span lang="sv" className="font-semibold">
                     {renderLemma(chosenLureEntry)}
                   </span>{' '}
@@ -512,25 +515,22 @@ export function ParticleVerbCard({
                   </div>
                 )}
                 {/* The prompt h2 is unmounted once graded, so the panel lemma is
-                    the card's heading. A <p> with an explicit heading role, not
-                    an <h2>: glyph.test.tsx and the ORD-128 e2e spec (qa-owned)
-                    locate the lemma as a <p>. */}
-                <p role="heading" aria-level={2} className="text-2xl font-bold text-primary">
-                  <PhraseWithParticle phrase={lemma} particle={entry.particle} />
-                </p>
-                <p className="text-sm text-muted-foreground">{entry.gloss.en}</p>
-                <div className="flex items-center justify-center gap-2">
-                  <p className="text-base" lang="sv">
-                    <PhraseWithParticle phrase={example.sv} particle={entry.particle} />
-                  </p>
-                  {discriminationVariant && (
-                    // Audio speaks the corrected sentence only — no pronounce
-                    // control on any wrong option (feedback point 5). The
-                    // isolated-particle stress risk the typed cloze's comment
-                    // above describes does not apply to a full sentence, which
-                    // is why this control exists here and nowhere else on this
-                    // card. Icon-only and beside the sentence it speaks, so it
-                    // costs no row of its own at 360x640.
+                    the card's heading. On a choice card the pronounce control
+                    shares this row (symmetric spacer keeps the lemma centred),
+                    so the example below gets the full panel width. */}
+                {discriminationVariant ? (
+                  <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center">
+                    <span aria-hidden="true" />
+                    <h2 className="text-2xl font-bold text-primary">
+                      <PhraseWithParticle phrase={lemma} particle={entry.particle} />
+                    </h2>
+                    {/* Audio speaks the corrected sentence only — no pronounce
+                        control on any wrong option (feedback point 5). The
+                        isolated-particle stress risk the typed cloze's comment
+                        above describes does not apply to a full sentence, which
+                        is why this control exists here and nowhere else on this
+                        card. Icon-only and on the lemma row, so it costs no row
+                        of its own at 360x640. */}
                     <Button
                       onClick={() => speakSwedish(example.sv, muteAudio)}
                       variant="outline"
@@ -540,8 +540,16 @@ export function ParticleVerbCard({
                     >
                       <Volume2 className="w-4 h-4" />
                     </Button>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <h2 className="text-2xl font-bold text-primary">
+                    <PhraseWithParticle phrase={lemma} particle={entry.particle} />
+                  </h2>
+                )}
+                <p className="text-sm text-muted-foreground">{entry.gloss.en}</p>
+                <p className="text-base" lang="sv">
+                  <PhraseWithParticle phrase={example.sv} particle={entry.particle} />
+                </p>
               </div>
 
               {senseLine}
