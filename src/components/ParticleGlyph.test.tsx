@@ -8,6 +8,9 @@ import {
   GLYPH_DURATION_MS,
   GLYPH_LOOP_PAUSE_MS,
   GLYPH_MAX_TOTAL_MS,
+  GLYPH_MOTION_END_MS,
+  GLYPH_MOTION_LIMIT_MS,
+  GLYPH_PLAY_COUNT,
   GLYPH_STAGGER_MS,
   GLYPH_START_DELAY_MS,
   ParticleGlyph,
@@ -201,7 +204,7 @@ describe('ParticleGlyph timing contract', () => {
   });
 });
 
-describe('ParticleGlyph loop contract (decision H)', () => {
+describe('ParticleGlyph play contract (decision I, ORD-137: two plays, then rest)', () => {
   it('moves 600-900 ms, within the 1.5 s cap, then rests 2000 ms; cycle is their sum', () => {
     expect(GLYPH_DURATION_MS).toBeGreaterThanOrEqual(600);
     expect(GLYPH_DURATION_MS).toBeLessThanOrEqual(900);
@@ -229,9 +232,101 @@ describe('ParticleGlyph loop contract (decision H)', () => {
     expect(percentages).toContain(100);
   });
 
-  it('the mover animation is infinite and spans var(--glyph-cycle)', () => {
-    const rule = css.match(/\.particle-glyph-mover\s*\{[^}]*\}/)![0];
-    expect(rule).toMatch(/animation:[^;]*var\(--glyph-cycle\)[^;]*\binfinite\b/);
+  // Rule change, not a weakened test: decision H ("infinite") was replaced by
+  // decision I (two plays, then the rest frame). The assertion now pins
+  // var(--glyph-plays) in the same slot where `infinite` used to be.
+  const rule = () => css.match(/\.particle-glyph-mover\s*\{[^}]*\}/)![0];
+
+  it('the mover animation spans var(--glyph-cycle) and repeats var(--glyph-plays) times', () => {
+    expect(rule()).toMatch(
+      /animation:[^;]*var\(--glyph-cycle\)[^;]*var\(--glyph-delay\)[^;]*var\(--glyph-plays\)/,
+    );
+    expect(rule()).toContain('var(--glyph-cycle)');
+    expect(rule()).toContain('var(--glyph-plays)');
+  });
+
+  const cssNoComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it('no rule of either mover (or the picture variants) says infinite', () => {
+    const rules = Array.from(cssNoComments.matchAll(/([^{}]+)\{([^}]*)\}/g)).filter(
+      ([, selector]) => /particle-glyph-mover|meaning-picture-/.test(selector ?? ''),
+    );
+    expect(rules.length).toBeGreaterThan(1);
+    for (const [, selector, body] of rules) {
+      expect(`${selector}{${body}}`).not.toMatch(/\binfinite\b/);
+    }
+  });
+
+  it('sets no fill mode: the base style is the rest frame', () => {
+    expect(rule()).not.toMatch(/animation-fill-mode/);
+    expect(rule()).not.toMatch(/\b(forwards|both|backwards)\b/);
+  });
+});
+
+describe('ParticleGlyph auto-stop constants (decision I, ORD-137)', () => {
+  it('plays twice', () => {
+    expect(GLYPH_PLAY_COUNT).toBe(2);
+  });
+
+  it('ends all movement at start + (plays - 1) * cycle + duration = 3400 ms', () => {
+    expect(GLYPH_MOTION_END_MS).toBe(
+      GLYPH_START_DELAY_MS + (GLYPH_PLAY_COUNT - 1) * GLYPH_CYCLE_MS + GLYPH_DURATION_MS,
+    );
+    expect(GLYPH_MOTION_END_MS).toBe(3400);
+  });
+
+  it('keeps automatic movement within the WCAG 2.2.2 limit of 5000 ms', () => {
+    expect(GLYPH_MOTION_LIMIT_MS).toBe(5000);
+    expect(GLYPH_MOTION_END_MS).toBeLessThanOrEqual(GLYPH_MOTION_LIMIT_MS);
+    // Literal, so redefining the limit constant cannot hide a breach.
+    expect(GLYPH_MOTION_END_MS).toBeLessThanOrEqual(5000);
+  });
+
+  it.each(NAMES)('"%s" mover carries --glyph-plays = "2"', (name) => {
+    mockReducedMotion(false);
+    const { container } = render(<ParticleGlyph name={name} />);
+    const mover = container.querySelector<SVGElement>('.particle-glyph-mover')!;
+    expect(mover.style.getPropertyValue('--glyph-plays')).toBe('2');
+  });
+});
+
+describe('ParticleGlyph controls under the auto-stop rule', () => {
+  it.each(NAMES)('"%s" has exactly one button, a size-11 Replay, and no Pause/Stop', (name) => {
+    mockReducedMotion(false);
+    render(<ParticleGlyph name={name} />);
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAccessibleName(`Replay movement: ${name}`);
+    expect(buttons[0]).toHaveClass('size-11');
+    expect(screen.queryByRole('button', { name: /pause|stop/i })).toBeNull();
+    expect(screen.queryByLabelText(/pause|stop/i)).toBeNull();
+  });
+
+  it('keeps the same button name after a click', async () => {
+    mockReducedMotion(false);
+    const user = userEvent.setup();
+    render(<ParticleGlyph name="hem" />);
+    await user.click(screen.getByRole('button', { name: 'Replay movement: hem' }));
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Replay movement: hem' })).not.toHaveAttribute(
+      'aria-pressed',
+    );
+  });
+
+  it('a re-render with the same props does not remount the SVG', () => {
+    mockReducedMotion(false);
+    const { container, rerender } = render(<ParticleGlyph name="upp" />);
+    const before = container.querySelector('svg');
+    rerender(<ParticleGlyph name="upp" />);
+    expect(container.querySelector('svg')).toBe(before);
+    expect(before!.isConnected).toBe(true);
+  });
+
+  it('under reduced motion: no button and an aria-hidden wrapper', () => {
+    mockReducedMotion(true);
+    const { container } = render(<ParticleGlyph name="ihop" />);
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(container.querySelector('svg')!.parentElement).toHaveAttribute('aria-hidden', 'true');
   });
 });
 

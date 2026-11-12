@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,6 +9,9 @@ import {
   GLYPH_DURATION_MS,
   GLYPH_LOOP_PAUSE_MS,
   GLYPH_MAX_TOTAL_MS,
+  GLYPH_MOTION_END_MS,
+  GLYPH_MOTION_LIMIT_MS,
+  GLYPH_PLAY_COUNT,
   GLYPH_START_DELAY_MS,
 } from '@/components/ParticleGlyph';
 import type { MeaningPictureId } from '@/lib/particleVerbs';
@@ -104,5 +109,72 @@ describe('MeaningPicture timing contract (shared with ParticleGlyph)', () => {
     const { container } = render(<MeaningPicture id={id} />);
     const mover = container.querySelector<SVGElement>('.meaning-picture-mover')!;
     expect(mover.style.getPropertyValue('--glyph-cycle')).toBe(`${GLYPH_CYCLE_MS}ms`);
+  });
+});
+
+describe('MeaningPicture auto-stop (decision I, ORD-137: two plays, then rest)', () => {
+  it('shares the glyph constants: 2 plays, movement ends at 3400 ms, within 5000 ms', () => {
+    expect(GLYPH_PLAY_COUNT).toBe(2);
+    expect(GLYPH_MOTION_END_MS).toBe(3400);
+    expect(GLYPH_MOTION_LIMIT_MS).toBe(5000);
+    expect(GLYPH_MOTION_END_MS).toBeLessThanOrEqual(5000);
+  });
+
+  it.each(IDS)('"%s" mover carries --glyph-plays = "2"', (id) => {
+    mockReducedMotion(false);
+    const { container } = render(<MeaningPicture id={id} />);
+    const mover = container.querySelector<SVGElement>('.meaning-picture-mover')!;
+    expect(mover.style.getPropertyValue('--glyph-plays')).toBe('2');
+  });
+
+  const css = readFileSync(join(__dirname, '..', 'index.css'), 'utf8').replace(
+    /\/\*[\s\S]*?\*\//g,
+    '',
+  );
+  const rule = () => css.match(/\.meaning-picture-mover\s*\{[^}]*\}/)![0];
+
+  it('.meaning-picture-mover repeats var(--glyph-plays) times over var(--glyph-cycle)', () => {
+    expect(rule()).toMatch(/animation-iteration-count:\s*var\(--glyph-plays\)\s*;/);
+    expect(rule()).toMatch(/animation-duration:\s*var\(--glyph-cycle\)\s*;/);
+  });
+
+  it('no picture mover rule says infinite and none sets a fill mode', () => {
+    expect(rule()).not.toMatch(/\binfinite\b/);
+    expect(rule()).not.toMatch(/animation-fill-mode/);
+    expect(rule()).not.toMatch(/\b(forwards|both|backwards)\b/);
+    const variants = Array.from(css.matchAll(/([^{}]+)\{([^}]*)\}/g)).filter(([, selector]) =>
+      /meaning-picture-/.test(selector ?? ''),
+    );
+    expect(variants.length).toBeGreaterThan(1);
+    for (const [, , body] of variants) {
+      expect(body).not.toMatch(/\binfinite\b/);
+      expect(body).not.toMatch(/animation-fill-mode/);
+    }
+  });
+
+  it.each(IDS)('"%s" has exactly one button, named Replay picture, no Pause/Stop', (id) => {
+    mockReducedMotion(false);
+    render(<MeaningPicture id={id} />);
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Replay picture' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /pause|stop/i })).toBeNull();
+  });
+
+  it('keeps the button and its name after a click', async () => {
+    mockReducedMotion(false);
+    const user = userEvent.setup();
+    render(<MeaningPicture id="printer" />);
+    await user.click(screen.getByRole('button', { name: 'Replay picture' }));
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Replay picture' })).toHaveClass('size-11');
+  });
+
+  it('a re-render with the same props does not remount the svg', () => {
+    mockReducedMotion(false);
+    const { container, rerender } = render(<MeaningPicture id="handcuffs" />);
+    const before = container.querySelector('svg');
+    rerender(<MeaningPicture id="handcuffs" />);
+    expect(container.querySelector('svg')).toBe(before);
+    expect(before!.isConnected).toBe(true);
   });
 });
