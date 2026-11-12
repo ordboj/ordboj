@@ -496,7 +496,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     // "till" excluded: every frame is "talar ___ för NP", and "tala till"
     // (address someone) never takes a "för" complement — the two do not
     // combine in Swedish, so the substitution is ungrammatical here.
-    acceptedRecall: ['tala om', 'säga till'],
+    acceptedRecall: ['tala om'],
     examples: [
       {
         sv: 'Han talar om för mig var nyckeln finns.',
@@ -718,7 +718,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     // ORD-123 split (decision E): two of three frames moved a physical
     // object, so this id keeps "remove". The digital sense is
     // pv:ta-bort-radera, appended at the end of the array.
-    gloss: { en: 'to remove an unwanted object from a place' },
+    gloss: { en: 'to clear a place of whatever covers or fills it' },
     transparency: 'literal',
     acceptedParticles: ['bort'],
     examples: [
@@ -1017,7 +1017,6 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to be aware of; to be acquainted with' },
     transparency: 'idiomatic',
     acceptedParticles: ['till'],
-    acceptedRecall: ['känna till', 'veta om'],
     examples: [
       { sv: 'Jag känner till den här delen av staden.', blankIndex: 2 },
       { sv: 'Han känner till reglerna men följer dem inte.', blankIndex: 2 },
@@ -1355,7 +1354,6 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     transparency: 'idiomatic',
     contrast: 'veta om (unstressed om) — "to know whether": jag vet inte om han kommer',
     acceptedParticles: ['om'],
-    acceptedRecall: ['veta om', 'känna till'],
     examples: [
       { sv: 'Han vet om det men säger ingenting till oss.', blankIndex: 2 },
       { sv: 'Vi vet om risken och tar den ändå.', blankIndex: 2 },
@@ -1674,12 +1672,11 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     reflexive: 'none',
     lemma: 'komma upp',
     // ORD-123 split (decision E): two of three frames were physical, so this
-    // id keeps "reach a higher place". The topic sense is pv:komma-upp-amne,
+    // id keeps "arrive at the top or surface". The topic sense is pv:komma-upp-amne,
     // appended at the end of the array.
-    gloss: { en: 'to reach a higher place' },
+    gloss: { en: 'to arrive at the top, the stage or the surface' },
     transparency: 'literal',
     acceptedParticles: ['upp'],
-    acceptedRecall: ['komma upp', 'gå upp'],
     examples: [
       { sv: 'Hon kommer upp ur vattnet efter en minut.', blankIndex: 2 },
       { sv: 'Han kommer upp på scenen efter pausen.', blankIndex: 2 },
@@ -2992,10 +2989,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'lämna in',
-    gloss: { en: 'to submit a document or application to an office' },
+    gloss: { en: 'to hand over a document or application personally at an office' },
     transparency: 'idiomatic',
     acceptedParticles: ['in'],
-    acceptedRecall: ['lämna in', 'skicka in'],
     examples: [
       { sv: 'Jag lämnar in ansökan före fredag.', blankIndex: 2 },
       { sv: 'Hon lämnar in sin uppsats i morgon.', blankIndex: 2 },
@@ -4657,7 +4653,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to wrap something up inside paper or a blanket' },
     transparency: 'literal',
     acceptedParticles: ['in'],
-    acceptedRecall: ['packa in', 'slå in'],
+    acceptedRecall: ['packa in'],
     examples: [
       { sv: 'Hon packar in presenten i fint papper.', blankIndex: 2 },
       { sv: 'Jag packar in boken i brunt omslagspapper.', blankIndex: 2 },
@@ -4939,10 +4935,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'skicka in',
-    gloss: { en: 'to submit a form or an application' },
+    gloss: { en: 'to send off a form or an application by post or online' },
     transparency: 'literal',
     acceptedParticles: ['in'],
-    acceptedRecall: ['skicka in', 'lämna in'],
     examples: [
       { sv: 'Hon skickar in ansökan före sista datum.', blankIndex: 2 },
       { sv: 'Jag skickar in blanketten till kommunen idag.', blankIndex: 2 },
@@ -6306,7 +6301,6 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to rise or ascend to a higher place' },
     transparency: 'literal',
     acceptedParticles: ['upp'],
-    acceptedRecall: ['gå upp', 'komma upp'],
     examples: [
       { sv: 'Solen går upp klockan fyra på morgonen i juni.', blankIndex: 2 },
       { sv: 'Hon går upp på vinden för att hämta lådor.', blankIndex: 2 },
