@@ -18,7 +18,15 @@ export function AuthScreen({
   return (
     <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
       <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <img
+            src="/favicon.svg"
+            alt=""
+            width={64}
+            height={64}
+            aria-hidden="true"
+            className="size-16 rounded-2xl"
+          />
           <p className="text-4xl font-bold text-primary">{AUTH_COPY.productName}</p>
         </div>
         <Card>

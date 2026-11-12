@@ -16,7 +16,8 @@ test.describe('required sign-in', () => {
     await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Support LÖSEV/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /apple/i })).toHaveCount(0);
-    await expect(page.getByText('Email sign-in is not available yet.')).toBeVisible();
+    await expect(page.getByText('Loading…')).toHaveCount(0);
+    await expect(page.getByText('Email sign-in is not available yet.')).toHaveCount(0);
 
     await page.goto('/review');
     await expect(page).toHaveURL(/\/sign-in/);

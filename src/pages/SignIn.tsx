@@ -268,8 +268,6 @@ export default function SignIn() {
             <TextLink to="/reset-password">{AUTH_COPY.forgotPassword}</TextLink>
           </div>
         </>
-      ) : ready ? (
-        <p>{AUTH_COPY.emailUnavailable}</p>
       ) : null}
       {/* Plain <a>, not a router link: /privacy is a Pages Function. */}
       <p className="text-center">

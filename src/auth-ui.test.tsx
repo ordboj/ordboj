@@ -18,6 +18,36 @@ function paragraphText(expected: string) {
     node?.tagName === 'P' && (node.textContent ?? '').replace(/\s+/g, ' ').trim() === expected;
 }
 
+function expectProductLockup() {
+  const wordmark = screen.getByText(paragraphText('Ordböj'));
+  expect(wordmark.tagName).toBe('P');
+  expect(wordmark).toHaveClass('text-4xl', 'font-bold', 'text-primary');
+  expect(wordmark.querySelector('img')).toBeNull();
+
+  const header = wordmark.parentElement;
+  expect(header).not.toBeNull();
+  expect(header!.className.split(/\s+/).filter(Boolean).sort()).toEqual(
+    ['flex', 'flex-col', 'gap-3', 'items-center', 'text-center'].sort(),
+  );
+
+  const logo = header!.querySelector('img');
+  expect(logo).not.toBeNull();
+  expect(logo).toHaveAttribute('src', '/favicon.svg');
+  expect(logo).toHaveAttribute('alt', '');
+  expect(logo).toHaveAttribute('aria-hidden', 'true');
+  expect(logo).toHaveAttribute('width', '64');
+  expect(logo).toHaveAttribute('height', '64');
+  expect(logo!.className.split(/\s+/).filter(Boolean).sort()).toEqual(['rounded-2xl', 'size-16']);
+  expect(logo!.className).not.toMatch(/\brounded-full\b/);
+  expect(logo!.className).not.toMatch(/\bshadow/);
+  expect(header!.className).not.toMatch(/\bshadow/);
+  expect(logo!.compareDocumentPosition(wordmark) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+    Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+  expect(wordmark.closest('.rounded-lg')).toBeNull();
+  expect(wordmark.closest('.min-h-dvh')).toHaveClass('justify-center');
+}
+
 // WCAG 2 relative luminance. White on #5D83E5 is 3.59:1, under the 4.5:1
 // needed for this 16px medium label. The sign-in pill must clear 4.5:1.
 function contrastRatio(foreground: string, background: string): number {
@@ -202,6 +232,43 @@ describe('client auth UI', () => {
     expect(app).not.toMatch(/routed\('\/privacy'/);
   });
 
+  it('shows the official logo above the live-text wordmark on sign-in, offline, and verify', async () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/AuthScreen.tsx'), 'utf8');
+    expect(source).toContain('flex flex-col items-center gap-3 text-center');
+    expect(source).toContain('src="/favicon.svg"');
+    expect(source).toContain('width={64}');
+    expect(source).toContain('height={64}');
+    expect(source).toContain('alt=""');
+    expect(source).toContain('aria-hidden="true"');
+    expect(source).toContain('size-16 rounded-2xl');
+    expect(source).toContain(
+      '<p className="text-4xl font-bold text-primary">{AUTH_COPY.productName}</p>',
+    );
+    expect(source).not.toMatch(/\bshadow/);
+    expect(source).not.toMatch(/rounded-full/);
+    const signIn = readFileSync(resolve(process.cwd(), 'src/pages/SignIn.tsx'), 'utf8');
+    expect(signIn).not.toContain('favicon.svg');
+    expect(signIn).not.toContain('/icons/icon-512.png');
+
+    const signedOut = mount('/sign-in');
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expectProductLockup();
+    signedOut.unmount();
+
+    resetAuthForTests();
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const offline = mount('/practice');
+    expect(await screen.findByRole('heading', { name: 'Connect to sign in' })).toBeInTheDocument();
+    expectProductLockup();
+    offline.unmount();
+    online.mockRestore();
+
+    resetAuthForTests();
+    mount('/verify-email');
+    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument();
+    expectProductLockup();
+  });
+
   it('shows the LÖSEV link on the signed-out sign-in page', async () => {
     mount('/sign-in');
     const link = await screen.findByRole('link', { name: /support lösev/i });
@@ -225,6 +292,7 @@ describe('client auth UI', () => {
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Create an account' })).toBeInTheDocument();
+    expect(screen.queryByText('Email sign-in is not available yet.')).not.toBeInTheDocument();
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText('Email for a sign-in link'), 'learner@example.com');
@@ -369,7 +437,8 @@ describe('client auth UI', () => {
     expect(await screen.findByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in with GitHub' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toBeInTheDocument();
-    expect(screen.getByText('Email sign-in is not available yet.')).toBeInTheDocument();
+    expect(screen.queryByText('Email sign-in is not available yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/not available yet/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
 
     const user = userEvent.setup();
@@ -387,7 +456,12 @@ describe('client auth UI', () => {
 
   it('hides every provider button and the email form when nothing is configured', async () => {
     mount('/sign-in');
-    expect(await screen.findByText('Email sign-in is not available yet.')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /support lösev/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText('Email sign-in is not available yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/not available yet/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign in with Google' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign in with GitHub' })).not.toBeInTheDocument();
     expect(
