@@ -29,7 +29,6 @@ const SignUp = lazyRoute(() => import('./pages/SignUp'));
 const VerifyEmail = lazyRoute(() => import('./pages/VerifyEmail'));
 const ResetPassword = lazyRoute(() => import('./pages/ResetPassword'));
 const MagicLink = lazyRoute(() => import('./pages/MagicLink'));
-const Privacy = lazyRoute(() => import('./pages/Privacy'));
 
 /** Minimal, dependency-free fallback shown while a route chunk loads. */
 function RouteLoadingFallback() {
@@ -71,7 +70,6 @@ const App = () => (
           {routed('/verify-email', VerifyEmail)}
           {routed('/reset-password', ResetPassword)}
           {routed('/magic-link', MagicLink)}
-          {routed('/privacy', Privacy)}
           <Route element={<RequireAuth />}>
             {routed('/', Home)}
             {routed('/practice', Practice)}

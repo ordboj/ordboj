@@ -21,9 +21,20 @@ test.describe('required sign-in', () => {
     await page.goto('/review');
     await expect(page).toHaveURL(/\/sign-in/);
 
-    await page.goto('/privacy');
+    await page.goto('/sign-in');
+    const privacy = page.getByRole('link', { name: 'Privacy', exact: true });
+    await expect(privacy).toHaveAttribute('href', '/privacy');
+    await privacy.click();
     await expect(page).toHaveURL(/\/privacy$/);
-    await expect(page.getByRole('heading', { name: 'Privacy' })).toBeVisible();
+    await expect(page).toHaveTitle('Privacy — Ordböj');
+    await expect(page.getByRole('heading', { name: 'Privacy', exact: true })).toBeVisible();
+    await expect(page.locator('#root')).toHaveCount(0);
+    await expect(page.locator('script')).toHaveCount(0);
+    await expect(
+      page.getByText(
+        'When you sign in, Ordböj stores the IP address and the user agent with the sign-in session for up to 7 days.',
+      ),
+    ).toBeVisible();
   });
 
   test('offline and signed out tells the learner to connect, and practice stays closed', async ({

@@ -20,10 +20,14 @@ test.describe('terms of use', () => {
 
     await link.click();
     await expect(page).toHaveURL(/\/terms$/);
+    await expect(page).toHaveTitle('Terms of Use — Ordböj');
     await expect(page.getByRole('heading', { name: 'Terms of Use', exact: true })).toBeVisible();
     await expect(
       page.getByText('Ordböj is a free site for practicing Swedish verbs.'),
     ).toBeVisible();
+    await expect(page.getByText('To use the site, you must sign in.')).toBeVisible();
+    await expect(page.locator('#root')).toHaveCount(0);
+    await expect(page.locator('script')).toHaveCount(0);
   });
 
   test('GET /terms is the terms when JavaScript is off', async ({ browser, baseURL }) => {
@@ -36,8 +40,9 @@ test.describe('terms of use', () => {
     await expect(
       page.getByText('Ordböj is a free site for practicing Swedish verbs.'),
     ).toBeVisible();
-    await expect(page.getByText('To use the site, you must sign in.')).toHaveCount(0);
-    await expect(page.getByText('We currently offer sign-in with Google.')).toHaveCount(0);
+    await expect(page).toHaveTitle('Terms of Use — Ordböj');
+    await expect(page.getByText('To use the site, you must sign in.')).toBeVisible();
+    await expect(page.getByText('We currently offer sign-in with Google.')).toBeVisible();
     await expect(page.getByText(/Do not misuse the service/)).toBeVisible();
     await expect(page.getByText('The service is provided as is.')).toBeVisible();
     await expect(page.getByText('These terms are governed by the laws of Sweden.')).toBeVisible();
@@ -56,6 +61,8 @@ test.describe('terms of use', () => {
     await expect(page.getByText(/needs JavaScript/i)).toHaveCount(0);
     await expect(page.locator('#root')).toHaveCount(0);
     await expect(page.locator('script')).toHaveCount(0);
+    await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveCount(0);
+    await expect(page.locator('script[src*="cloudflareinsights"]')).toHaveCount(0);
     await context.close();
   });
 });

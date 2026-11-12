@@ -160,7 +160,6 @@ describe('client auth UI', () => {
       ['/verify-email', 'Check your email'],
       ['/reset-password', 'Reset your password'],
       ['/magic-link', 'Sign-in link'],
-      ['/privacy', 'Privacy'],
     ];
     mount('/sign-in');
     for (const [path, heading] of routes) {
@@ -169,6 +168,22 @@ describe('client auth UI', () => {
       expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'Practice screen' })).not.toBeInTheDocument();
     }
+  });
+
+  it('opens the privacy policy through a plain anchor, not a client route', async () => {
+    mount('/sign-in');
+    const privacy = await screen.findByRole('link', { name: /^Privacy$/ });
+    expect(privacy.tagName).toBe('A');
+    expect(privacy).toHaveAttribute('href', '/privacy');
+    expect(privacy).not.toHaveAttribute('data-discover');
+    expect(privacy.getAttribute('href')).not.toMatch(/^https?:/);
+
+    const signIn = readFileSync(resolve(process.cwd(), 'src/pages/SignIn.tsx'), 'utf8');
+    expect(signIn).not.toMatch(/to=["']\/privacy["']/);
+    expect(signIn).not.toMatch(/to=["']\/terms["']/);
+    const app = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
+    expect(app).not.toContain("import('./pages/Privacy')");
+    expect(app).not.toMatch(/routed\('\/privacy'/);
   });
 
   it('shows the LÖSEV link on the signed-out sign-in page', async () => {

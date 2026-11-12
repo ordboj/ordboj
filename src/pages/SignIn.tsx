@@ -263,7 +263,10 @@ export default function SignIn() {
       ) : ready ? (
         <p>{AUTH_COPY.emailUnavailable}</p>
       ) : null}
-      <TextLink to="/privacy">{AUTH_COPY.privacyLink}</TextLink>
+      {/* Plain <a>, not a router link: /privacy is a Pages Function. */}
+      <a href="/privacy" className="text-sm text-primary underline underline-offset-4">
+        {AUTH_COPY.privacyLink}
+      </a>
       <CookieNotice />
     </AuthScreen>
   );

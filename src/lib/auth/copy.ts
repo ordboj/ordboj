@@ -55,10 +55,6 @@ export const AUTH_COPY = {
   wrongPassword: 'That email or password is not right.',
   unverified: 'Confirm your email before you sign in.',
   tooManyRequests: 'Too many requests. Wait and try again.',
-  privacyTitle: 'Privacy',
-  privacyBody:
-    'Ordböj stores your email address to sign you in. A sign-in cookie is stored on this device when you sign in. Practice progress stays in this browser.',
-  privacyBack: 'Back to sign in',
   privacyLink: 'Privacy',
   privacyPolicy: 'Privacy Policy',
   termsOfUse: 'Terms of Use',
