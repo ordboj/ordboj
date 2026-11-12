@@ -62,6 +62,27 @@ describe('GET /privacy', () => {
     expect(missing).toEqual([]);
     expect(body).toContain('Practice progress is stored in this browser.');
     expect(body).toContain(
+      'After you sign in, Ordböj stores practice events in a first-party database in the EU.',
+    );
+    expect(body).toContain('An event records when a practice round starts and when it ends.');
+    expect(body).toContain(
+      'An event records whether an answer was correct or incorrect, the form, the mode, and timings.',
+    );
+    expect(body).toContain(
+      'Ordböj ties these events to an internal account id, not to your email address.',
+    );
+    expect(body).toContain('Ordböj keeps these events for 13 months and then deletes them.');
+    expect(body).toContain('Ordböj also deletes these events when it deletes your account.');
+    expect(body).toContain(
+      "The legal basis is Ordböj's legitimate interest in improving the trainer.",
+    );
+    expect(body).toContain('You can object in Settings. Turn off Store practice events.');
+    expect(body).toContain(
+      'Ordböj then stops storing practice events for your account and deletes the events it already stored.',
+    );
+    expect(body).toContain('This is not a consent banner.');
+    expect(body).toContain('Practice events are not cookies.');
+    expect(body).toContain(
       'When you sign in, Ordböj stores the IP address and the user agent with the sign-in session for up to 7 days.',
     );
     expect(body).toContain(

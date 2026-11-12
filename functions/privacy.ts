@@ -11,7 +11,7 @@ export const PRIVACY_HTML = `<!doctype html>
     <title>Privacy — Ordböj</title>
     <meta
       name="description"
-      content="What Ordböj stores when you practice Swedish verbs and when you sign in with Google."
+      content="What Ordböj stores when you practice Swedish verbs, when you sign in with Google, and which practice events it keeps."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="theme-color" content="#006AA7" />
@@ -60,6 +60,21 @@ export const PRIVACY_HTML = `<!doctype html>
         A visit after the first day can extend that session by another 7 days.
       </p>
       <p>Practice progress is stored in this browser.</p>
+      <p>After you sign in, Ordböj stores practice events in a first-party database in the EU.</p>
+      <p>An event records when a practice round starts and when it ends.</p>
+      <p>
+        An event records whether an answer was correct or incorrect, the form, the mode, and timings.
+      </p>
+      <p>Ordböj ties these events to an internal account id, not to your email address.</p>
+      <p>Ordböj keeps these events for 13 months and then deletes them.</p>
+      <p>Ordböj also deletes these events when it deletes your account.</p>
+      <p>The legal basis is Ordböj's legitimate interest in improving the trainer.</p>
+      <p>You can object in Settings. Turn off Store practice events.</p>
+      <p>
+        Ordböj then stops storing practice events for your account and deletes the events it already stored.
+      </p>
+      <p>This is not a consent banner.</p>
+      <p>Practice events are not cookies.</p>
       <p>
         Ordböj uses Cloudflare Web Analytics to count page views and to measure page performance.
         It does not use cookies, including advertising cookies, and it does not store anything on your device.

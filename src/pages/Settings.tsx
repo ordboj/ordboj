@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { PracticeEventOptOut } from '@/components/PracticeEventOptOut';
 import { SupportLosevNotice } from '@/components/SupportLosevNotice';
 import { ArrowLeft, Download, Upload, Trash2 } from 'lucide-react';
 import { reloadSettingsFromStorage, useSettings } from '@/hooks/useSettings';
@@ -272,6 +273,8 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        <PracticeEventOptOut />
 
         {/* Data Management */}
         <Card>
