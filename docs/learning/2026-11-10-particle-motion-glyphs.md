@@ -2,6 +2,14 @@
 
 Linear ORD-116 (GitHub #531).
 
+**Amended by human decision I (2026-11-11).**
+[[2026-11-11-glyph-loop-auto-stop]] (ORD-137) replaces "repeats without end" in
+the Decision section, decision H, the transience evidence, rule 3 (with its
+known costs), rule 4 "How to loop", rule 8, the parameter table (Loop
+mechanism, Iterations and Introduction card rows) and the loop bullet in "How
+we would know this was wrong". The glyph plays two times, then stops at the rest frame. A tap
+plays the sequence again.
+
 ## Decision
 
 A motion glyph shows in two places: on the particle feedback screen and on the

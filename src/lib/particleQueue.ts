@@ -156,14 +156,22 @@ export function isBaseStarted(
   );
 }
 
+// docs/learning/2026-11-11-particle-sibling-lemma-key.md: the lemma key is the
+// base infinitive plus the primary particle. Fields only — never parse `id` or
+// `lemma`. Ignores `reflexive` and `acceptedParticles`. Sibling separation
+// keys on this, so two entries that show the same phrase never share a sitting.
+export function particleLemmaKey(entry: ParticleVerbData): string {
+  return `${entry.baseInfinitive} ${entry.particle}`;
+}
+
 // docs/learning/particle-verb-practice.md, "Progression, and what CEFR can
 // and cannot do": CEFR band ascending; within a band, a base the learner has
 // started before one they have not; then transparency, literal before
-// idiomatic; then corpus frequency. The fourth key is never compared
-// explicitly — PARTICLE_VERB_DATA is already frequency-ordered within a band
-// by the linguist, and Array.prototype.sort is a stable sort in every engine
-// this project targets, so two entries tied on every rule above simply keep
-// the relative order they arrived in.
+// idiomatic; then corpus frequency.
+// The fourth key is never compared explicitly. Entries tied on every rule
+// above keep their relative order in PARTICLE_VERB_DATA (Array.prototype.sort
+// is stable). That order is NOT corpus frequency: entries are appended, so a
+// later entry sits last in its band even when its verb is frequent.
 //
 // Each comparison returns as soon as it finds a difference, so a
 // lower-priority key (started, transparency) can never reach far enough to
@@ -238,19 +246,22 @@ export function buildParticleSitting({
   // is due. See docs/superpowers/specs/2026-08-08-partikelverb-design.md.
   //
   // --- due reviews -------------------------------------------------------
-  // The two items of one verb never share a sitting: the cloze feedback
-  // screen shows the phrase in full, so a recall card later in the same
-  // sitting is answered from short-term memory and reports a success the
-  // learner did not earn. When both are due, the cloze wins and the recall
-  // waits for the next sitting.
-  const dueCards: Array<{ card: ParticleSittingCard; dueAt: number }> = [];
-  for (const entry of entries) {
+  // Entries with the same lemma key (`particleLemmaKey`) never share a sitting:
+  // the cloze feedback screen shows the phrase in full, so a second card for
+  // it is answered from short-term memory and reports a success the learner
+  // did not earn. When both are due, the cloze wins, then the smaller dueAt,
+  // then the earlier position in `entries`. The other card waits for the next
+  // sitting: it stays due and is not rescheduled. Different particles on the
+  // same base are only reordered, never held (08-17 rule).
+  const allDue: Array<{ card: ParticleSittingCard; dueAt: number; position: number }> = [];
+  for (const [position, entry] of entries.entries()) {
     const clozeId = particleItemId(entry.id, 'cloze');
     const clozeState = srsStates[clozeId];
     if (clozeState && isDue(clozeState, now)) {
-      dueCards.push({
+      allDue.push({
         card: { kind: 'cloze', entry, itemId: clozeId, countsTowardGoal: true },
         dueAt: clozeState.dueAt,
+        position,
       });
       continue;
     }
@@ -258,12 +269,32 @@ export function buildParticleSitting({
     const recallId = particleItemId(entry.id, 'recall');
     const recallState = srsStates[recallId];
     if (recallState && isDue(recallState, now)) {
-      dueCards.push({
+      allDue.push({
         card: { kind: 'recall', entry, itemId: recallId, countsTowardGoal: true },
         dueAt: recallState.dueAt,
+        position,
       });
     }
   }
+
+  // One card per lemma key, before the goal slice so a held card uses no slot.
+  const winnerByKey = new Map<string, (typeof allDue)[number]>();
+  for (const candidate of allDue) {
+    const key = particleLemmaKey(candidate.card.entry);
+    const current = winnerByKey.get(key);
+    if (
+      !current ||
+      Number(candidate.card.kind === 'cloze') - Number(current.card.kind === 'cloze') > 0 ||
+      (candidate.card.kind === current.card.kind &&
+        (candidate.dueAt < current.dueAt ||
+          (candidate.dueAt === current.dueAt && candidate.position < current.position)))
+    ) {
+      winnerByKey.set(key, candidate);
+    }
+  }
+  const dueCards = allDue.filter(
+    (candidate) => winnerByKey.get(particleLemmaKey(candidate.card.entry)) === candidate,
+  );
 
   // Most overdue first, with ties interleaved rather than left in corpus
   // order — otherwise every sitting opens with the same base verbs.
@@ -289,8 +320,10 @@ export function buildParticleSitting({
     const clozeState = srsStates[particleItemId(entry.id, 'cloze')];
     if (!clozeState || clozeState.repetitions < RECALL_UNLOCK_REPETITIONS) continue;
     // Sibling separation again: an unlock is not served in a sitting that
-    // already contains this verb's cloze.
-    if (reviews.some((card) => card.entry.id === entry.id)) continue;
+    // already holds a card, or a chosen unlock, with this lemma key.
+    const unlockKey = particleLemmaKey(entry);
+    if (reviews.some((card) => particleLemmaKey(card.entry) === unlockKey)) continue;
+    if (recallUnlocks.some((card) => particleLemmaKey(card.entry) === unlockKey)) continue;
     recallUnlocks.push({ kind: 'recall', entry, itemId: recallId, countsTowardGoal: true });
     remaining -= 1;
   }
@@ -310,6 +343,11 @@ export function buildParticleSitting({
     if (remaining <= 0) break;
     if (srsStates[particleItemId(entry.id, 'cloze')]) continue;
     if (isBaseRecentlyUsed(entry, srsStates, entries)) continue;
+    // Lemma-key siblings: no introduction beside a review or recall unlock
+    // with the same lemma key (it would show the phrase the card tests).
+    const introKey = particleLemmaKey(entry);
+    if (reviews.some((card) => particleLemmaKey(card.entry) === introKey)) continue;
+    if (recallUnlocks.some((card) => particleLemmaKey(card.entry) === introKey)) continue;
     // A base verb introduced earlier in *this* sitting blocks its siblings
     // too; the stored-state check above cannot see it yet.
     if (introductions.some((card) => card.entry.baseInfinitive === entry.baseInfinitive)) continue;
@@ -378,17 +416,19 @@ export function buildFreeParticlePractice(
       });
     }
   }
-  // One item per verb, same sibling-separation reasoning as a scheduled
-  // sitting: a cloze feedback screen shows the phrase in full, so pairing it
-  // with its own recall card makes the second card a reading exercise. A free
-  // round records nothing, so no false success reaches the scheduler, but the
-  // round is worth less and there is no reason to build it that way.
-  const seenVerbs = new Set<string>();
+  // One item per lemma key (`particleLemmaKey`), same sibling-separation
+  // reasoning as a scheduled sitting: a cloze feedback screen shows the
+  // phrase in full, so pairing it with its own recall card makes the second
+  // card a reading exercise. A free round records nothing, so no false
+  // success reaches the scheduler, but the round is worth less and there is
+  // no reason to build it that way.
+  const seenLemmaKeys = new Set<string>();
   return candidates
     .sort((a, b) => a.dueAt - b.dueAt)
     .filter(({ card }) => {
-      if (seenVerbs.has(card.entry.id)) return false;
-      seenVerbs.add(card.entry.id);
+      const key = particleLemmaKey(card.entry);
+      if (seenLemmaKeys.has(key)) return false;
+      seenLemmaKeys.add(key);
       return true;
     })
     .slice(0, FREE_PARTICLE_PRACTICE_SIZE)

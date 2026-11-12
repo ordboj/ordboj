@@ -6,6 +6,13 @@ Amended 2026-11-11 by ORD-136, after the pilot shipped (ORD-134). The changes
 are: two data fields, the `contrast` ruling, the pilot counts, the failure
 threshold and the drawing lessons. See "Amendments, 2026-11-11 (ORD-136)".
 
+**Amended by human decision I (2026-11-11).**
+[[2026-11-11-glyph-loop-auto-stop]] (ORD-137) replaces the loop without end in
+settled point 2. It also amends the loop in the Decision section, settled point
+4, the transience evidence, the "Looping motion" risk, the Timing row of the
+parameter table and the "Distraction" check. The picture plays two times, then stops at the rest frame. A
+tap plays the sequence again.
+
 ## Decision
 
 An idiomatic particle verb can show a meaning picture. A meaning picture shows
