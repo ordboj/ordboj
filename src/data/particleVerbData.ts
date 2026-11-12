@@ -6563,7 +6563,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     examples: [
       { sv: 'Regnet håller upp precis före matchen.', blankIndex: 2 },
       { sv: 'Det håller upp efter lunch, lovar prognosen.', blankIndex: 2 },
-      { sv: 'Regnet håller upp på kvällen.', blankIndex: 2 },
+      { sv: 'Regnet håller upp en stund före middagen.', blankIndex: 2 },
     ],
     verified: true,
     forms: { presens: 'håller upp', preteritum: 'höll upp', supinum: 'hållit upp' },
@@ -6630,7 +6630,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     acceptedParticles: ['ut'],
     examples: [
       { sv: 'Fabriken släpper ut rök från skorstenen.', blankIndex: 2 },
-      { sv: 'Bilen släpper ut mycket avgaser.', blankIndex: 2 },
+      { sv: 'Den gamla bilen släpper ut mycket avgaser.', blankIndex: 4 },
       { sv: 'Fabriken släpper ut avloppsvatten i sjön.', blankIndex: 2 },
     ],
     verified: true,
