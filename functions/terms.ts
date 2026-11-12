@@ -9,7 +9,10 @@ export const TERMS_HTML = `<!doctype html>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Terms of Use — Ordböj</title>
-    <meta name="description" content="Ordböj is a free site for practicing Swedish verbs." />
+    <meta
+      name="description"
+      content="Terms for using Ordböj, a free site for practicing Swedish verbs."
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="theme-color" content="#006AA7" />
     <style>
@@ -46,7 +49,6 @@ export const TERMS_HTML = `<!doctype html>
     <main>
       <h1>Terms of Use</h1>
       <p>Ordböj is a free site for practicing Swedish verbs.</p>
-      <p>To use the site, you must sign in. We currently offer sign-in with Google.</p>
       <p>You may use Ordböj for your own learning. Do not misuse the service, try to break it, or harm other users.</p>
       <p>How we handle your data is described in the <a href="/privacy">Privacy Policy</a>.</p>
       <p>The service is provided as is. We may change or stop it.</p>
