@@ -55,10 +55,7 @@ export const PRIVACY_HTML = `<!doctype html>
         you in.
       </p>
       <p>A sign-in cookie is stored in your browser when you sign in.</p>
-      <p>
-        Practice progress is stored in this browser. When you are signed in, Ordböj also stores
-        that progress on a Cloudflare D1 database in the EU.
-      </p>
+      <p>Practice progress is stored in this browser.</p>
       <p>Ordböj does not sell this data.</p>
       <p><a href="/">Back to Ordböj</a></p>
     </main>

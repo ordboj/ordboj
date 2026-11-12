@@ -17,9 +17,7 @@ const DISCLOSURES: { label: string; pattern: RegExp }[] = [
   { label: 'openid', pattern: /openid/i },
   { label: 'sign-in cookie', pattern: /sign-in cookie/i },
   { label: 'practice progress', pattern: /practice progress/i },
-  { label: 'Cloudflare D1', pattern: /cloudflare d1/i },
-  { label: 'EU', pattern: /\bEU\b/ },
-  { label: 'this browser', pattern: /this browser/i },
+  { label: 'this browser', pattern: /Practice progress is stored in this browser/ },
   { label: 'does not sell', pattern: /does not sell/i },
 ];
 
@@ -51,6 +49,11 @@ describe('GET /privacy', () => {
       ({ label }) => label,
     );
     expect(missing).toEqual([]);
+    expect(body).toContain('Practice progress is stored in this browser.');
+    expect(body).not.toContain(
+      'When you are signed in, Ordböj also stores that progress on a Cloudflare D1 database in the EU.',
+    );
+    expect(body).not.toMatch(/cloudflare d1/i);
     expect(body).not.toContain('id="root"');
     expect(body).not.toContain('/src/main.tsx');
     expect(body).not.toMatch(/needs JavaScript/i);

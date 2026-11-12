@@ -27,7 +27,7 @@ test.describe('privacy policy', () => {
     await expect(page.getByText(/openid/i)).toBeVisible();
     await expect(page.getByText(/sign-in cookie/i)).toBeVisible();
     await expect(page.getByText(/Practice progress is stored in this browser/i)).toBeVisible();
-    await expect(page.getByText(/Cloudflare D1 database in the EU/i)).toBeVisible();
+    await expect(page.getByText(/Cloudflare D1/i)).toHaveCount(0);
     await expect(page.getByText('Ordböj does not sell this data.')).toBeVisible();
     await expect(page.getByText(/needs JavaScript/i)).toHaveCount(0);
     await expect(page.locator('#root')).toHaveCount(0);
