@@ -255,6 +255,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to enter a room or building' },
     transparency: 'literal',
     acceptedParticles: ['in'],
+    acceptedRecall: ['gå in', 'komma in'],
     examples: [
       { sv: 'Barnen går in i huset när det regnar.', blankIndex: 2 },
       { sv: 'Han går in på kontoret klockan åtta varje morgon.', blankIndex: 2 },
@@ -349,6 +350,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to enter' },
     transparency: 'literal',
     acceptedParticles: ['in'],
+    acceptedRecall: ['komma in', 'gå in'],
     examples: [
       { sv: 'Han kommer in i rummet med en stor låda.', blankIndex: 2 },
       { sv: 'Katten kommer in genom det öppna fönstret.', blankIndex: 2 },
@@ -494,6 +496,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     // "till" excluded: every frame is "talar ___ för NP", and "tala till"
     // (address someone) never takes a "för" complement — the two do not
     // combine in Swedish, so the substitution is ungrammatical here.
+    acceptedRecall: ['tala om'],
     examples: [
       {
         sv: 'Han talar om för mig var nyckeln finns.',
@@ -715,7 +718,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     // ORD-123 split (decision E): two of three frames moved a physical
     // object, so this id keeps "remove". The digital sense is
     // pv:ta-bort-radera, appended at the end of the array.
-    gloss: { en: 'to remove' },
+    gloss: { en: 'to clear a place of whatever covers or fills it' },
     transparency: 'literal',
     acceptedParticles: ['bort'],
     examples: [
@@ -975,6 +978,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to let someone know; to notify' },
     transparency: 'idiomatic',
     acceptedParticles: ['till'],
+    acceptedRecall: ['säga till', 'tala om'],
     examples: [
       { sv: 'Han säger till när maten är färdig.', blankIndex: 2 },
       { sv: 'Du säger till om du behöver mer hjälp.', blankIndex: 2 },
@@ -1010,7 +1014,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'till',
     reflexive: 'none',
     lemma: 'känna till',
-    gloss: { en: 'to be aware of; to be acquainted with' },
+    gloss: { en: 'to be familiar with; to be acquainted with' },
     transparency: 'idiomatic',
     acceptedParticles: ['till'],
     examples: [
@@ -1668,9 +1672,9 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     reflexive: 'none',
     lemma: 'komma upp',
     // ORD-123 split (decision E): two of three frames were physical, so this
-    // id keeps "reach a higher place". The topic sense is pv:komma-upp-amne,
+    // id keeps "arrive at the top or surface". The topic sense is pv:komma-upp-amne,
     // appended at the end of the array.
-    gloss: { en: 'to reach a higher place' },
+    gloss: { en: 'to arrive at the top, onto the stage or at the surface' },
     transparency: 'literal',
     acceptedParticles: ['upp'],
     examples: [
@@ -2710,6 +2714,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to return something to its owner', sv: 'lämna åter' },
     transparency: 'literal',
     acceptedParticles: ['tillbaka'],
+    acceptedRecall: ['ge tillbaka', 'lämna tillbaka'],
     examples: [
       { sv: 'Hon ger tillbaka boken till biblioteket i dag.', blankIndex: 2 },
       { sv: 'Han ger tillbaka pengarna efter en vecka.', blankIndex: 2 },
@@ -2984,7 +2989,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'lämna in',
-    gloss: { en: 'to submit a document or application to an office' },
+    gloss: { en: 'to hand over a document, an application or schoolwork personally' },
     transparency: 'idiomatic',
     acceptedParticles: ['in'],
     examples: [
@@ -3636,7 +3641,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'ut',
     reflexive: 'none',
     lemma: 'skicka ut',
-    gloss: { en: 'to distribute something by sending it to many recipients' },
+    gloss: { en: 'to send something to a large group of recipients' },
     transparency: 'literal',
     acceptedParticles: ['ut'],
     examples: [
@@ -3880,6 +3885,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to travel to a different location for a period of time' },
     transparency: 'literal',
     acceptedParticles: ['bort'],
+    acceptedRecall: ['resa bort', 'åka bort'],
     examples: [
       { sv: 'Vi reser bort över helgen ibland.', blankIndex: 2 },
       { sv: 'Familjen reser alltid bort varje sommarlov.', blankIndex: 3 },
@@ -4043,6 +4049,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to gather scattered items into one place' },
     transparency: 'literal',
     acceptedParticles: ['ihop'],
+    acceptedRecall: ['plocka ihop', 'samla ihop'],
     examples: [
       { sv: 'Jag plockar ihop mina saker snabbt.', blankIndex: 2 },
       { sv: 'Hon plockar ihop leksakerna på golvet.', blankIndex: 2 },
@@ -4185,6 +4192,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to wrap a gift or parcel using decorative paper' },
     transparency: 'idiomatic',
     acceptedParticles: ['in'],
+    acceptedRecall: ['slå in', 'packa in'],
     examples: [
       { sv: 'Jag slår in presenten i fint papper.', blankIndex: 2 },
       { sv: 'Hon slår snyggt in paketet till julen.', blankIndex: 3 },
@@ -4382,6 +4390,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to hand over a borrowed item once you are done with it' },
     transparency: 'literal',
     acceptedParticles: ['tillbaka'],
+    acceptedRecall: ['lämna tillbaka', 'ge tillbaka'],
     examples: [
       { sv: 'Jag måste lämna tillbaka boken i morgon bitti.', blankIndex: 3 },
       { sv: 'Hon lämnar tillbaka nyckeln till grannen varje måndag.', blankIndex: 2 },
@@ -4644,6 +4653,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to wrap something up inside paper or a blanket' },
     transparency: 'literal',
     acceptedParticles: ['in'],
+    acceptedRecall: ['packa in', 'slå in'],
     examples: [
       { sv: 'Hon packar in presenten i fint papper.', blankIndex: 2 },
       { sv: 'Jag packar in boken i brunt omslagspapper.', blankIndex: 2 },
@@ -4731,6 +4741,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to bring scattered things together into one pile' },
     transparency: 'literal',
     acceptedParticles: ['ihop'],
+    acceptedRecall: ['samla ihop', 'plocka ihop'],
     examples: [
       { sv: 'Barnen samlar ihop de utspridda legobitarna på golvet.', blankIndex: 2 },
       { sv: 'Jag samlar ihop mina saker innan jag går.', blankIndex: 2 },
@@ -4924,7 +4935,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'skicka in',
-    gloss: { en: 'to submit a form or an application' },
+    gloss: { en: 'to send off a form or an application by post or online' },
     transparency: 'literal',
     acceptedParticles: ['in'],
     examples: [
@@ -5990,6 +6001,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to travel elsewhere for a period' },
     transparency: 'literal',
     acceptedParticles: ['bort'],
+    acceptedRecall: ['åka bort', 'resa bort'],
     examples: [
       { sv: 'Vi åker bort över helgen till stugan.', blankIndex: 2 },
       { sv: 'Familjen åker bort en vecka i juli.', blankIndex: 2 },
@@ -6493,6 +6505,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to remove an item from a list or a plan' },
     transparency: 'literal',
     acceptedParticles: ['bort'],
+    acceptedRecall: ['plocka bort', 'ta bort'],
     examples: [
       { sv: 'Hon plockar bort en post ur listan.', blankIndex: 2 },
       { sv: 'Läraren plockar bort två frågor från provet.', blankIndex: 2 },
