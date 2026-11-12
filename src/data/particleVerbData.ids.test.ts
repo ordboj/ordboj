@@ -403,12 +403,13 @@ describe('primary sense of split particle verbs (ORD-123)', () => {
 const ORD135_IDS: readonly string[] = ['pv:ta-hem-seger'];
 
 describe('particle verb id stability (ORD-135 pin)', () => {
-  it('appends exactly the ORD-135 id directly after the ORD-123 entries, and nothing else', () => {
-    expect(PARTICLE_VERB_DATA).toHaveLength(MAIN_COUNT + APPENDED_IDS.length + ORD135_IDS.length);
-    expect(PARTICLE_VERB_DATA.slice(MAIN_COUNT + APPENDED_IDS.length).map((e) => e.id)).toEqual(
+  it('appends exactly the ORD-135 id directly after the ORD-123 entries', () => {
+    const start = MAIN_COUNT + APPENDED_IDS.length;
+    // Later tickets (ORD-127) append after this block; it stays exactly in place.
+    expect(PARTICLE_VERB_DATA.slice(start, start + ORD135_IDS.length).map((e) => e.id)).toEqual(
       ORD135_IDS,
     );
-    expect(PARTICLE_VERB_DATA[PARTICLE_VERB_DATA.length - 1]?.id).toBe('pv:ta-hem-seger');
+    expect(PARTICLE_VERB_DATA[start]?.id).toBe('pv:ta-hem-seger');
   });
 
   it('pv:ta-hem keeps exactly one physical sense with three examples and no victory sentence', () => {
@@ -432,5 +433,114 @@ describe('particle verb id stability (ORD-135 pin)', () => {
     expect(entry?.verified).toBe(true);
     expect(entry?.motionGlyphVerified).toBeUndefined();
     expect(getVerifiedParticleVerbs().some((e) => e.id === 'pv:ta-hem-seger')).toBe(true);
+  });
+});
+
+// ORD-127: four single-sense splits; the new ids are appended after pv:ta-hem-seger.
+const ORD127_IDS: readonly string[] = [
+  'pv:halla-upp-regn',
+  'pv:halla-upp-dorr',
+  'pv:se-ner-forakta',
+  'pv:slappa-ut-utslapp',
+];
+
+const find = (id: string) => PARTICLE_VERB_DATA.find((e) => e.id === id);
+const svOf = (id: string) => (find(id)?.examples ?? []).map((ex) => ex.sv);
+
+describe('particle verb id stability (ORD-127 pin)', () => {
+  it('appends exactly the four ORD-127 ids, in order, directly after pv:ta-hem-seger', () => {
+    const after = PARTICLE_VERB_DATA.findIndex((e) => e.id === 'pv:ta-hem-seger') + 1;
+    expect(after).toBe(MAIN_COUNT + APPENDED_IDS.length + ORD135_IDS.length);
+    expect(PARTICLE_VERB_DATA.slice(after).map((e) => e.id)).toEqual(ORD127_IDS);
+    expect(PARTICLE_VERB_DATA).toHaveLength(290);
+    expect(PARTICLE_VERB_DATA.slice(-4).map((e) => e.id)).toEqual(ORD127_IDS);
+  });
+
+  it.each([
+    ['pv:halla-upp', 'to hold something raised'],
+    ['pv:se-ner', 'to direct one’s gaze lower'],
+    ['pv:slappa-ut', 'to release something so it escapes confinement'],
+  ])('incumbent %s has the single-sense gloss', (id, gloss) => {
+    expect(find(id)?.gloss.en).toBe(gloss);
+    expect(find(id)?.examples).toHaveLength(3);
+  });
+
+  it('pv:halla-upp keeps no rain or door example', () => {
+    for (const sv of svOf('pv:halla-upp')) expect(sv).not.toMatch(/regn|dörr|port/i);
+  });
+
+  it('pv:se-ner keeps no despise (" ner på ") example', () => {
+    for (const sv of svOf('pv:se-ner')) expect(sv).not.toMatch(/ ner på /);
+  });
+
+  it('pv:slappa-ut keeps no smoke or exhaust example and keeps its motion glyph flag', () => {
+    for (const sv of svOf('pv:slappa-ut')) expect(sv).not.toMatch(/rök|avgaser/i);
+    expect(find('pv:slappa-ut')?.motionGlyphVerified).toBe(true);
+  });
+
+  it('pv:sta-upp no longer contains the applause example', () => {
+    expect(find('pv:sta-upp')?.examples).toHaveLength(3);
+    for (const sv of svOf('pv:sta-upp')) expect(sv).not.toMatch(/applåder/i);
+  });
+
+  it.each([
+    [
+      'pv:halla-upp-regn',
+      '(of rain) to stop falling',
+      'upp',
+      ['upp'],
+      'håller upp',
+      'höll upp',
+      'hållit upp',
+    ],
+    [
+      'pv:halla-upp-dorr',
+      'to hold a door open for someone',
+      'upp',
+      ['upp'],
+      'håller upp',
+      'höll upp',
+      'hållit upp',
+    ],
+    [
+      'pv:se-ner-forakta',
+      'to despise someone as inferior',
+      'ner',
+      ['ner', 'ned'],
+      'ser ner på',
+      'såg ner på',
+      'sett ner på',
+    ],
+    [
+      'pv:slappa-ut-utslapp',
+      'to emit a substance into the environment',
+      'ut',
+      ['ut'],
+      'släpper ut',
+      'släppte ut',
+      'släppt ut',
+    ],
+  ])('%s is a verified single-sense entry', (id, gloss, particle, accepted, pres, pret, sup) => {
+    const entry = find(id);
+    expect(entry?.gloss.en).toBe(gloss);
+    expect(entry?.particle).toBe(particle);
+    expect(entry?.acceptedParticles).toEqual(accepted);
+    expect(entry?.examples).toHaveLength(3);
+    expect(entry?.forms).toEqual({ presens: pres, preteritum: pret, supinum: sup });
+    expect(entry?.verified).toBe(true);
+    expect(entry?.motionGlyphVerified).toBeUndefined();
+    expect(getVerifiedParticleVerbs().some((e) => e.id === id)).toBe(true);
+  });
+
+  it('pv:se-ner-forakta carries the obligatory preposition på', () => {
+    expect(find('pv:se-ner-forakta')?.preposition).toBe('på');
+    for (const sv of svOf('pv:se-ner-forakta')) expect(sv).toMatch(/ ner på /);
+  });
+
+  it('moved example sentences live on the new ids', () => {
+    expect(svOf('pv:halla-upp-regn')).toContain('Regnet håller upp precis före matchen.');
+    expect(svOf('pv:halla-upp-dorr')).toContain('Han håller upp dörren för den äldre kvinnan.');
+    expect(svOf('pv:se-ner-forakta')).toContain('Hon ser ner på dem som inte pluggar.');
+    expect(svOf('pv:slappa-ut-utslapp')).toContain('Fabriken släpper ut rök från skorstenen.');
   });
 });
