@@ -2201,12 +2201,12 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'hem',
     reflexive: 'none',
     lemma: 'ta hem',
-    gloss: { en: 'to bring something to one’s home; to win a victory' },
+    gloss: { en: 'to bring something to one’s home' },
     transparency: 'literal',
     acceptedParticles: ['hem'],
     examples: [
       { sv: 'Vi tar hem maten från restaurangen på fredagar.', blankIndex: 2 },
-      { sv: 'Laget tar hem segern efter en jämn match.', blankIndex: 2 },
+      { sv: 'Hon tar hem blommor från torget på lördagar.', blankIndex: 2 },
       { sv: 'Han tar hem böcker från biblioteket varje vecka.', blankIndex: 2 },
     ],
     verified: true,
@@ -6500,5 +6500,28 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     ],
     verified: true,
     forms: { presens: 'plockar bort', preteritum: 'plockade bort', supinum: 'plockat bort' },
+  },
+  {
+    // Victory half of pv:ta-hem (ORD-135, decision E). Idiomatic: winning
+    // is not carrying anything home. The incumbent keeps the physical
+    // sense. Band and evidence copy the incumbent (the SVALex row is for
+    // ta + hem, not for one sense). No motion glyph.
+    id: 'pv:ta-hem-seger',
+    cefr: 'A1',
+    cefrEvidence: 'svalex',
+    baseInfinitive: 'ta',
+    particle: 'hem',
+    reflexive: 'none',
+    lemma: 'ta hem',
+    gloss: { en: 'to win (a match or a prize)' },
+    transparency: 'idiomatic',
+    acceptedParticles: ['hem'],
+    examples: [
+      { sv: 'Laget tar hem segern efter en jämn match.', blankIndex: 2 },
+      { sv: 'Laget tar hem tre poäng mot Malmö i kväll.', blankIndex: 2 },
+      { sv: 'Vi tar hem matchen med två mål.', blankIndex: 2 },
+    ],
+    verified: true,
+    forms: { presens: 'tar hem', preteritum: 'tog hem', supinum: 'tagit hem' },
   },
 ];
