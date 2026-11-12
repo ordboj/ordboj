@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSyncExternalStore } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { getAuthSnapshot } from '@/lib/auth/session';
@@ -46,7 +46,6 @@ export function PracticeEventOptOut() {
     <Card>
       <CardHeader>
         <CardTitle>Practice events</CardTitle>
-        <CardDescription>Used to improve the trainer. Not a cookie.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <p id="store-practice-events-help" className="text-sm text-muted-foreground">

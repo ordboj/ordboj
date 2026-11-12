@@ -51,7 +51,13 @@ test.describe('privacy policy', () => {
     await expect(
       page.getByText('You can object in Settings. Turn off Store practice events.'),
     ).toBeVisible();
-    await expect(page.getByText('This is not a consent banner.')).toBeVisible();
+    await expect(
+      page.getByText(
+        "These events are stored on Ordböj's servers, not as cookies in your browser.",
+      ),
+    ).toBeVisible();
+    await expect(page.getByText('This is not a consent banner.')).toHaveCount(0);
+    await expect(page.getByText('Practice events are not cookies.')).toHaveCount(0);
     await expect(
       page.getByText(
         'When you sign in, Ordböj stores the IP address and the user agent with the sign-in session for up to 7 days.',

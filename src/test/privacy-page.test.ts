@@ -80,8 +80,11 @@ describe('GET /privacy', () => {
     expect(body).toContain(
       'Ordböj then stops storing practice events for your account and deletes the events it already stored.',
     );
-    expect(body).toContain('This is not a consent banner.');
-    expect(body).toContain('Practice events are not cookies.');
+    expect(body).toContain(
+      "These events are stored on Ordböj's servers, not as cookies in your browser.",
+    );
+    expect(body).not.toContain('This is not a consent banner.');
+    expect(body).not.toContain('Practice events are not cookies.');
     expect(body).toContain(
       'When you sign in, Ordböj stores the IP address and the user agent with the sign-in session for up to 7 days.',
     );

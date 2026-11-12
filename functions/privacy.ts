@@ -73,8 +73,7 @@ export const PRIVACY_HTML = `<!doctype html>
       <p>
         Ordböj then stops storing practice events for your account and deletes the events it already stored.
       </p>
-      <p>This is not a consent banner.</p>
-      <p>Practice events are not cookies.</p>
+      <p>These events are stored on Ordböj's servers, not as cookies in your browser.</p>
       <p>
         Ordböj uses Cloudflare Web Analytics to count page views and to measure page performance.
         It does not use cookies, including advertising cookies, and it does not store anything on your device.
