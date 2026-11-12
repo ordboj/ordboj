@@ -13,8 +13,11 @@ test.describe('privacy policy', () => {
     await expect(link).toHaveAttribute('href', '/privacy');
     await link.click();
     await expect(page).toHaveURL(/\/privacy$/);
+    await expect(page).toHaveTitle('Privacy — Ordböj');
     await expect(page.getByRole('heading', { name: 'Privacy', exact: true })).toBeVisible();
     await expect(page.getByText('Ordböj does not sell this data.')).toBeVisible();
+    await expect(page.locator('#root')).toHaveCount(0);
+    await expect(page.locator('script')).toHaveCount(0);
   });
 
   test('GET /privacy is the policy when JavaScript is off', async ({ browser, baseURL }) => {
@@ -22,6 +25,8 @@ test.describe('privacy policy', () => {
     const page = await context.newPage();
     const response = await page.goto('/privacy');
     expect(response?.status()).toBe(200);
+    expect(response?.headers()['content-type']).toContain('text/html');
+    await expect(page).toHaveTitle('Privacy — Ordböj');
     await expect(page.getByRole('heading', { name: 'Privacy', exact: true })).toBeVisible();
     await expect(page.getByText(/email address and basic profile/i)).toBeVisible();
     await expect(page.getByText(/openid/i)).toBeVisible();
@@ -46,6 +51,9 @@ test.describe('privacy policy', () => {
     await expect(page.getByText('Ordböj does not sell this data.')).toBeVisible();
     await expect(page.getByText(/needs JavaScript/i)).toHaveCount(0);
     await expect(page.locator('#root')).toHaveCount(0);
+    await expect(page.locator('script')).toHaveCount(0);
+    await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveCount(0);
+    await expect(page.locator('script[src*="cloudflareinsights"]')).toHaveCount(0);
     await context.close();
   });
 });

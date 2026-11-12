@@ -1,6 +1,7 @@
 import { defineConfig, type Connect, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
+import { e2eAuthStubPlugin } from './e2e/support/authStubPlugin.ts';
 import { PRIVACY_HTML } from './functions/privacy.ts';
 import { TERMS_HTML } from './functions/terms.ts';
 import { applyWebAnalyticsToken } from './src/lib/webAnalyticsHtml.ts';
@@ -73,7 +74,13 @@ export default defineConfig(() => ({
     host: '::',
     port: 8080,
   },
-  plugins: [webAnalyticsPlugin(), privacyPagePlugin(), termsPagePlugin(), react()],
+  plugins: [
+    webAnalyticsPlugin(),
+    privacyPagePlugin(),
+    termsPagePlugin(),
+    react(),
+    e2eAuthStubPlugin(),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),

@@ -1,3 +1,7 @@
+import {
+  resolveAllowedAuthOrigin,
+  resolveRequestAuthOrigin,
+} from '../../src/lib/auth/allowed-origin';
 import type { Env } from '../env';
 import { GENERIC_MAIL_BODY, MAIL_LIMIT_BODY, PASSKEY_ORIGIN } from './constants';
 import { createAuth } from './create-auth';
@@ -52,6 +56,14 @@ export async function handleAuthRequest(
   env: Env,
   options: AuthHandlerOptions = {},
 ): Promise<Response> {
+  const authOrigin = resolveRequestAuthOrigin(request);
+  if (!authOrigin) return json({ message: 'Unknown host' }, 403);
+  if (request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'OPTIONS') {
+    const originHeader = request.headers.get('origin');
+    if (originHeader && resolveAllowedAuthOrigin(originHeader) !== authOrigin) {
+      return json({ message: 'Invalid origin' }, 403);
+    }
+  }
   if (!env.DB || !env.BETTER_AUTH_SECRET) {
     return json({ message: 'Service unavailable' }, 503);
   }
@@ -69,7 +81,7 @@ export async function handleAuthRequest(
   const authDeps = { mailer, waitUntil: options.waitUntil };
 
   if (PASSKEY_REGISTRATION_PATHS.has(url.pathname)) {
-    const auth = createAuth(env, authDeps);
+    const auth = createAuth(env, authDeps, authOrigin);
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) return json({ message: 'Unauthorized' }, 401);
     if (!session.user.emailVerified) return json({ message: 'Verified sign-in required' }, 403);
@@ -85,10 +97,10 @@ export async function handleAuthRequest(
     // Count the request itself. A missing account sends no mail, and that
     // must not leave its counter behind an existing account.
     await recordMailSend(db, { now: stamp, email, ip });
-    const auth = createAuth(env, authDeps);
+    const auth = createAuth(env, authDeps, authOrigin);
     return auth.handler(request);
   }
 
-  const auth = createAuth(env, authDeps);
+  const auth = createAuth(env, authDeps, authOrigin);
   return auth.handler(request);
 }

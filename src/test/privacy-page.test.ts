@@ -73,10 +73,13 @@ describe('GET /privacy', () => {
     expect(body).not.toMatch(/cloudflare d1/i);
     expect(body).not.toMatch(/product event/i);
     expect(body).not.toMatch(/GDPR compliant/i);
+    expect(body).toContain('<title>Privacy — Ordböj</title>');
     expect(body).not.toContain('id="root"');
     expect(body).not.toContain('/src/main.tsx');
     expect(body).not.toMatch(/needs JavaScript/i);
     expect(body).not.toMatch(/<script/i);
+    expect(body).not.toMatch(/cloudflareinsights/i);
+    expect(body).not.toMatch(/Content-Security-Policy/i);
   });
 
   it('is served by the Pages Function, which _redirects does not override', () => {
