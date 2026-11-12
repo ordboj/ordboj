@@ -276,6 +276,16 @@ describe('Home - navigation cards expose role=link, not role=button (issue #329)
 // Issue #110 AC: touch targets must be at least 44px. The mute/unmute
 // button was 40px (the icon-button default) with no explicit size class
 // before this fix.
+describe('Home - privacy link', () => {
+  it('shows a same-origin link to /privacy', async () => {
+    renderWithProviders(<Home />, { route: '/' });
+
+    const link = await screen.findByRole('link', { name: /^Privacy$/ });
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', '/privacy');
+  });
+});
+
 describe('Home - mute button touch target (issue #110 AC)', () => {
   it('renders the mute/unmute button at 44px (h-11 w-11) with an aria-label', async () => {
     // Force the muted state so the accessible name is "Unmute audio" (see
