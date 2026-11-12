@@ -256,6 +256,12 @@ export default function Home() {
             >
               Privacy
             </a>
+            <a
+              href="/terms"
+              className="inline-flex min-h-11 items-center justify-center px-3 text-sm text-muted-foreground underline underline-offset-4"
+            >
+              Terms
+            </a>
           </p>
           <SupportLosevNotice className="text-center" />
         </footer>
