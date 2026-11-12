@@ -238,7 +238,8 @@ describe('client auth UI', () => {
     });
     const social = box.requests.find((call) => call.url.includes('/api/auth/sign-in/social'));
     expect(social?.body).toContain('"provider":"google"');
-    expect(social?.body).toContain('https://ordboj.com/');
+    expect(social?.body).toContain(callbackURL('/'));
+    expect(social?.body).toContain(callbackURL('/sign-in'));
     expect(social?.body).not.toContain('pages.dev');
     expect(social?.body).not.toContain('apple');
   });

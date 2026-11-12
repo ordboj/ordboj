@@ -1,26 +1,38 @@
-/** Canonical public origin. Never use ordboj.pages.dev for an absolute URL. */
-export const CANONICAL_ORIGIN = 'https://ordboj.com';
+import { CANONICAL_ORIGIN, resolveAllowedAuthOrigin } from '@/lib/auth/allowed-origin';
 
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
+export {
+  CANONICAL_ORIGIN,
+  resolveAllowedAuthOrigin,
+  resolveRequestAuthOrigin,
+} from '@/lib/auth/allowed-origin';
+
+const CANONICAL_FALLBACK = CANONICAL_ORIGIN;
 
 /**
- * API calls from the browser stay on the current origin when that origin is
- * the canonical site or a local dev server. Any other host, including
- * *.pages.dev, uses https://ordboj.com.
+ * Origin used for auth redirects. Production, an allowed Pages preview host,
+ * and loopback stay on themselves. Any other host is rejected (null).
  */
-export function resolveAuthBaseURL(origin: string): string {
-  try {
-    const url = new URL(origin);
-    if (url.hostname === 'ordboj.com' || LOCAL_HOSTS.has(url.hostname)) return url.origin;
-  } catch {
-    return CANONICAL_ORIGIN;
-  }
-  return CANONICAL_ORIGIN;
+export function resolveAuthBaseURL(origin: string): string | null {
+  return resolveAllowedAuthOrigin(origin);
 }
 
-export function callbackURL(path: string): string {
-  if (!path.startsWith('/') || path.startsWith('//')) return `${CANONICAL_ORIGIN}/`;
-  return `${CANONICAL_ORIGIN}${path}`;
+function pageOrigin(explicit?: string): string {
+  if (explicit !== undefined) return explicit;
+  if (typeof window !== 'undefined' && typeof window.location?.origin === 'string') {
+    return window.location.origin;
+  }
+  return CANONICAL_FALLBACK;
+}
+
+/**
+ * Absolute URL on the current allowed page origin. A path that is not
+ * root-relative, and a page origin that is not allowed, stay on
+ * https://ordboj.com so an untrusted host is never written into the URL.
+ */
+export function callbackURL(path: string, explicitOrigin?: string): string {
+  const base = resolveAllowedAuthOrigin(pageOrigin(explicitOrigin)) ?? CANONICAL_FALLBACK;
+  if (!path.startsWith('/') || path.startsWith('//')) return `${base}/`;
+  return `${base}${path}`;
 }
 
 /** In-app path only. Rejects absolute URLs and protocol-relative URLs. */
