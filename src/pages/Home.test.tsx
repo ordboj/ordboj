@@ -276,6 +276,34 @@ describe('Home - navigation cards expose role=link, not role=button (issue #329)
 // Issue #110 AC: touch targets must be at least 44px. The mute/unmute
 // button was 40px (the icon-button default) with no explicit size class
 // before this fix.
+describe('Home - privacy link', () => {
+  it('shows a same-origin link to /privacy', async () => {
+    renderWithProviders(<Home />, { route: '/' });
+
+    const link = await screen.findByRole('link', { name: /^Privacy$/ });
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', '/privacy');
+    expect(link).toHaveClass('min-h-11');
+  });
+});
+
+describe('Home - terms link', () => {
+  it('shows a same-origin Terms link next to Privacy', async () => {
+    renderWithProviders(<Home />, { route: '/' });
+
+    expect(screen.getByRole('heading', { name: 'Ordböj' })).toBeInTheDocument();
+    expect(screen.getByText('Master Swedish verbs with spaced repetition')).toBeInTheDocument();
+
+    const privacy = await screen.findByRole('link', { name: /^Privacy$/ });
+    const terms = screen.getByRole('link', { name: /^Terms$/ });
+    expect(terms.tagName).toBe('A');
+    expect(terms).toHaveAttribute('href', '/terms');
+    expect(terms).toHaveClass('min-h-11');
+    expect(privacy).toHaveAttribute('href', '/privacy');
+    expect(privacy.parentElement).toBe(terms.parentElement);
+  });
+});
+
 describe('Home - mute button touch target (issue #110 AC)', () => {
   it('renders the mute/unmute button at 44px (h-11 w-11) with an aria-label', async () => {
     // Force the muted state so the accessible name is "Unmute audio" (see
