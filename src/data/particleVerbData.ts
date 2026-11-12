@@ -1014,7 +1014,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'till',
     reflexive: 'none',
     lemma: 'känna till',
-    gloss: { en: 'to be aware of; to be acquainted with' },
+    gloss: { en: 'to be familiar with; to be acquainted with' },
     transparency: 'idiomatic',
     acceptedParticles: ['till'],
     examples: [
@@ -1674,7 +1674,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     // ORD-123 split (decision E): two of three frames were physical, so this
     // id keeps "arrive at the top or surface". The topic sense is pv:komma-upp-amne,
     // appended at the end of the array.
-    gloss: { en: 'to arrive at the top, the stage or the surface' },
+    gloss: { en: 'to arrive at the top, onto the stage or at the surface' },
     transparency: 'literal',
     acceptedParticles: ['upp'],
     examples: [
@@ -2989,7 +2989,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     particle: 'in',
     reflexive: 'none',
     lemma: 'lämna in',
-    gloss: { en: 'to hand over a document or application personally at an office' },
+    gloss: { en: 'to hand over a document, an application or schoolwork personally' },
     transparency: 'idiomatic',
     acceptedParticles: ['in'],
     examples: [
@@ -4653,7 +4653,7 @@ export const PARTICLE_VERB_DATA: ParticleVerbData[] = [
     gloss: { en: 'to wrap something up inside paper or a blanket' },
     transparency: 'literal',
     acceptedParticles: ['in'],
-    acceptedRecall: ['packa in'],
+    acceptedRecall: ['packa in', 'slå in'],
     examples: [
       { sv: 'Hon packar in presenten i fint papper.', blankIndex: 2 },
       { sv: 'Jag packar in boken i brunt omslagspapper.', blankIndex: 2 },
