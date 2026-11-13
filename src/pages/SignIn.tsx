@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AuthError,
@@ -44,6 +44,35 @@ function cookieNoticeOpen(): boolean {
 
 function CookieNotice() {
   const [open, setOpen] = useState(cookieNoticeOpen);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    const page = panel?.closest('.min-h-dvh');
+    if (!open || !panel || !(page instanceof HTMLElement)) return;
+
+    // Padding equals the banner plus the gap under it, so the last line
+    // can scroll clear of the fixed pop-up.
+    const measure = () => {
+      const rect = panel.getBoundingClientRect();
+      const gap = Math.max(0, window.innerHeight - rect.bottom);
+      page.style.paddingBottom = `${Math.ceil(rect.height + gap)}px`;
+    };
+    measure();
+
+    let observer: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(measure);
+      observer.observe(panel);
+    }
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+      page.style.paddingBottom = '';
+    };
+  }, [open]);
+
   if (!open) return null;
 
   function dismiss() {
@@ -56,11 +85,25 @@ function CookieNotice() {
   }
 
   return (
-    <div className="space-y-1 text-center">
+    <div
+      ref={panelRef}
+      role="region"
+      aria-label="Cookie notice"
+      data-testid="ordboj-necessary-cookie-notice"
+      className="fixed z-20 w-[calc(100%-2rem)] max-w-md rounded-lg border bg-card px-4 py-3 text-center shadow-sm"
+      style={{
+        bottom: 'max(16px, env(safe-area-inset-bottom))',
+        left: '50%',
+        transform: 'translateX(-50%)',
+      }}
+    >
       <p className="text-sm text-muted-foreground">
         {AUTH_COPY.cookieNotice}{' '}
         <span className="whitespace-nowrap">
-          <a href="/privacy" className="text-primary underline underline-offset-4">
+          <a
+            href="/privacy"
+            className="whitespace-nowrap text-primary underline underline-offset-4"
+          >
             {AUTH_COPY.privacyPolicy}
           </a>
           {'.'}
@@ -183,7 +226,12 @@ export default function SignIn() {
   const providers = PROVIDERS.filter((provider) => ready?.oauth[provider.id] === true);
 
   return (
-    <AuthScreen title={AUTH_COPY.signInTitle} intro={AUTH_COPY.signInIntro} showLosev>
+    <AuthScreen
+      title={AUTH_COPY.signInTitle}
+      intro={AUTH_COPY.signInIntro}
+      showLosev
+      notice={<CookieNotice />}
+    >
       {error ? <AuthError>{error}</AuthError> : null}
       {ready === null ? <AuthStatus>{AUTH_COPY.loading}</AuthStatus> : null}
       {providers.map((provider) =>
@@ -268,16 +316,7 @@ export default function SignIn() {
             <TextLink to="/reset-password">{AUTH_COPY.forgotPassword}</TextLink>
           </div>
         </>
-      ) : ready ? (
-        <p>{AUTH_COPY.emailUnavailable}</p>
       ) : null}
-      {/* Plain <a>, not a router link: /privacy is a Pages Function. */}
-      <p className="text-center">
-        <a href="/privacy" className="text-sm text-primary underline underline-offset-4">
-          {AUTH_COPY.privacyLink}
-        </a>
-      </p>
-      <CookieNotice />
     </AuthScreen>
   );
 }

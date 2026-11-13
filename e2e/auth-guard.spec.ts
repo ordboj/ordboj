@@ -16,13 +16,17 @@ test.describe('required sign-in', () => {
     await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Support LÖSEV/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /apple/i })).toHaveCount(0);
-    await expect(page.getByText('Email sign-in is not available yet.')).toBeVisible();
+    await expect(page.getByText('Loading…')).toHaveCount(0);
+    await expect(page.getByText('Email sign-in is not available yet.')).toHaveCount(0);
 
     await page.goto('/review');
     await expect(page).toHaveURL(/\/sign-in/);
 
     await page.goto('/sign-in');
-    const privacy = page.getByRole('link', { name: 'Privacy', exact: true });
+    await expect(page.getByRole('link', { name: 'Privacy', exact: true })).toHaveCount(0);
+    const privacy = page.getByRole('region', { name: 'Cookie notice' }).getByRole('link', {
+      name: 'Privacy Policy',
+    });
     await expect(privacy).toHaveAttribute('href', '/privacy');
     await privacy.click();
     await expect(page).toHaveURL(/\/privacy$/);
