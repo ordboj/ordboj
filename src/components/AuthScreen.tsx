@@ -9,11 +9,13 @@ export function AuthScreen({
   intro,
   children,
   showLosev = false,
+  notice,
 }: {
   title: string;
   intro?: string;
   children?: ReactNode;
   showLosev?: boolean;
+  notice?: ReactNode;
 }) {
   return (
     <div className="min-h-dvh bg-gradient-to-br from-background via-primary/5 to-accent/10 p-4 flex flex-col items-center justify-center">
@@ -38,6 +40,7 @@ export function AuthScreen({
         </Card>
         {showLosev ? <SupportLosevNotice className="text-center" /> : null}
       </div>
+      {notice}
     </div>
   );
 }

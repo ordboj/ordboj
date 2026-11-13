@@ -50,18 +50,73 @@ test.describe('ORD-148 auth lockup', () => {
 
     const google = page.getByRole('button', { name: 'Sign in with Google' });
     const ok = page.getByRole('button', { name: 'OK' });
+    const notice = page.getByRole('region', { name: 'Cookie notice' });
+    const card = page.locator('div.rounded-lg.border').filter({ has: page.getByRole('heading') });
     await expect(google).toBeVisible();
     await expect(ok).toBeVisible();
+    await expect(notice).toBeVisible();
+    await expect(card.getByRole('link', { name: 'Privacy', exact: true })).toHaveCount(0);
+    await expect(card.getByRole('link', { name: 'Privacy Policy' })).toBeVisible();
+    await expect(card.getByRole('link', { name: 'Terms of Use' })).toBeVisible();
+    await expect(notice.getByRole('link')).toHaveCount(1);
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+    const position = await notice.evaluate((element) => getComputedStyle(element).position);
+    expect(position).toBe('fixed');
+    await expect(card.locator('[data-testid="ordboj-necessary-cookie-notice"]')).toHaveCount(0);
 
     const googleBox = await google.boundingBox();
     const okBox = await ok.boundingBox();
+    const noticeBox = await notice.boundingBox();
     expect(googleBox).not.toBeNull();
     expect(okBox).not.toBeNull();
+    expect(noticeBox).not.toBeNull();
     expect(insideViewport(googleBox!)).toBe(true);
     expect(insideViewport(okBox!)).toBe(true);
+    expect(intersects(googleBox!, noticeBox!)).toBe(false);
+    expect(VIEWPORT.height - (noticeBox!.y + noticeBox!.height)).toBeGreaterThanOrEqual(15);
+    expect(VIEWPORT.height - (noticeBox!.y + noticeBox!.height)).toBeLessThanOrEqual(17);
+    expect(noticeBox!.x).toBeGreaterThanOrEqual(15);
+    expect(noticeBox!.x).toBeLessThanOrEqual(17);
+
+    const pad = await page
+      .locator('.min-h-dvh')
+      .evaluate((element) => parseFloat(getComputedStyle(element).paddingBottom));
+    const gap = VIEWPORT.height - (noticeBox!.y + noticeBox!.height);
+    expect(pad).toBeGreaterThanOrEqual(noticeBox!.height - 0.5);
+    expect(Math.abs(pad - (noticeBox!.height + gap))).toBeLessThan(2);
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const consent = page.getByText('By signing in, you agree to the');
+    const losev = page.getByRole('link', { name: /Support LÖSEV/i });
+    const consentBox = await consent.boundingBox();
+    const losevBox = await losev.boundingBox();
+    const noticeAfterScroll = await notice.boundingBox();
+    expect(consentBox).not.toBeNull();
+    expect(losevBox).not.toBeNull();
+    expect(noticeAfterScroll).not.toBeNull();
+    expect(intersects(consentBox!, noticeAfterScroll!)).toBe(false);
+    expect(intersects(losevBox!, noticeAfterScroll!)).toBe(false);
+
+    const keysBefore = await page.evaluate(() => Object.keys(localStorage));
+    await ok.click();
+    await expect(notice).toHaveCount(0);
+    const keysAfter = await page.evaluate(() => Object.keys(localStorage));
+    expect(keysAfter.filter((key) => !keysBefore.includes(key))).toEqual([
+      'ordboj-necessary-cookie-notice',
+    ]);
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Cookie notice' })).toHaveCount(0);
   });
 });
+
+function intersects(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number },
+) {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+}
 
 function insideViewport(box: { x: number; y: number; width: number; height: number }) {
   return (

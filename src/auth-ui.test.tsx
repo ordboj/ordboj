@@ -50,6 +50,27 @@ function expectProductLockup() {
 
 // WCAG 2 relative luminance. White on #5D83E5 is 3.59:1, under the 4.5:1
 // needed for this 16px medium label. The sign-in pill must clear 4.5:1.
+function cssTokenHex(name: string): string {
+  const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
+  const match = css.match(new RegExp(`--${name}:\\s*([\\d.]+)\\s+([\\d.]+)%\\s+([\\d.]+)%`));
+  if (!match) throw new Error(`missing --${name}`);
+  return hslToHex(Number(match[1]), Number(match[2]), Number(match[3]));
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const sat = s / 100;
+  const lig = l / 100;
+  const a = sat * Math.min(lig, 1 - lig);
+  const channel = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = lig - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${channel(0)}${channel(8)}${channel(4)}`;
+}
+
 function contrastRatio(foreground: string, background: string): number {
   const channel = (hex: string, shift: number) => {
     const s = ((parseInt(hex.slice(1), 16) >> shift) & 255) / 255;
@@ -216,11 +237,12 @@ describe('client auth UI', () => {
 
   it('opens the privacy policy through a plain anchor, not a client route', async () => {
     mount('/sign-in');
-    const privacy = await screen.findByRole('link', { name: /^Privacy$/ });
+    expect(screen.queryByRole('link', { name: /^Privacy$/ })).not.toBeInTheDocument();
+    const notice = await screen.findByRole('region', { name: 'Cookie notice' });
+    const privacy = within(notice).getByRole('link', { name: 'Privacy Policy' });
     expect(privacy.tagName).toBe('A');
     expect(privacy).toHaveAttribute('href', '/privacy');
-    expect(privacy.parentElement).toHaveClass('text-center');
-    expect(privacy.parentElement?.tagName).toBe('P');
+    expect(privacy).toHaveClass('whitespace-nowrap');
     expect(privacy).not.toHaveAttribute('data-discover');
     expect(privacy.getAttribute('href')).not.toMatch(/^https?:/);
 
@@ -390,6 +412,9 @@ describe('client auth UI', () => {
     expect(button.compareDocumentPosition(consent) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+    const card = button.closest('.rounded-lg');
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).queryByRole('link', { name: /^Privacy$/ })).toBeNull();
   });
 
   it('explains the necessary cookie and dismisses it without touching stored practice', async () => {
@@ -401,24 +426,55 @@ describe('client auth UI', () => {
         'Ordböj uses a necessary cookie to keep you signed in, and stores practice progress in this browser. See the Privacy Policy.',
       ),
     );
+    const region = screen.getByRole('region', { name: 'Cookie notice' });
+    expect(region).toHaveAttribute('data-testid', 'ordboj-necessary-cookie-notice');
+    expect(region).toHaveAttribute('role', 'region');
+    expect(region).toHaveClass(
+      'fixed',
+      'z-20',
+      'w-[calc(100%-2rem)]',
+      'max-w-md',
+      'rounded-lg',
+      'border',
+      'bg-card',
+      'shadow-sm',
+    );
+    expect(region.style.bottom).toBe('max(16px, env(safe-area-inset-bottom))');
+    expect(region.style.left).toBe('50%');
+    expect(region.style.transform).toBe('translateX(-50%)');
+    expect(region.className).not.toMatch(/\banimate-/);
+    expect(region.className).not.toMatch(/\btransition/);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const card = screen.getByRole('heading', { name: 'Sign in' }).closest('.rounded-lg');
+    expect(card).not.toBeNull();
+    expect(card?.contains(region)).toBe(false);
+    expect(within(card as HTMLElement).queryByRole('link', { name: /^Privacy$/ })).toBeNull();
     const policy = within(notice).getByRole('link', { name: 'Privacy Policy' });
+    expect(within(region).getAllByRole('link')).toHaveLength(1);
     expect(policy).toHaveAttribute('href', '/privacy');
+    expect(policy).toHaveClass('whitespace-nowrap');
     expect(policy.parentElement).toHaveClass('whitespace-nowrap');
     expect(policy.parentElement?.textContent).toMatch(/Privacy Policy\./);
     const ok = screen.getByRole('button', { name: 'OK' });
-    expect(ok).toHaveClass('min-h-11', 'min-w-11');
+    expect(ok).toHaveClass('min-h-11', 'min-w-11', 'text-primary');
+    expect(contrastRatio(cssTokenHex('primary'), cssTokenHex('card'))).toBeGreaterThanOrEqual(4.5);
     expect(policy).not.toHaveAttribute('data-discover');
     expect(policy.getAttribute('href')).not.toMatch(/^https?:/);
     expect(screen.queryByRole('button', { name: /reject/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /accept/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
 
+    const keysBefore = Object.keys(localStorage).sort();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'OK' }));
     expect(
       screen.queryByText(/uses a necessary cookie to keep you signed in/i),
     ).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Cookie notice' })).not.toBeInTheDocument();
     expect(localStorage.getItem('ordboj-necessary-cookie-notice')).toBe('1');
+    expect(Object.keys(localStorage).filter((key) => !keysBefore.includes(key))).toEqual([
+      'ordboj-necessary-cookie-notice',
+    ]);
     expectPreserved();
 
     first.unmount();
@@ -429,6 +485,31 @@ describe('client auth UI', () => {
       screen.queryByText(/uses a necessary cookie to keep you signed in/i),
     ).not.toBeInTheDocument();
     expectPreserved();
+  });
+
+  it('reserves bottom padding equal to the cookie pop-up clearance', async () => {
+    const rect = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.dataset.testid === 'ordboj-necessary-cookie-notice')
+          return new DOMRect(16, 480, 328, 144);
+        return new DOMRect();
+      });
+    const previousHeight = window.innerHeight;
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 640 });
+    try {
+      box.config = { oauth: { google: true, github: false, microsoft: false }, mail: false };
+      mount('/sign-in');
+      await screen.findByRole('region', { name: 'Cookie notice' });
+      const page = document.querySelector('.min-h-dvh') as HTMLElement;
+      expect(page.style.paddingBottom).toBe('160px');
+    } finally {
+      rect.mockRestore();
+      Object.defineProperty(window, 'innerHeight', {
+        configurable: true,
+        value: previousHeight,
+      });
+    }
   });
 
   it('shows Google, GitHub, and Microsoft only when that provider is configured', async () => {

@@ -23,7 +23,10 @@ test.describe('required sign-in', () => {
     await expect(page).toHaveURL(/\/sign-in/);
 
     await page.goto('/sign-in');
-    const privacy = page.getByRole('link', { name: 'Privacy', exact: true });
+    await expect(page.getByRole('link', { name: 'Privacy', exact: true })).toHaveCount(0);
+    const privacy = page.getByRole('region', { name: 'Cookie notice' }).getByRole('link', {
+      name: 'Privacy Policy',
+    });
     await expect(privacy).toHaveAttribute('href', '/privacy');
     await privacy.click();
     await expect(page).toHaveURL(/\/privacy$/);
