@@ -7,6 +7,7 @@ import { PracticeCard } from '@/components/PracticeCard';
 import { ConfettiEffect } from '@/components/ConfettiEffect';
 import { ReadOnlyBanner } from '@/components/ReadOnlyBanner';
 import { useSrsProgress, type PracticeItem } from '@/hooks/useSrsProgress';
+import { usePracticeRound } from '@/hooks/usePracticeRound';
 import { useSettings } from '@/hooks/useSettings';
 import { conjugationItemId } from '@/lib/itemIds';
 import { Grade, MAX_REQUEUES_PER_DAY, isEligibleForRequeue, type AnswerModality } from '@/lib/srs';
@@ -43,6 +44,7 @@ function getLocalDayKey(): string {
 export default function Practice() {
   const navigate = useNavigate();
   const { settings, updateSettings, isLoading: settingsLoading } = useSettings();
+  const practiceRound = usePracticeRound('conjugation');
   const { getDueItems, recordAnswer, srsStates, isLoading, isReadOnly } = useSrsProgress(
     settings.cefrLevels,
   );
@@ -134,12 +136,16 @@ export default function Practice() {
     }
     setRequeueMap(clearedMap);
     setRequeueDay(today);
+    if (roundItems.length > 0) {
+      practiceRound.begin({ sessionKind: kind, practiceMode: settings.practiceMode });
+    }
   };
 
   // Load the deck exactly once per session (i.e. once per mount), when the
   // underlying data first becomes available. Mirrors PR #122's stable-load
-  // pattern: depending on isLoading/settingsLoading only (not getDueItems)
-  // keeps this from re-firing on every post-answer render.
+  // pattern: deckLoadedRef ignores later renders, including a practiceMode
+  // change, so this does not reshuffle the deck after an answer. getDueItems
+  // stays in a ref for the same reason.
   const deckLoadedRef = useRef(false);
   useEffect(() => {
     if (deckLoadedRef.current || isLoading || settingsLoading) {
@@ -153,6 +159,9 @@ export default function Practice() {
         // First load of the mount: requeueMap is still its initial {}, so
         // there is nothing pending to carry over or clear yet -- this can
         // set state directly instead of going through startRound.
+        if (due.length > 0) {
+          practiceRound.begin({ sessionKind: 'due', practiceMode: settings.practiceMode });
+        }
         setItems(due);
         setRoundItemIds(new Set(due.map((item) => item.itemId)));
         setCurrentIndex(0);
@@ -168,7 +177,7 @@ export default function Practice() {
       }
     };
     loadDueItems();
-  }, [isLoading, settingsLoading]);
+  }, [isLoading, settingsLoading, settings.practiceMode, practiceRound]);
 
   // Recomputes the completion screen's two post-session pools whenever a
   // session ends, keyed on srsStates rather than read from a closure
@@ -209,6 +218,12 @@ export default function Practice() {
   const handleAnswer = (grade: Grade, modality: AnswerModality) => {
     const answeredItem = items[currentIndex];
     if (!answeredItem) return;
+
+    // "New" is repetitions === 0 before this answer. recordAnswer updates
+    // state later, so this read is the value the event must store.
+    const wasNew = (srsStates[answeredItem.itemId]?.repetitions ?? 0) === 0 ? 1 : 0;
+    const isRequeue =
+      sessionKind !== 'free' && (requeueMap[answeredItem.itemId]?.requeuesToday ?? 0) > 0 ? 1 : 0;
 
     const isFree = sessionKind === 'free';
     if (!isFree) {
@@ -299,11 +314,22 @@ export default function Practice() {
     setItems(nextQueue);
     setCompletedItemIds(nextCompletedItemIds);
 
-    if (currentIndex < nextQueue.length - 1) {
+    const roundDone = currentIndex >= nextQueue.length - 1;
+    if (!roundDone) {
       setCurrentIndex(currentIndex + 1);
     } else {
       setSessionComplete(true);
     }
+    practiceRound.answer({
+      sessionKind,
+      practiceMode: settings.practiceMode,
+      modality,
+      form: answeredItem.form,
+      correct: grade === 5 ? 1 : 0,
+      wasNew,
+      isRequeue,
+    });
+    if (roundDone) practiceRound.finish();
   };
 
   const totalRoundItems = roundItemIds.size;

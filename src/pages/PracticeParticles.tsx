@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { ParticleVerbCard, type ChoiceCommit } from '@/components/ParticleVerbCard';
 import { ReadOnlyBanner } from '@/components/ReadOnlyBanner';
 import { useSrsProgress } from '@/hooks/useSrsProgress';
+import { usePracticeRound } from '@/hooks/usePracticeRound';
 import { useSettings } from '@/hooks/useSettings';
 import { useAnswerLog } from '@/hooks/useAnswerLog';
 import { buildFreeParticlePractice, type ParticleSittingCard } from '@/lib/particleQueue';
@@ -20,6 +21,7 @@ type ParticleSessionKind = 'scheduled' | 'free';
 export default function PracticeParticles() {
   const navigate = useNavigate();
   const { settings, isLoading: settingsLoading } = useSettings();
+  const practiceRound = usePracticeRound('particle');
   const { getParticleSitting, recordAnswer, srsStates, isLoading, isReadOnly } = useSrsProgress(
     settings.cefrLevels,
   );
@@ -62,13 +64,15 @@ export default function PracticeParticles() {
     loadedRef.current = true;
 
     const sitting = getSittingRef.current(settings.particleDailyGoal);
+    if (sitting.cards.length > 0) {
+      practiceRound.begin({ sessionKind: 'due' });
+    }
     setCards(sitting.cards);
     setCurrentIndex(0);
     if (sitting.cards.length === 0) {
       setSessionComplete(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, settingsLoading]);
+  }, [isLoading, settingsLoading, settings.particleDailyGoal, practiceRound]);
 
   // The empty queue is a routine state, not an error: ~70 cards are all live
   // after about 24 days at defaults, after which particle mode is pure
@@ -83,6 +87,7 @@ export default function PracticeParticles() {
     if (currentIndex < cards.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
+      practiceRound.finish();
       setSessionComplete(true);
     }
   };
@@ -93,11 +98,23 @@ export default function PracticeParticles() {
     setCurrentIndex(0);
     setSessionKind('free');
     setSessionComplete(false);
+    practiceRound.begin({ sessionKind: 'free' });
   };
 
   const handleAnswer = (grade: Grade, choice?: ChoiceCommit) => {
     const card = cards[currentIndex];
     if (!card) return;
+    if (card.kind === 'cloze' || card.kind === 'recall') {
+      const repetitions = card.itemId ? (srsStates[card.itemId]?.repetitions ?? 0) : 0;
+      practiceRound.answer({
+        sessionKind: sessionKind === 'free' ? 'free' : 'due',
+        modality: choice ? 'choice' : 'typed',
+        particleKind: card.kind,
+        correct: grade === 5 ? 1 : 0,
+        wasNew: repetitions === 0 ? 1 : 0,
+        isRequeue: 0,
+      });
+    }
     // A free round is explicitly not scheduled: recording it would move real
     // intervals for items the learner chose to revisit early, which is the
     // opposite of what "keep practising" should cost them.
